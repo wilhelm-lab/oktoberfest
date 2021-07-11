@@ -30,7 +30,7 @@ class CeCalibrarion(SpectralLibrary):
         """
         Edit library to try different ranges of ce 15-50.
         then predict with the new library.
-        Check ...
+        Check https://gitlab.lrz.de/proteomics/prosit_tools/oktoberfest/-/blob/develop/oktoberfest/ce_calibration/grpc_alignment.py
         """
         pass
 
