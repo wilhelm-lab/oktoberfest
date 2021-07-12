@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from library import SpectralLibrary
+from spectral_library import SpectralLibrary
 
 class CeCalibrarion(SpectralLibrary):
     """
