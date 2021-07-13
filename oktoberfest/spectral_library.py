@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 
+from oktoberfest.data.spectra import Spectra
+
+
 class SpectralLibrary:
     """
         main to init a SpectralLibrary obj and go through the steps:
@@ -9,11 +12,11 @@ class SpectralLibrary:
         3- write output
     """
     path: str
-    library: pd.DataFrame
+    library: Spectra
 
     def __init__(self, path):
         self.path = path
-        self.library = pd.DataFrame()
+        self.library = Spectra()
 
     def gen_lib(self):
         """
