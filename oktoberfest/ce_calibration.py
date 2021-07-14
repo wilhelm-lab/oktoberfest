@@ -1,9 +1,13 @@
+import os
+
 import numpy as np
 import pandas as pd
 
-from spectral_library import SpectralLibrary
+from .spectral_library import SpectralLibrary
+from .data.spectra import Spectra
 
-class CeCalibrarion(SpectralLibrary):
+
+class CeCalibration(SpectralLibrary):
     """
         main to init a CeCalibrarion obj and go through the steps:
         1- gen_lib
@@ -15,16 +19,17 @@ class CeCalibrarion(SpectralLibrary):
     raw_path: str
     best_ce: float
 
-    def __init__(self, msms_path, raw_path):
-        self.msms_path = msms_path
+    def __init__(self, search_path, raw_path):
+        self.search_path = search_path
         self.raw_path = raw_path
-        self.library = pd.DataFrame()
+        self.library = Spectra()
 
     def gen_lib(self):
         """
         Read input msms and raw and add it to library
         """
-        pass
+        if os.path.basename(self.search_path) == "msms.txt":
+            print(True)
 
     def allign_ce(self):
         """
@@ -39,3 +44,6 @@ class CeCalibrarion(SpectralLibrary):
         Get aligned ce for this lib.
         """
         pass
+
+if __name__ == "main":
+    pass
