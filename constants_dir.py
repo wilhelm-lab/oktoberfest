@@ -1,0 +1,1 @@
+CONFIG_PATH = "oktoberfest/example_config.json"

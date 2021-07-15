@@ -42,14 +42,17 @@ class Spectra:
             prefix = Spectra.MZ_COLUMN_PREFIX
         return prefix
 
-    def add_columns(self, column_data: pd.DataFrame):
+    def add_column(self, column_data: np, name: str):
+        self.spectra_data[name] = column_data
+
+    def add_columns(self, columns_data: pd.DataFrame):
         """
         Add columns to spectra data.
-        :param column_data: a pandas data frame to add can be metrics or metadata.
+        :param columns_data: a pandas data frame to add can be metrics or metadata.
         """
-        self.spectra_data = pd.concat([self.spectra_data, column_data], axis=1)
+        self.spectra_data = pd.concat([self.spectra_data, columns_data], axis=1)
 
-    def add_intensity_matrix(self, intensity_data, fragment_type=FragmentType.PRED):
+    def add_matrix(self, intensity_data, fragment_type=FragmentType.PRED):
         """
         concat intensity df as a sparse matrix to our data
         :param intensity_data: Intensity numpy array to add
@@ -57,10 +60,11 @@ class Spectra:
         """
 
         # inflate the nested numpy array
-        intensity_df = pd.DataFrame(intensity_data).explode()
+        #print(intensity_data)
+        intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
-        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, Spectra.NO_OF_FRAGMENTS)
+        intensity_array = intensity_df.values.astype(np.float16).reshape(-1, Spectra.NO_OF_FRAGMENTS)
 
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
@@ -68,7 +72,7 @@ class Spectra:
         intensity_array[intensity_array == -1] = 0
 
         # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array))
+        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float16)
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
 
