@@ -1,8 +1,8 @@
 {
   "jobType": "SpectralLibraryGeneration",
   "fileUploads": {
-    "search_type": ["maxquant", "internal"],
-    "raw_type": "thermo", "mzml",
+    "search_type": "maxquant",
+    "raw_type": "mzml",
     "fasta": false,
     "peptides.csv": true
   },
@@ -19,5 +19,5 @@
       "proteotypicity": "Prosit_2020_proteotypicity"
   },
   "spectralLibraryOutputFormat": "msp",
-  "jobId": "1B2C984C43488B2FC3A2BACC0438260D",
+  "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
  }

@@ -8,8 +8,10 @@ authors = ["WassimG <wassim.gabriel@tum.de>"]
 python = "^3.8.10"
 numpy = "^1.21.0"
 pandas = "^1.3.0"
-prosit-io = {git = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git", branch="develop"}
-fundamentals = {git = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git", branch="feature/annotation"}
+#prosit-io = {git = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git", branch="develop"}
+#fundamentals = {git = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git", branch="feature/annotation"}
+prosit_grpc = {git = "git@gitlab.lrz.de:proteomics/prosit_tools/prosit_grpc.git"}
+
 
 [tool.poetry.dev-dependencies]
 

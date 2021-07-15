@@ -15,11 +15,12 @@ class CeCalibration(SpectralLibrary):
         3- get_best_ce
         4- write output
     """
-    msms_path: str
+    search_path: str
     raw_path: str
     best_ce: float
 
     def __init__(self, search_path, raw_path):
+        super().__init__(self, search_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.library = Spectra()

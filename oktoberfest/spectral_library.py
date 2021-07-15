@@ -47,7 +47,7 @@ class SpectralLibrary:
             library_df.columns = library_df.columns.str.upper()
             self.library.add_columns(library_df)
 
-    def grpc_predict(self):
+    def grpc_predict(self, library):
         """
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
@@ -64,26 +64,29 @@ class SpectralLibrary:
             if value:
                 models.append(value)
 
-        predictions = predictor.predict(sequences=self.library.spectra_data["MODIFIED_SEQUENCE"],
-                                        charges=self.library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
-                                        collision_energies=self.library.spectra_data["COLLISION_ENERGY"],
+        print(library.spectra_data["PRECURSOR_CHARGE"].values.tolist()[0]>1)
+        predictions = predictor.predict(sequences=library.spectra_data["MODIFIED_SEQUENCE"].values,
+                                        charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
+                                        collision_energies=library.spectra_data["COLLISION_ENERGY"].values,
                                         models=models,
                                         disable_progress_bar=True)
 
-
+    #     return predictions
+    #
+    # def somefunc():
         #Return only in spectral library generation otherwise add to library
         if self.config['jobType'] == "SpectralLibraryGeneration":
             return predictions
 
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
-        self.library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
+        library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
         irt_pred = predictions[models[1]]
-        self.library.add_column(irt_pred, 'IRT')
+        library.add_column(irt_pred, 'IRT')
 
         if len(models) > 2:
             proteotypicity_pred = predictions[models[2]]
-            self.library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
+            library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
 
 

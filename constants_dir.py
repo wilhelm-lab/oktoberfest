@@ -1,1 +1,1 @@
-CONFIG_PATH = "oktoberfest/example_config.json"
+CONFIG_PATH = "/home/llautenbacher/Documents/oktoberfest/example_config.json"
