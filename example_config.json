@@ -1,8 +1,8 @@
 {
   "jobType": "SpectralLibraryGeneration",
   "fileUploads": {
-    "search_type": "maxquant",
-    "raw": "thermo", "mzml",
+    "search_type": ["maxquant", "internal"],
+    "raw_type": "thermo", "mzml",
     "fasta": false,
     "peptides.csv": true
   },

@@ -12,11 +12,11 @@ class FragmentType(Enum):
 
 class Spectra:
     NO_OF_FRAGMENTS = 174
-    INTENSITY_COLUMN_PREFIX = 'intensity_raw'
-    INTENSITY_PRED_PREFIX = 'intensity_pred'
-    MZ_COLUMN_PREFIX = 'mz_raw'
+    INTENSITY_COLUMN_PREFIX = 'INTENSITY_RAW'
+    INTENSITY_PRED_PREFIX = 'INTENSITY_PRED'
+    MZ_COLUMN_PREFIX = 'MZ_RAW'
     EPSILON = 1e-7
-    COLUMNS_FRAGMENT_ION = ['y1+', 'y1++', 'y1+++', 'b1+', 'b1++', 'b1+++']
+    COLUMNS_FRAGMENT_ION = ['Y1+', 'Y1++', 'Y1+++', 'B1+', 'B1++', 'B1+++']
 
     spectra_data: pd.DataFrame
 
@@ -58,9 +58,6 @@ class Spectra:
         :param intensity_data: Intensity numpy array to add
         :param fragment_type: Choose type of fragments predicted or raw
         """
-
-        # inflate the nested numpy array
-        #print(intensity_data)
         intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
@@ -77,10 +74,6 @@ class Spectra:
         intensity_df.columns = columns
 
         self.add_columns(intensity_df)
-
-    def add_mz_matrix(self, mz):
-        # if the input is in the same format as intensity (nested numpy array), then merge both into one function
-        pass
 
     def get_matrix(self, fragment_type=FragmentType.PRED) -> spmatrix:
         """
