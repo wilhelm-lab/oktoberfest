@@ -8,6 +8,8 @@ authors = ["Your Name <you@example.com>"]
 python = "^3.8"
 numpy = "^1.21.0"
 pandas = "^1.3.0"
+prosit-io = {git = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git", branch="develop"}
+fundamentals = {git = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git", branch="feature/annotation"}
 
 [tool.poetry.dev-dependencies]
 
