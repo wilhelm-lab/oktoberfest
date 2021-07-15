@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from oktoberfest.data.spectra import Spectra
+from .data.spectra import Spectra
 
 
 class SpectralLibrary:

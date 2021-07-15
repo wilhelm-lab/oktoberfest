@@ -1,0 +1,23 @@
+{
+  "jobType": "SpectralLibraryGeneration",
+  "fileUploads": {
+    "search_type": "maxquant",
+    "raw": "thermo", "mzml",
+    "fasta": false,
+    "peptides.csv": true
+  },
+  "fastaDigestOptions": {
+    "collisionEnergy": false,
+    "protease": false,
+    "missedCleavages": false,
+    "oxidizedMethionine": false,
+    "charges": false
+  },
+  "models":{
+      "intensity": "Prosit_2019_intensity",
+      "irt": "Prosit_2019_irt",
+      "proteotypicity": "Prosit_2020_proteotypicity"
+  },
+  "spectralLibraryOutputFormat": "msp",
+  "jobId": "1B2C984C43488B2FC3A2BACC0438260D",
+ }

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from ce_calibration import CeCalibrarion
+from .ce_calibration import CeCalibrarion
 
 class ReScore(CeCalibrarion):
     """
