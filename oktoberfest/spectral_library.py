@@ -3,15 +3,14 @@ import pandas as pd
 import json
 import os
 
-from data.spectra import Spectra
-from data.spectra import FragmentType
+from .data.spectra import Spectra
+from .data.spectra import FragmentType
 from prosit_io.file import csv
 from prosit_grpc.predictPROSIT import PROSITpredictor
-from constants import CERTIFICATES, PROSIT_SERVER
-from constants_dir import CONFIG_PATH
+from .constants import CERTIFICATES, PROSIT_SERVER
+from .constants_dir import CONFIG_PATH
 
 def read_config():
-    print(CONFIG_PATH)
     with open(CONFIG_PATH) as f:
         data = json.load(f)
     return data
@@ -64,7 +63,6 @@ class SpectralLibrary:
             if value:
                 models.append(value)
 
-        print(library.spectra_data["PRECURSOR_CHARGE"].values.tolist()[0]>1)
         predictions = predictor.predict(sequences=library.spectra_data["MODIFIED_SEQUENCE"].values.tolist(),
                                         charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                         collision_energies=library.spectra_data["COLLISION_ENERGY"].values,

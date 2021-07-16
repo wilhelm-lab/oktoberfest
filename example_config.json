@@ -1,5 +1,5 @@
 {
-  "jobType": "SpectralLibraryGeneration",
+  "jobType": "CeCalibration",
   "fileUploads": {
     "search_type": "maxquant",
     "raw_type": "mzml",
