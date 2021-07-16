@@ -1,4 +1,5 @@
 import pandas as pd
+import scipy
 from scipy.sparse import coo_matrix, spmatrix
 from enum import Enum
 import numpy as np
@@ -50,6 +51,7 @@ class Spectra:
         Add columns to spectra data.
         :param columns_data: a pandas data frame to add can be metrics or metadata.
         """
+        # Check if columns already exist
         self.spectra_data = pd.concat([self.spectra_data, columns_data], axis=1)
 
     def add_matrix(self, intensity_data, fragment_type=FragmentType.PRED):
@@ -72,7 +74,6 @@ class Spectra:
         intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float16)
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
-
         self.add_columns(intensity_df)
 
     def get_matrix(self, fragment_type=FragmentType.PRED) -> spmatrix:
@@ -84,4 +85,5 @@ class Spectra:
 
         prefix = Spectra._resolve_prefix(fragment_type)
         columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
-        return self.spectra_data[columns_to_select].sparse.to_coo()
+        #Check if conversion is low change to coo then csr from coo
+        return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
