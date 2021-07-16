@@ -14,6 +14,7 @@ from fundamentals.metrics.similarity import SimilarityMetrics
 from .spectral_library import SpectralLibrary
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
+from prosit_io.file import hdf5
 
 class CeCalibration(SpectralLibrary):
     """
@@ -81,6 +82,17 @@ class CeCalibration(SpectralLibrary):
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"],FragmentType.MZ)
 
+    def write_metadata_annotation(self):
+        #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
+        hdf5_path = self.raw_path+'.hdf5'
+        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
+
+        sparse_matrix_intensity_raw, columns_intensity = self.library.get_matrix(FragmentType.RAW, True)
+        sparse_matrix_mz, columns_mz = self.library.get_matrix(FragmentType.MZ, True)
+        data_sets = [self.library.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz]
+        column_names = [columns_intensity, columns_mz]
+
+        hdf5.write_file(data_sets, hdf5_path, data_set_names, column_names)
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -130,6 +142,7 @@ class CeCalibration(SpectralLibrary):
 
     def perform_alignment(self):
         self.gen_lib()
+        self.write_metadata_annotation()
         self._prepare_alignment_df()
         self._predict_alignment()
         self._alignment()
