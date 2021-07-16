@@ -3,11 +3,11 @@ import pandas as pd
 import json
 import os
 
-from .data.spectra import Spectra
-from .data.spectra import FragmentType
+from data.spectra import Spectra
+from data.spectra import FragmentType
 from prosit_io.file import csv
 from prosit_grpc.predictPROSIT import PROSITpredictor
-from .constants import CERTIFICATES, PROSIT_SERVER
+from constants import CERTIFICATES, PROSIT_SERVER
 from constants_dir import CONFIG_PATH
 
 def read_config():
@@ -52,10 +52,10 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server=PROSIT_SERVER,
-                                    path_to_ca_certificate=CERTIFICATES['CA'],
-                                    path_to_certificate=CERTIFICATES['USER'],
-                                    path_to_key_certificate=CERTIFICATES['KEY'],
+        predictor = PROSITpredictor(server='10.152.171.58:8500',
+                                    #path_to_ca_certificate=CERTIFICATES['CA'],
+                                    #path_to_certificate=CERTIFICATES['USER'],
+                                    #path_to_key_certificate=CERTIFICATES['KEY'],
                                     keepalive_timeout_ms=10000)
 
         models_dict = self.config['models']
@@ -65,7 +65,7 @@ class SpectralLibrary:
                 models.append(value)
 
         print(library.spectra_data["PRECURSOR_CHARGE"].values.tolist()[0]>1)
-        predictions = predictor.predict(sequences=library.spectra_data["MODIFIED_SEQUENCE"].values,
+        predictions = predictor.predict(sequences=library.spectra_data["MODIFIED_SEQUENCE"].values.tolist(),
                                         charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                         collision_energies=library.spectra_data["COLLISION_ENERGY"].values,
                                         models=models,
@@ -80,6 +80,7 @@ class SpectralLibrary:
 
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
+        #return intensities_pred
         library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
         irt_pred = predictions[models[1]]
         library.add_column(irt_pred, 'IRT')
