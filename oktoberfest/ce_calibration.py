@@ -32,7 +32,6 @@ class CeCalibration(SpectralLibrary):
         super().__init__(search_path)
         self.search_path = search_path
         self.raw_path = raw_path
-        self.library = Spectra()
 
     def _gen_internal_search_result_from_msms(self):
         mxq = MaxQuant(self.search_path)
@@ -40,7 +39,7 @@ class CeCalibration(SpectralLibrary):
 
     def _gen_mzml_from_thermo(self):
         raw = ThermoRaw()
-        self.raw_path = raw.raw_mzml(self.raw_path)
+        self.raw_path = raw.convert_raw_mzml(self.raw_path)
 
     def _load_search(self):
         switch = self.config["fileUploads"]["search_type"]
@@ -57,7 +56,7 @@ class CeCalibration(SpectralLibrary):
     def _load_rawfile(self):
         switch = self.config["fileUploads"]["raw_type"]
         if switch == "thermo":
-            ThermoRaw.raw_mzml(self.raw_path)
+            ThermoRaw.convert_raw_mzml(self.raw_path)
         elif switch == "mzml":
             pass
         else:
@@ -75,6 +74,8 @@ class CeCalibration(SpectralLibrary):
         df_raw = self._load_rawfile()
 
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
+
+
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         self.library.add_columns(df_join)
@@ -137,7 +138,7 @@ class CeCalibration(SpectralLibrary):
         """
         Get aligned ce for this lib.
         """
-        return self.ce_alignment.idxmax()
+        self.best_ce = self.ce_alignment.idxmax()
 
 
     def perform_alignment(self):
@@ -146,8 +147,7 @@ class CeCalibration(SpectralLibrary):
         self._prepare_alignment_df()
         self._predict_alignment()
         self._alignment()
-        return self._get_best_ce()
-
+        self._get_best_ce()
 
 if __name__ == "main":
     pass

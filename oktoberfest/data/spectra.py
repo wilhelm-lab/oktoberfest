@@ -54,6 +54,13 @@ class Spectra:
         # Check if columns already exist
         self.spectra_data = pd.concat([self.spectra_data, columns_data], axis=1)
 
+    def get_meta_data(self):
+        columns = self.spectra_data.columns
+        meta_data_columns = list(filter(lambda x: not x.startswith(
+            tuple([Spectra.INTENSITY_COLUMN_PREFIX, Spectra.MZ_COLUMN_PREFIX, Spectra.INTENSITY_PRED_PREFIX])), columns))
+
+        return self.spectra_data[meta_data_columns]
+
     def add_matrix(self, intensity_data, fragment_type=FragmentType.PRED):
         """
         concat intensity df as a sparse matrix to our data
@@ -76,7 +83,7 @@ class Spectra:
         intensity_df.columns = columns
         self.add_columns(intensity_df)
 
-    def get_matrix(self, fragment_type=FragmentType.PRED) -> spmatrix:
+    def get_matrix(self, fragment_type=FragmentType.PRED, return_column_names=False) -> spmatrix:
         """
         Get intensities sparse matrix from dataframe.
         :param fragment_type: choose predicted, raw, or mz
@@ -85,5 +92,7 @@ class Spectra:
 
         prefix = Spectra._resolve_prefix(fragment_type)
         columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
-        #Check if conversion is low change to coo then csr from coo
+        if return_column_names:
+            return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
+        # Check if conversion is low change to coo then csr from coo
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)

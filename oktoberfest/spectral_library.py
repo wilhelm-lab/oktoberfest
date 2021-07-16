@@ -81,7 +81,7 @@ class SpectralLibrary:
         #return intensities_pred
         library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
         irt_pred = predictions[models[1]]
-        library.add_column(irt_pred, 'IRT')
+        library.add_column(irt_pred, 'PREDICTED_IRT')
 
         if len(models) > 2:
             proteotypicity_pred = predictions[models[2]]
