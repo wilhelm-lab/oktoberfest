@@ -16,6 +16,10 @@ from .data.spectra import Spectra
 from .data.spectra import FragmentType
 from prosit_io.file import hdf5
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 class CeCalibration(SpectralLibrary):
     """
         main to init a CeCalibrarion obj and go through the steps:
@@ -28,21 +32,28 @@ class CeCalibration(SpectralLibrary):
     raw_path: str
     best_ce: float
 
+
     def __init__(self, search_path, raw_path):
         super().__init__(search_path)
         self.search_path = search_path
         self.raw_path = raw_path
 
+
     def _gen_internal_search_result_from_msms(self):
+        logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
         self.search_path = mxq.generate_internal()
 
+
     def _gen_mzml_from_thermo(self):
+        logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
         self.raw_path = raw.convert_raw_mzml(self.raw_path)
 
+
     def _load_search(self):
         switch = self.config["fileUploads"]["search_type"]
+        logger.info(f"search_type is {switch}")
         if switch == "maxquant":
             self._gen_internal_search_result_from_msms()
         elif switch == "internal":
@@ -55,6 +66,7 @@ class CeCalibration(SpectralLibrary):
 
     def _load_rawfile(self):
         switch = self.config["fileUploads"]["raw_type"]
+        logger.info(f"raw_type is {switch}")
         if switch == "thermo":
             ThermoRaw.convert_raw_mzml(self.raw_path)
         elif switch == "mzml":
@@ -69,19 +81,22 @@ class CeCalibration(SpectralLibrary):
         """
         Read input search and raw and add it to library
         """
-
         df_search = self._load_search()
         df_raw = self._load_rawfile()
 
+        logger.info("Merging rawfile and search result")
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
+        logger.info(f"There are {len(df_join)} matched identifications")
 
-
+        logger.info("Annotating raw spectra")
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
+
+        logger.info("Preparing library")
         self.library.add_columns(df_join)
-        #return df_annotated_spectra
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"],FragmentType.MZ)
+
 
     def write_metadata_annotation(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
@@ -94,6 +109,7 @@ class CeCalibration(SpectralLibrary):
         column_names = [columns_intensity, columns_mz]
 
         hdf5.write_file(data_sets, hdf5_path, data_set_names, column_names)
+
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -117,8 +133,10 @@ class CeCalibration(SpectralLibrary):
         self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(CE_RANGE, nrow)
         self.alignment_library.spectra_data.reset_index(inplace=True)
 
+
     def _predict_alignment(self):
         self.grpc_predict(self.alignment_library)
+
 
     def _alignment(self):
         """
@@ -134,12 +152,12 @@ class CeCalibration(SpectralLibrary):
 
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
 
+
     def _get_best_ce(self):
         """
         Get aligned ce for this lib.
         """
         self.best_ce = self.ce_alignment.idxmax()
-
 
     def perform_alignment(self):
         self.gen_lib()
