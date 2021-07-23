@@ -28,8 +28,10 @@ class ReScore(CeCalibration):
         get all percolator metrics and add it to library
         """
 
-        perc_features = Percolator(self.library.get_meta_data, self.library.get_matrix(FragmentType.PRED), self.library.get_matrix(FragmentType.RAW),
-                                    'Prosit')
+        perc_features = Percolator(self.library.get_meta_data(),
+                                   self.library.get_matrix(FragmentType.PRED),
+                                   self.library.get_matrix(FragmentType.RAW),
+                                   'Prosit')
         perc_features.calc()
         return perc_features.metrics_val
 
