@@ -173,9 +173,10 @@ if __name__ == "main":
     ce_cal = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
                       raw_path = "D:/Compmass/workDir/HCD_OT/190416_FPTMT_MS3_HCDOT_R1.mzml")
     df_search = ce_cal._load_search()
-    raw_files = df_search['RAW_FILE'].unique()
+    grouped_search = df_search.groupby('RAW_FILE')
+    raw_files = grouped_search.groups.keys()
     ce_cal_raw = {}
     for raw_file in raw_files:
-        ce_cal_raw[raw_file] = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
-                          raw_path = "D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
-        ce_cal_raw[raw_file].perform_alignment(df_search)
+        ce_cal_raw[raw_file] = CeCalibration(search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
+                                             raw_path="D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
+        ce_cal_raw[raw_file].perform_alignment(grouped_search.get_group(raw_file))
