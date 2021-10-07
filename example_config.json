@@ -2,7 +2,7 @@
   "jobType": "CeCalibration",
   "fileUploads": {
     "search_type": "maxquant",
-    "raw_type": "mzml",
+    "raw_type": "raw",
     "fasta": false,
     "peptides.csv": true
   },
@@ -14,8 +14,8 @@
     "charges": false
   },
   "models":{
-      "intensity": "Prosit_2019_intensity",
-      "irt": "Prosit_2019_irt",
+      "intensity": "Prosit_2020_intensityTMT",
+      "irt": "Prosit_2020_irt_TMT",
       "proteotypicity": "Prosit_2020_proteotypicity"
   },
   "spectralLibraryOutputFormat": "msp",

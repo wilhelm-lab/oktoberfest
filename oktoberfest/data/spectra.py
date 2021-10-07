@@ -3,6 +3,7 @@ import scipy
 from scipy.sparse import coo_matrix, spmatrix
 from enum import Enum
 import numpy as np
+import fundamentals.constants as C
 
 
 class FragmentType(Enum):
@@ -35,9 +36,10 @@ class Spectra:
 
     @staticmethod
     def _resolve_prefix(fragment_type):
-        if fragment_type is FragmentType.PRED:
+        print(fragment_type)
+        if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
-        elif fragment_type is FragmentType.RAW:
+        elif fragment_type.value == 2:
             prefix = Spectra.INTENSITY_COLUMN_PREFIX
         else:
             prefix = Spectra.MZ_COLUMN_PREFIX
@@ -61,7 +63,7 @@ class Spectra:
 
         return self.spectra_data[meta_data_columns]
 
-    def add_matrix(self, intensity_data, fragment_type=FragmentType.PRED):
+    def add_matrix(self, intensity_data, fragment_type):
         """
         concat intensity df as a sparse matrix to our data
         :param intensity_data: Intensity numpy array to add
@@ -83,7 +85,7 @@ class Spectra:
         intensity_df.columns = columns
         self.add_columns(intensity_df)
 
-    def get_matrix(self, fragment_type=FragmentType.PRED, return_column_names=False) -> spmatrix:
+    def get_matrix(self, fragment_type, return_column_names=False) -> spmatrix:
         """
         Get intensities sparse matrix from dataframe.
         :param fragment_type: choose predicted, raw, or mz
@@ -91,6 +93,7 @@ class Spectra:
         """
 
         prefix = Spectra._resolve_prefix(fragment_type)
+        print(prefix)
         columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
         if return_column_names:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select

@@ -51,23 +51,38 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server='10.152.171.58:8500',
+        predictor = PROSITpredictor(server='10.152.171.58:8500')
                                     #path_to_ca_certificate=CERTIFICATES['CA'],
                                     #path_to_certificate=CERTIFICATES['USER'],
                                     #path_to_key_certificate=CERTIFICATES['KEY'],
-                                    keepalive_timeout_ms=10000)
+                                    #keepalive_timeout_ms=10000)
 
         models_dict = self.config['models']
         models = []
+        tmt_model = False
         for key, value in models_dict.items():
             if value:
+                if 'TMT' in value:
+                    tmt_model = True
                 models.append(value)
+        print(models)
+        if tmt_model:
+            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
+                lambda x: x[12:])
+            predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
+                                            charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
+                                            collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
+                                            fragmentation= library.spectra_data["FRAGMENTATION"].values,
+                                            models=models,
+                                            disable_progress_bar=True)
+        else:
+            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
+            predictions = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
+                                            charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
+                                            collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
+                                            models=models,
+                                            disable_progress_bar=True)
 
-        predictions = predictor.predict(sequences=library.spectra_data["MODIFIED_SEQUENCE"].values.tolist(),
-                                        charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
-                                        collision_energies=library.spectra_data["COLLISION_ENERGY"].values,
-                                        models=models,
-                                        disable_progress_bar=True)
 
     #     return predictions
     #
@@ -75,7 +90,7 @@ class SpectralLibrary:
         #Return only in spectral library generation otherwise add to library
         if self.config['jobType'] == "SpectralLibraryGeneration":
             return predictions
-
+        print(predictions[models[0]])
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
         #return intensities_pred

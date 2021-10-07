@@ -37,6 +37,7 @@ class CeCalibration(SpectralLibrary):
         super().__init__(search_path)
         self.search_path = search_path
         self.raw_path = raw_path
+        self.best_ce = 0
 
 
     def _gen_internal_search_result_from_msms(self):
@@ -77,13 +78,13 @@ class CeCalibration(SpectralLibrary):
         return ThermoRaw.read_mzml(self.raw_path)
 
 
-    def gen_lib(self):
+    def gen_lib(self, df_search):
         """
         Read input search and raw and add it to library
         """
-        df_search = self._load_search()
+        #df_search = self._load_search()
         df_raw = self._load_rawfile()
-
+        #return df_search
         logger.info("Merging rawfile and search result")
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
@@ -91,7 +92,7 @@ class CeCalibration(SpectralLibrary):
         logger.info("Annotating raw spectra")
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
-
+        #return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")
         self.library.add_columns(df_join)
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
@@ -146,7 +147,8 @@ class CeCalibration(SpectralLibrary):
         """
         pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
         raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
-
+        #print(pred_intensity.toarray())
+        #return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity,raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity)
 
@@ -159,8 +161,8 @@ class CeCalibration(SpectralLibrary):
         """
         self.best_ce = self.ce_alignment.idxmax()
 
-    def perform_alignment(self):
-        self.gen_lib()
+    def perform_alignment(self, df_search):        
+        self.gen_lib(df_search)
         self.write_metadata_annotation()
         self._prepare_alignment_df()
         self._predict_alignment()
@@ -168,4 +170,12 @@ class CeCalibration(SpectralLibrary):
         self._get_best_ce()
 
 if __name__ == "main":
-    pass
+    ce_cal = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
+                      raw_path = "D:/Compmass/workDir/HCD_OT/190416_FPTMT_MS3_HCDOT_R1.mzml")
+    df_search = ce_cal._load_search()
+    raw_files = df_search['RAW_FILE'].unique()
+    ce_cal_raw = {}
+    for raw_file in raw_files:
+        ce_cal_raw[raw_file] = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
+                          raw_path = "D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
+        ce_cal_raw[raw_file].perform_alignment(df_search)
