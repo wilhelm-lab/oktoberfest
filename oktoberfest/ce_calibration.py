@@ -97,7 +97,7 @@ class CeCalibration(SpectralLibrary):
         self.library.add_columns(df_join)
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"],FragmentType.MZ)
-
+        self.library.add_column(df_annotated_spectra['CALCULATED_MASS'],'CALCULATED_MASS')
 
     def write_metadata_annotation(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
