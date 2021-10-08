@@ -69,7 +69,7 @@ class CeCalibration(SpectralLibrary):
         switch = self.config["fileUploads"]["raw_type"]
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
-            ThermoRaw.convert_raw_mzml(self.raw_path)
+            self._gen_mzml_from_thermo()
         elif switch == "mzml":
             pass
         else:
@@ -130,7 +130,7 @@ class CeCalibration(SpectralLibrary):
         # Repeat dataframe for each CE
         CE_RANGE = range(18,50)
         nrow = len(self.alignment_library.spectra_data)
-        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in CE_RANGE])
+        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in CE_RANGE], axis=0)
         self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(CE_RANGE, nrow)
         self.alignment_library.spectra_data.reset_index(inplace=True)
 
@@ -160,6 +160,7 @@ class CeCalibration(SpectralLibrary):
         Get aligned ce for this lib.
         """
         self.best_ce = self.ce_alignment.idxmax()
+        logger.info(f"Best collision energy: {self.best_ce}")
 
     def perform_alignment(self, df_search):        
         self.gen_lib(df_search)

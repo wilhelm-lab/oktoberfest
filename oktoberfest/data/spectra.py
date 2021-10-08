@@ -1,9 +1,13 @@
+import logging
+from enum import Enum
+
 import pandas as pd
 import scipy
 from scipy.sparse import coo_matrix, spmatrix
-from enum import Enum
 import numpy as np
 import fundamentals.constants as C
+
+logger = logging.getLogger(__name__)
 
 
 class FragmentType(Enum):
@@ -36,7 +40,7 @@ class Spectra:
 
     @staticmethod
     def _resolve_prefix(fragment_type):
-        print(fragment_type)
+        logger.debug(fragment_type)
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
@@ -93,7 +97,7 @@ class Spectra:
         """
 
         prefix = Spectra._resolve_prefix(fragment_type)
-        print(prefix)
+        logger.debug(prefix)
         columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
         if return_column_names:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select

@@ -3,6 +3,7 @@ import time
 from .ce_calibration import CeCalibration
 from .re_score import ReScore
 
+
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

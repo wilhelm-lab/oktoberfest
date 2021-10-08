@@ -65,7 +65,7 @@ class SpectralLibrary:
                 if 'TMT' in value:
                     tmt_model = True
                 models.append(value)
-        print(models)
+        #print(models)
         if tmt_model:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[12:])
@@ -90,7 +90,7 @@ class SpectralLibrary:
         #Return only in spectral library generation otherwise add to library
         if self.config['jobType'] == "SpectralLibraryGeneration":
             return predictions
-        print(predictions[models[0]])
+        #print(predictions[models[0]])
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
         #return intensities_pred
