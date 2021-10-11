@@ -31,7 +31,7 @@ def integration_test_1():
 
 def integration_test_2():
     search_dir = "/media/processing_results/bierdimpfl/workDir/627"
-    msms_path = os.path.join(search_dir, "msms_filtered.txt")
+    msms_path = os.path.join(search_dir, "msms.txt")
     re_score = ReScore(search_path = msms_path,
                        raw_path = search_dir)
     re_score.get_raw_files()

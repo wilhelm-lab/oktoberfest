@@ -11,6 +11,15 @@ from .calculate_features import CalculateFeatures
 logger = logging.getLogger(__name__)
 
 
+def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path):
+    logger.info(f"Calculating features for {raw_file_path}")
+    features = CalculateFeatures(search_path = "",
+                      raw_path = raw_file_path)
+    df_search = pd.read_csv(split_msms_path, delimiter = '\t')
+    features.predict_with_aligned_ce(df_search)
+    features.gen_perc_metrics(percolator_input_path)
+
+
 class ReScore(CalculateFeatures):
     """
         main to init a re-score obj and go through the steps:
@@ -59,22 +68,29 @@ class ReScore(CalculateFeatures):
         
         open(split_msms_done_file, 'w').close()
     
-    def calculate_features(self):
+    def calculate_features(self, num_threads = 6):
+        if num_threads > 1:
+            from . import multiprocessing_pool as pool
+            processingPool = pool.MyPool(processes = num_threads)
+
         for raw_file in self.raw_files:
             raw_file_path = os.path.join(self.raw_path, raw_file)
             percolator_input_path = self._get_split_prosit_path(raw_file)
+            split_msms_path = self._get_split_msms_path(raw_file)
             
             if not os.path.isfile(percolator_input_path):
-                logger.info(f"Calculating features for {raw_file}")
-                features = CalculateFeatures(search_path = "",
-                                  raw_path = raw_file_path)
-                df_search = pd.read_csv(self._get_split_msms_path(raw_file), delimiter = '\t')
-                features.predict_with_aligned_ce(df_search)
-                features.gen_perc_metrics(percolator_input_path)
+                if num_threads > 1:
+                    processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path))
+                else:
+                    calculate_features_single(raw_file_path, split_msms_path, percolator_input_path)
             else:
                 logger.info(f"Found percolator input file {percolator_input_path} for raw file {raw_file}, skipping feature calculation.")
-        
+            
+        if num_threads > 1:
+            processingPool.checkPool(printProgressEvery = 1)
+
     def merge_input(self, merged_input_path: str):
+        logger.info(f"Merging percolator input files")
         with open(merged_input_path, "wb") as fout:
             first = True
             for percolator_input_path in map(self._get_split_prosit_path, self.raw_files):
@@ -101,8 +117,9 @@ class ReScore(CalculateFeatures):
         decoy_peptides = os.path.join(output_path, f"{search_type}_decoy.peptides")
         log_file = os.path.join(output_path, f"{search_type}.log")
         
-        # TODO: add number of threads as a parameter, otherwise it will use the default maximum of 3
+        # TODO: read number of threads from config file, otherwise percolator will use the default maximum of 3
         cmd = f"percolator --weights {weights_file} \
+                          --num-threads 6 \
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
