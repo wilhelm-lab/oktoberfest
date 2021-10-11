@@ -16,8 +16,6 @@ class CalculateFeatures(CeCalibration):
         1- predict_with_aligned_ce
         2- gen_perc_metrics
     """
-    percolator: pd.DataFrame
-
     def predict_with_aligned_ce(self, df_search):
         """
         Get best ce with ce_calibration then use it for prediction.

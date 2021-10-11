@@ -33,8 +33,8 @@ class CeCalibration(SpectralLibrary):
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path):
-        super().__init__(search_path)
+    def __init__(self, search_path, raw_path, config_path=None):
+        super().__init__(search_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.best_ce = 0

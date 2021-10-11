@@ -10,8 +10,9 @@ from prosit_grpc.predictPROSIT import PROSITpredictor
 from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 
-def read_config():
-    with open(CONFIG_PATH) as f:
+
+def read_config(config_path):
+    with open(config_path) as f:
         data = json.load(f)
     return data
 
@@ -26,11 +27,15 @@ class SpectralLibrary:
     path: str
     library: Spectra
     config: dict
+    num_threads: int
 
-    def __init__(self, path):
+    def __init__(self, path, config_path=None):
         self.path = path
         self.library = Spectra()
-        self.config = read_config()
+        if config_path:
+            self.config = read_config(config_path)
+        else:
+            self.config = read_config(CONFIG_PATH)
 
     def gen_lib(self):
         """
@@ -51,7 +56,7 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server='10.152.171.58:8500')
+        predictor = PROSITpredictor(server=self.config['prosit_server'])
                                     #path_to_ca_certificate=CERTIFICATES['CA'],
                                     #path_to_certificate=CERTIFICATES['USER'],
                                     #path_to_key_certificate=CERTIFICATES['KEY'],
@@ -65,8 +70,9 @@ class SpectralLibrary:
                 if 'TMT' in value:
                     tmt_model = True
                 models.append(value)
-        #print(models)
+
         if tmt_model:
+            # TODO: find better way instead of hard coded x[12:]
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[12:])
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
@@ -83,17 +89,13 @@ class SpectralLibrary:
                                             models=models,
                                             disable_progress_bar=True)
 
-
-    #     return predictions
-    #
-    # def somefunc():
         #Return only in spectral library generation otherwise add to library
         if self.config['jobType'] == "SpectralLibraryGeneration":
             return predictions
-        #print(predictions[models[0]])
+
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
-        #return intensities_pred
+
         library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
         irt_pred = predictions[models[1]]
         library.add_column(irt_pred, 'PREDICTED_IRT')
@@ -102,7 +104,6 @@ class SpectralLibrary:
             proteotypicity_pred = predictions[models[2]]
             library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
-
-
     def read_fasta(self):
         pass
+

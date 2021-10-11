@@ -32,17 +32,15 @@ def integration_test_1():
 def integration_test_2():
     search_dir = "/media/processing_results/bierdimpfl/workDir/627"
     msms_path = os.path.join(search_dir, "msms.txt")
-    re_score = ReScore(search_path = msms_path,
-                       raw_path = search_dir)
+    config_path = os.path.join(search_dir, "config_new.json")
+    re_score = ReScore(search_path=msms_path,
+                       raw_path=search_dir,
+                       config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
     re_score.calculate_features()
-    merged_input_path = os.path.join(search_dir, "prosit.tab")
-    re_score.merge_input(merged_input_path)
-    
-    #output_path = "/root/data/out/percolator/"
-    output_path = os.path.join(search_dir, "percolator_new")    
-    re_score.rescore_with_perc(merged_input_path, output_path)
+    re_score.merge_input()
+    re_score.rescore_with_perc()
 
 
 if __name__ == "__main__":

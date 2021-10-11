@@ -5,7 +5,7 @@ import signal
 import warnings
 from multiprocessing import Pool
 
-class MyPool:
+class JobPool:
   def __init__(self, processes = 1, warningFilter = "default"):
     self.warningFilter = warningFilter
     self.pool = Pool(processes, self.initWorker)
@@ -47,7 +47,7 @@ def addOne(i):
   return i+1
 
 def unitTest():
-  pool = MyPool(4)
+  pool = JobPool(4)
   for i in range(20):
     pool.applyAsync(addOne, [i])
   results = pool.checkPool()
