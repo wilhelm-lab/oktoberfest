@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import json
 import os
 
 from .data.spectra import Spectra
@@ -9,12 +8,7 @@ from prosit_io.file import csv
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
-
-
-def read_config(config_path):
-    with open(config_path) as f:
-        data = json.load(f)
-    return data
+from .utils.config import Config
 
 
 class SpectralLibrary:
@@ -27,21 +21,24 @@ class SpectralLibrary:
     path: str
     library: Spectra
     config: dict
+    config_path: str
     num_threads: int
 
     def __init__(self, path, config_path=None):
         self.path = path
         self.library = Spectra()
+        self.config_path = config_path
+        self.config = Config()
         if config_path:
-            self.config = read_config(config_path)
+            self.config.read(config_path)
         else:
-            self.config = read_config(CONFIG_PATH)
+            self.config.read(CONFIG_PATH)
 
     def gen_lib(self):
         """
         Read input csv file and add it to library
         """
-        if self.config['fileUploads']['fasta']:
+        if self.config.get_fasta():
             self.read_fasta()
         else:
             for root, dirs, files in os.walk(self.path):
@@ -56,13 +53,13 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server=self.config['prosit_server'])
+        predictor = PROSITpredictor(server=self.config.get_prosit_server())
                                     #path_to_ca_certificate=CERTIFICATES['CA'],
                                     #path_to_certificate=CERTIFICATES['USER'],
                                     #path_to_key_certificate=CERTIFICATES['KEY'],
                                     #keepalive_timeout_ms=10000)
 
-        models_dict = self.config['models']
+        models_dict = self.config.get_models()
         models = []
         tmt_model = False
         for key, value in models_dict.items():
@@ -90,7 +87,7 @@ class SpectralLibrary:
                                             disable_progress_bar=True)
 
         #Return only in spectral library generation otherwise add to library
-        if self.config['jobType'] == "SpectralLibraryGeneration":
+        if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions
 
         intensities_pred = pd.DataFrame()

@@ -13,10 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 # This function cannot be a function inside ReScore since the multiprocessing pool does not work with class member functions
-def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, calc_feature_step):
+def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, config_path, calc_feature_step):
     logger.info(f"Calculating features for {raw_file_path}")
-    features = CalculateFeatures(search_path = "",
-                      raw_path = raw_file_path)
+    features = CalculateFeatures(search_path="",
+                                 raw_path=raw_file_path,
+                                 config_path=config_path)
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics(percolator_input_path)
@@ -53,7 +54,7 @@ class ReScore(CalculateFeatures):
             self.raw_files = [self.raw_path]
             self.raw_path = os.path.dirname(self.raw_path)
         elif os.path.isdir(self.raw_path):
-            switch = self.config["fileUploads"]["raw_type"]
+            switch = self.config.get_raw_type()
             if switch == "thermo":
                 extension = ".raw"
             elif switch == "mzml":
@@ -71,6 +72,10 @@ class ReScore(CalculateFeatures):
         if self.split_msms_step.is_done():
             return
         
+        msms_path = self.get_msms_folder_path()
+        if not os.path.isdir(msms_path):
+            os.makedirs(msms_path)
+
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby('RAW_FILE'):
@@ -90,10 +95,14 @@ class ReScore(CalculateFeatures):
         """
         Calculates percolator input features per raw file using multiprocessing
         """
-        num_threads = self._get_num_threads()
+        num_threads = self.config.get_num_threads()
         if num_threads > 1:
             from .utils.multiprocessing_pool import JobPool
             processingPool = JobPool(processes = num_threads)
+        
+        perc_path = self.get_percolator_folder_path()
+        if not os.path.isdir(perc_path):
+            os.makedirs(perc_path)
 
         for raw_file in self.raw_files:
             calc_feature_step = ProcessStep(self.raw_path, "calculate_features." + raw_file)
@@ -105,9 +114,9 @@ class ReScore(CalculateFeatures):
             split_msms_path = self._get_split_msms_path(raw_file)
             
             if num_threads > 1:
-                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, calc_feature_step))
+                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, self.config_path, calc_feature_step))
             else:
-                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, calc_feature_step)
+                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, self.config_path, calc_feature_step)
             
         if num_threads > 1:
             processingPool.checkPool(printProgressEvery = 1)
@@ -142,10 +151,6 @@ class ReScore(CalculateFeatures):
         """
         if self.percolator_step.is_done():
             return
-
-        perc_path = self.get_percolator_folder_path()
-        if not os.path.isdir(perc_path):
-            os.makedirs(perc_path)
         
         weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
         target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
@@ -155,7 +160,7 @@ class ReScore(CalculateFeatures):
         log_file = os.path.join(perc_path, f"{search_type}.log")
 
         cmd = f"percolator --weights {weights_file} \
-                          --num-threads {self._get_num_threads()} \
+                          --num-threads {self.config.get_num_threads()} \
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
@@ -185,9 +190,5 @@ class ReScore(CalculateFeatures):
     def _get_merged_perc_input_path(self):
         return os.path.join(self.get_percolator_folder_path(), 'prosit.tab')
     
-    def _get_num_threads(self):
-        if "numThreads" in config:
-            return config["numThreads"]
-        else:
-            return 1
+    
 
