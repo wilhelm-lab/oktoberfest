@@ -47,7 +47,8 @@ def run_oktoberfest(search_dir, config_path):
         config_path = os.path.join(search_dir, "config.json")
     
     re_score = ReScore(search_path=msms_path,
-                       raw_path=search_dir)
+                       raw_path=search_dir,
+                       config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
     re_score.calculate_features()

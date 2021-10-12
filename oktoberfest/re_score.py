@@ -45,6 +45,9 @@ class ReScore(CalculateFeatures):
         self.percolator_step = ProcessStep(raw_path, "percolator")
 
     def get_raw_files(self):
+        """
+        Obtains raw files by scanning through the raw_path directory. If raw_path is a file, only process this one.
+        """
         self.raw_files = []
         if os.path.isfile(self.raw_path):
             self.raw_files = [self.raw_path]
@@ -61,22 +64,10 @@ class ReScore(CalculateFeatures):
             self.raw_files = [os.path.basename(f) for f in os.listdir(self.raw_path) if f.lower().endswith(extension)]
             logger.info(f"Found {len(self.raw_files)} raw files in the search directory")
         
-    def get_msms_folder_path(self):
-        return os.path.join(self.raw_path, "msms")
-    
-    def _get_split_msms_path(self, raw_file: str):
-        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".txt")
-
-    def get_percolator_folder_path(self):
-        return os.path.join(self.raw_path, "percolator")
-    
-    def _get_split_perc_input_path(self, raw_file: str):
-        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '.tab')
-    
-    def _get_merged_perc_input_path(self):
-        return os.path.join(self.get_percolator_folder_path(), 'prosit.tab')
-    
     def split_msms(self):
+        """
+        Splits msms.txt file per raw file such that we can process each raw file in parallel without reading the entire msms.txt
+        """
         if self.split_msms_step.is_done():
             return
         
@@ -96,7 +87,10 @@ class ReScore(CalculateFeatures):
         self.split_msms_step.mark_done()
     
     def calculate_features(self):
-        num_threads = self.config['numThreads']
+        """
+        Calculates percolator input features per raw file using multiprocessing
+        """
+        num_threads = self._get_num_threads()
         if num_threads > 1:
             from .utils.multiprocessing_pool import JobPool
             processingPool = JobPool(processes = num_threads)
@@ -119,6 +113,10 @@ class ReScore(CalculateFeatures):
             processingPool.checkPool(printProgressEvery = 1)
 
     def merge_input(self):
+        """
+        Merges percolator input files into one large file for combined percolation.
+        Fastest solution according to: https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
+        """
         if self.merge_input_step.is_done():
             return
         
@@ -157,7 +155,7 @@ class ReScore(CalculateFeatures):
         log_file = os.path.join(perc_path, f"{search_type}.log")
 
         cmd = f"percolator --weights {weights_file} \
-                          --num-threads {self.config['numThreads']} \
+                          --num-threads {self._get_num_threads()} \
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
@@ -171,4 +169,25 @@ class ReScore(CalculateFeatures):
         subprocess.run(cmd, shell=True, check=True)
         
         self.percolator_step.mark_done()
+    
+    def get_msms_folder_path(self):
+        return os.path.join(self.raw_path, "msms")
+    
+    def _get_split_msms_path(self, raw_file: str):
+        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".txt")
+
+    def get_percolator_folder_path(self):
+        return os.path.join(self.raw_path, "percolator")
+    
+    def _get_split_perc_input_path(self, raw_file: str):
+        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '.tab')
+    
+    def _get_merged_perc_input_path(self):
+        return os.path.join(self.get_percolator_folder_path(), 'prosit.tab')
+    
+    def _get_num_threads(self):
+        if "numThreads" in config:
+            return config["numThreads"]
+        else:
+            return 1
 
