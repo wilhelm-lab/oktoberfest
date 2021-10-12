@@ -13,13 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 # This function cannot be a function inside ReScore since the multiprocessing pool does not work with class member functions
-def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path):
+def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, calc_feature_step):
     logger.info(f"Calculating features for {raw_file_path}")
     features = CalculateFeatures(search_path = "",
                       raw_path = raw_file_path)
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics(percolator_input_path)
+    
+    calc_feature_step.mark_done()
 
 
 class ReScore(CalculateFeatures):
@@ -109,11 +111,9 @@ class ReScore(CalculateFeatures):
             split_msms_path = self._get_split_msms_path(raw_file)
             
             if num_threads > 1:
-                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path))
+                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, calc_feature_step))
             else:
-                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path)
-
-            calc_feature_step.mark_done()
+                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, calc_feature_step)
             
         if num_threads > 1:
             processingPool.checkPool(printProgressEvery = 1)

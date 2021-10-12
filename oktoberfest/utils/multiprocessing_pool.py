@@ -33,6 +33,11 @@ class JobPool:
       self.pool.terminate()
       self.pool.join()
       sys.exit()
+    except Exception:
+      print("Caught Unknown exception, terminating workers")
+      self.pool.terminate()
+      self.pool.join()
+      sys.exit()
 
 
 def init_worker(warningFilter):
