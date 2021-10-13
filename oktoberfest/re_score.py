@@ -152,6 +152,7 @@ class ReScore(CalculateFeatures):
         if self.percolator_step.is_done():
             return
         
+        perc_path = self.get_percolator_folder_path()
         weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
         target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
         decoy_psms = os.path.join(perc_path, f"{search_type}_decoy.psms")

@@ -9,6 +9,7 @@ Written by
 - Wassim Gabriel (wassim.gabriel@tum.de),
 - Ludwig Lautenbacher (ludwig.lautenbacher@tum.de),
 - Matthew The (matthew.the@tum.de),
+- Mario Picciani (mario.picciani@in.tum.de),
 - Firas Hamood (firas.hamood@tum.de),
 - Cecilia Jensen (cecilia.jensen@tum.de)
 at the Technical University of Munich.'''
