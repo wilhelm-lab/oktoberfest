@@ -14,7 +14,6 @@ from fundamentals.metrics.similarity import SimilarityMetrics
 from .spectral_library import SpectralLibrary
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
-from prosit_io.file import hdf5
 
 import logging
 logger = logging.getLogger(__name__)
@@ -98,19 +97,13 @@ class CeCalibration(SpectralLibrary):
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"],FragmentType.MZ)
         self.library.add_column(df_annotated_spectra['CALCULATED_MASS'],'CALCULATED_MASS')
-
-    def write_metadata_annotation(self):
+    
+    def get_hdf5_path(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
-        hdf5_path = self.raw_path+'.hdf5'
-        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
+        return os.path.splitext(self.raw_path)[0] + '.hdf5'
 
-        sparse_matrix_intensity_raw, columns_intensity = self.library.get_matrix(FragmentType.RAW, True)
-        sparse_matrix_mz, columns_mz = self.library.get_matrix(FragmentType.MZ, True)
-        data_sets = [self.library.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz]
-        column_names = [columns_intensity, columns_mz]
-
-        hdf5.write_file(data_sets, hdf5_path, data_set_names, column_names)
-
+    def write_metadata_annotation(self):        
+        self.library.write_as_hdf5(self.get_hdf5_path())
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -162,9 +155,14 @@ class CeCalibration(SpectralLibrary):
         self.best_ce = self.ce_alignment.idxmax()
         logger.info(f"Best collision energy: {self.best_ce}")
 
-    def perform_alignment(self, df_search):        
-        self.gen_lib(df_search)
-        self.write_metadata_annotation()
+    def perform_alignment(self, df_search):
+        hdf5_path = self.get_hdf5_path()
+        logger.info(f"Path to hdf5 file with annotations for {self.raw_path}: {hdf5_path}")
+        if os.path.isfile(hdf5_path):
+            self.library.read_from_hdf5(hdf5_path)
+        else:
+            self.gen_lib(df_search)
+            self.write_metadata_annotation()
         self._prepare_alignment_df()
         self._predict_alignment()
         self._alignment()

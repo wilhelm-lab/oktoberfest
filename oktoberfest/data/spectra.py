@@ -6,6 +6,7 @@ import scipy
 from scipy.sparse import coo_matrix, spmatrix
 import numpy as np
 import fundamentals.constants as C
+from prosit_io.file import hdf5
 
 logger = logging.getLogger(__name__)
 
@@ -103,3 +104,19 @@ class Spectra:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
         # Check if conversion is low change to coo then csr from coo
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
+    
+    def write_as_hdf5(self, output_file):
+        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
+
+        sparse_matrix_intensity_raw, columns_intensity = self.get_matrix(FragmentType.RAW, True)
+        sparse_matrix_mz, columns_mz = self.get_matrix(FragmentType.MZ, True)
+        data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz]
+        column_names = [columns_intensity, columns_mz]
+
+        hdf5.write_file(data_sets, output_file, data_set_names, column_names)
+    
+    def read_from_hdf5(self, input_file):
+        self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
+        self.add_columns(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"))
+        self.add_columns(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"))
+
