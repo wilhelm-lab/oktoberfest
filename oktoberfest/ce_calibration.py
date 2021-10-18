@@ -74,7 +74,7 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-
+        self.raw_path = self.raw_path.replace('.raw','.mzml')
         return ThermoRaw.read_mzml(self.raw_path)
 
 
@@ -82,7 +82,6 @@ class CeCalibration(SpectralLibrary):
         """
         Read input search and raw and add it to library
         """
-        #df_search = self._load_search()
         df_raw = self._load_rawfile()
         #return df_search
         logger.info("Merging rawfile and search result")
@@ -165,10 +164,10 @@ class CeCalibration(SpectralLibrary):
     def perform_alignment(self, df_search):        
         self.gen_lib(df_search)
         self.write_metadata_annotation()
-        self._prepare_alignment_df()
-        self._predict_alignment()
-        self._alignment()
-        self._get_best_ce()
+        #self._prepare_alignment_df()
+        #self._predict_alignment()
+        #self._alignment()
+        #self._get_best_ce()
 
 if __name__ == "main":
     ce_cal = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
