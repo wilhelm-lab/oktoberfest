@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import json
 import os
 
 from .data.spectra import Spectra
@@ -9,11 +8,7 @@ from prosit_io.file import csv
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
-
-def read_config():
-    with open(CONFIG_PATH) as f:
-        data = json.load(f)
-    return data
+from .utils.config import Config
 
 
 class SpectralLibrary:
@@ -26,17 +21,24 @@ class SpectralLibrary:
     path: str
     library: Spectra
     config: dict
+    config_path: str
+    num_threads: int
 
-    def __init__(self, path):
+    def __init__(self, path, config_path=None):
         self.path = path
         self.library = Spectra()
-        self.config = read_config()
+        self.config_path = config_path
+        self.config = Config()
+        if config_path:
+            self.config.read(config_path)
+        else:
+            self.config.read(CONFIG_PATH)
 
     def gen_lib(self):
         """
         Read input csv file and add it to library
         """
-        if self.config['fileUploads']['fasta']:
+        if self.config.get_fasta():
             self.read_fasta()
         else:
             for root, dirs, files in os.walk(self.path):
@@ -57,7 +59,7 @@ class SpectralLibrary:
                                     path_to_key_certificate=CERTIFICATES['KEY'],
                                     keepalive_timeout_ms=10000)
 
-        models_dict = self.config['models']
+        models_dict = self.config.get_models()
         models = []
         tmt_model = False
         for key, value in models_dict.items():
@@ -65,9 +67,10 @@ class SpectralLibrary:
                 if 'TMT' in value:
                     tmt_model = True
                 models.append(value)
-        #print(models)
+
         if tmt_model:
 
+            # TODO: find better way instead of hard coded x[12:]
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[12:])
             library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
@@ -86,11 +89,13 @@ class SpectralLibrary:
                                             models=models,
                                             disable_progress_bar=True)
 
-        if self.config['jobType'] == "SpectralLibraryGeneration":
+        #Return only in spectral library generation otherwise add to library
+        if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions
+
         intensities_pred = pd.DataFrame()
         intensities_pred['intensity'] = predictions[models[0]]["intensity"].tolist()
-        #return intensities_pred
+
         library.add_matrix(intensities_pred['intensity'], FragmentType.PRED)
         irt_pred = predictions[models[1]]
         library.add_column(irt_pred, 'PREDICTED_IRT')
@@ -99,7 +104,6 @@ class SpectralLibrary:
             proteotypicity_pred = predictions[models[2]]
             library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
-
-
     def read_fasta(self):
         pass
+

@@ -4,8 +4,9 @@ import sys
 import signal
 import warnings
 from multiprocessing import Pool
+import traceback
 
-class MyPool:
+class JobPool:
   def __init__(self, processes = 1, warningFilter = "default"):
     self.warningFilter = warningFilter
     self.pool = Pool(processes, self.initWorker)
@@ -33,6 +34,13 @@ class MyPool:
       self.pool.terminate()
       self.pool.join()
       sys.exit()
+    except Exception as e:
+      print("Caught Unknown exception, terminating workers")
+      print(traceback.print_exc())
+      print(e)
+      self.pool.terminate()
+      self.pool.join()
+      sys.exit()
 
 
 def init_worker(warningFilter):
@@ -47,7 +55,7 @@ def addOne(i):
   return i+1
 
 def unitTest():
-  pool = MyPool(4)
+  pool = JobPool(4)
   for i in range(20):
     pool.applyAsync(addOne, [i])
   results = pool.checkPool()

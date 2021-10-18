@@ -33,8 +33,8 @@ class CeCalibration(SpectralLibrary):
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path):
-        super().__init__(search_path)
+    def __init__(self, search_path, raw_path, config_path=None):
+        super().__init__(search_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.best_ce = 0
@@ -53,7 +53,7 @@ class CeCalibration(SpectralLibrary):
 
 
     def _load_search(self):
-        switch = self.config["fileUploads"]["search_type"]
+        switch = self.config.get_search_type()
         logger.info(f"search_type is {switch}")
         if switch == "maxquant":
             self._gen_internal_search_result_from_msms()
@@ -66,7 +66,7 @@ class CeCalibration(SpectralLibrary):
 
 
     def _load_rawfile(self):
-        switch = self.config["fileUploads"]["raw_type"]
+        switch = self.config.get_raw_type()
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
             self._gen_mzml_from_thermo()
