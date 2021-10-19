@@ -77,7 +77,7 @@ class Spectra:
         intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
-        intensity_array = intensity_df.values.astype(np.float16).reshape(-1, Spectra.NO_OF_FRAGMENTS)
+        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, Spectra.NO_OF_FRAGMENTS)
 
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
@@ -85,10 +85,25 @@ class Spectra:
         intensity_array[intensity_array == -1] = 0
 
         # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float16)
+        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float32)
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
         self.add_columns(intensity_df)
+
+    def get_columns(self, fragment_type, return_column_names=False) -> spmatrix:
+        """
+        Get intensities sparse matrix from dataframe.
+        :param fragment_type: choose predicted, raw, or mz
+        :return: sparse matrix with the required data
+        """
+
+        prefix = Spectra._resolve_prefix(fragment_type)
+        logger.debug(prefix)
+        columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
+        if return_column_names:
+            return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
+        # Check if conversion is low change to coo then csr from coo
+        return self.spectra_data[columns_to_select]
 
     def get_matrix(self, fragment_type, return_column_names=False) -> spmatrix:
         """

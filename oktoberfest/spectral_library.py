@@ -53,11 +53,11 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server=self.config.get_prosit_server())
-                                    #path_to_ca_certificate=CERTIFICATES['CA'],
-                                    #path_to_certificate=CERTIFICATES['USER'],
-                                    #path_to_key_certificate=CERTIFICATES['KEY'],
-                                    #keepalive_timeout_ms=10000)
+        predictor = PROSITpredictor(server=PROSIT_SERVER,
+                                    path_to_ca_certificate=CERTIFICATES['CA'],
+                                    path_to_certificate=CERTIFICATES['USER'],
+                                    path_to_key_certificate=CERTIFICATES['KEY'],
+                                    keepalive_timeout_ms=10000)
 
         models_dict = self.config.get_models()
         models = []
@@ -69,13 +69,16 @@ class SpectralLibrary:
                 models.append(value)
 
         if tmt_model:
+
             # TODO: find better way instead of hard coded x[12:]
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[12:])
+            library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
+
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
-                                            fragmentation= library.spectra_data["FRAGMENTATION"].values,
+                                            fragmentation= library.spectra_data["FRAGMENTATION_GRPC"].values,
                                             models=models,
                                             disable_progress_bar=True)
         else:
