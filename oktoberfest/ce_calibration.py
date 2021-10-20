@@ -27,15 +27,16 @@ class CeCalibration(SpectralLibrary):
         3- get_best_ce
         4- write output
     """
-    search_path: str
     raw_path: str
+    out_path: str
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path, config_path=None):
+    def __init__(self, search_path, raw_path, out_path, config_path=None):
         super().__init__(search_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
+        self.out_path = out_path
         self.best_ce = 0
 
 
@@ -48,7 +49,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        self.raw_path = raw.convert_raw_mzml(self.raw_path)
+        self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
 
 
     def _load_search(self):
@@ -74,7 +75,7 @@ class CeCalibration(SpectralLibrary):
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
         self.raw_path = self.raw_path.replace('.raw','.mzml')
-        return ThermoRaw.read_mzml(self.raw_path)
+        return ThermoRaw.read_mzml(self.out_path)
 
 
     def gen_lib(self, df_search):
@@ -99,7 +100,7 @@ class CeCalibration(SpectralLibrary):
     
     def get_hdf5_path(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
-        return os.path.splitext(self.raw_path)[0] + '.hdf5'
+        return self.out_path+'.hdf5' '.hdf5'
 
     def write_metadata_annotation(self):        
         self.library.write_as_hdf5(self.get_hdf5_path())

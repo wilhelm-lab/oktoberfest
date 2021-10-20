@@ -16,10 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 # This function cannot be a function inside ReScore since the multiprocessing pool does not work with class member functions
-def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, config_path, calc_feature_step):
+def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, mzml_path, config_path, calc_feature_step):
     logger.info(f"Calculating features for {raw_file_path}")
     features = CalculateFeatures(search_path="",
                                  raw_path=raw_file_path,
+                                 out_path= mzml_path,
                                  config_path=config_path)
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
@@ -43,8 +44,8 @@ class ReScore(CalculateFeatures):
     merge_input_step: ProcessStep
     percolator_step: ProcessStep
     
-    def __init__(self, search_path, raw_path, config_path=None):
-        super().__init__(search_path, raw_path, config_path=config_path)
+    def __init__(self, search_path, raw_path,out_path, config_path=None):
+        super().__init__(search_path, raw_path,out_path, config_path=config_path)
         self.split_msms_step = ProcessStep(raw_path, "split_msms")
         self.merge_input_step = ProcessStep(raw_path, "merge_input")
         self.percolator_step = ProcessStep(raw_path, "percolator")
@@ -120,13 +121,15 @@ class ReScore(CalculateFeatures):
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
+            mzml_file_path = os.path.join(self.raw_path, raw_file.replace('.raw','.mzml'))
+
             percolator_input_path = self._get_split_perc_input_path(raw_file)
             split_msms_path = self._get_split_msms_path(raw_file)
             
             if num_threads > 1:
-                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, self.config_path, calc_feature_step))
+                processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, mzml_file_path, self.config_path, calc_feature_step))
             else:
-                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, self.config_path, calc_feature_step)
+                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, self.out_path, mzml_file_path, calc_feature_step)
             
         if num_threads > 1:
             processingPool.checkPool(printProgressEvery = 1)
@@ -184,41 +187,18 @@ class ReScore(CalculateFeatures):
         logger.info(f"Starting percolator with command {cmd}")
         subprocess.run(cmd, shell=True, check=True)
         pass
-
-
-
-if __name__ == "main":
-    ce_cal = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
-                          raw_path = "D:/Compmass/workDir/HCD_OT/190416_FPTMT_MS3_HCDOT_R1.mzml")
-    df_search = ce_cal._load_search()
-    grouped_search = df_search.groupby('RAW_FILE')
-    raw_files = grouped_search.groups.keys()
-    re_score_raw = {}
-    for raw_file in raw_files:
-        re_score_raw[raw_file] = ReScore(search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
-                                             raw_path="D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
-        msms_raw = grouped_search.get_group(raw_file)
-        msms_raw = msms_raw[~msms_raw['SEQUENCE'].str.contains('U')]
-        msms_raw = msms_raw[msms_raw['PRECURSOR_CHARGE']<=6]
-        re_score_raw[raw_file].predict_with_aligned_ce(msms_raw)
-        re_score_raw[raw_file].percolator = re_score_raw[raw_file].gen_perc_metrics()
-        re_score_raw[raw_file].percolator = re_score_raw.percolator[ReScore.align_percolator_cols()]
-        re_score_raw[raw_file].percolator.to_csv('prosit_' + raw_file +'.tab', sep='\t',index=False)        
-        self.percolator_step.mark_done()
     
     def get_msms_folder_path(self):
-        return os.path.join(self.raw_path, "msms")
-    
+        return os.path.join(self.out_path, "msms")
+
     def _get_split_msms_path(self, raw_file: str):
         return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".prosit")
 
     def get_percolator_folder_path(self):
-        return os.path.join(self.raw_path, "percolator")
-    
+        return os.path.join(self.out_path, "percolator")
+
     def _get_split_perc_input_path(self, raw_file: str):
         return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '.tab')
-    
+
     def _get_merged_perc_input_path(self):
         return os.path.join(self.get_percolator_folder_path(), 'prosit.tab')
-    
-    
