@@ -157,7 +157,7 @@ class CeCalibration(SpectralLibrary):
 
     def perform_alignment(self, df_search):
         hdf5_path = self.get_hdf5_path()
-        logger.info(f"Path to hdf5 file with annotations for {self.raw_path}: {hdf5_path}")
+        logger.info(f"Path to hdf5 file with annotations for {self.out_path}: {hdf5_path}")
         if os.path.isfile(hdf5_path):
             self.library.read_from_hdf5(hdf5_path)
         else:

@@ -117,12 +117,12 @@ class ReScore(CalculateFeatures):
         if not os.path.isdir(perc_path):
             os.makedirs(perc_path)
         for raw_file in self.raw_files:
-            calc_feature_step = ProcessStep(self.raw_path, "calculate_features." + raw_file)
+            calc_feature_step = ProcessStep(self.out_path, "calculate_features." + raw_file)
             if calc_feature_step.is_done():
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
-            mzml_file_path = os.path.join(self.raw_path, raw_file.replace('.raw','.mzml'))
+            mzml_file_path = os.path.join(self.out_path, raw_file.replace('.raw','.mzml'))
 
             percolator_input_path = self._get_split_perc_input_path(raw_file)
             split_msms_path = self._get_split_msms_path(raw_file)
