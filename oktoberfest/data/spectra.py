@@ -62,11 +62,22 @@ class Spectra:
         self.spectra_data = pd.concat([self.spectra_data, columns_data], axis=1)
 
     def get_meta_data(self):
-        columns = self.spectra_data.columns
+        columns = list(self.spectra_data.columns)
         meta_data_columns = list(filter(lambda x: not x.startswith(
             tuple([Spectra.INTENSITY_COLUMN_PREFIX, Spectra.MZ_COLUMN_PREFIX, Spectra.INTENSITY_PRED_PREFIX])), columns))
 
         return self.spectra_data[meta_data_columns]
+    def add_matrix_from_hdf5(self, intensity_data, fragment_type):
+        """
+        concat intensity df as a sparse matrix to our data
+        :param intensity_data: Intensity sparse matrix
+        :param fragment_type: Choose type of fragments predicted or raw
+        """
+        # generate column names and build dataframe from sparse matrix
+        columns = self._gen_column_names(fragment_type)
+        intensity_data.columns = columns
+        self.add_columns(intensity_data)
+
 
     def add_matrix(self, intensity_data, fragment_type):
         """
@@ -132,6 +143,5 @@ class Spectra:
     
     def read_from_hdf5(self, input_file):
         self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
-        self.add_columns(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"))
-        self.add_columns(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"))
-
+        self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
+        self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)

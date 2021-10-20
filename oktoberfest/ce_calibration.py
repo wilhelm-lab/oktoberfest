@@ -100,7 +100,7 @@ class CeCalibration(SpectralLibrary):
     
     def get_hdf5_path(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
-        return self.out_path+'.hdf5' '.hdf5'
+        return self.out_path+'.hdf5'
 
     def write_metadata_annotation(self):        
         self.library.write_as_hdf5(self.get_hdf5_path())
@@ -163,6 +163,11 @@ class CeCalibration(SpectralLibrary):
         else:
             self.gen_lib(df_search)
             self.write_metadata_annotation()
+        #Check if all data is HCD no need to align and return the best ce as 35
+        hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
+        if len(hcd_df.index) == 0:
+            self.best_ce = 35.0
+            return
         self._prepare_alignment_df()
         self._predict_alignment()
         self._alignment()

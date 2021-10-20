@@ -24,6 +24,7 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
                                  config_path=config_path)
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
+    print(features.library.get_meta_data())
     features.gen_perc_metrics(percolator_input_path)
     
     calc_feature_step.mark_done()
@@ -107,7 +108,8 @@ class ReScore(CalculateFeatures):
         """
         Calculates percolator input features per raw file using multiprocessing
         """
-        num_threads = self.config.get_num_threads()
+        #num_threads = self.config.get_num_threads()
+        num_threads = 1
         if num_threads > 1:
             from .utils.multiprocessing_pool import JobPool
             processingPool = JobPool(processes = num_threads)
@@ -129,7 +131,7 @@ class ReScore(CalculateFeatures):
             if num_threads > 1:
                 processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, mzml_file_path, self.config_path, calc_feature_step))
             else:
-                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, self.out_path, mzml_file_path, calc_feature_step)
+                calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, mzml_file_path, self.config_path, calc_feature_step)
             
         if num_threads > 1:
             processingPool.checkPool(printProgressEvery = 1)
