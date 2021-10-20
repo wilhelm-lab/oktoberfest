@@ -108,8 +108,7 @@ class ReScore(CalculateFeatures):
         """
         Calculates percolator input features per raw file using multiprocessing
         """
-        #num_threads = self.config.get_num_threads()
-        num_threads = 1
+        num_threads = self.config.get_num_threads()
         if num_threads > 1:
             from .utils.multiprocessing_pool import JobPool
             processingPool = JobPool(processes = num_threads)
