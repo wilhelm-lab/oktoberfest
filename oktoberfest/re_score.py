@@ -172,7 +172,7 @@ class ReScore(CalculateFeatures):
             self.merge_input_step_andromeda.mark_done()
 
     
-    def rescore_with_perc(self, search_type: str = "prosit", 
+    def rescore_with_perc(self, search_type: str = "Prosit",
                           test_fdr: float = 0.01, train_fdr: float = 0.01):
         """
         Use percolator to re-score library.
@@ -198,7 +198,7 @@ class ReScore(CalculateFeatures):
                           --decoy-results-psms {decoy_psms} \
                           --results-peptides {target_peptides} \
                           --decoy-results-peptides {decoy_peptides} \
-                          {self._get_merged_perc_input_path()} 2> {log_file}"
+                          {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
         logger.info(f"Starting percolator with command {cmd}")
         subprocess.run(cmd, shell=True, check=True)
         pass
