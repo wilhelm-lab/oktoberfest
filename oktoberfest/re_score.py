@@ -25,7 +25,9 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
     print(features.library.get_meta_data())
-    features.gen_perc_metrics(percolator_input_path)
+    features.gen_perc_metrics('Prosit', percolator_input_path)
+    features.gen_perc_metrics('Andromeda', percolator_input_path.replace('Prosit','Andromeda'))
+
     
     calc_feature_step.mark_done()
 
@@ -42,13 +44,15 @@ class ReScore(CalculateFeatures):
     raw_files: List[str]
 
     split_msms_step: ProcessStep
-    merge_input_step: ProcessStep
+    merge_input_step_prosit: ProcessStep
+    merge_input_step_andromeda: ProcessStep
     percolator_step: ProcessStep
     
     def __init__(self, search_path, raw_path,out_path, config_path=None):
         super().__init__(search_path, raw_path,out_path, config_path=config_path)
         self.split_msms_step = ProcessStep(raw_path, "split_msms")
-        self.merge_input_step = ProcessStep(raw_path, "merge_input")
+        self.merge_input_step_prosit = ProcessStep(raw_path, "merge_input_prosit")
+        self.merge_input_step_andromeda = ProcessStep(raw_path, "merge_input_andromeda")
         self.percolator_step = ProcessStep(raw_path, "percolator")
 
     def get_raw_files(self):
@@ -124,7 +128,7 @@ class ReScore(CalculateFeatures):
             raw_file_path = os.path.join(self.raw_path, raw_file)
             mzml_file_path = os.path.join(self.out_path, raw_file.replace('.raw','.mzml'))
 
-            percolator_input_path = self._get_split_perc_input_path(raw_file)
+            percolator_input_path = self._get_split_perc_input_path(raw_file, 'Prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
             
             if num_threads > 1:
@@ -135,28 +139,38 @@ class ReScore(CalculateFeatures):
         if num_threads > 1:
             processingPool.checkPool(printProgressEvery = 1)
 
-    def merge_input(self):
+    def merge_input(self, type: str):
         """
         Merges percolator input files into one large file for combined percolation.
         Fastest solution according to: https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
+        type: choose either prosit or andromeda to merge percolator files for this.
         """
-        if self.merge_input_step.is_done():
-            return
+        if type == 'Prosit':
+            if self.merge_input_step_prosit.is_done():
+                return
+        else:
+            if self.merge_input_step_andromeda.is_done():
+                return
         
-        merged_perc_input_file = self._get_merged_perc_input_path()
+        merged_perc_input_file_prosit = self._get_merged_perc_input_path(type)
 
-        logger.info(f"Merging percolator input files")
-        with open(merged_perc_input_file, "wb") as fout:
+        logger.info(f"Merging percolator input files for " + type)
+        with open(merged_perc_input_file_prosit, "wb") as fout:
             first = True
-            for percolator_input_path in map(self._get_split_perc_input_path, self.raw_files):
+            for raw_file in self.raw_files:
+                percolator_input_path = self._get_split_perc_input_path(raw_file, type)
                 with open(percolator_input_path, "rb") as f:
                     if not first:
                         next(f) # skip the header
                     else:
                         first = False
                     fout.write(f.read())
-        
-        self.merge_input_step.mark_done()
+
+        if type == 'Prosit':
+            self.merge_input_step_prosit.mark_done()
+        else:
+            self.merge_input_step_andromeda.mark_done()
+
     
     def rescore_with_perc(self, search_type: str = "prosit", 
                           test_fdr: float = 0.01, train_fdr: float = 0.01):
@@ -198,8 +212,9 @@ class ReScore(CalculateFeatures):
     def get_percolator_folder_path(self):
         return os.path.join(self.out_path, "percolator")
 
-    def _get_split_perc_input_path(self, raw_file: str):
-        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '.tab')
+    #Specify type to differentiate between percolator and andromeda output.
+    def _get_split_perc_input_path(self, raw_file: str, type: str):
+        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '_' + type+'.tab')
 
-    def _get_merged_perc_input_path(self):
-        return os.path.join(self.get_percolator_folder_path(), 'prosit.tab')
+    def _get_merged_perc_input_path(self, type: str):
+        return os.path.join(self.get_percolator_folder_path(), type + '.tab')

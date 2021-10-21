@@ -9,7 +9,6 @@ from .data.spectra import FragmentType
 
 logger = logging.getLogger(__name__)
 
-
 class CalculateFeatures(CeCalibration):
     """
         main to init a re-score obj and go through the steps:
@@ -22,9 +21,10 @@ class CalculateFeatures(CeCalibration):
         """
         self.perform_alignment(df_search)
         self.library.spectra_data['COLLISION_ENERGY'] = self.best_ce
+        #self.library.spectra_data['COLLISION_ENERGY'] = 35.0
         self.grpc_predict(self.library)
 
-    def gen_perc_metrics(self, file_path = None):
+    def gen_perc_metrics(self, type, file_path = None):
         """
         get all percolator metrics and add it to library
         """
@@ -32,7 +32,7 @@ class CalculateFeatures(CeCalibration):
         perc_features = Percolator(self.library.get_meta_data(),
                                    self.library.get_matrix(FragmentType.PRED),
                                    self.library.get_matrix(FragmentType.RAW),
-                                   'Prosit')
+                                   type)
         perc_features.calc()
         if file_path:
             perc_features.write_to_file(file_path)
