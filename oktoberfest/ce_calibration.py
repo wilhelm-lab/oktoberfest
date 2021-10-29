@@ -75,7 +75,7 @@ class CeCalibration(SpectralLibrary):
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
         self.raw_path = self.raw_path.replace('.raw','.mzml')
-        return ThermoRaw.read_mzml(self.out_path)
+        return ThermoRaw.read_mzml(self.out_path, package='pyteomics')
 
 
     def gen_lib(self, df_search):
@@ -129,7 +129,7 @@ class CeCalibration(SpectralLibrary):
 
 
     def _predict_alignment(self):
-        self.grpc_predict(self.alignment_library)
+        self.grpc_predict(self.alignment_library, alignment= True)
 
 
     def _alignment(self):
