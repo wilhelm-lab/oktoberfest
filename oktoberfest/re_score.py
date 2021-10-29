@@ -190,6 +190,7 @@ class ReScore(CalculateFeatures):
 
         cmd = f"percolator --weights {weights_file} \
                           --num-threads {self.config.get_num_threads()} \
+                          ----subset-max-train 500000\
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
