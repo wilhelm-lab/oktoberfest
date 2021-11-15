@@ -8,9 +8,9 @@ re_score_raw = ReScore(search_path="/media/kusterlab/internal_projects/active/mi
 re_score_raw.get_raw_files()
 re_score_raw.split_msms()
 re_score_raw.calculate_features()
-re_score_raw.merge_input('Prosit')
-#re_score_raw.merge_input('Andromeda')
+re_score_raw.merge_input('prosit')
+#re_score_raw.merge_input('andromeda')
 
-re_score_raw.rescore_with_perc('Prosit')
-#re_score_raw.rescore_with_perc('Andromeda')
+re_score_raw.rescore_with_perc('prosit')
+#re_score_raw.rescore_with_perc('andromeda')
 

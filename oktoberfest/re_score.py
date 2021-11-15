@@ -25,8 +25,8 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
     print(features.library.get_meta_data())
-    features.gen_perc_metrics('Prosit', percolator_input_path)
-    features.gen_perc_metrics('Andromeda', percolator_input_path.replace('Prosit','Andromeda'))
+    features.gen_perc_metrics('prosit', percolator_input_path)
+    features.gen_perc_metrics('andromeda', percolator_input_path.replace('prosit','andromeda'))
 
     
     calc_feature_step.mark_done()
@@ -128,7 +128,7 @@ class ReScore(CalculateFeatures):
             raw_file_path = os.path.join(self.raw_path, raw_file)
             mzml_file_path = os.path.join(self.out_path, raw_file.replace('.raw','.mzml'))
 
-            percolator_input_path = self._get_split_perc_input_path(raw_file, 'Prosit')
+            percolator_input_path = self._get_split_perc_input_path(raw_file, 'prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
             
             if num_threads > 1:
@@ -145,7 +145,7 @@ class ReScore(CalculateFeatures):
         Fastest solution according to: https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
         type: choose either prosit or andromeda to merge percolator files for this.
         """
-        if type == 'Prosit':
+        if type == 'prosit':
             if self.merge_input_step_prosit.is_done():
                 return
         else:
@@ -166,13 +166,13 @@ class ReScore(CalculateFeatures):
                         first = False
                     fout.write(f.read())
 
-        if type == 'Prosit':
+        if type == 'prosit':
             self.merge_input_step_prosit.mark_done()
         else:
             self.merge_input_step_andromeda.mark_done()
 
     
-    def rescore_with_perc(self, search_type: str = "Prosit",
+    def rescore_with_perc(self, search_type: str = "prosit",
                           test_fdr: float = 0.01, train_fdr: float = 0.01):
         """
         Use percolator to re-score library.
@@ -213,9 +213,12 @@ class ReScore(CalculateFeatures):
     def get_percolator_folder_path(self):
         return os.path.join(self.out_path, "percolator")
 
-    #Specify type to differentiate between percolator and andromeda output.
     def _get_split_perc_input_path(self, raw_file: str, type: str):
-        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '_' + type+'.tab')
+        """
+        Specify type to differentiate between percolator and andromeda output.
+        """
+        return os.path.join(self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + '_' + type + '.tab')
 
     def _get_merged_perc_input_path(self, type: str):
         return os.path.join(self.get_percolator_folder_path(), type + '.tab')
+
