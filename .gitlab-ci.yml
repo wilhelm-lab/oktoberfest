@@ -25,7 +25,7 @@ build:
   stage: build
   script:
     - apk update && apk add git
-    - git describe --long --dirty > hash.file
+    - git describe --long --dirty --always > hash.file
     - PROJECT_PATH=$(echo $CI_PROJECT_PATH | tr '[:upper:]' '[:lower:]')
     - CONTAINER_IMAGE=$REGISTRY/$PROJECT_PATH
     - docker pull $CONTAINER_IMAGE:latest || true
