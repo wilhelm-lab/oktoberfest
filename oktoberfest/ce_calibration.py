@@ -43,7 +43,11 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        self.search_path = mxq.generate_internal()
+        if 'Prosit_2020_intensityTMT' in self.config.get_models():
+            tmt_labeled = True
+        else:
+            tmt_labeled = False
+        self.search_path = mxq.generate_internal(tmt_labeled)
 
 
     def _gen_mzml_from_thermo(self):
@@ -61,8 +65,12 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as search-type")
-
-        return MaxQuant.read_internal(self.search_path)
+        #Check if model used for TMT_labeled peptides
+        if 'Prosit_2020_intensityTMT' in self.config.get_models():
+            tmt_labeled = True
+        else:
+            tmt_labeled = False
+        return MaxQuant.read_internal(self.search_path, tmt_labeled)
 
 
     def _load_rawfile(self):
