@@ -9,12 +9,8 @@ python = "^3.8.0"
 numpy = "^1.18.1"
 pandas = "^1.3.0"
 prosit-io = {git = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git", branch="develop"}
-fundamentals = {git = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git", branch="hackathon_cleanup"}
+fundamentals = {git = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git", branch="develop"}
 prosit_grpc = {git = "git@gitlab.lrz.de:proteomics/prosit_tools/prosit_grpc.git", branch="oktoberfest_revamp"}
-#prosit-io = {path = "/home/matthewt/git/prosit_io"}
-#fundamentals = {path = "/home/matthewt/git/fundamentals"}
-#prosit_grpc = {path = "/home/matthewt/git/prosit_grpc"}
-
 
 [tool.poetry.dev-dependencies]
 
