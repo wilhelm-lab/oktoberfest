@@ -24,7 +24,7 @@ class CalculateFeatures(CeCalibration):
         #self.library.spectra_data['COLLISION_ENERGY'] = 35.0
         self.grpc_predict(self.library)
 
-    def gen_perc_metrics(self, type, file_path = None):
+    def gen_perc_metrics(self, search_type, file_path = None):
         """
         get all percolator metrics and add it to library
         """
@@ -32,7 +32,7 @@ class CalculateFeatures(CeCalibration):
         perc_features = Percolator(self.library.get_meta_data(),
                                    self.library.get_matrix(FragmentType.PRED),
                                    self.library.get_matrix(FragmentType.RAW),
-                                   type)
+                                   search_type)
         perc_features.calc()
         if file_path:
             perc_features.write_to_file(file_path)

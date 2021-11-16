@@ -49,10 +49,15 @@ def run_oktoberfest(search_dir, config_path):
     
     re_score = ReScore(search_path=msms_path,
                        raw_path=search_dir,
+                       out_path=search_dir,
                        config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
     re_score.calculate_features()
-    re_score.merge_input()
-    re_score.rescore_with_perc()
+    
+    re_score.merge_input('prosit')
+    re_score.merge_input('andromeda')
+    
+    re_score.rescore_with_perc('prosit')
+    re_score.rescore_with_perc('andromeda')
     

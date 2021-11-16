@@ -32,11 +32,12 @@ class CeCalibration(SpectralLibrary):
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path, out_path, config_path=None):
+    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pymzml'):
         super().__init__(search_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.out_path = out_path
+        self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
 
@@ -75,7 +76,7 @@ class CeCalibration(SpectralLibrary):
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
         self.raw_path = self.raw_path.replace('.raw','.mzml')
-        return ThermoRaw.read_mzml(self.out_path, package='pyteomics')
+        return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
 
 
     def gen_lib(self, df_search):

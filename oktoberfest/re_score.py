@@ -48,8 +48,8 @@ class ReScore(CalculateFeatures):
     merge_input_step_andromeda: ProcessStep
     percolator_step: ProcessStep
     
-    def __init__(self, search_path, raw_path,out_path, config_path=None):
-        super().__init__(search_path, raw_path,out_path, config_path=config_path)
+    def __init__(self, search_path, raw_path,out_path, config_path=None, mzml_reader_package='pymzml'):
+        super().__init__(search_path, raw_path,out_path, config_path=config_path, mzml_reader_package=mzml_reader_package)
         self.split_msms_step = ProcessStep(raw_path, "split_msms")
         self.merge_input_step_prosit = ProcessStep(raw_path, "merge_input_prosit")
         self.merge_input_step_andromeda = ProcessStep(raw_path, "merge_input_andromeda")
@@ -64,13 +64,13 @@ class ReScore(CalculateFeatures):
             self.raw_files = [self.raw_path]
             self.raw_path = os.path.dirname(self.raw_path)
         elif os.path.isdir(self.raw_path):
-            switch = self.config.get_raw_type()
-            if switch == "thermo":
+            raw_type = self.config.get_raw_type()
+            if raw_type == "thermo":
                 extension = ".raw"
-            elif switch == "mzml":
+            elif raw_type == "mzml":
                 extension = ".mzml"
             else:
-                raise ValueError(f"{switch} is not supported as rawfile-type")
+                raise ValueError(f"{raw_type} is not supported as rawfile-type")
 
             self.raw_files = [os.path.basename(f) for f in os.listdir(self.raw_path) if f.lower().endswith(extension)]
             logger.info(f"Found {len(self.raw_files)} raw files in the search directory")
@@ -126,7 +126,7 @@ class ReScore(CalculateFeatures):
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
-            mzml_file_path = os.path.join(self.out_path, raw_file.replace('.raw','.mzml'))
+            mzml_file_path = os.path.join(self.out_path, "mzML", raw_file.replace('.raw','.mzML'))
 
             percolator_input_path = self._get_split_perc_input_path(raw_file, 'prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
@@ -190,7 +190,6 @@ class ReScore(CalculateFeatures):
 
         cmd = f"percolator --weights {weights_file} \
                           --num-threads {self.config.get_num_threads()} \
-                          ----subset-max-train 500000\
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
