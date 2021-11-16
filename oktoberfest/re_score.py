@@ -27,7 +27,6 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
     print(features.library.get_meta_data())
     features.gen_perc_metrics('prosit', percolator_input_path)
     features.gen_perc_metrics('andromeda', percolator_input_path.replace('prosit','andromeda'))
-
     
     calc_feature_step.mark_done()
 
@@ -46,14 +45,16 @@ class ReScore(CalculateFeatures):
     split_msms_step: ProcessStep
     merge_input_step_prosit: ProcessStep
     merge_input_step_andromeda: ProcessStep
-    percolator_step: ProcessStep
+    percolator_step_prosit: ProcessStep
+    percolator_step_andromeda: ProcessStep
     
     def __init__(self, search_path, raw_path,out_path, config_path=None, mzml_reader_package='pymzml'):
         super().__init__(search_path, raw_path,out_path, config_path=config_path, mzml_reader_package=mzml_reader_package)
         self.split_msms_step = ProcessStep(raw_path, "split_msms")
         self.merge_input_step_prosit = ProcessStep(raw_path, "merge_input_prosit")
         self.merge_input_step_andromeda = ProcessStep(raw_path, "merge_input_andromeda")
-        self.percolator_step = ProcessStep(raw_path, "percolator")
+        self.percolator_step_prosit = ProcessStep(raw_path, "percolator_prosit")
+        self.percolator_step_andromeda = ProcessStep(raw_path, "percolator_andromeda")
 
     def get_raw_files(self):
         """
@@ -177,9 +178,13 @@ class ReScore(CalculateFeatures):
         """
         Use percolator to re-score library.
         """
-        if self.percolator_step.is_done():
-            return
-        
+        if search_type == "prosit":
+            if self.percolator_step_prosit.is_done():
+                return
+        else:
+            if self.percolator_step_andromeda.is_done():
+                return
+                
         perc_path = self.get_percolator_folder_path()
         weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
         target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
@@ -190,6 +195,7 @@ class ReScore(CalculateFeatures):
 
         cmd = f"percolator --weights {weights_file} \
                           --num-threads {self.config.get_num_threads()} \
+                          --subset-max-train 500000 \
                           --post-processing-tdc \
                           --search-input concatenated \
                           --testFDR {test_fdr} \
@@ -201,6 +207,12 @@ class ReScore(CalculateFeatures):
                           {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
         logger.info(f"Starting percolator with command {cmd}")
         subprocess.run(cmd, shell=True, check=True)
+        
+        if search_type == 'prosit':
+            self.percolator_step_prosit.mark_done()
+        else:
+            self.percolator_step_andromeda.mark_done()
+            
     
     def get_msms_folder_path(self):
         return os.path.join(self.out_path, "msms")

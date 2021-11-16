@@ -1,0 +1,22 @@
+IMAGE ?= oktoberfest
+DATA ?= $(HOME)/example/
+INTERACTIVE := $(shell [ -t 0 ] && echo 1)
+MEMORY_LIMIT ?= 10gb
+CPU_LIMIT ?= 1
+PERC_TEST_FDR ?= 0.01
+PERC_TRAIN_FDR ?= 0.01
+
+ifdef INTERACTIVE
+	USE_TTY= -t
+else
+	USE_TTY=
+endif
+
+DOCKER_CMD =  docker run -i ${USE_TTY} \
+					-v "$(DATA)":/root/data/
+					--memory=$(MEMORY_LIMIT) \
+					--cpus=$(CPU_LIMIT) \
+
+check_models:
+	$(DOCKER_CMD) \
+		$(IMAGE) python3 oktoberfest/check_models.py
