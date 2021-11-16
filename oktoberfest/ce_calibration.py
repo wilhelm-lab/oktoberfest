@@ -14,7 +14,6 @@ from fundamentals.metrics.similarity import SimilarityMetrics
 from .spectral_library import SpectralLibrary
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
-from prosit_io.file import hdf5
 
 import logging
 logger = logging.getLogger(__name__)
@@ -28,32 +27,38 @@ class CeCalibration(SpectralLibrary):
         3- get_best_ce
         4- write output
     """
-    search_path: str
     raw_path: str
+    out_path: str
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path):
-        super().__init__(search_path)
+    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pymzml'):
+        super().__init__(search_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
+        self.out_path = out_path
+        self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
 
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        self.search_path = mxq.generate_internal()
+        if 'Prosit_2020_intensityTMT' in self.config.get_models():
+            tmt_labeled = True
+        else:
+            tmt_labeled = False
+        self.search_path = mxq.generate_internal(tmt_labeled)
 
 
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        self.raw_path = raw.convert_raw_mzml(self.raw_path)
+        self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
 
 
     def _load_search(self):
-        switch = self.config["fileUploads"]["search_type"]
+        switch = self.config.get_search_type()
         logger.info(f"search_type is {switch}")
         if switch == "maxquant":
             self._gen_internal_search_result_from_msms()
@@ -61,28 +66,31 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as search-type")
-
-        return MaxQuant.read_internal(self.search_path)
+        #Check if model used for TMT_labeled peptides
+        if 'Prosit_2020_intensityTMT' in self.config.get_models():
+            tmt_labeled = True
+        else:
+            tmt_labeled = False
+        return MaxQuant.read_internal(self.search_path, tmt_labeled)
 
 
     def _load_rawfile(self):
-        switch = self.config["fileUploads"]["raw_type"]
+        switch = self.config.get_raw_type()
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
-            ThermoRaw.convert_raw_mzml(self.raw_path)
+            self._gen_mzml_from_thermo()
         elif switch == "mzml":
             pass
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-
-        return ThermoRaw.read_mzml(self.raw_path)
+        self.raw_path = self.raw_path.replace('.raw','.mzml')
+        return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
 
 
     def gen_lib(self, df_search):
         """
         Read input search and raw and add it to library
         """
-        #df_search = self._load_search()
         df_raw = self._load_rawfile()
         #return df_search
         logger.info("Merging rawfile and search result")
@@ -97,20 +105,14 @@ class CeCalibration(SpectralLibrary):
         self.library.add_columns(df_join)
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"],FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"],FragmentType.MZ)
-
-
-    def write_metadata_annotation(self):
+        self.library.add_column(df_annotated_spectra['CALCULATED_MASS'],'CALCULATED_MASS')
+    
+    def get_hdf5_path(self):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
-        hdf5_path = self.raw_path+'.hdf5'
-        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
+        return self.out_path+'.hdf5'
 
-        sparse_matrix_intensity_raw, columns_intensity = self.library.get_matrix(FragmentType.RAW, True)
-        sparse_matrix_mz, columns_mz = self.library.get_matrix(FragmentType.MZ, True)
-        data_sets = [self.library.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz]
-        column_names = [columns_intensity, columns_mz]
-
-        hdf5.write_file(data_sets, hdf5_path, data_set_names, column_names)
-
+    def write_metadata_annotation(self):        
+        self.library.write_as_hdf5(self.get_hdf5_path())
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -130,13 +132,13 @@ class CeCalibration(SpectralLibrary):
         # Repeat dataframe for each CE
         CE_RANGE = range(18,50)
         nrow = len(self.alignment_library.spectra_data)
-        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in CE_RANGE])
+        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in CE_RANGE], axis=0)
         self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(CE_RANGE, nrow)
         self.alignment_library.spectra_data.reset_index(inplace=True)
 
 
     def _predict_alignment(self):
-        self.grpc_predict(self.alignment_library)
+        self.grpc_predict(self.alignment_library, alignment= True)
 
 
     def _alignment(self):
@@ -160,22 +162,35 @@ class CeCalibration(SpectralLibrary):
         Get aligned ce for this lib.
         """
         self.best_ce = self.ce_alignment.idxmax()
+        logger.info(f"Best collision energy: {self.best_ce}")
 
-    def perform_alignment(self, df_search):        
-        self.gen_lib(df_search)
-        self.write_metadata_annotation()
+    def perform_alignment(self, df_search):
+        hdf5_path = self.get_hdf5_path()
+        logger.info(f"Path to hdf5 file with annotations for {self.out_path}: {hdf5_path}")
+        if os.path.isfile(hdf5_path):
+            self.library.read_from_hdf5(hdf5_path)
+        else:
+            self.gen_lib(df_search)
+            self.write_metadata_annotation()
+        #Check if all data is HCD no need to align and return the best ce as 35
+        hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
+        if len(hcd_df.index) == 0:
+            self.best_ce = 35.0
+            return
         self._prepare_alignment_df()
         self._predict_alignment()
         self._alignment()
         self._get_best_ce()
 
+
 if __name__ == "main":
     ce_cal = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
                       raw_path = "D:/Compmass/workDir/HCD_OT/190416_FPTMT_MS3_HCDOT_R1.mzml")
     df_search = ce_cal._load_search()
-    raw_files = df_search['RAW_FILE'].unique()
+    grouped_search = df_search.groupby('RAW_FILE')
+    raw_files = grouped_search.groups.keys()
     ce_cal_raw = {}
     for raw_file in raw_files:
-        ce_cal_raw[raw_file] = CeCalibration(search_path = "D:/Compmass/workDir/HCD_OT/msms.txt",
-                          raw_path = "D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
-        ce_cal_raw[raw_file].perform_alignment(df_search)
+        ce_cal_raw[raw_file] = CeCalibration(search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
+                                             raw_path="D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml")
+        ce_cal_raw[raw_file].perform_alignment(grouped_search.get_group(raw_file))
