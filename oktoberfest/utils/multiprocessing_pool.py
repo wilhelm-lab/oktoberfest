@@ -3,8 +3,12 @@ from __future__ import print_function
 import sys
 import signal
 import warnings
+import logging
 from multiprocessing import Pool
 import traceback
+
+logger = logging.getLogger(__name__)
+
 
 class JobPool:
   def __init__(self, processes = 1, warningFilter = "default"):
@@ -23,21 +27,21 @@ class JobPool:
     try:
       outputs = list()
       for res in self.results:
-        outputs.append(res.get(timeout = 1000))
+        outputs.append(res.get(timeout = 10000)) # 10000 seconds = ~3 hours
         if printProgressEvery > 0 and len(outputs) % printProgressEvery == 0:
-          print(" ", len(outputs),"/", len(self.results), "%.2f" % (float(len(outputs)) / len(self.results) * 100) + "%")
+          logger.info(f' {len(outputs)} / {len(self.results)} {"%.2f" % (float(len(outputs)) / len(self.results) * 100)}%')
       self.pool.close()
       self.pool.join()
       return outputs
     except (KeyboardInterrupt, SystemExit):
-      print("Caught KeyboardInterrupt, terminating workers")
+      logger.error("Caught KeyboardInterrupt, terminating workers")
       self.pool.terminate()
       self.pool.join()
       sys.exit()
     except Exception as e:
-      print("Caught Unknown exception, terminating workers")
-      print(traceback.print_exc())
-      print(e)
+      logger.error("Caught Unknown exception, terminating workers")
+      logger.error(traceback.print_exc())
+      logger.error(e)
       self.pool.terminate()
       self.pool.join()
       sys.exit()

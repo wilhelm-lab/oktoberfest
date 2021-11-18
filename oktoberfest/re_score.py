@@ -24,7 +24,6 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
                                  config_path=config_path)
     df_search = pd.read_csv(split_msms_path, delimiter = '\t')
     features.predict_with_aligned_ce(df_search)
-    print(features.library.get_meta_data())
     features.gen_perc_metrics('prosit', percolator_input_path)
     features.gen_perc_metrics('andromeda', percolator_input_path.replace('prosit','andromeda'))
     
@@ -117,16 +116,21 @@ class ReScore(CalculateFeatures):
             from .utils.multiprocessing_pool import JobPool
             processingPool = JobPool(processes = num_threads)
         
+        mzml_path = self.get_mzml_folder_path()
+        if not os.path.isdir(mzml_path):
+            os.makedirs(mzml_path)
+
         perc_path = self.get_percolator_folder_path()
         if not os.path.isdir(perc_path):
             os.makedirs(perc_path)
+
         for raw_file in self.raw_files:
             calc_feature_step = ProcessStep(self.out_path, "calculate_features." + raw_file)
             if calc_feature_step.is_done():
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
-            mzml_file_path = os.path.join(self.out_path, "mzML", raw_file.replace('.raw','.mzML'))
+            mzml_file_path = os.path.join(mzml_path, raw_file.replace('.raw','.mzML'))
 
             percolator_input_path = self._get_split_perc_input_path(raw_file, 'prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
@@ -219,6 +223,9 @@ class ReScore(CalculateFeatures):
     def _get_split_msms_path(self, raw_file: str):
         return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".prosit")
 
+    def get_mzml_folder_path(self):
+        return os.path.join(self.out_path, "mzML")
+    
     def get_percolator_folder_path(self):
         return os.path.join(self.out_path, "percolator")
 

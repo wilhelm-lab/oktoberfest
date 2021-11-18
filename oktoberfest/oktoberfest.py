@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 
 from .re_score import ReScore
 
@@ -14,10 +15,12 @@ Written by
 - Cecilia Jensen (cecilia.jensen@tum.de)
 at the Technical University of Munich.'''
 
+logger = logging.getLogger(__name__)
+
 
 def main():
-    print('Oktoberfest version %s\n%s' % (__version__, __copyright__))
-    print('Issued command:', os.path.basename(__file__) + " " + " ".join(map(str, sys.argv[1:])))
+    logger.info(f'Oktoberfest version {__version__}\n{__copyright__}')
+    logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
     
     args = parse_args()  
 
