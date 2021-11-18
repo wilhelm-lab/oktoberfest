@@ -98,7 +98,6 @@ class ReScore(CalculateFeatures):
             
             split_msms = self._get_split_msms_path(raw_file)
             logger.info(f"Creating split msms.txt file {split_msms}")
-            print(df_search_split['PEPTIDE_LENGTH'].dtype)
             df_search_split = df_search_split[(df_search_split['PEPTIDE_LENGTH'] <= 30)]
             df_search_split = df_search_split[(~df_search_split['MODIFIED_SEQUENCE'].str.contains('\(ac\)'))]
             df_search_split = df_search_split[(~df_search_split['SEQUENCE'].str.contains('U'))]

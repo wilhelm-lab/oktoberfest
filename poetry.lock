@@ -103,7 +103,7 @@ statsmodels = "^0.12.2"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git"
 reference = "develop"
-resolved_reference = "45a83e49107072bb89a73124851ec87a4bcd81b1"
+resolved_reference = "ffa5d8748cd69d3fcad65860a9b7d1e4edf5e1ce"
 
 [[package]]
 name = "gast"
@@ -229,7 +229,7 @@ tests = ["pandas", "pillow", "tensorflow", "keras", "pytest", "pytest-xdist", "p
 
 [[package]]
 name = "markdown"
-version = "3.3.4"
+version = "3.3.5"
 description = "Python implementation of Markdown."
 category = "main"
 optional = false
@@ -381,7 +381,7 @@ tables = "^3.6.1"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git"
 reference = "develop"
-resolved_reference = "767de2bd7d61fbeefdfbc0c0e398f5140c19a3bb"
+resolved_reference = "be733a083ff87fe3471a98010c54c3614f081e1d"
 
 [[package]]
 name = "protobuf"
@@ -881,8 +881,8 @@ keras-preprocessing = [
     {file = "Keras_Preprocessing-1.1.2.tar.gz", hash = "sha256:add82567c50c8bc648c14195bf544a5ce7c1f76761536956c3d2978970179ef3"},
 ]
 markdown = [
-    {file = "Markdown-3.3.4-py3-none-any.whl", hash = "sha256:96c3ba1261de2f7547b46a00ea8463832c921d3f9d6aba3f255a6f71386db20c"},
-    {file = "Markdown-3.3.4.tar.gz", hash = "sha256:31b5b491868dcc87d6c24b7e3d19a0d730d59d3e46f4eea6430a321bed387a49"},
+    {file = "Markdown-3.3.5-py3-none-any.whl", hash = "sha256:0d2d09f75cb8d1ffc6770c65c61770b23a61708101f47bda416a002a0edbc480"},
+    {file = "Markdown-3.3.5.tar.gz", hash = "sha256:26e9546bfbcde5fcd072bd8f612c9c1b6e2677cb8aadbdf65206674f46dde069"},
 ]
 numexpr = [
     {file = "numexpr-2.7.3-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:74df157ab4577bfc83c14f4e39d14781b06ade5406d3efef049f90c88d8c28ea"},

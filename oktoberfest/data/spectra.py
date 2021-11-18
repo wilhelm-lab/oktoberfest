@@ -1,5 +1,6 @@
 import logging
 from enum import Enum
+from typing import List
 
 import pandas as pd
 import scipy
@@ -18,7 +19,6 @@ class FragmentType(Enum):
 
 
 class Spectra:
-    NO_OF_FRAGMENTS = 174
     INTENSITY_COLUMN_PREFIX = 'INTENSITY_RAW'
     INTENSITY_PRED_PREFIX = 'INTENSITY_PRED'
     MZ_COLUMN_PREFIX = 'MZ_RAW'
@@ -31,7 +31,7 @@ class Spectra:
         self.spectra_data = pd.DataFrame()
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType):
+    def _gen_column_names(fragment_type: FragmentType) -> List[str]:
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
         for i in range(1, 30):
@@ -40,7 +40,7 @@ class Spectra:
         return columns
 
     @staticmethod
-    def _resolve_prefix(fragment_type):
+    def _resolve_prefix(fragment_type: FragmentType) -> str:
         logger.debug(fragment_type)
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
@@ -50,10 +50,10 @@ class Spectra:
             prefix = Spectra.MZ_COLUMN_PREFIX
         return prefix
 
-    def add_column(self, column_data: np, name: str):
+    def add_column(self, column_data: np, name: str) -> None:
         self.spectra_data[name] = column_data
 
-    def add_columns(self, columns_data: pd.DataFrame):
+    def add_columns(self, columns_data: pd.DataFrame) -> None:
         """
         Add columns to spectra data.
         :param columns_data: a pandas data frame to add can be metrics or metadata.
@@ -61,13 +61,14 @@ class Spectra:
         # Check if columns already exist
         self.spectra_data = pd.concat([self.spectra_data, columns_data], axis=1)
 
-    def get_meta_data(self):
+    def get_meta_data(self) -> pd.DataFrame:
         columns = list(self.spectra_data.columns)
         meta_data_columns = list(filter(lambda x: not x.startswith(
             tuple([Spectra.INTENSITY_COLUMN_PREFIX, Spectra.MZ_COLUMN_PREFIX, Spectra.INTENSITY_PRED_PREFIX])), columns))
 
         return self.spectra_data[meta_data_columns]
-    def add_matrix_from_hdf5(self, intensity_data, fragment_type):
+
+    def add_matrix_from_hdf5(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
         """
         concat intensity df as a sparse matrix to our data
         :param intensity_data: Intensity sparse matrix
@@ -78,8 +79,7 @@ class Spectra:
         intensity_data.columns = columns
         self.add_columns(intensity_data)
 
-
-    def add_matrix(self, intensity_data, fragment_type):
+    def add_matrix(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
         """
         concat intensity df as a sparse matrix to our data
         :param intensity_data: Intensity numpy array to add
@@ -88,7 +88,7 @@ class Spectra:
         intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
-        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, Spectra.NO_OF_FRAGMENTS)
+        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, C.VEC_LENGTH)
 
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
@@ -101,7 +101,7 @@ class Spectra:
         intensity_df.columns = columns
         self.add_columns(intensity_df)
 
-    def get_columns(self, fragment_type, return_column_names=False) -> spmatrix:
+    def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
         """
         Get intensities sparse matrix from dataframe.
         :param fragment_type: choose predicted, raw, or mz
@@ -116,7 +116,7 @@ class Spectra:
         # Check if conversion is low change to coo then csr from coo
         return self.spectra_data[columns_to_select]
 
-    def get_matrix(self, fragment_type, return_column_names=False) -> spmatrix:
+    def get_matrix(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
         """
         Get intensities sparse matrix from dataframe.
         :param fragment_type: choose predicted, raw, or mz
@@ -131,7 +131,7 @@ class Spectra:
         # Check if conversion is low change to coo then csr from coo
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
     
-    def write_as_hdf5(self, output_file):
+    def write_as_hdf5(self, output_file: str) -> None:
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
 
         sparse_matrix_intensity_raw, columns_intensity = self.get_matrix(FragmentType.RAW, True)
@@ -141,7 +141,8 @@ class Spectra:
 
         hdf5.write_file(data_sets, output_file, data_set_names, column_names)
     
-    def read_from_hdf5(self, input_file):
+    def read_from_hdf5(self, input_file: str) -> None:
         self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+

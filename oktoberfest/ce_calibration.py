@@ -40,7 +40,6 @@ class CeCalibration(SpectralLibrary):
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
-
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
@@ -48,14 +47,12 @@ class CeCalibration(SpectralLibrary):
             tmt_labeled = True
         else:
             tmt_labeled = False
-        self.search_path = mxq.generate_internal(tmt_labeled)
-
+        self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
-
 
     def _load_search(self):
         switch = self.config.get_search_type()
@@ -66,13 +63,7 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as search-type")
-        #Check if model used for TMT_labeled peptides
-        if 'Prosit_2020_intensityTMT' in self.config.get_models():
-            tmt_labeled = True
-        else:
-            tmt_labeled = False
-        return MaxQuant.read_internal(self.search_path, tmt_labeled)
-
+        return MaxQuant.read_internal(self.search_path)
 
     def _load_rawfile(self):
         switch = self.config.get_raw_type()
@@ -85,7 +76,6 @@ class CeCalibration(SpectralLibrary):
             raise ValueError(f"{switch} is not supported as rawfile-type")
         self.raw_path = self.raw_path.replace('.raw','.mzml')
         return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
-
 
     def gen_lib(self, df_search):
         """
@@ -140,7 +130,6 @@ class CeCalibration(SpectralLibrary):
     def _predict_alignment(self):
         self.grpc_predict(self.alignment_library, alignment= True)
 
-
     def _alignment(self):
         """
         Edit library to try different ranges of ce 15-50.
@@ -155,7 +144,6 @@ class CeCalibration(SpectralLibrary):
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity)
 
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
-
 
     def _get_best_ce(self):
         """

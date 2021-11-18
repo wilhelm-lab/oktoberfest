@@ -27,3 +27,7 @@ compress: run_oktoberfest
 
 all: compress
 
+
+run_local: 
+	python3 -u -m oktoberfest "$(DATA)"
+
