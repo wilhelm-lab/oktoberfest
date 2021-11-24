@@ -103,7 +103,7 @@ statsmodels = "^0.12.2"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git"
 reference = "develop"
-resolved_reference = "b10f5d834decc6c2929956012ed144d3c7095c97"
+resolved_reference = "b344c063121f0cdbf1152de6c867f3a0c63963b5"
 
 [[package]]
 name = "gast"
@@ -381,7 +381,7 @@ tables = "^3.6.1"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git"
 reference = "develop"
-resolved_reference = "edea1d755dd60a6533711620fdebad3f0b7eb9e6"
+resolved_reference = "962238b936990de1c4ec8d589d140aa94c5a975f"
 
 [[package]]
 name = "protobuf"
