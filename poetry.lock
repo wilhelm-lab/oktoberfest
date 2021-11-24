@@ -103,7 +103,7 @@ statsmodels = "^0.12.2"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/fundamentals.git"
 reference = "develop"
-resolved_reference = "cdf78ac0c2fa4a096bab5ee80b86deb152989bcb"
+resolved_reference = "b10f5d834decc6c2929956012ed144d3c7095c97"
 
 [[package]]
 name = "gast"
