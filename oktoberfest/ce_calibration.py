@@ -43,7 +43,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        if 'Prosit_2020_intensityTMT' in self.config.get_models():
+        if 'Prosit_2020_intensityTMT' in self.config.get_models().values():
             tmt_labeled = True
         else:
             tmt_labeled = False
