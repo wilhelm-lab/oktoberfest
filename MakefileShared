@@ -20,3 +20,7 @@ DOCKER_CMD =  docker run -i ${USE_TTY} \
 check_models:
 	$(DOCKER_CMD) \
 		$(IMAGE) python3 oktoberfest/check_models.py
+
+# clean up err.out file when restarting a job
+rm_err_file:
+	rm -f $(DATA)err.out

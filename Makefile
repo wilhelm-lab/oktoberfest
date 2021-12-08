@@ -18,7 +18,8 @@ jump:
 build: dependencies
 	docker build -f Dockerfile -t $(IMAGE) . || (exit 1)
 
-run_oktoberfest: 
+
+run_oktoberfest: rm_err_file
 	$(DOCKER_CMD) \
 		$(IMAGE) python3 -u -m oktoberfest /root/data || (echo "2" > $(DATA)err.out; exit 2)
 
