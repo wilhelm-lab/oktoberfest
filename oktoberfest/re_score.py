@@ -99,6 +99,7 @@ class ReScore(CalculateFeatures):
             logger.info(f"Creating split msms.txt file {split_msms}")
             df_search_split = df_search_split[(df_search_split['PEPTIDE_LENGTH'] <= 30)]
             df_search_split = df_search_split[(~df_search_split['MODIFIED_SEQUENCE'].str.contains('\(ac\)'))]
+            df_search_split = df_search_split[(~df_search_split['MODIFIED_SEQUENCE'].str.contains('\(Acetyl \(Protein N-term\)\)'))]
             df_search_split = df_search_split[(~df_search_split['SEQUENCE'].str.contains('U'))]
             df_search_split = df_search_split[df_search_split['PRECURSOR_CHARGE'] <= 6]
             df_search_split = df_search_split[df_search_split['PEPTIDE_LENGTH'] >= 7]

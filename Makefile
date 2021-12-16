@@ -32,3 +32,5 @@ all: compress
 run_local: 
 	python3 -u -m oktoberfest "$(DATA)"
 
+clean_data_folder: 
+	rm -rf "$(DATA)/{proc,msms,percolator,mzML,msms.prosit}"
