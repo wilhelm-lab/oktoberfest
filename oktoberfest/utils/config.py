@@ -40,7 +40,18 @@ class Config:
             return { "selectedIntensityModel" : self.data["selectedIntensityModel"],
                      "selectedIRTModel": self.data["selectedIRTModel"],
                      "selectedProteotypicityModel": self.data["selectedProteotypicityModel"] }
-    
+    def get_tag(self):
+        if "tag" in self.data:
+            return self.data['tag']
+        else:
+            return "tmt"
+
+    def get_all_features(self):
+        if "all_features" in self.data:
+            return self.data['all_features']
+        else:
+            return False
+
     def get_job_type(self):
         if "jobType" in self.data:
             return self.data['jobType']

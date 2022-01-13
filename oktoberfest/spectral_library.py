@@ -70,8 +70,12 @@ class SpectralLibrary:
         if tmt_model:
 
             # TODO: find better way instead of hard coded x[12:]
+            if self.config.get_tag == "tmtpro":
+                i = 13
+            else:
+                i = 12
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
-                lambda x: x[12:])
+                lambda x: x[i:])
             library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
 
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),

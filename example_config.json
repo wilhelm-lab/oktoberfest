@@ -1,5 +1,7 @@
 {
   "jobType": "CeCalibration",
+  "tag": "TMT",
+  "allFeatures": true,
   "fileUploads": {
     "search_type": "maxquant",
     "raw_type": "raw",
