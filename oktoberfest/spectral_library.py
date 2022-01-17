@@ -55,6 +55,9 @@ class SpectralLibrary:
         """
         predictor = PROSITpredictor(server='131.159.152.7:8500',
                                     keepalive_timeout_ms=10000)
+        
+        # models_dict None otherwise
+        self.config.read(CONFIG_PATH)
 
         models_dict = self.config.get_models()
         models = []
@@ -77,7 +80,6 @@ class SpectralLibrary:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[i:])
             library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
-
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,

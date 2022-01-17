@@ -7,6 +7,8 @@ from .ce_calibration import CeCalibration
 from fundamentals.metrics.percolator import Percolator
 from .data.spectra import FragmentType
 
+from .utils.config import Config
+
 logger = logging.getLogger(__name__)
 
 class CalculateFeatures(CeCalibration):
@@ -32,7 +34,9 @@ class CalculateFeatures(CeCalibration):
         perc_features = Percolator(self.library.get_meta_data(),
                                    self.library.get_matrix(FragmentType.PRED),
                                    self.library.get_matrix(FragmentType.RAW),
-                                   search_type)
+                                   search_type,
+                                   self.config.get_all_features()
+                                   )
         perc_features.calc()
         if file_path:
             perc_features.write_to_file(file_path)

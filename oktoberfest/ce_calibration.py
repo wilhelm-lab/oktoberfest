@@ -15,6 +15,9 @@ from .spectral_library import SpectralLibrary
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
 
+from .utils.config import Config
+from .constants_dir import CONFIG_PATH
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -43,10 +46,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        if 'Prosit_2020_intensityTMT_Phospho' in self.config.get_models().values() or 'Prosit_2020_intensityTMT' in self.config.get_models().values():
-            tmt_labeled = True
-        else:
-            tmt_labeled = False
+        tmt_labeled = self.config.get_tag()
         self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
@@ -141,7 +141,7 @@ class CeCalibration(SpectralLibrary):
         #print(pred_intensity.toarray())
         #return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity,raw_intensity)
-        self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity)
+        self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity, 0)
 
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
 
