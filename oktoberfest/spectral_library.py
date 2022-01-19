@@ -51,7 +51,7 @@ class SpectralLibrary:
             print(self.path)
             for file in os.listdir(self.path):
                 if file.endswith(".csv"):
-                     library_df = csv.read_file(self.path + file)
+                     library_df = csv.read_file(os.path.join(self.path, file))
             library_df.columns = library_df.columns.str.upper()
             self.library.add_columns(library_df)
 
