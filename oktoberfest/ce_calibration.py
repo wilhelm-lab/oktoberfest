@@ -33,12 +33,10 @@ class CeCalibration(SpectralLibrary):
 
 
     def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pyteomics'):
-        super().__init__(search_path, config_path=config_path)
+        super().__init__(search_path,out_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
-        self.out_path = os.path.join(out_path,'out/')
-        if not os.path.isdir(self.out_path):
-            os.makedirs(self.out_path)
+        self.out_path = out_path
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
@@ -54,7 +52,8 @@ class CeCalibration(SpectralLibrary):
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        if not self.out_path.endswith('.mzml'):
+        print(self.out_path)
+        if not (self.out_path.endswith('.mzML')) and (not (self.out_path.endswith('.raw'))):
             self.out_path = os.path.join(self.out_path, self.raw_path.split('/')[-1].split('.')[0]+'.mzml')
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
 

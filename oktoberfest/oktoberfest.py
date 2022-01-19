@@ -54,7 +54,7 @@ def parse_args():
 
 
 def generate_spectral_lib(search_dir, config_path):
-    spec_library = SpectralLibrary(path=search_dir,config_path=config_path)
+    spec_library = SpectralLibrary(path=search_dir, out_path= search_dir, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = spec_library.library.spectra_data[
         'MODIFIED_SEQUENCE'].apply(lambda x: '_' + x + '_')
@@ -85,12 +85,12 @@ def generate_spectral_lib(search_dir, config_path):
         else:
             spectra_div.spectra_data = spec_library.library.spectra_data.iloc[(i + 1) * 7000:]
         grpc_output_sec = spec_library.grpc_predict(spectra_div)
-        if not os.path.isdir(os.path.join(spec_library.path, 'out/')):
-            os.makedirs(os.path.join(spec_library.path, 'out/'))
         if spec_library.config.get_output_format() == 'msp':
-            out_lib = MSP(spectra_div.spectra_data, grpc_output_sec,  os.path.join(spec_library.path, 'out/' ,'myPrositLib.msp'))
+            out_lib = MSP(spectra_div.spectra_data, grpc_output_sec,  os.path.join(spec_library.results_path,'myPrositLib.msp'))
+        elif spec_library.config.get_output_format() == 'spectronaut':
+            out_lib = Spectronaut(spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, 'myPrositLib.spectronaut'))
         else:
-            out_lib = Spectronaut(spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.path,'out/', 'myPrositLib.soectronaut'))
+            raise ValueError(f"{spec_library.config.get_output_format()} is not supported as spectral library type")
         out_lib.prepare_spectrum()
         out_lib.write()
 
@@ -109,9 +109,9 @@ def run_ce_calibration(msms_path, search_dir, config_path):
     else:
         raise ValueError(f"{raw_type} is not supported as rawfile-type")
 
-    ce_calib.raw_path = os.path.join(ce_calib.raw_path,[os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0])
+    ce_calib.raw_path = os.path.join(ce_calib.raw_path, [os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0])
     ce_calib.perform_alignment(df_search)
-    with open(os.path.join(search_dir,'out','ce.txt'), 'w') as f:
+    with open(os.path.join(ce_calib.results_path, 'ce.txt'), 'w') as f:
         f.write(str(ce_calib.best_ce))
 
 
@@ -126,10 +126,10 @@ def run_rescoring(msms_path, search_dir, config_path):
     re_score.calculate_features()
 
     re_score.merge_input('prosit')
-    # re_score.merge_input('andromeda')
+    re_score.merge_input('andromeda')
 
     re_score.rescore_with_perc('prosit')
-    # re_score.rescore_with_perc('andromeda')
+    re_score.rescore_with_perc('andromeda')
 
 
 def run_oktoberfest(search_dir, config_path):
@@ -140,7 +140,7 @@ def run_oktoberfest(search_dir, config_path):
     conf.read(config_path)
     job_type = conf.get_job_type()
     if job_type == 'SpectralLibraryGeneration':
-        generate_spectral_lib(search_dir,config_path)
+        generate_spectral_lib(search_dir, config_path)
     elif job_type == 'CollisionEnergyAlignment':
         run_ce_calibration(msms_path, search_dir, config_path)
     elif job_type == 'MaxQuantRescoring':

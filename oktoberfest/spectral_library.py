@@ -25,7 +25,7 @@ class SpectralLibrary:
     num_threads: int
     grpc_output: dict
 
-    def __init__(self, path, config_path=None):
+    def __init__(self, path, out_path, config_path=None):
         self.path = path
         self.library = Spectra()
         self.config_path = config_path
@@ -34,6 +34,12 @@ class SpectralLibrary:
             self.config.read(config_path)
         else:
             self.config.read(CONFIG_PATH)
+        self.results_path = os.path.join(out_path, 'results')
+        if not os.path.isdir(self.results_path):
+            try:
+                os.makedirs(self.results_path)
+            except:
+                print('In Feature Calculation')
 
     def gen_lib(self):
         """
@@ -42,10 +48,10 @@ class SpectralLibrary:
         if self.config.get_fasta():
             self.read_fasta()
         else:
-            for root, dirs, files in os.walk(self.path):
-                for file in files:
-                    if file.endswith(".csv"):
-                         library_df = csv.read_file(self.path + file)
+            print(self.path)
+            for file in os.listdir(self.path):
+                if file.endswith(".csv"):
+                     library_df = csv.read_file(self.path + file)
             library_df.columns = library_df.columns.str.upper()
             self.library.add_columns(library_df)
 
@@ -74,7 +80,6 @@ class SpectralLibrary:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
                 lambda x: x[12:])
             library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
-
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,

@@ -18,11 +18,12 @@ logger = logging.getLogger(__name__)
 # This function cannot be a function inside ReScore since the multiprocessing pool does not work with class member functions
 def calculate_features_single(raw_file_path, split_msms_path, percolator_input_path, mzml_path, config_path, calc_feature_step):
     logger.info(f"Calculating features for {raw_file_path}")
+    print(raw_file_path, split_msms_path, percolator_input_path, mzml_path)
     features = CalculateFeatures(search_path="",
                                  raw_path=raw_file_path,
-                                 out_path= mzml_path,
+                                 out_path=mzml_path,
                                  config_path=config_path)
-    df_search = pd.read_csv(split_msms_path, delimiter = '\t')
+    df_search = pd.read_csv(split_msms_path, delimiter='\t')
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics('prosit', percolator_input_path)
     features.gen_perc_metrics('andromeda', percolator_input_path.replace('prosit','andromeda'))
@@ -131,8 +132,9 @@ class ReScore(CalculateFeatures):
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
-            mzml_file_path = os.path.join(mzml_path, raw_file.replace('.raw','.mzML'))
+            mzml_file_path = os.path.join(mzml_path, raw_file.replace('.raw', '.mzML'))
 
+            print(self.results_path)
             percolator_input_path = self._get_split_perc_input_path(raw_file, 'prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
             
@@ -170,6 +172,8 @@ class ReScore(CalculateFeatures):
                     else:
                         first = False
                     fout.write(f.read())
+                print(percolator_input_path)
+                os.remove(percolator_input_path)
 
         if search_type == 'prosit':
             self.merge_input_step_prosit.mark_done()
@@ -228,7 +232,7 @@ class ReScore(CalculateFeatures):
         return os.path.join(self.out_path, "mzML")
     
     def get_percolator_folder_path(self):
-        return os.path.join(self.out_path, "percolator")
+        return os.path.join(self.results_path, "percolator")
 
     def _get_split_perc_input_path(self, raw_file: str, search_type: str):
         """
