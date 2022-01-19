@@ -88,11 +88,15 @@ class SpectralLibrary:
                                             disable_progress_bar=True)
         else:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
-            predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
+            try:
+                predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
                                             models=models,
                                             disable_progress_bar=True)
+            except:
+                print(library.spectra_data['GRPC_SEQUENCE'])
+
         #Return only in spectral library generation otherwise add to library
         if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions

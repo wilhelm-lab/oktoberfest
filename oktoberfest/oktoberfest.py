@@ -3,7 +3,7 @@ import sys
 import logging
 
 from fundamentals.fragments import compute_peptide_mass
-from fundamentals.mod_string import maxquant_to_internal
+from fundamentals.mod_string import maxquant_to_internal, internal_without_mods
 from prosit_io import Spectronaut
 from prosit_io.spectral_library import MSP
 
@@ -59,6 +59,19 @@ def generate_spectral_lib(search_dir, config_path):
     spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = spec_library.library.spectra_data[
         'MODIFIED_SEQUENCE'].apply(lambda x: '_' + x + '_')
     models_dict = spec_library.config.get_models()
+    spec_library.library.spectra_data["SEQUENCE"] = internal_without_mods(spec_library.library.spectra_data["MODIFIED_SEQUENCE"])
+    spec_library.library.spectra_data['PEPTIDE_LENGTH'] = spec_library.library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
+
+    logger.info(f"No of sequences before Filtering is {len(spec_library.library.spectra_data['PEPTIDE_LENGTH'])}")
+    spec_library.library.spectra_data = spec_library.library.spectra_data[(spec_library.library.spectra_data['PEPTIDE_LENGTH'] <= 30)]
+    spec_library.library.spectra_data = spec_library.library.spectra_data[(~spec_library.library.spectra_data['MODIFIED_SEQUENCE'].str.contains('\(ac\)'))]
+    spec_library.library.spectra_data = spec_library.library.spectra_data[
+        (~spec_library.library.spectra_data['MODIFIED_SEQUENCE'].str.contains('\(Acetyl \(Protein N-term\)\)'))]
+    spec_library.library.spectra_data = spec_library.library.spectra_data[(~spec_library.library.spectra_data['SEQUENCE'].str.contains('U'))]
+    spec_library.library.spectra_data = spec_library.library.spectra_data[spec_library.library.spectra_data['PRECURSOR_CHARGE'] <= 6]
+    spec_library.library.spectra_data = spec_library.library.spectra_data[spec_library.library.spectra_data['PEPTIDE_LENGTH'] >= 7]
+    logger.info(f"No of sequences after Filtering is {len(spec_library.library.spectra_data['PEPTIDE_LENGTH'])}")
+
     tmt_model = False
     for key, value in models_dict.items():
         if value:
@@ -80,10 +93,14 @@ def generate_spectral_lib(search_dir, config_path):
         spectra_div = Spectra()
         if i < no_of_sections:
             spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000:(i + 1) * 7000]
-        elif no_of_spectra < 7000:
-            spectra_div.spectra_data = spec_library.library.spectra_data
+            logger.info(f"Indices {i * 7000}, {(i + 1) * 7000}")
+        elif (i * 7000) < no_of_spectra:
+            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000:]
+            logger.info(f"Last Batch from index {i * 7000}")
+            logger.info(f"  Batch of size {len(spectra_div.spectra_data.index)}")
         else:
-            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[(i + 1) * 7000:]
+            break
+
         grpc_output_sec = spec_library.grpc_predict(spectra_div)
         if spec_library.config.get_output_format() == 'msp':
             out_lib = MSP(spectra_div.spectra_data, grpc_output_sec,  os.path.join(spec_library.results_path,'myPrositLib.msp'))

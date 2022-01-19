@@ -431,7 +431,7 @@ tables = "^3.6.1"
 type = "git"
 url = "git@gitlab.lrz.de:compmass/prosit/tools/prosit_io.git"
 reference = "develop"
-resolved_reference = "5e61bda73af6c4c1e44d17f6e9b9233db7d239e4"
+resolved_reference = "6771df32867c2bec11e67f85849fa7207f0b0ab4"
 
 [[package]]
 name = "protobuf"
