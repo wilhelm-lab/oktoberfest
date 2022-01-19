@@ -2,6 +2,14 @@ import os
 import sys
 import logging
 
+from fundamentals.fragments import compute_peptide_mass
+from fundamentals.mod_string import maxquant_to_internal
+from prosit_io import Spectronaut
+from prosit_io.spectral_library import MSP
+
+from .utils.config import Config
+from . import SpectralLibrary, CeCalibration
+from .data.spectra import Spectra
 from .re_score import ReScore
 
 __version__ = "0.1.0"
@@ -45,11 +53,70 @@ def parse_args():
     return args
 
 
-def run_oktoberfest(search_dir, config_path):
-    msms_path = os.path.join(search_dir, "msms.txt")
-    if not config_path:
-        config_path = os.path.join(search_dir, "config.json")
-    
+def generate_spectral_lib(search_dir, config_path):
+    spec_library = SpectralLibrary(path=search_dir,config_path=config_path)
+    spec_library.gen_lib()
+    spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = spec_library.library.spectra_data[
+        'MODIFIED_SEQUENCE'].apply(lambda x: '_' + x + '_')
+    models_dict = spec_library.config.get_models()
+    tmt_model = False
+    for key, value in models_dict.items():
+        if value:
+            if 'TMT' in value:
+                tmt_model = True
+    if(tmt_model):
+        spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = maxquant_to_internal(
+            spec_library.library.spectra_data['MODIFIED_SEQUENCE'], fixed_mods={'C': 'C[UNIMOD:4]',
+                                                                                '^_': '_[UNIMOD:737]',
+                                                                                'K': 'K[UNIMOD:737]'})
+    else:
+        spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = maxquant_to_internal(
+            spec_library.library.spectra_data['MODIFIED_SEQUENCE'])
+    spec_library.library.spectra_data['MASS'] = spec_library.library.spectra_data['MODIFIED_SEQUENCE'].apply(
+        lambda x: compute_peptide_mass(x))
+    no_of_spectra = len(spec_library.library.spectra_data)
+    no_of_sections = no_of_spectra // 7000
+    for i in range(0, no_of_sections + 1):
+        spectra_div = Spectra()
+        if i < no_of_sections:
+            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000:(i + 1) * 7000]
+        elif no_of_spectra < 7000:
+            spectra_div.spectra_data = spec_library.library.spectra_data
+        else:
+            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[(i + 1) * 7000:]
+        grpc_output_sec = spec_library.grpc_predict(spectra_div)
+        if not os.path.isdir(os.path.join(spec_library.path, 'out/')):
+            os.makedirs(os.path.join(spec_library.path, 'out/'))
+        if spec_library.config.get_output_format() == 'msp':
+            out_lib = MSP(spectra_div.spectra_data, grpc_output_sec,  os.path.join(spec_library.path, 'out/' ,'myPrositLib.msp'))
+        else:
+            out_lib = Spectronaut(spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.path,'out/', 'myPrositLib.soectronaut'))
+        out_lib.prepare_spectrum()
+        out_lib.write()
+
+
+def run_ce_calibration(msms_path, search_dir, config_path):
+    ce_calib = CeCalibration(search_path=msms_path,
+                       raw_path=search_dir,
+                       out_path=search_dir,
+                       config_path=config_path)
+    df_search = ce_calib._load_search()
+    raw_type = ce_calib.config.get_raw_type()
+    if raw_type == "thermo":
+        extension = ".raw"
+    elif raw_type == "mzml":
+        extension = ".mzml"
+    else:
+        raise ValueError(f"{raw_type} is not supported as rawfile-type")
+
+    ce_calib.raw_path = os.path.join(ce_calib.raw_path,[os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0])
+    ce_calib.perform_alignment(df_search)
+    with open(os.path.join(search_dir,'out','ce.txt'), 'w') as f:
+        f.write(str(ce_calib.best_ce))
+
+
+
+def run_rescoring(msms_path, search_dir, config_path):
     re_score = ReScore(search_path=msms_path,
                        raw_path=search_dir,
                        out_path=search_dir,
@@ -57,10 +124,24 @@ def run_oktoberfest(search_dir, config_path):
     re_score.get_raw_files()
     re_score.split_msms()
     re_score.calculate_features()
-    
+
     re_score.merge_input('prosit')
-    re_score.merge_input('andromeda')
-    
+    # re_score.merge_input('andromeda')
+
     re_score.rescore_with_perc('prosit')
-    re_score.rescore_with_perc('andromeda')
-    
+    # re_score.rescore_with_perc('andromeda')
+
+
+def run_oktoberfest(search_dir, config_path):
+    msms_path = os.path.join(search_dir, "msms.txt")
+    if not config_path:
+        config_path = os.path.join(search_dir, "config.json")
+    conf = Config()
+    conf.read(config_path)
+    job_type = conf.get_job_type()
+    if job_type == 'SpectralLibraryGeneration':
+        generate_spectral_lib(search_dir,config_path)
+    elif job_type == 'CollisionEnergyAlignment':
+        run_ce_calibration(msms_path, search_dir, config_path)
+    elif job_type == 'MaxQuantRescoring':
+        run_rescoring(msms_path, search_dir, config_path)

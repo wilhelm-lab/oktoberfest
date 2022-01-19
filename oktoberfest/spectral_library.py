@@ -23,6 +23,7 @@ class SpectralLibrary:
     config: dict
     config_path: str
     num_threads: int
+    grpc_output: dict
 
     def __init__(self, path, config_path=None):
         self.path = path
@@ -87,7 +88,6 @@ class SpectralLibrary:
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
                                             models=models,
                                             disable_progress_bar=True)
-
         #Return only in spectral library generation otherwise add to library
         if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions
