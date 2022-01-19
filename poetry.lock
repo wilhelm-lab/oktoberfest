@@ -408,7 +408,7 @@ tqdm = "^4.43.0"
 type = "git"
 url = "git@gitlab.lrz.de:proteomics/prosit_tools/prosit_grpc.git"
 reference = "oktoberfest_revamp"
-resolved_reference = "aef4b125fa465f7e380e09d1c7cf89b6adc93f32"
+resolved_reference = "66924525706ab22f7def3d71a4004d2b758b9982"
 
 [[package]]
 name = "prosit-io"
