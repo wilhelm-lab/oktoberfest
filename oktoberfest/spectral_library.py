@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import os
@@ -10,6 +12,8 @@ from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 from .utils.config import Config
 
+import logging
+logger = logging.getLogger(__name__)
 
 class SpectralLibrary:
     """
@@ -94,7 +98,8 @@ class SpectralLibrary:
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
                                             models=models,
                                             disable_progress_bar=True)
-            except:
+            except BaseException:
+                logger.exception("An exception was thrown!", exc_info=True)
                 print(library.spectra_data['GRPC_SEQUENCE'])
 
         #Return only in spectral library generation otherwise add to library
