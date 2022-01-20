@@ -47,8 +47,8 @@ class Config:
             return "tmt"
 
     def get_all_features(self):
-        if "all_features" in self.data:
-            return self.data['all_features']
+        if "allFeatures" in self.data:
+            return self.data['allFeatures']
         else:
             return False
 

@@ -56,9 +56,6 @@ class SpectralLibrary:
         predictor = PROSITpredictor(server='131.159.152.7:8500',
                                     keepalive_timeout_ms=10000)
         
-        # models_dict None otherwise
-        self.config.read(CONFIG_PATH)
-
         models_dict = self.config.get_models()
         models = []
         tmt_model = False
@@ -73,7 +70,7 @@ class SpectralLibrary:
         if tmt_model:
 
             # TODO: find better way instead of hard coded x[12:]
-            if self.config.get_tag == "tmtpro":
+            if self.config.get_tag() == "tmtpro":
                 i = 13
             else:
                 i = 12
