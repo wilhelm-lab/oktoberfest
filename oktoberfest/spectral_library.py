@@ -39,11 +39,14 @@ class SpectralLibrary:
         else:
             self.config.read(CONFIG_PATH)
         self.results_path = os.path.join(out_path, 'results')
-        if not os.path.isdir(self.results_path):
-            try:
-                os.makedirs(self.results_path)
-            except:
-                print('In Feature Calculation')
+        if os.path.isdir(out_path):
+            if not os.path.isdir(self.results_path):
+                try:
+                    os.makedirs(self.results_path)
+                except:
+                    print('In Feature Calculation')
+        else:
+            print('In Feature Calculation')
 
     def gen_lib(self):
         """
@@ -93,7 +96,7 @@ class SpectralLibrary:
         else:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
             try:
-                predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
+                predictions, sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
                                             models=models,
@@ -102,6 +105,7 @@ class SpectralLibrary:
                 logger.exception("An exception was thrown!", exc_info=True)
                 print(library.spectra_data['GRPC_SEQUENCE'])
 
+        print(predictions)
         #Return only in spectral library generation otherwise add to library
         if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions

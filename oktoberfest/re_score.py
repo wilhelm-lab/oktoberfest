@@ -23,6 +23,8 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
                                  raw_path=raw_file_path,
                                  out_path=mzml_path,
                                  config_path=config_path)
+
+
     df_search = pd.read_csv(split_msms_path, delimiter='\t')
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics('prosit', percolator_input_path)
@@ -90,7 +92,7 @@ class ReScore(CalculateFeatures):
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby('RAW_FILE'):
-            logger.info(f"Found raw file {raw_file} in msms.txt")
+
             
             if not os.path.isfile(os.path.join(self.raw_path, raw_file + ".raw")):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
@@ -132,12 +134,12 @@ class ReScore(CalculateFeatures):
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
+
             mzml_file_path = os.path.join(mzml_path, raw_file.replace('.raw', '.mzML'))
 
-            print(self.results_path)
             percolator_input_path = self._get_split_perc_input_path(raw_file, 'prosit')
             split_msms_path = self._get_split_msms_path(raw_file)
-            
+
             if num_threads > 1:
                 processingPool.applyAsync(calculate_features_single, (raw_file_path, split_msms_path, percolator_input_path, mzml_file_path, self.config_path, calc_feature_step))
             else:
@@ -172,7 +174,6 @@ class ReScore(CalculateFeatures):
                     else:
                         first = False
                     fout.write(f.read())
-                print(percolator_input_path)
                 os.remove(percolator_input_path)
 
         if search_type == 'prosit':

@@ -422,7 +422,7 @@ tqdm = "^4.43.0"
 type = "git"
 url = "git@gitlab.lrz.de:proteomics/prosit_tools/prosit_grpc.git"
 reference = "oktoberfest_revamp"
-resolved_reference = "66924525706ab22f7def3d71a4004d2b758b9982"
+resolved_reference = "ec59facb51716ab301f825db70b79a8d0a3da326"
 
 [[package]]
 name = "prosit-io"
@@ -504,7 +504,7 @@ pynumpress = ["pynumpress (>=0.0.4)"]
 
 [[package]]
 name = "pyparsing"
-version = "3.0.6"
+version = "3.0.7"
 description = "Python parsing module"
 category = "main"
 optional = false
@@ -1284,8 +1284,8 @@ pymzml = [
     {file = "pymzml-2.5.0.macosx-10.15-x86_64.tar.gz", hash = "sha256:0425e8fe2ecd790823f7432557cd0b69fc17ae490c128b3b47d2844c2d28065d"},
 ]
 pyparsing = [
-    {file = "pyparsing-3.0.6-py3-none-any.whl", hash = "sha256:04ff808a5b90911829c55c4e26f75fa5ca8a2f5f36aa3a51f68e27033341d3e4"},
-    {file = "pyparsing-3.0.6.tar.gz", hash = "sha256:d9bdec0013ef1eb5a84ab39a3b3868911598afa494f5faa038647101504e2b81"},
+    {file = "pyparsing-3.0.7-py3-none-any.whl", hash = "sha256:a6c06a88f252e6c322f65faf8f418b16213b51bdfaece0524c1c1bc30c63c484"},
+    {file = "pyparsing-3.0.7.tar.gz", hash = "sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea"},
 ]
 pyteomics = [
     {file = "pyteomics-4.5.2-py2.py3-none-any.whl", hash = "sha256:0f62f854cb0153ff25932c2e8f3615e031b5e30f5bd1cc8aa97e76fd56d010b2"},

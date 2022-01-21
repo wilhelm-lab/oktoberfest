@@ -43,7 +43,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        if 'Prosit_2020_intensityTMT_Phospho' in self.config.get_models().values() or 'Prosit_2020_intensityTMT' in self.config.get_models().values():
+        if 'Prosit_2020_intensityTMT_Phospho' in self.config.get_models().values() or 'Prosit_TMT_intensity_2021' in self.config.get_models().values():
             tmt_labeled = True
         else:
             tmt_labeled = False
@@ -142,7 +142,8 @@ class CeCalibration(SpectralLibrary):
         """
         pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
         raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
-
+        print(len(pred_intensity.toarray()))
+        print(len(raw_intensity.toarray()))
         #return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity,raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity)
