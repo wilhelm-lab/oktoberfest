@@ -105,7 +105,7 @@ def generate_spectral_lib(search_dir, config_path):
         if spec_library.config.get_output_format() == 'msp':
             out_lib = MSP(spectra_div.spectra_data, grpc_output_sec,  os.path.join(spec_library.results_path,'myPrositLib.msp'))
         elif spec_library.config.get_output_format() == 'spectronaut':
-            out_lib = Spectronaut(spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, 'myPrositLib.spectronaut'))
+            out_lib = Spectronaut(spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, 'myPrositLib.csv'))
         else:
             raise ValueError(f"{spec_library.config.get_output_format()} is not supported as spectral library type")
         out_lib.prepare_spectrum()

@@ -105,7 +105,6 @@ class SpectralLibrary:
                 logger.exception("An exception was thrown!", exc_info=True)
                 print(library.spectra_data['GRPC_SEQUENCE'])
 
-        print(predictions)
         #Return only in spectral library generation otherwise add to library
         if self.config.get_job_type() == "SpectralLibraryGeneration":
             return predictions
