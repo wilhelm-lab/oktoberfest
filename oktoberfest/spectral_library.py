@@ -69,7 +69,8 @@ class SpectralLibrary:
         """
         from pathlib import Path
 
-        path = Path(__file__).parent / "../certificates/"
+        path = Path(__file__).parent / "certificates/"
+        logger.info(path)
         predictor = PROSITpredictor(server="proteomicsdb.org:8500",
                                     path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
                                     path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
