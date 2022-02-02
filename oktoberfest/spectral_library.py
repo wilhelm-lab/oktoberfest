@@ -67,8 +67,14 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server='131.159.152.7:8500',
-                                    keepalive_timeout_ms=10000)
+        from pathlib import Path
+
+        path = Path(__file__).parent / "../certificates/"
+        predictor = PROSITpredictor(server="proteomicsdb.org:8500",
+                                    path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
+                                    path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
+                                    path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
+                                    )
 
         models_dict = self.config.get_models()
         models = []
