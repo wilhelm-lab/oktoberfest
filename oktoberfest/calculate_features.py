@@ -25,6 +25,8 @@ class CalculateFeatures(CeCalibration):
         self.library.spectra_data['COLLISION_ENERGY'] = self.best_ce
         #self.library.spectra_data['COLLISION_ENERGY'] = 35.0
         self.grpc_predict(self.library)
+        self.library.write_pred_as_hdf5(self.get_pred_path())
+
 
     def gen_perc_metrics(self, search_type, file_path = None):
         """

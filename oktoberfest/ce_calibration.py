@@ -101,6 +101,9 @@ class CeCalibration(SpectralLibrary):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
         return self.out_path+'.hdf5'
 
+    def get_pred_path(self):
+        return self.out_path+'_pred.hdf5'
+
     def write_metadata_annotation(self):        
         self.library.write_as_hdf5(self.get_hdf5_path())
 
