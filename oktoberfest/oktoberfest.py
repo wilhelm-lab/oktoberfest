@@ -59,6 +59,8 @@ def generate_spectral_lib(search_dir, config_path):
     spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = spec_library.library.spectra_data[
         'MODIFIED_SEQUENCE'].apply(lambda x: '_' + x + '_')
     models_dict = spec_library.config.get_models()
+    spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = maxquant_to_internal(
+        spec_library.library.spectra_data['MODIFIED_SEQUENCE'],fixed_mods={})
     spec_library.library.spectra_data["SEQUENCE"] = internal_without_mods(spec_library.library.spectra_data["MODIFIED_SEQUENCE"])
     spec_library.library.spectra_data['PEPTIDE_LENGTH'] = spec_library.library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
 
