@@ -140,7 +140,18 @@ class Spectra:
         column_names = [columns_intensity, columns_mz]
 
         hdf5.write_file(data_sets, output_file, data_set_names, column_names)
-    
+
+    def write_pred_as_hdf5(self, output_file: str) -> None:
+        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY, hdf5.INTENSITY_PRED_KEY]
+
+        sparse_matrix_intensity_raw, columns_intensity = self.get_matrix(FragmentType.RAW, True)
+        sparse_matrix_mz, columns_mz = self.get_matrix(FragmentType.MZ, True)
+        sparse_matrix_pred, columns_pred = self.get_matrix(FragmentType.PRED, True)
+        data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz, sparse_matrix_pred]
+        column_names = [columns_intensity, columns_mz, columns_pred]
+
+        hdf5.write_file(data_sets, output_file, data_set_names, column_names)    
+
     def read_from_hdf5(self, input_file: str) -> None:
         self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)

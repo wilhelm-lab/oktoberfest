@@ -15,6 +15,9 @@ from .spectral_library import SpectralLibrary
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
 
+from .utils.config import Config
+from .constants_dir import CONFIG_PATH
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -32,8 +35,8 @@ class CeCalibration(SpectralLibrary):
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pymzml'):
-        super().__init__(search_path, config_path=config_path)
+    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pyteomics'):
+        super().__init__(search_path,out_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.out_path = out_path
@@ -43,16 +46,17 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
-        if 'Prosit_2020_intensityTMT_Phospho' in self.config.get_models().values() or 'Prosit_2020_intensityTMT' in self.config.get_models().values():
-            tmt_labeled = True
-        else:
-            tmt_labeled = False
+        tmt_labeled = self.config.get_tag()
         self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
+        print(self.out_path)
+        if not (self.out_path.endswith('.mzML')) and (not (self.out_path.endswith('.raw'))):
+            self.out_path = os.path.join(self.out_path, self.raw_path.split('/')[-1].split('.')[0]+'.mzml')
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
+
 
     def _load_search(self):
         switch = self.config.get_search_type()
@@ -101,6 +105,9 @@ class CeCalibration(SpectralLibrary):
         #hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
         return self.out_path+'.hdf5'
 
+    def get_pred_path(self):
+        return self.out_path+'_pred.hdf5'
+
     def write_metadata_annotation(self):        
         self.library.write_as_hdf5(self.get_hdf5_path())
 
@@ -138,10 +145,9 @@ class CeCalibration(SpectralLibrary):
         """
         pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
         raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
-        #print(pred_intensity.toarray())
         #return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity,raw_intensity)
-        self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity)
+        self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity, 0)
 
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
 

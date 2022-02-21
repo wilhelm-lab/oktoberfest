@@ -1,8 +1,10 @@
 {
   "jobType": "CeCalibration",
+  "tag": "itraq4",
+  "allFeatures": true,
   "fileUploads": {
     "search_type": "maxquant",
-    "raw_type": "raw",
+    "raw_type": "thermo",
     "fasta": false,
     "peptides.csv": true
   },
@@ -20,6 +22,6 @@
   },
   "spectralLibraryOutputFormat": "msp",
   "prosit_server": "131.159.152.7:8500",
-  "numThreads": 1,
+  "numThreads": 4,
   "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
  }

@@ -40,7 +40,18 @@ class Config:
             return { "selectedIntensityModel" : self.data["selectedIntensityModel"],
                      "selectedIRTModel": self.data["selectedIRTModel"],
                      "selectedProteotypicityModel": self.data["selectedProteotypicityModel"] }
-    
+    def get_tag(self):
+        if "tag" in self.data:
+            return self.data['tag']
+        else:
+            return "tmt"
+
+    def get_all_features(self):
+        if "allFeatures" in self.data:
+            return self.data['allFeatures']
+        else:
+            return False
+
     def get_job_type(self):
         if "jobType" in self.data:
             return self.data['jobType']
@@ -60,4 +71,9 @@ class Config:
             return self.data["fileUploads"]["search_type"]
         else:
             return "maxquant"
-    
+
+    def get_output_format(self):
+        if 'outputFormat' in self.data:
+            return self.data['outputFormat']
+        else:
+            return ""

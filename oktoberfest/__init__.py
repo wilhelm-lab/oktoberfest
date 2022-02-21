@@ -26,3 +26,4 @@ else:
 
 from .ce_calibration import CeCalibration
 from .re_score import ReScore
+from .spectral_library import SpectralLibrary

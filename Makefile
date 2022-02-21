@@ -24,7 +24,7 @@ run_oktoberfest: rm_err_file
 		$(IMAGE) python3 -u -m oktoberfest /root/data || (echo "2" > $(DATA)err.out; exit 2)
 
 compress: run_oktoberfest
-	zip -j -r -9 "$(DATA)/results.zip" "$(DATA)/percolator/"  --exclude '*_prosit.tab' '*_andromeda.tab' || (echo "3" > $(DATA)err.out; exit 3)
+	zip -j -r -9 "$(DATA)/results.zip" "$(DATA)/results/" || (echo "3" > $(DATA)err.out; exit 3)
 
 all: compress
 
@@ -33,4 +33,4 @@ run_local:
 	python3 -u -m oktoberfest "$(DATA)"
 
 clean_data_folder: 
-	rm -rf "$(DATA)/{proc,msms,percolator,mzML,msms.prosit}"
+	rm -rf "$(DATA)/{proc,msms,results,mzML,msms.prosit}"
