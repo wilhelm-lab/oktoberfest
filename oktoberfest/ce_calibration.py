@@ -35,8 +35,8 @@ class CeCalibration(SpectralLibrary):
     best_ce: float
 
 
-    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pymzml'):
-        super().__init__(search_path, config_path=config_path)
+    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package='pyteomics'):
+        super().__init__(search_path,out_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
         self.out_path = out_path
@@ -52,7 +52,11 @@ class CeCalibration(SpectralLibrary):
     def _gen_mzml_from_thermo(self):
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
+        print(self.out_path)
+        if not (self.out_path.endswith('.mzML')) and (not (self.out_path.endswith('.raw'))):
+            self.out_path = os.path.join(self.out_path, self.raw_path.split('/')[-1].split('.')[0]+'.mzml')
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
+
 
     def _load_search(self):
         switch = self.config.get_search_type()
@@ -141,7 +145,6 @@ class CeCalibration(SpectralLibrary):
         """
         pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
         raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
-        #print(pred_intensity.toarray())
         #return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity,raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity,pred_intensity, 0)

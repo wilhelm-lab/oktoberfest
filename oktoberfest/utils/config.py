@@ -71,4 +71,9 @@ class Config:
             return self.data["fileUploads"]["search_type"]
         else:
             return "maxquant"
-    
+
+    def get_output_format(self):
+        if 'outputFormat' in self.data:
+            return self.data['outputFormat']
+        else:
+            return ""

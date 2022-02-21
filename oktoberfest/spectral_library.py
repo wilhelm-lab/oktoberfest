@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 import os
@@ -10,6 +12,8 @@ from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 from .utils.config import Config
 
+import logging
+logger = logging.getLogger(__name__)
 
 class SpectralLibrary:
     """
@@ -23,8 +27,9 @@ class SpectralLibrary:
     config: dict
     config_path: str
     num_threads: int
+    grpc_output: dict
 
-    def __init__(self, path, config_path=None):
+    def __init__(self, path, out_path, config_path=None):
         self.path = path
         self.library = Spectra()
         self.config_path = config_path
@@ -33,6 +38,15 @@ class SpectralLibrary:
             self.config.read(config_path)
         else:
             self.config.read(CONFIG_PATH)
+        self.results_path = os.path.join(out_path, 'results')
+        if os.path.isdir(out_path):
+            if not os.path.isdir(self.results_path):
+                try:
+                    os.makedirs(self.results_path)
+                except:
+                    print('In Feature Calculation')
+        else:
+            print('In Feature Calculation')
 
     def gen_lib(self):
         """
@@ -41,10 +55,10 @@ class SpectralLibrary:
         if self.config.get_fasta():
             self.read_fasta()
         else:
-            for root, dirs, files in os.walk(self.path):
-                for file in files:
-                    if file.endswith(".csv"):
-                         library_df = csv.read_file(self.path + file)
+            print(self.path)
+            for file in os.listdir(self.path):
+                if file.endswith(".csv"):
+                     library_df = csv.read_file(os.path.join(self.path, file))
             library_df.columns = library_df.columns.str.upper()
             self.library.add_columns(library_df)
 
@@ -53,9 +67,15 @@ class SpectralLibrary:
         Use grpc to predict library and add predictions to library
         :return: grpc predictions if we are trying to generate spectral library
         """
-        predictor = PROSITpredictor(server='131.159.152.7:8500',
-                                    keepalive_timeout_ms=10000)
-        
+        from pathlib import Path
+
+        path = Path(__file__).parent / "certificates/"
+        logger.info(path)
+        predictor = PROSITpredictor(server="proteomicsdb.org:8500",
+                                    path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
+                                    path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
+                                    path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
+                                    )
         models_dict = self.config.get_models()
         models = []
         tmt_model = False
@@ -85,11 +105,15 @@ class SpectralLibrary:
                                             disable_progress_bar=True)
         else:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
-            predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
+            try:
+                predictions, sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                                             collision_energies=library.spectra_data["COLLISION_ENERGY"].values/100.0,
                                             models=models,
                                             disable_progress_bar=True)
+            except BaseException:
+                logger.exception("An exception was thrown!", exc_info=True)
+                print(library.spectra_data['GRPC_SEQUENCE'])
 
         #Return only in spectral library generation otherwise add to library
         if self.config.get_job_type() == "SpectralLibraryGeneration":
