@@ -85,6 +85,7 @@ class CeCalibration(SpectralLibrary):
         """
         Read input search and raw and add it to library
         """
+        #super().gen_lib()
         df_raw = self._load_rawfile()
         #return df_search
         logger.info("Merging rawfile and search result")
