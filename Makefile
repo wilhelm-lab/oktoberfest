@@ -21,7 +21,7 @@ build: dependencies
 
 run_oktoberfest: rm_err_file
 	$(DOCKER_CMD) \
-		$(IMAGE) python3 -u -m oktoberfest /root/data || (echo "2" > $(DATA)err.out; exit 2)
+		$(IMAGE) python3 -u -m oktoberfest /root/data --config_path /root/data/config.json || (echo "2" > $(DATA)err.out; exit 2)
 
 compress: run_oktoberfest
 	zip -j -r -9 "$(DATA)/results.zip" "$(DATA)/results/" || (echo "3" > $(DATA)err.out; exit 3)
