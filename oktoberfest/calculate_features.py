@@ -21,7 +21,6 @@ class CalculateFeatures(CeCalibration):
         """
         Get best ce with ce_calibration then use it for prediction.
         """
-        #super().gen_lib(df_search)
         self.perform_alignment(df_search)
         self.library.spectra_data['COLLISION_ENERGY'] = self.best_ce
         self.grpc_predict(self.library)

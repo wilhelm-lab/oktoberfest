@@ -77,3 +77,6 @@ class Config:
             return self.data['outputFormat']
         else:
             return ""
+
+    def get_fragmentation(self):
+        return self.data['fragmentation']

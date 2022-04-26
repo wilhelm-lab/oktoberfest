@@ -57,6 +57,7 @@ class SpectralLibrary:
         if self.config.get_fasta():
             self.read_fasta()
             library_df = csv.read_file(os.path.join(self.path, "prosit_input.csv"))
+
         else:
             print(self.path)
             for file in os.listdir(self.path):
@@ -65,6 +66,7 @@ class SpectralLibrary:
 
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
+        print(self.library)
 
     def grpc_predict(self, library, alignment=False):
         """
@@ -89,12 +91,13 @@ class SpectralLibrary:
 
         if tmt_model:
             # TODO: find better way instead of hard coded x[12:]
-            if self.config.get_tag() == "tmtpro":
-                i = 13
-            else:
-                i = 12
-            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
-                lambda x: x[i:])
+            #if self.config.get_tag() == "tmtpro":
+             #   i = 13
+            #else:
+             #   i = 12
+            #library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].apply(
+               # lambda x: x[i:])
+            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].str.replace('\[UNIMOD:2016\]','')
             library.spectra_data['FRAGMENTATION_GRPC'] = library.spectra_data["FRAGMENTATION"].apply(lambda x : 2 if x=='HCD' else 1)
             predictions,sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
@@ -104,7 +107,7 @@ class SpectralLibrary:
                                             disable_progress_bar=True)
         else:
             #library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
-            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].str.replace('\[UNIMOD:730\]','')
+            library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE'].str.replace('\[UNIMOD:2016\]','')
             try:
                 predictions, sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
@@ -132,7 +135,8 @@ class SpectralLibrary:
             library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
     def read_fasta(self):
-        cmd = f"--fasta {self.config.get_fasta()} --prosit_input {os.path.join(self.path, 'prosit_input.csv')}"
-        #subprocess.call(["python", "digest.py", "--fasta", f"{self.config.get_fasta()}", "--prosit_input", f"{os.path.join(self.path, 'prosit_input.csv')}"])
+        cmd = ["--fasta",  f"{self.config.get_fasta()}", "--prosit_input", f"{os.path.join(self.path, 'prosit_input.csv')}",
+               "--fragmentation", f"{self.config.get_fragmentation()}"]
+        #print("-----------------read_fasta-----------------------------------")
         digest.main(cmd)
 

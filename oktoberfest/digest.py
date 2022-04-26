@@ -8,17 +8,17 @@ import collections
 import numpy as np
 
 def main(args):
-    args = parseArgs()    
+    args = parseArgs(args)
     # python digest.py --enzyme trypsinp --cleavages 0 --fasta /home/matthewt/data/MaxLFQ_benchmark/ups.fasta --prosit_input ~/data/Prosit_test/ups_prosit_input.csv
     if args.prosit_input:
         writer = getTsvWriter(args.prosit_input, delimiter = ',')
-        writer.writerow("modified_sequence,collision_energy,precursor_charge".split(","))
-
+        writer.writerow("modified_sequence,collision_energy,precursor_charge,fragmentation".split(","))
         print(args.prosit_input)
         print(args.fasta)
+        print(args.fragmentation)
         prositInputFileWithProteins = args.prosit_input.replace(".csv", "_with_proteins.csv")
         writerWithProteins = getTsvWriter(prositInputFileWithProteins, delimiter = ',')
-        writerWithProteins.writerow("modified_sequence,collision_energy,precursor_charge,protein".split(","))
+        writerWithProteins.writerow("modified_sequence,collision_energy,precursor_charge,protein,fragmentation".split(","))
         
         pre, not_post = getCleavageSites(args.enzyme)    
         for peptide, proteins in getPeptideToProteinMap(
@@ -35,8 +35,8 @@ def main(args):
                     useHashKey = False).items():
             if validPrositPeptide(peptide):
                 for charge in [2,3,4]:
-                    writer.writerow([peptide, 30, charge])
-                    writerWithProteins.writerow([peptide, 30, charge, proteins[0]])
+                    writer.writerow([peptide, 30, charge, args.fragmentation])
+                    writerWithProteins.writerow([peptide, 30, charge, proteins[0], args.fragmentation])
 
     # python digest.py --fasta /media/kusterlab/internal_projects/active/Mouse_proteome/stuff/10090_UP000000589_UniProtKB_Mouse_CanIso_2018_03_27.fasta --peptide_protein_map ../data/fasta/10090_UP000000589_UniProtKB_Mouse_CanIso_2018_03_27.peptide_to_protein_map.txt            
     if args.peptide_protein_map:
@@ -63,16 +63,16 @@ def validPrositPeptide(peptide):
     return len(peptide) <= 30 and "U" not in peptide and "X" not in peptide
 
 
-def parseArgs():
+def parseArgs(call):
     import argparse
     apars = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    apars.add_argument('--fasta', default="/media/kusterlab/internal_projects/active/ProteomeTools/TMT/datasets/HumanYeast_Mix/Homo_Sapiens.fasta", metavar = "F", required = False,
+    apars.add_argument('--fasta', metavar = "F", required = False,
                                          help='''Fasta file used as input
                                                     ''')
     
-    apars.add_argument('--prosit_input', default="prosit_input.csv", metavar = "M", required = False,
+    apars.add_argument('--prosit_input', metavar = "M", required = False,
                                          help='''Path to file where to write the prosit input file.
                                                     ''')
                                                     
@@ -86,11 +86,13 @@ def parseArgs():
                                                          file that meet the iBAQ criteria
                                                          (6 <= pepLen <= 30, no miscleavages).
                                                     ''')
+    apars.add_argument('--fragmentation', default=None, metavar = "M", required = True, 
+                                         help='''Fragmentation (HCD or CID)''')
                                                                                             
     addArguments(apars)
                                                                                                     
     # ------------------------------------------------
-    args = apars.parse_args()
+    args = apars.parse_args(call)
     
     return args
 
