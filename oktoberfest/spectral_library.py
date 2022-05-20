@@ -7,13 +7,13 @@ import os
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
 from prosit_io.file import csv
+from prosit_io.spectral_library import digest
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 from .utils.config import Config
 
 import subprocess
-from . import digest
 import logging
 logger = logging.getLogger(__name__)
 
@@ -135,8 +135,11 @@ class SpectralLibrary:
             library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
     def read_fasta(self):
+        print("-----------------read_fasta-----------------------------------")
         cmd = ["--fasta",  f"{self.config.get_fasta()}", "--prosit_input", f"{os.path.join(self.path, 'prosit_input.csv')}",
-               "--fragmentation", f"{self.config.get_fragmentation()}"]
-        #print("-----------------read_fasta-----------------------------------")
+               "--fragmentation", f"{self.config.get_fragmentation()}", "--digestion", f"{self.config.get_digestion()}",
+               "--cleavages", f"{self.config.get_cleavages()}",  "--db", f"{self.config.get_db()}", 
+               "--enzyme", f"{self.config.get_enzyme()}", "--special-aas", f"{self.config.get_special_aas()}", 
+               "--min-length", f"{self.config.get_min_length()}", "--max-length", f"{self.config.get_max_length()}"]
         digest.main(cmd)
 
