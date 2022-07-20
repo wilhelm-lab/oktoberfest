@@ -6,7 +6,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 import tracemalloc
-import mokapot
+
 
 from .calculate_features import CalculateFeatures
 from .utils.process_step import ProcessStep
@@ -183,7 +183,7 @@ class ReScore(CalculateFeatures):
 
     
     def rescore_with_perc(self, search_type: str = "prosit",
-                          test_fdr: float = 0.01, train_fdr: float = 0.01, mokapot_flag: bool = False):
+                          test_fdr: float = 0.01, train_fdr: float = 0.01):
         """
         Use percolator to re-score library.
         """
@@ -193,18 +193,16 @@ class ReScore(CalculateFeatures):
         else:
             if self.percolator_step_andromeda.is_done():
                 return
-       
+                
         perc_path = self.get_percolator_folder_path()
-        
-        if not mokapot_flag:
-            weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
-            target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
-            decoy_psms = os.path.join(perc_path, f"{search_type}_decoy.psms")
-            target_peptides = os.path.join(perc_path, f"{search_type}_target.peptides")
-            decoy_peptides = os.path.join(perc_path, f"{search_type}_decoy.peptides")
-            log_file = os.path.join(perc_path, f"{search_type}.log")
+        weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
+        target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
+        decoy_psms = os.path.join(perc_path, f"{search_type}_decoy.psms")
+        target_peptides = os.path.join(perc_path, f"{search_type}_target.peptides")
+        decoy_peptides = os.path.join(perc_path, f"{search_type}_decoy.peptides")
+        log_file = os.path.join(perc_path, f"{search_type}.log")
 
-            cmd = f"percolator --weights {weights_file} \
+        cmd = f"percolator --weights {weights_file} \
                           --num-threads {self.config.get_num_threads()} \
                           --subset-max-train 500000 \
                           --post-processing-tdc \
@@ -216,17 +214,9 @@ class ReScore(CalculateFeatures):
                           --results-peptides {target_peptides} \
                           --decoy-results-peptides {decoy_peptides} \
                           {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
-            logger.info(f"Starting percolator with command {cmd}")
-            subprocess.run(cmd, shell=True, check=True)
-        else:
-            file = os.path.join(perc_path, f"{search_type}.tab")
-            df = pd.read_csv(file, sep="\t")
-            df = df.rename(columns={"Protein": "Proteins"})
-            df.to_csv(file, sep ="\t")
-            psms = mokapot.read_pin(file)
-            results, models = mokapot.brew(psms, test_fdr = 0.01)
-            results.to_txt(dest_dir = perc_path, file_root=f"{search_type}", decoys = True)
-
+        logger.info(f"Starting percolator with command {cmd}")
+        subprocess.run(cmd, shell=True, check=True)
+        
         if search_type == 'prosit':
             self.percolator_step_prosit.mark_done()
         else:

@@ -7,13 +7,11 @@ import os
 from .data.spectra import Spectra
 from .data.spectra import FragmentType
 from prosit_io.file import csv
-from prosit_io.spectral_library import digest
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 from .utils.config import Config
 
-import subprocess
 import logging
 logger = logging.getLogger(__name__)
 
@@ -56,17 +54,13 @@ class SpectralLibrary:
         """
         if self.config.get_fasta():
             self.read_fasta()
-            library_df = csv.read_file(os.path.join(self.path, "prosit_input.csv"))
-
         else:
-            #print(self.path)
+            print(self.path)
             for file in os.listdir(self.path):
                 if file.endswith(".csv"):
                      library_df = csv.read_file(os.path.join(self.path, file))
-
-        library_df.columns = library_df.columns.str.upper()
-        self.library.add_columns(library_df)
-        print(self.library)
+            library_df.columns = library_df.columns.str.upper()
+            self.library.add_columns(library_df)
 
     def grpc_predict(self, library, alignment=False):
         """
@@ -94,6 +88,7 @@ class SpectralLibrary:
                     break
 
         if tmt_model:
+
             # TODO: find better way instead of hard coded x[12:]
             if self.config.get_tag() == "tmtpro":
                 i = 13
@@ -110,7 +105,6 @@ class SpectralLibrary:
                                             disable_progress_bar=True)
         else:
             library.spectra_data['GRPC_SEQUENCE'] = library.spectra_data['MODIFIED_SEQUENCE']
-
             try:
                 predictions, sequences = predictor.predict(sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                                             charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
@@ -138,10 +132,5 @@ class SpectralLibrary:
             library.add_column(proteotypicity_pred, 'PROTEOTYPICITY')
 
     def read_fasta(self):
-        cmd = ["--fasta",  f"{self.config.get_fasta()}", "--prosit_input", f"{os.path.join(self.path, 'prosit_input.csv')}",
-               "--fragmentation", f"{self.config.get_fragmentation()}", "--digestion", f"{self.config.get_digestion()}",
-               "--cleavages", f"{self.config.get_cleavages()}",  "--db", f"{self.config.get_db()}", 
-               "--enzyme", f"{self.config.get_enzyme()}", "--special-aas", f"{self.config.get_special_aas()}", 
-               "--min-length", f"{self.config.get_min_length()}", "--max-length", f"{self.config.get_max_length()}"]
-        digest.main(cmd)
+        pass
 
