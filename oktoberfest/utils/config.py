@@ -77,3 +77,48 @@ class Config:
             return self.data['outputFormat']
         else:
             return ""
+
+    def get_fragmentation(self):
+        return self.data['fragmentation']
+
+    def get_digestion(self):
+        if 'digestion' in self.data:
+            return self.data['digestion']
+        else:
+            return "full"
+
+    def get_cleavages(self):
+        if 'cleavages' in self.data:
+            return self.data['cleavages']
+        else:
+            return 2
+
+    def get_min_length(self):
+        if 'min_length' in self.data:
+            return self.data['min_length']
+        else:
+            return 7
+
+    def get_max_length(self):
+        if 'max_length' in self.data:
+            return self.data['max_length']
+        else:
+            return 60
+
+    def get_enzyme(self):
+        if 'enzyme' in self.data:
+            return self.data['enzyme']
+        else:
+            return 'trypsin'
+
+    def get_special_aas(self):
+        if 'special_aas' in self.data:
+            return self.data['special_aas']
+        else:
+            return 'KR'
+
+    def get_db(self):
+        if 'db' in self.data:
+            return self.data['db']
+        else:
+            return 'concat'
