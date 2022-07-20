@@ -54,7 +54,6 @@ def parse_args():
 
 
 def generate_spectral_lib(search_dir, config_path):
-    print("---------------generate spectral lib-------------------------")
     spec_library = SpectralLibrary(path=search_dir, out_path= search_dir, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data['MODIFIED_SEQUENCE'] = spec_library.library.spectra_data[
@@ -159,10 +158,7 @@ def run_oktoberfest(search_dir, config_path):
     conf = Config()
     conf.read(config_path)
     job_type = conf.get_job_type()
-    print("---------------------------")
-    print(job_type)
     if job_type == 'SpectralLibraryGeneration':
-        print("---------------speclib------------")
         generate_spectral_lib(search_dir, config_path)
     elif job_type == 'CollisionEnergyAlignment':
         run_ce_calibration(msms_path, search_dir, config_path)
