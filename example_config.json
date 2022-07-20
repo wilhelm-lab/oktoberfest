@@ -1,13 +1,11 @@
 {
-  "jobType": "SpectralLibraryGeneration",
+  "jobType": "CeCalibration",
   "tag": "itraq4",
-  "allFeatures":true,
-  "outputFormat": "spectronaut",
-  "fragmentation": "HCD",
+  "allFeatures": true,
   "fileUploads": {
     "search_type": "maxquant",
     "raw_type": "thermo",
-    "fasta": "/media/kusterlab/internal_projects/active/ProteomeTools/TMT/datasets/HumanYeast_Mix/Homo_Sapiens.fasta",
+    "fasta": false,
     "peptides.csv": true
   },
   "fastaDigestOptions": {
@@ -18,12 +16,12 @@
     "charges": false
   },
   "models":{
-      "intensity": "Prosit_2020_intensity_cid",
+      "intensity": "Prosit_2020_intensityTMT",
       "irt": "Prosit_2020_irt_TMT",
       "proteotypicity": "Prosit_2020_proteotypicity"
   },
   "spectralLibraryOutputFormat": "msp",
   "prosit_server": "131.159.152.7:8500",
-  "numThreads": 10,
+  "numThreads": 4,
   "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
  }
