@@ -24,10 +24,8 @@ def calculate_features_single(raw_file_path, split_msms_path, percolator_input_p
                                  out_path=mzml_path,
                                  config_path=config_path)
 
-    print("---------------------")
-    print(split_msms_path)
+
     df_search = pd.read_csv(split_msms_path, delimiter='\t')
-    print(df_search)
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics('prosit', percolator_input_path)
     features.gen_perc_metrics('andromeda', percolator_input_path.replace('prosit','andromeda'))
