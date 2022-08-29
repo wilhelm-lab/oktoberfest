@@ -1,0 +1,40 @@
+image: docker:latest
+
+variables:
+  REGISTRY: $CI_REGISTRY
+  PROJECT_PATH: none
+  DOCKER_DRIVER: overlay2
+  # SELECT ONE OF INTERNAL,EXTERNAL
+  CI_DEPLOY_NETWORK: EXTERNAL
+  CI_DEPLOY_TAG: none
+  # SELECT ONE OF public,private
+  CI_PUBLISH: public
+  # hotfix for https://gitlab.com/gitlab-org/gitlab-ce/issues/64959
+  DOCKER_TLS_CERTDIR: ""
+
+stages:
+  - build
+
+
+build:
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+  services:
+    - name: docker:dind
+      command: ["--experimental"]
+  stage: build
+  script:
+    - apk update && apk add git
+    - git describe --long --dirty --always > hash.file
+    - PROJECT_PATH=$(echo $CI_PROJECT_PATH | tr '[:upper:]' '[:lower:]')
+    - CONTAINER_IMAGE=$REGISTRY/$PROJECT_PATH
+    - docker pull $CONTAINER_IMAGE:latest || true
+    # - docker build --squash --cache-from $CONTAINER_IMAGE:latest --tag $CONTAINER_IMAGE:$CI_COMMIT_REF_SLUG --tag $CONTAINER_IMAGE:latest .
+    - docker build --cache-from $CONTAINER_IMAGE:latest --tag $CONTAINER_IMAGE:$CI_COMMIT_REF_SLUG --tag $CONTAINER_IMAGE:latest --tag $CONTAINER_IMAGE:$CI_COMMIT_SHORT_SHA .
+      #    - docker build --squash --cache-from $CONTAINER_IMAGE:latest --tag $CONTAINER_IMAGE:git_$CI_COMMIT_SHORT_SHA .
+    - docker push $CONTAINER_IMAGE:$CI_COMMIT_REF_SLUG
+    - docker push $CONTAINER_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker push $CONTAINER_IMAGE:latest
+  tags:
+    - docker
+
