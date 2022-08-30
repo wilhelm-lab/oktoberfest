@@ -1,8 +1,7 @@
 __version__ = "0.1.0"
-import sys
 import logging.handlers
+import sys
 import time
-
 
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)
@@ -15,14 +14,14 @@ if len(logger.handlers) == 0:
     console_handler.setLevel(CONSOLE_LOG_LEVEL)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
+
     # add error handler
     error_handler = logging.StreamHandler()
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
     logger.addHandler(error_handler)
 else:
-    logger.info('Logger already initizalized. Resuming normal operation.')
+    logger.info("Logger already initizalized. Resuming normal operation.")
 
 
 from .ce_calibration import CeCalibration

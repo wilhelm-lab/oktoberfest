@@ -1,19 +1,20 @@
-import os
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
 
 class ProcessStep:
     def __init__(self, raw_path, step_name):
         self.raw_path = raw_path
         self.step_name = step_name
-    
+
     def _get_proc_folder_path(self):
         return os.path.join(self.raw_path, "proc")
 
     def _get_done_file_path(self):
         return os.path.join(self._get_proc_folder_path(), self.step_name + ".done")
-    
+
     def is_done(self):
         if not os.path.isdir(self._get_proc_folder_path()):
             os.makedirs(self._get_proc_folder_path())
@@ -23,6 +24,6 @@ class ProcessStep:
             return True
         else:
             return False
-    
+
     def mark_done(self):
-        open(self._get_done_file_path(), 'w').close()
+        open(self._get_done_file_path(), "w").close()

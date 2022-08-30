@@ -2,12 +2,12 @@ import logging
 from enum import Enum
 from typing import List
 
+import fundamentals.constants as C
+import numpy as np
 import pandas as pd
 import scipy
-from scipy.sparse import coo_matrix, spmatrix
-import numpy as np
-import fundamentals.constants as C
 from prosit_io.file import hdf5
+from scipy.sparse import coo_matrix, spmatrix
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ class FragmentType(Enum):
 
 
 class Spectra:
-    INTENSITY_COLUMN_PREFIX = 'INTENSITY_RAW'
-    INTENSITY_PRED_PREFIX = 'INTENSITY_PRED'
-    MZ_COLUMN_PREFIX = 'MZ_RAW'
+    INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
+    INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
+    MZ_COLUMN_PREFIX = "MZ_RAW"
     EPSILON = 1e-7
-    COLUMNS_FRAGMENT_ION = ['Y1+', 'Y1++', 'Y1+++', 'B1+', 'B1++', 'B1+++']
+    COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
     spectra_data: pd.DataFrame
 
@@ -36,7 +36,7 @@ class Spectra:
         columns = []
         for i in range(1, 30):
             for column in Spectra.COLUMNS_FRAGMENT_ION:
-                columns.append(prefix + '_' + column.replace('1', str(i)))
+                columns.append(prefix + "_" + column.replace("1", str(i)))
         return columns
 
     @staticmethod
@@ -63,8 +63,14 @@ class Spectra:
 
     def get_meta_data(self) -> pd.DataFrame:
         columns = list(self.spectra_data.columns)
-        meta_data_columns = list(filter(lambda x: not x.startswith(
-            tuple([Spectra.INTENSITY_COLUMN_PREFIX, Spectra.MZ_COLUMN_PREFIX, Spectra.INTENSITY_PRED_PREFIX])), columns))
+        meta_data_columns = list(
+            filter(
+                lambda x: not x.startswith(
+                    tuple([Spectra.INTENSITY_COLUMN_PREFIX, Spectra.MZ_COLUMN_PREFIX, Spectra.INTENSITY_PRED_PREFIX])
+                ),
+                columns,
+            )
+        )
 
         return self.spectra_data[meta_data_columns]
 
@@ -130,7 +136,7 @@ class Spectra:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
         # Check if conversion is low change to coo then csr from coo
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
-    
+
     def write_as_hdf5(self, output_file: str) -> None:
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
 
@@ -150,10 +156,9 @@ class Spectra:
         data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz, sparse_matrix_pred]
         column_names = [columns_intensity, columns_mz, columns_pred]
 
-        hdf5.write_file(data_sets, output_file, data_set_names, column_names)    
+        hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
     def read_from_hdf5(self, input_file: str) -> None:
         self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
-

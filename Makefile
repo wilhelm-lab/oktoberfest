@@ -10,7 +10,7 @@ registry:
 	docker build -t gitlab.lrz.de:5005/proteomics/prosit_tools/oktoberfest .
 	docker push gitlab.lrz.de:5005/proteomics/prosit_tools/oktoberfest
 
-jump: 
+jump:
 	$(DOCKER_CMD) \
 		$(IMAGE) bash
 
@@ -29,8 +29,8 @@ compress: run_oktoberfest
 all: compress
 
 
-run_local: 
+run_local:
 	python3 -u -m oktoberfest "$(DATA)"
 
-clean_data_folder: 
+clean_data_folder:
 	rm -rf "$(DATA)/{proc,msms,results,mzML,msms.prosit}"
