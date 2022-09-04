@@ -3,25 +3,21 @@ import os
 
 import numpy as np
 import pandas as pd
-import scipy.sparse
 from fundamentals.annotation.annotation import annotate_spectra
-from fundamentals.metrics.metric import Metric
 from fundamentals.metrics.similarity import SimilarityMetrics
-from prosit_io.file import csv
 from prosit_io.raw import ThermoRaw
 from prosit_io.search_result import MaxQuant
 
-from .constants_dir import CONFIG_PATH
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
-from .utils.config import Config
 
 logger = logging.getLogger(__name__)
 
 
 class CeCalibration(SpectralLibrary):
     """
-    main to init a CeCalibrarion obj and go through the steps:
+    Main to init a CeCalibrarion obj and go through the steps.
+
     1- gen_lib
     2- allign_ce
     3- get_best_ce
@@ -32,7 +28,23 @@ class CeCalibration(SpectralLibrary):
     out_path: str
     best_ce: float
 
-    def __init__(self, search_path, raw_path, out_path, config_path=None, mzml_reader_package="pyteomics"):
+    def __init__(
+        self,
+        search_path: str,
+        raw_path: str,
+        out_path: str,
+        config_path: str = None,
+        mzml_reader_package: str = "pyteomics",
+    ):
+        """
+        Initialize a CeCalibration object.
+
+        :param search_path: path to search directory
+        :param raw_path: path to directory containing the msms.txt and raw files
+        :param out_path: path to output folder
+        :param config_path: path to configuration file
+        :param mzml_reader_package: mzml reader (pymzml or pyteomics)
+        """
         super().__init__(search_path, out_path, config_path=config_path)
         self.search_path = search_path
         self.raw_path = raw_path
@@ -44,10 +56,10 @@ class CeCalibration(SpectralLibrary):
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
         if (
-            "Prosit_2020_intensityTMT_Phospho" in self.config.get_models().values()
-            or "Prosit_TMT_intensity_2021" in self.config.get_models().values()
+            "Prosit_2020_intensityTMT_Phospho" in self.config.models.values()
+            or "Prosit_TMT_intensity_2021" in self.config.models.values()
         ):
-            tmt_labeled = self.config.get_tag()
+            tmt_labeled = self.config.tag
         else:
             tmt_labeled = ""
         self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
@@ -61,7 +73,7 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
 
     def _load_search(self):
-        switch = self.config.get_search_type()
+        switch = self.config.search_type
         logger.info(f"search_type is {switch}")
         if switch == "maxquant":
             self._gen_internal_search_result_from_msms()
@@ -72,7 +84,7 @@ class CeCalibration(SpectralLibrary):
         return MaxQuant.read_internal(self.search_path)
 
     def _load_rawfile(self):
-        switch = self.config.get_raw_type()
+        switch = self.config.raw_type
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
             self._gen_mzml_from_thermo()
@@ -83,9 +95,11 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = self.raw_path.replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
 
-    def gen_lib(self, df_search):
+    def gen_lib(self, df_search: pd.DataFrame):
         """
-        Read input search and raw and add it to library
+        Read input search and raw and add it to library.
+
+        :param df_search: search result as pd.DataFrame
         """
         df_raw = self._load_rawfile()
         # return df_search
@@ -103,14 +117,17 @@ class CeCalibration(SpectralLibrary):
         self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
         self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
 
-    def get_hdf5_path(self):
+    def get_hdf5_path(self) -> str:
+        """Get path to hdf5 file."""
         # hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
         return self.out_path + ".hdf5"
 
-    def get_pred_path(self):
+    def get_pred_path(self) -> str:
+        """Get path to prediction hdf5 file."""
         return self.out_path + "_pred.hdf5"
 
     def write_metadata_annotation(self):
+        """Write metadata annotation as hdf5 file."""
         self.library.write_as_hdf5(self.get_hdf5_path())
 
     def _prepare_alignment_df(self):
@@ -127,17 +144,11 @@ class CeCalibration(SpectralLibrary):
             by="SCORE", ascending=False
         ).iloc[:1000]
 
-        # Old code to repeat dataframe for each CE
-        # self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.array([x for x in range(18,50)] for _ in range(len(self.alignment_library.spectra_data)))
-        # self.alignment_library.spectra_data = self.alignment_library.spectra_data.explode("COLLISION_ENERGY")
-        # self.alignment_library.spectra_data.reset_index(inplace=True)
-        # self.alignment_library.spectra_data = self.alignment_library.spectra_data.copy()
-
         # Repeat dataframe for each CE
-        CE_RANGE = range(18, 50)
+        ce_range = range(18, 50)
         nrow = len(self.alignment_library.spectra_data)
-        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in CE_RANGE], axis=0)
-        self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(CE_RANGE, nrow)
+        self.alignment_library.spectra_data = pd.concat([self.alignment_library.spectra_data for _ in ce_range], axis=0)
+        self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range, nrow)
         self.alignment_library.spectra_data.reset_index(inplace=True)
 
     def _predict_alignment(self):
@@ -145,8 +156,8 @@ class CeCalibration(SpectralLibrary):
 
     def _alignment(self):
         """
-        Edit library to try different ranges of ce 15-50.
-        then predict with the new library.
+        Edit library to try different ranges of ce 15-50. then predict with the new library.
+
         Check https://gitlab.lrz.de/proteomics/prosit_tools/oktoberfest/-/blob/develop/oktoberfest/ce_calibration/grpc_alignment.py
         """
         pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
@@ -160,13 +171,16 @@ class CeCalibration(SpectralLibrary):
         ].mean()
 
     def _get_best_ce(self):
-        """
-        Get aligned ce for this lib.
-        """
+        """Get aligned ce for this lib."""
         self.best_ce = self.ce_alignment.idxmax()
         logger.info(f"Best collision energy: {self.best_ce}")
 
-    def perform_alignment(self, df_search):
+    def perform_alignment(self, df_search: pd.DataFrame):
+        """
+        Perform alignment and get the best CE.
+
+        :param df_search: search result as pd.DataFrame
+        """
         hdf5_path = self.get_hdf5_path()
         logger.info(f"Path to hdf5 file with annotations for {self.out_path}: {hdf5_path}")
         if os.path.isfile(hdf5_path):

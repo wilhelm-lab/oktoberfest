@@ -1,3 +1,4 @@
+"""Initialize logger."""
 __version__ = "0.1.0"
 import logging.handlers
 import sys
@@ -22,8 +23,3 @@ if len(logger.handlers) == 0:
     logger.addHandler(error_handler)
 else:
     logger.info("Logger already initizalized. Resuming normal operation.")
-
-
-from .ce_calibration import CeCalibration
-from .re_score import ReScore
-from .spectral_library import SpectralLibrary

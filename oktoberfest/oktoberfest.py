@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    """Main method to run oktoberfest."""
     logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
     logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
 
@@ -36,6 +37,7 @@ def main():
 
 
 def parse_args():
+    """Parse search_dir and config_path arguments."""
     import argparse
 
     apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -52,8 +54,8 @@ def parse_args():
         "--config_path",
         default=None,
         metavar="C",
-        help="""Path to config file in json format. If this argument is not specified, we try to find and use a file called config.json in <search_dir>.
-                            """,
+        help="""Path to config file in json format. \\
+                If this argument is not specified, we try to find and use a file called config.json in <search_dir>.""",
     )
 
     args = apars.parse_args()
@@ -61,13 +63,20 @@ def parse_args():
     return args
 
 
-def generate_spectral_lib(search_dir, config_path):
+def generate_spectral_lib(search_dir: str, config_path: str):
+    """
+    Create a SpectralLibrary object and generate the spectral library.
+
+    :param search_dir: path to directory containing the msms.txt and raw files
+    :param config_path: path to config file
+    :raises ValueError: spectral library output format is not supported as spectral library type
+    """
     spec_library = SpectralLibrary(path=search_dir, out_path=search_dir, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
         "MODIFIED_SEQUENCE"
     ].apply(lambda x: "_" + x + "_")
-    models_dict = spec_library.config.get_models()
+    models_dict = spec_library.config.models
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
         spec_library.library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods={}
     )
@@ -100,7 +109,7 @@ def generate_spectral_lib(search_dir, config_path):
     logger.info(f"No of sequences after Filtering is {len(spec_library.library.spectra_data['PEPTIDE_LENGTH'])}")
 
     tmt_model = False
-    for key, value in models_dict.items():
+    for _, value in models_dict.items():
         if value:
             if "TMT" in value:
                 tmt_model = True
@@ -131,24 +140,32 @@ def generate_spectral_lib(search_dir, config_path):
             break
 
         grpc_output_sec = spec_library.grpc_predict(spectra_div)
-        if spec_library.config.get_output_format() == "msp":
+        if spec_library.config.output_format == "msp":
             out_lib = MSP(
                 spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.msp")
             )
-        elif spec_library.config.get_output_format() == "spectronaut":
+        elif spec_library.config.output_format == "spectronaut":
             out_lib = Spectronaut(
                 spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.csv")
             )
         else:
-            raise ValueError(f"{spec_library.config.get_output_format()} is not supported as spectral library type")
+            raise ValueError(f"{spec_library.config.output_format} is not supported as spectral library type")
         out_lib.prepare_spectrum()
         out_lib.write()
 
 
-def run_ce_calibration(msms_path, search_dir, config_path):
+def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
+    """
+    Create a CeCalibration object and run the CE calibration.
+
+    :param msms_path: path to msms folder
+    :param search_dir: path to directory containing the msms.txt and raw files
+    :param config_path: path to config file
+    :raises ValueError: raw_type is not supported as rawfile-type
+    """
     ce_calib = CeCalibration(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
     df_search = ce_calib._load_search()
-    raw_type = ce_calib.config.get_raw_type()
+    raw_type = ce_calib.config.raw_type
     if raw_type == "thermo":
         extension = ".raw"
     elif raw_type == "mzml":
@@ -165,7 +182,14 @@ def run_ce_calibration(msms_path, search_dir, config_path):
         f.write(str(ce_calib.best_ce))
 
 
-def run_rescoring(msms_path, search_dir, config_path):
+def run_rescoring(msms_path: str, search_dir: str, config_path: str):
+    """
+    Create a ReScore object and run the rescoring.
+
+    :param msms_path: path to msms folder
+    :param search_dir: path to directory containing the msms.txt and raw files
+    :param config_path: path to config file
+    """
     re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
@@ -178,13 +202,19 @@ def run_rescoring(msms_path, search_dir, config_path):
     re_score.rescore_with_perc("andromeda")
 
 
-def run_oktoberfest(search_dir, config_path):
+def run_oktoberfest(search_dir: str, config_path: str):
+    """
+    Run oktoberfest based on job type given in the config file.
+
+    :param search_dir: path to directory containing the msms.txt and raw files
+    :param config_path: path to config file as a string
+    """
     msms_path = os.path.join(search_dir, "msms.txt")
     if not config_path:
         config_path = os.path.join(search_dir, "config.json")
     conf = Config()
     conf.read(config_path)
-    job_type = conf.get_job_type()
+    job_type = conf.job_type
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
     elif job_type == "CollisionEnergyAlignment":

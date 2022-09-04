@@ -21,8 +21,8 @@ sys.path.append(os.path.realpath(poetry_python_lib))
 try:
     from poetry.core.factory import Factory
     from poetry.core.masonry.builders.sdist import SdistBuilder
-except (ImportError, ModuleNotFoundError) as ee:
-    raise ImportError("install poetry by doing pip install poetry to use " f"this script: {ee}")
+except ImportError as ee:
+    raise ImportError("install poetry by doing pip install poetry to use " f"this script: {ee}") from ee
 
 # Generate a Poetry object that knows about the metadata in pyproject.toml
 factory = Factory()

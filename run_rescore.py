@@ -1,6 +1,3 @@
-import datetime
-
-from oktoberfest.ce_calibration import CeCalibration
 from oktoberfest.re_score import ReScore
 
 re_score_raw = ReScore(

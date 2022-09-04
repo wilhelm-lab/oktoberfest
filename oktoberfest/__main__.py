@@ -1,10 +1,11 @@
-"""triqler.__main__: executed when bootstrap directory is called as script."""
-
-"""Command-line interface."""
-import click
 from rich import traceback
 
 from .oktoberfest import main
+
+"""triqler.__main__: executed when bootstrap directory is called as script."""
+
+"""Command-line interface."""
+# import click
 
 # main()
 

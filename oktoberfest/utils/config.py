@@ -6,23 +6,35 @@ logger = logging.getLogger(__name__)
 
 
 class Config:
+    """Read config file and get information from it."""
+
     data: Dict
 
     def __init__(self):
+        """Initialize config file data."""
         self.data = {}
 
     def read(self, config_path: str):
+        """
+        Read config file.
+
+        :param config_path: path to config file as a string
+        """
         logger.info(f"Reading configuration from {config_path}")
         with open(config_path) as f:
             self.data = json.load(f)
 
-    def get_num_threads(self):
+    @property
+    def num_threads(self) -> int:
+        """Get the number of threads from the config file; if not specified return 1."""
         if "numThreads" in self.data:
             return self.data["numThreads"]
         else:
             return 1
 
-    def get_fasta(self):
+    @property
+    def fasta(self) -> str:
+        """Get path to fasta file from the config file."""
         if "fileUploads" in self.data:
             return self.data["fileUploads"]["fasta"]
         elif "uploads" in self.data:
@@ -30,10 +42,14 @@ class Config:
         else:
             raise ValueError("No fasta file specified in config file")
 
-    def get_prosit_server(self):
+    @property
+    def prosit_server(self) -> str:
+        """Get prosit server from the config file."""
         return self.data["prosit_server"]
 
-    def get_models(self):
+    @property
+    def models(self) -> dict:
+        """Get intensity, IRT, and proteotypicity models from the config file."""
         if "models" in self.data:
             return self.data["models"]
         elif "selectedIntensityModel" in self.data:
@@ -43,19 +59,25 @@ class Config:
                 "selectedProteotypicityModel": self.data["selectedProteotypicityModel"],
             }
 
-    def get_tag(self):
+    @property
+    def tag(self) -> str:
+        """Get tag from the config file; if not specified return "tmt"."""
         if "tag" in self.data:
             return self.data["tag"]
         else:
             return "tmt"
 
-    def get_all_features(self):
+    @property
+    def all_features(self) -> bool:
+        """Get allFeatures flag (decides whether all features should be used by the percolator)."""
         if "allFeatures" in self.data:
             return self.data["allFeatures"]
         else:
             return False
 
-    def get_job_type(self):
+    @property
+    def job_type(self) -> str:
+        """Get jobType flag (CollisionEnergyAlignment, MaxQuantRescoring or SpectralLibraryGeneration) from the config file."""
         if "jobType" in self.data:
             return self.data["jobType"]
         elif "type" in self.data:
@@ -63,19 +85,25 @@ class Config:
         else:
             raise ValueError("No job type specified in config file")
 
-    def get_raw_type(self):
-        if "fileUploads" in self.data:  # thermo or mzml
+    @property
+    def raw_type(self) -> str:
+        """Get raw type (thermo or mzml) from the config file."""
+        if "fileUploads" in self.data:
             return self.data["fileUploads"]["raw_type"]
         else:
             return "thermo"
 
-    def get_search_type(self):
-        if "fileUploads" in self.data:  # maxquant or internal
+    @property
+    def search_type(self) -> str:
+        """Get search type (maxquant or internal) from the config file."""
+        if "fileUploads" in self.data:
             return self.data["fileUploads"]["search_type"]
         else:
             return "maxquant"
 
-    def get_output_format(self):
+    @property
+    def output_format(self):
+        """Get output format from the config file."""
         if "outputFormat" in self.data:
             return self.data["outputFormat"]
         else:

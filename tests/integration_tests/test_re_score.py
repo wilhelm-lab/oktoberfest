@@ -4,6 +4,7 @@ from oktoberfest.re_score import ReScore
 
 
 def integration_test_1():
+    """Integration test for the rescoring."""
     ce_cal = ReScore(search_path="D:/Compmass/workDir/HCD_OT/msms.txt", raw_path="D:/Compmass/workDir/HCD_OT/")
     df_search = ce_cal._load_search()
     grouped_search = df_search.groupby("RAW_FILE")
@@ -25,12 +26,13 @@ def integration_test_1():
             fout.write(f.read())
         # now the rest:
         for raw_file in list(raw_files)[1:]:
-            with open("prosit_" + rawfile + ".tab", "rb") as f:
+            with open("prosit_" + raw_file + ".tab", "rb") as f:
                 next(f)  # skip the header
                 fout.write(f.read())
 
 
 def integration_test_2():
+    """Integration test for the rescoring."""
     search_dir = "/media/processing_results/bierdimpfl/workDir/627"
     msms_path = os.path.join(search_dir, "msms.txt")
     config_path = os.path.join(search_dir, "config_new.json")
