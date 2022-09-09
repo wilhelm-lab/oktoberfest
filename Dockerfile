@@ -6,3 +6,40 @@ ARG DEBIAN_FRONTEND=noninteractive
 # for mono installation
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
 RUN echo "deb https://download.mono-project.com/repo/debian stable-buster main" | tee /etc/apt/sources.list.d/mono-official-stable.list
+
+RUN apt-get update && apt-get install -y \
+        mono-devel \
+        ssh \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
+
+# set root directory
+ENV HOME /root
+WORKDIR /root
+
+# ADD keys for our gitlab
+ADD keys /root/.ssh
+RUN chmod 700 /root/.ssh/id_rsa
+
+RUN pip install poetry==1.1.10
+# poetry useses virtualenvs by default -> we want global installation
+RUN poetry config virtualenvs.create false
+ADD pyproject.toml /root/pyproject.toml
+ADD poetry.lock /root/poetry.lock
+RUN poetry install
+
+# install percolator
+RUN ZIP=ubuntu.tar.gz && \
+    wget https://github.com/percolator/percolator/releases/download/rel-3-05/$ZIP -O /tmp/$ZIP && \
+    tar xvzf /tmp/$ZIP && \
+    chmod -R 755 /tmp/* && \
+    dpkg -i percolator-v3-05-linux-amd64.deb && \
+    rm /tmp/$ZIP
+
+# Delete ssh keys
+RUN rm -r /root/.ssh
+ADD oktoberfest/ /root/oktoberfest
+
+# Used by ProteomicsDB runs to describe the oktoberfest version
+ADD hash.file /root/hash.file
+
