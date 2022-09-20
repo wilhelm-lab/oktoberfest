@@ -11,4 +11,4 @@ from .oktoberfest import main
 
 if __name__ == "__main__":
     traceback.install()
-    main(prog_name="batchglm")  # pragma: no cover
+    main()  # pragma: no cover

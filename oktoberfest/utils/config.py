@@ -52,12 +52,14 @@ class Config:
         """Get intensity, IRT, and proteotypicity models from the config file."""
         if "models" in self.data:
             return self.data["models"]
-        elif "selectedIntensityModel" in self.data:
+        if "selectedIntensityModel" in self.data:
             return {
                 "selectedIntensityModel": self.data["selectedIntensityModel"],
                 "selectedIRTModel": self.data["selectedIRTModel"],
                 "selectedProteotypicityModel": self.data["selectedProteotypicityModel"],
             }
+        else:
+            return self.data["models"]
 
     @property
     def tag(self) -> str:

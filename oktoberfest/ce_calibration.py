@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -95,12 +96,19 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = self.raw_path.replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
 
-    def gen_lib(self, df_search: pd.DataFrame):
+    def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
         """
         Read input search and raw and add it to library.
 
+        Method inherits from superclass, therefore the Optional is required to ensure same method signature.
+        It needs to be refactored in the future.
+
         :param df_search: search result as pd.DataFrame
+        :raises AssertionError: raises if df_search is not given
         """
+        if df_search is None:
+            raise AssertionError("You need to provide a dataframe.")
+
         df_raw = self._load_rawfile()
         # return df_search
         logger.info("Merging rawfile and search result")
@@ -199,6 +207,7 @@ class CeCalibration(SpectralLibrary):
         self._get_best_ce()
 
 
+"""
 if __name__ == "main":
     ce_cal = CeCalibration(
         search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
@@ -214,3 +223,4 @@ if __name__ == "main":
             raw_path="D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml",
         )
         ce_cal_raw[raw_file].perform_alignment(grouped_search.get_group(raw_file))
+"""

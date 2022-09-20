@@ -67,7 +67,7 @@ class Spectra:
             prefix = Spectra.MZ_COLUMN_PREFIX
         return prefix
 
-    def add_column(self, column_data: np, name: str) -> None:
+    def add_column(self, column_data: pd.Series, name: str) -> None:
         """
         Add column to spectra data.
 

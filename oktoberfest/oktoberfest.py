@@ -7,7 +7,7 @@ from fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from prosit_io import Spectronaut
 from prosit_io.spectral_library import MSP
 
-from . import CeCalibration, SpectralLibrary
+from .ce_calibration import CeCalibration, SpectralLibrary
 from .data.spectra import Spectra
 from .re_score import ReScore
 from .utils.config import Config

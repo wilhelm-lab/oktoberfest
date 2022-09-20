@@ -4,6 +4,8 @@ import sys
 import traceback
 import warnings
 from multiprocessing import Pool
+from multiprocessing.pool import AsyncResult
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ class JobPool:
         """Initialize JobPool."""
         self.warning_filter = warning_filter
         self.pool = Pool(processes, self.init_worker)
-        self.results = []
+        self.results = []  # type: List[AsyncResult]
 
     def apply_async(self, f, args):
         """Apply async."""
@@ -29,7 +31,7 @@ class JobPool:
     def check_pool(self, print_progress_every: int = -1):
         """Check the pool."""
         try:
-            outputs = list()
+            outputs = [AsyncResult]
             for res in self.results:
                 outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
                 if print_progress_every > 0 and len(outputs) % print_progress_every == 0:
@@ -46,7 +48,7 @@ class JobPool:
             sys.exit()
         except Exception as e:
             logger.error("Caught Unknown exception, terminating workers")
-            logger.error(traceback.print_exc())
+            logger.error(traceback.format_exc())
             logger.error(e)
             self.pool.terminate()
             self.pool.join()

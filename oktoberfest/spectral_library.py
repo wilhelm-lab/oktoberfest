@@ -1,5 +1,7 @@
 import logging
 import os
+from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 from prosit_grpc.predictPROSIT import PROSITpredictor
@@ -24,8 +26,8 @@ class SpectralLibrary:
 
     path: str
     library: Spectra
-    config: dict
-    config_path: str
+    config: Config
+    config_path: Optional[str]
     num_threads: int
     grpc_output: dict
 
@@ -55,8 +57,12 @@ class SpectralLibrary:
         else:
             print("In Feature Calculation")
 
-    def gen_lib(self):
-        """Read input csv file and add it to library."""
+    def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
+        """
+        Read input csv file and add it to library.
+
+        :param df_search: unused, necessary to ensure same method signature for inheriting function
+        """
         if self.config.fasta:
             self.read_fasta()
         else:
@@ -82,8 +88,6 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        from pathlib import Path
-
         path = Path(__file__).parent / "certificates/"
         logger.info(path)
         predictor = PROSITpredictor(
