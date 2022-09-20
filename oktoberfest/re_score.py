@@ -78,11 +78,11 @@ class ReScore(CalculateFeatures):
         super().__init__(
             search_path, raw_path, out_path, config_path=config_path, mzml_reader_package=mzml_reader_package
         )
-        self.split_msms_step = ProcessStep(raw_path, "split_msms")
-        self.merge_input_step_prosit = ProcessStep(raw_path, "merge_input_prosit")
-        self.merge_input_step_andromeda = ProcessStep(raw_path, "merge_input_andromeda")
-        self.percolator_step_prosit = ProcessStep(raw_path, "percolator_prosit")
-        self.percolator_step_andromeda = ProcessStep(raw_path, "percolator_andromeda")
+        self.split_msms_step = ProcessStep(out_path, "split_msms")
+        self.merge_input_step_prosit = ProcessStep(out_path, "merge_input_prosit")
+        self.merge_input_step_andromeda = ProcessStep(out_path, "merge_input_andromeda")
+        self.percolator_step_prosit = ProcessStep(out_path, "percolator_prosit")
+        self.percolator_step_andromeda = ProcessStep(out_path, "percolator_andromeda")
 
     def get_raw_files(self):
         """
@@ -193,7 +193,7 @@ class ReScore(CalculateFeatures):
         if num_threads > 1:
             processing_pool.checkPool(printProgressEvery=1)
 
-    def merge_input(self, search_type: str):
+    def merge_input(self, search_type: str = "prosit"):
         """
         Merges percolator input files into one large file for combined percolation.
 

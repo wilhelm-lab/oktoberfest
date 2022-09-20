@@ -45,14 +45,14 @@ class JobPool:
             logger.error("Caught KeyboardInterrupt, terminating workers")
             self.pool.terminate()
             self.pool.join()
-            sys.exit()
+            sys.exit(1)
         except Exception as e:
             logger.error("Caught Unknown exception, terminating workers")
             logger.error(traceback.format_exc())
             logger.error(e)
             self.pool.terminate()
             self.pool.join()
-            sys.exit()
+            sys.exit(1)
 
 
 def init_worker(warning_filter):

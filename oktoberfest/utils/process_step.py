@@ -7,19 +7,19 @@ logger = logging.getLogger(__name__)
 class ProcessStep:
     """Init a ProcessStep object given raw file path and step name."""
 
-    def __init__(self, raw_path: str, step_name: str):
+    def __init__(self, out_path: str, step_name: str):
         """
         Init raw file path and step name.
 
         :param raw_path: path to raw file
         :param step_name: name of the current step
         """
-        self.raw_path = raw_path
+        self.out_path = out_path
         self.step_name = step_name
 
     def _get_proc_folder_path(self) -> str:
         """Get proc folder path."""
-        return os.path.join(self.raw_path, "proc")
+        return os.path.join(self.out_path, "proc")
 
     def _get_done_file_path(self) -> str:
         """Get done if a file is done."""
