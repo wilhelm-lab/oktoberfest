@@ -42,4 +42,3 @@ ADD oktoberfest/ /root/oktoberfest
 
 # Used by ProteomicsDB runs to describe the oktoberfest version
 ADD hash.file /root/hash.file
-

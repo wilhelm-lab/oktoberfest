@@ -1,28 +1,28 @@
 {
-   "type":"MaxQuantRescoring",
-   "uploads":{
-      "msms.txt":true,
-      "RAW":true,
-      "FASTA":false,
-      "peptides.csv":false,
-      "evidence.txt":false,
-      "prosit_target.psms":false,
-      "prosit_decoy.psms":false
-   },
-   "options":{
-      "collisionEnergy":0,
-      "protease":"",
-      "missedCleavages":0,
-      "oxidizedMethionine":0,
-      "minPeptideLength":0,
-      "maxPeptideLength":0,
-      "specialAAs":""
-   },
-   "outputFormat":"msp",
-   "selectedIntensityModel":"Prosit_2019_intensity",
-   "selectedIRTModel":"Prosit_2019_irt",
-   "selectedProteotypicityModel":"Prosit_2020_proteotypicity",
-   "prosit_server":"131.159.152.7:8500",
-   "prosit_server_rest":"131.159.152.7:8501",
-   "id":"fc5d2bc7-73ae-4471-ba22-07f8d77cf0ab"
+    "type": "MaxQuantRescoring",
+    "uploads": {
+        "msms.txt": true,
+        "RAW": true,
+        "FASTA": false,
+        "peptides.csv": false,
+        "evidence.txt": false,
+        "prosit_target.psms": false,
+        "prosit_decoy.psms": false
+    },
+    "options": {
+        "collisionEnergy": 0,
+        "protease": "",
+        "missedCleavages": 0,
+        "oxidizedMethionine": 0,
+        "minPeptideLength": 0,
+        "maxPeptideLength": 0,
+        "specialAAs": ""
+    },
+    "outputFormat": "msp",
+    "selectedIntensityModel": "Prosit_2019_intensity",
+    "selectedIRTModel": "Prosit_2019_irt",
+    "selectedProteotypicityModel": "Prosit_2020_proteotypicity",
+    "prosit_server": "131.159.152.7:8500",
+    "prosit_server_rest": "131.159.152.7:8501",
+    "id": "fc5d2bc7-73ae-4471-ba22-07f8d77cf0ab"
 }
