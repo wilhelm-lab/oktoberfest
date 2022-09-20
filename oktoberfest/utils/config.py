@@ -104,7 +104,7 @@ class Config:
             return "maxquant"
 
     @property
-    def output_format(self):
+    def output_format(self) -> str:
         """Get output format from the config file."""
         if "outputFormat" in self.data:
             return self.data["outputFormat"]
