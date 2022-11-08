@@ -4,10 +4,10 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from fundamentals.annotation.annotation import annotate_spectra
-from fundamentals.metrics.similarity import SimilarityMetrics
-from prosit_io.raw import ThermoRaw
-from prosit_io.search_result import MaxQuant
+from spec_fundamentals.annotation.annotation import annotate_spectra
+from spec_fundamentals.metrics.similarity import SimilarityMetrics
+from spectrum_io.raw import ThermoRaw
+from spectrum_io.search_result import MaxQuant
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -54,6 +54,7 @@ class CeCalibration(SpectralLibrary):
         self.best_ce = 0
 
     def _gen_internal_search_result_from_msms(self):
+        """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
         mxq = MaxQuant(self.search_path)
         if (
@@ -66,6 +67,7 @@ class CeCalibration(SpectralLibrary):
         self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
+        """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
         print(self.out_path)
@@ -74,6 +76,7 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
 
     def _load_search(self):
+        """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
         if switch == "maxquant":
@@ -85,6 +88,7 @@ class CeCalibration(SpectralLibrary):
         return MaxQuant.read_internal(self.search_path)
 
     def _load_rawfile(self):
+        """Load raw file."""
         switch = self.config.raw_type
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":

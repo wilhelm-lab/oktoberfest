@@ -3,7 +3,7 @@ from oktoberfest.re_score import ReScore
 re_score_raw = ReScore(
     search_path="/media/kusterlab/internal_projects/active/microFlAIMS/06_Fractionation_LF/txt_100per/msms.txt",
     raw_path="/media/kusterlab/internal_projects/active/microFlAIMS/06_Fractionation_LF/",
-    out_path="/media/kusterlab/internal_projects/active/microFlAIMS/06_Fractionation_LF/new_oktoberfest/",
+    out_path="/media/kusterlab/internal_projects/active/microFlAIMS/06_Fractionation_LF/test_oktoberfest/",
     mzml_reader_package="pyteomics",
 )
 

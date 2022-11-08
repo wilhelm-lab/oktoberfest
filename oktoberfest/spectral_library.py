@@ -5,7 +5,7 @@ from typing import Optional
 
 import pandas as pd
 from prosit_grpc.predictPROSIT import PROSITpredictor
-from prosit_io.file import csv
+from spectrum_io.file import csv
 
 # from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH

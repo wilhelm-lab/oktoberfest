@@ -2,15 +2,14 @@ import logging
 import os
 import sys
 
-from fundamentals.fragments import compute_peptide_mass
-from fundamentals.mod_string import internal_without_mods, maxquant_to_internal
-from prosit_io import Spectronaut
-from prosit_io.spectral_library import MSP
-
-from .ce_calibration import CeCalibration, SpectralLibrary
-from .data.spectra import Spectra
-from .re_score import ReScore
-from .utils.config import Config
+from ce_calibration import CeCalibration, SpectralLibrary
+from data.spectra import Spectra
+from re_score import ReScore
+from spec_fundamentals.fragments import compute_peptide_mass
+from spec_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+from spectrum_io import Spectronaut
+from spectrum_io.spectral_library import MSP
+from utils.config import Config
 
 __version__ = "0.1.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.

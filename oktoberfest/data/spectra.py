@@ -2,12 +2,12 @@ import logging
 from enum import Enum
 from typing import List
 
-import fundamentals.constants as c
 import numpy as np
 import pandas as pd
 import scipy
-from prosit_io.file import hdf5
+import spec_fundamentals.constants as c
 from scipy.sparse import coo_matrix, spmatrix
+from spectrum_io.file import hdf5
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class Spectra:
 
     def add_matrix_from_hdf5(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
         """
-        Concat intensity df as a sparse matrix to our data.
+        Concatenate intensity df as a sparse matrix to our data.
 
         :param intensity_data: intensity sparse matrix
         :param fragment_type: choose predicted, raw, or mz
@@ -113,7 +113,7 @@ class Spectra:
 
     def add_matrix(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
         """
-        Concat intensity df as a sparse matrix to our data.
+        Concatenate intensity df as a sparse matrix to our data.
 
         :param intensity_data: intensity numpy array to add
         :param fragment_type: choose predicted, raw, or mz

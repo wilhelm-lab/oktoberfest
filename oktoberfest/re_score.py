@@ -195,7 +195,7 @@ class ReScore(CalculateFeatures):
 
     def merge_input(self, search_type: str = "prosit"):
         """
-        Merges percolator input files into one large file for combined percolation.
+        Merge percolator input files into one large file for combined percolation.
 
         Fastest solution according to:
         https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one

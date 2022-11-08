@@ -1,7 +1,7 @@
 import logging
 
 import pandas as pd
-from fundamentals.metrics.percolator import Percolator
+from spec_fundamentals.metrics.percolator import Percolator
 
 from .ce_calibration import CeCalibration
 from .data.spectra import FragmentType
@@ -19,7 +19,7 @@ class CalculateFeatures(CeCalibration):
 
     def predict_with_aligned_ce(self, df_search: pd.DataFrame):
         """
-        Get best ce with ce_calibration then use it for prediction.
+        Get best collision energy with ce_calibration then use it for prediction.
 
         :param df_search: a msms matrix as a pd.DataFrame
         """
@@ -30,7 +30,7 @@ class CalculateFeatures(CeCalibration):
 
     def gen_perc_metrics(self, search_type: str, file_path: str = None):
         """
-        Get all percolator metrics and add it to library.
+        Get all percolator metrics and add them to library.
 
         :param search_type: model (prosit or andromeda) as a string
         :param file_path: path to percolator input file as a string

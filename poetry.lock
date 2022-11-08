@@ -839,8 +839,8 @@ tables = "^3.6.1"
 
 [package.source]
 type = "git"
-url = "https://gitlab.lrz.de/compmass/prosit/tools/prosit_io.git"
-reference = "develop_upgrade_dependencies"
+url = "git@github.com:wilhelm-lab/spectrum_io.git"
+reference = "search_engines"
 resolved_reference = "a8da0fae9b4f7d9562857e7c382774722c106206"
 
 [[package]]
