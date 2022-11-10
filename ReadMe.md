@@ -36,51 +36,53 @@ Prosit will:
 
 ## Installation
 
-After cloning oktoberfest repository, create a new conda environment:
+After cloning the repository of oktoberfest, create a new conda environment:
 
 ```bash
 conda create -n oktoberfest python=3.8
 ```
 
-Then, go to oktoberfest repository folder and run:
+Then, go to the main folder with the repository of oktoberfest and run:
 
 ```bash
 pip install .
 ```
 
-Create a config.json file which should contain the following flags:
+Create a `config.json` file which should contain the following flags:
 
--   jobType = CollisionEnergyAlignment, MaxQuantRescoring or SpectralLibraryGeneration
+-   `jobType` = CollisionEnergyAlignment, MaxQuantRescoring or SpectralLibraryGeneration
 
--   tag = tmt, tmtpro, itraq4 or itraq8; default = tmt
+-   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
--   allFeatures = true if all features should be used by the percolator; default = false
+-   `allFeatures` = true if all features should be used by the percolator; default = false
 
--   fileUploads
+-   `fileUploads`
 
-    -   search_type = maxquant or internal; default = maxquant
+    -   `search_type` = maxquant or internal; default = maxquant
 
-    -   raw_type = thermo or mzml; default = thermo
+    -   `raw_type` = thermo or mzml; default = thermo
 
-    -   fasta = path to the fasta file
+    -   `fasta` = path to the FASTA file, if FASTA file is provided
 
-    -   peptides.csv =
+    -   `peptides.csv` = true if you like to provide the list of peptides
 
--   models
+-   `models`
 
-    -   intensity = intensity model
+    -   `intensity` = intensity model
 
-    -   irt = irt model
+    -   `irt` = irt model
 
-    -   proteotypicity = proteotypicity model
+    -   `proteotypicity` = proteotypicity model
 
--   prosit_server =
+-   `prosit_server` = server for the Prosit prediction
 
--   numThreads = number of threads from the config file; default = 1
+-   `numThreads` = number of threads from the config file; default = 1
 
--   jobId =
+-   `jobId` = job ID for the Prosit prediction
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
+
+For `prosit_server` and `jobId`: ask Wassim Gabriel (wassim.gabriel@tum.de) or Ludwig Lautenbacher (Ludwig.Lautenbacher@tum.de).
 
 Finally, go to `/oktoberfest/oktoberfest/` and run
 
