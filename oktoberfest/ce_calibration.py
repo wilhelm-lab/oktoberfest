@@ -7,7 +7,7 @@ import pandas as pd
 from spec_fundamentals.annotation.annotation import annotate_spectra
 from spec_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import MaxQuant
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -64,7 +64,17 @@ class CeCalibration(SpectralLibrary):
             tmt_labeled = self.config.tag
         else:
             tmt_labeled = ""
-        self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
+
+        search_type = self.config.get_search_type()
+        if search_type == "maxquant":
+            mxq = MaxQuant(self.search_path)
+            self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
+        elif search_type == "msfragger":
+            msf = MSFragger(self.search_path)
+            self.search_path = msf.generate_internal(tmt_labeled=tmt_labeled)
+        elif search_type == "mascot":
+            mascot = Mascot(self.search_path)
+            self.search_path = mascot.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
         """Generate mzml from thermo raw file."""
@@ -79,7 +89,7 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch == "maxquant":
+        if switch == "maxquant" or switch == "msfragger" or switch == "mascot":
             self._gen_internal_search_result_from_msms()
         elif switch == "internal":
             pass
@@ -131,7 +141,6 @@ class CeCalibration(SpectralLibrary):
 
     def get_hdf5_path(self) -> str:
         """Get path to hdf5 file."""
-        # hdf5_path = os.path.join(self.out_path, raw_file_name + '.hdf5')
         return self.out_path + ".hdf5"
 
     def get_pred_path(self) -> str:
@@ -209,22 +218,3 @@ class CeCalibration(SpectralLibrary):
         self._predict_alignment()
         self._alignment()
         self._get_best_ce()
-
-
-"""
-if __name__ == "main":
-    ce_cal = CeCalibration(
-        search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
-        raw_path="D:/Compmass/workDir/HCD_OT/190416_FPTMT_MS3_HCDOT_R1.mzml",
-    )
-    df_search = ce_cal._load_search()
-    grouped_search = df_search.groupby("RAW_FILE")
-    raw_files = grouped_search.groups.keys()
-    ce_cal_raw = {}
-    for raw_file in raw_files:
-        ce_cal_raw[raw_file] = CeCalibration(
-            search_path="D:/Compmass/workDir/HCD_OT/msms.txt",
-            raw_path="D:/Compmass/workDir/HCD_OT/" + raw_file + ".mzml",
-        )
-        ce_cal_raw[raw_file].perform_alignment(grouped_search.get_group(raw_file))
-"""
