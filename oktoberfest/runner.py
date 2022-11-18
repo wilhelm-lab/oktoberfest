@@ -1,14 +1,14 @@
 import logging
 import os
-import sys
 
-from .ce_calibration import CeCalibration, SpectralLibrary
-from .data.spectra import Spectra
-from .re_score import ReScore
 from spec_fundamentals.fragments import compute_peptide_mass
 from spec_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
 from spectrum_io.spectral_library import MSP
+
+from .ce_calibration import CeCalibration, SpectralLibrary
+from .data.spectra import Spectra
+from .re_score import ReScore
 from .utils.config import Config
 
 __version__ = "0.1.0"
@@ -23,7 +23,6 @@ Written by
 at the Technical University of Munich."""
 
 logger = logging.getLogger(__name__)
-
 
 
 def generate_spectral_lib(search_dir: str, config_path: str):
@@ -165,12 +164,13 @@ def run_rescoring(msms_path: str, search_dir: str, config_path: str):
     re_score.rescore_with_perc("andromeda")
 
 
-def run_oktoberfest(search_dir: str, config_path: str):
+def run_job(search_dir: str, config_path: str):
     """
     Run oktoberfest based on job type given in the config file.
 
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file as a string
+    :raises ValueError: In case the job_type in the provided config file is not known
     """
     msms_path = os.path.join(search_dir, "msms.txt")
     if not config_path:

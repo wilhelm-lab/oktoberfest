@@ -1,11 +1,12 @@
 import argparse
-from oktoberfest import run_oktoberfest, logger, __version__, __copyright__
 import os
 import sys
 
+from oktoberfest import __copyright__, __version__, logger, runner
+
+
 def parse_args():
     """Parse search_dir and config_path arguments."""
-
     apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     apars.add_argument(
@@ -30,13 +31,13 @@ def parse_args():
 
 
 def main():
-   logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
-   logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
-   
-   args = parse_args()
-   run_oktoberfest(args.search_dir, args.config_path)
+    """Execution of oktoberfest from terminal."""
+    logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
+    logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
+
+    args = parse_args()
+    runner.run_job(args.search_dir, args.config_path)
 
 
 if __name__ == "__main__":
-   main()
-  
+    main()
