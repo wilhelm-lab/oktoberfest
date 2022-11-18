@@ -1,8 +1,24 @@
 """Initialize logger."""
-__version__ = "0.1.0"
+
 import logging.handlers
 import sys
 import time
+
+from .runner import run_oktoberfest
+
+
+__version__ = "0.1.0"
+__copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
+Written by
+- Wassim Gabriel (wassim.gabriel@tum.de),
+- Ludwig Lautenbacher (ludwig.lautenbacher@tum.de),
+- Matthew The (matthew.the@tum.de),
+- Mario Picciani (mario.picciani@in.tum.de),
+- Firas Hamood (firas.hamood@tum.de),
+- Cecilia Jensen (cecilia.jensen@tum.de)
+at the Technical University of Munich."""
+
+
 
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)

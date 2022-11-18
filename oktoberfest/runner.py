@@ -2,14 +2,14 @@ import logging
 import os
 import sys
 
-from ce_calibration import CeCalibration, SpectralLibrary
-from data.spectra import Spectra
-from re_score import ReScore
+from .ce_calibration import CeCalibration, SpectralLibrary
+from .data.spectra import Spectra
+from .re_score import ReScore
 from spec_fundamentals.fragments import compute_peptide_mass
 from spec_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
 from spectrum_io.spectral_library import MSP
-from utils.config import Config
+from .utils.config import Config
 
 __version__ = "0.1.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
@@ -24,42 +24,6 @@ at the Technical University of Munich."""
 
 logger = logging.getLogger(__name__)
 
-
-def main():
-    """Main method to run oktoberfest."""
-    logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
-    logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
-
-    args = parse_args()
-
-    run_oktoberfest(args.search_dir, args.config_path)
-
-
-def parse_args():
-    """Parse search_dir and config_path arguments."""
-    import argparse
-
-    apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    apars.add_argument(
-        "search_dir",
-        default=None,
-        metavar="S",
-        help="""Directory containing the msms.txt and raw files
-                            """,
-    )
-
-    apars.add_argument(
-        "--config_path",
-        default=None,
-        metavar="C",
-        help="""Path to config file in json format. \\
-                If this argument is not specified, we try to find and use a file called config.json in <search_dir>.""",
-    )
-
-    args = apars.parse_args()
-
-    return args
 
 
 def generate_spectral_lib(search_dir: str, config_path: str):
@@ -220,3 +184,5 @@ def run_oktoberfest(search_dir: str, config_path: str):
         run_ce_calibration(msms_path, search_dir, config_path)
     elif job_type == "MaxQuantRescoring":
         run_rescoring(msms_path, search_dir, config_path)
+    else:
+        raise ValueError(f"Unknown job_type in config: {job_type}")
