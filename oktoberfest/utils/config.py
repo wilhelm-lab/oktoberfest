@@ -110,3 +110,75 @@ class Config:
             return self.data["outputFormat"]
         else:
             return ""
+
+    @property
+    def search_path(self) -> str:
+        """Get search path from the config file."""
+        if "searchPath" in self.data:
+            return self.data["searchPath"]
+        else:
+            return ""
+
+    @property
+    def fragmentation(self) -> str:
+        """Get fragmentation method from the config file (HCD or CID)."""
+        if "fragmentation" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["fragmentation"]
+        else:
+            return ""
+
+    @property
+    def digestion(self) -> str:
+        """Get digestion mode (full, semi or none)."""
+        if "digestion" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["digestion"]
+        else:
+            return "full"
+
+    @property
+    def cleavages(self) -> int:
+        """Get number of allowed missed cleavages used in the search engine."""
+        if "cleavages" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["cleavages"]
+        else:
+            return 2
+
+    @property
+    def min_length(self) -> int:
+        """Get minimum peptide length allowed used in the search engine."""
+        if "minLength" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["minLength"]
+        else:
+            return 7
+
+    @property
+    def max_length(self) -> int:
+        """Get maximum peptide length allowed used in the search engine."""
+        if "maxLength" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["maxLength"]
+        else:
+            return 60
+
+    @property
+    def enzyme(self) -> str:
+        """Get type of enzyme used."""
+        if "enzyme" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["enzyme"]
+        else:
+            return "trypsin"
+
+    @property
+    def special_aas(self) -> str:
+        """Get special amino acids used by MaxQuant for decoy generation."""
+        if "specialAas" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["specialAas"]
+        else:
+            return "KR"
+
+    @property
+    def db(self) -> str:
+        """Target, decoy or concat (relevant if fasta file provided)."""
+        if "db" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["db"]
+        else:
+            return "concat"

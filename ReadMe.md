@@ -58,7 +58,7 @@ Create a `config.json` file which should contain the following flags:
 
 -   `fileUploads`
 
-    -   `search_type` = maxquant or internal; default = maxquant
+    -   `search_type` = maxquant, msfragger, mascot or internal; default = maxquant
 
     -   `raw_type` = thermo or mzml; default = thermo
 
@@ -79,6 +79,28 @@ Create a `config.json` file which should contain the following flags:
 -   `numThreads` = number of threads from the config file; default = 1
 
 -   `jobId` = job ID for the Prosit prediction
+
+-   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
+
+The following flags are relevant only if a FASTA file is provided:
+
+-   `fastaDigestOptions`
+
+-   `fragmentation` = fragmentation method (HCD or CID)
+
+-   `digestion` = digestion mode (full, semi or none); default = full
+
+-   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+
+-   `minLength` = minimum peptide length allowed used in the search engine; default = 7
+
+-   `maxLength` = maximum peptide length allowed used in the search engine; default = 60
+
+-   `enzyme` = type of enzyme used in the search engine; default = trypsin
+
+-   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = KR
+
+-   `db` = Target, decoy or concat; default = concat
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 

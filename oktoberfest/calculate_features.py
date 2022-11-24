@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import pandas as pd
 from spec_fundamentals.metrics.percolator import Percolator
@@ -28,7 +29,7 @@ class CalculateFeatures(CeCalibration):
         self.grpc_predict(self.library)
         self.library.write_pred_as_hdf5(self.get_pred_path())
 
-    def gen_perc_metrics(self, search_type: str, file_path: str = None):
+    def gen_perc_metrics(self, search_type: str, file_path: Optional[str]):
         """
         Get all percolator metrics and add them to library.
 

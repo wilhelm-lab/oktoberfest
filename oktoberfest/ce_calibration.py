@@ -34,7 +34,7 @@ class CeCalibration(SpectralLibrary):
         search_path: str,
         raw_path: str,
         out_path: str,
-        config_path: str = None,
+        config_path: Optional[str],
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -56,7 +56,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
-        mxq = MaxQuant(self.search_path)
+        # mxq = MaxQuant(self.search_path)
         if (
             "Prosit_2020_intensityTMT_Phospho" in self.config.models.values()
             or "Prosit_TMT_intensity_2021" in self.config.models.values()
@@ -65,7 +65,7 @@ class CeCalibration(SpectralLibrary):
         else:
             tmt_labeled = ""
 
-        search_type = self.config.get_search_type()
+        search_type = self.config.search_type
         if search_type == "maxquant":
             mxq = MaxQuant(self.search_path)
             self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
@@ -80,7 +80,6 @@ class CeCalibration(SpectralLibrary):
         """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        print(self.out_path)
         if not (self.out_path.endswith(".mzML")) and (not (self.out_path.endswith(".raw"))):
             self.out_path = os.path.join(self.out_path, self.raw_path.split("/")[-1].split(".")[0] + ".mzml")
         self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
@@ -95,11 +94,18 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as search-type")
-        return MaxQuant.read_internal(self.search_path)
+        print(self.path)
+        if switch == "maxquant":
+            return MaxQuant.read_internal(MaxQuant(self.search_path), self.search_path)
+        elif switch == "msfragger":
+            return MSFragger.read_internal(MSFragger(self.search_path), path=self.search_path)
+        else:
+            return Mascot.read_internal(Mascot(self.search_path), path=self.search_path)
 
     def _load_rawfile(self):
         """Load raw file."""
         switch = self.config.raw_type
+        search_engine = self.config.search_type
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
             self._gen_mzml_from_thermo()
@@ -108,7 +114,7 @@ class CeCalibration(SpectralLibrary):
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
         self.raw_path = self.raw_path.replace(".raw", ".mzml")
-        return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package)
+        return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
         """

@@ -172,12 +172,16 @@ def run_job(search_dir: str, config_path: str):
     :param config_path: path to config file as a string
     :raises ValueError: In case the job_type in the provided config file is not known
     """
-    msms_path = os.path.join(search_dir, "msms.txt")
     if not config_path:
         config_path = os.path.join(search_dir, "config.json")
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type
+    if conf.search_path:
+        msms_path = conf.search_path
+    else:
+        msms_path = os.path.join(search_dir, "msms.txt")
+
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
     elif job_type == "CollisionEnergyAlignment":

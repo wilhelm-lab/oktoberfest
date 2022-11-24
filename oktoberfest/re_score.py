@@ -1,7 +1,7 @@
 import logging
 import os
 import subprocess
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -57,7 +57,7 @@ class ReScore(CalculateFeatures):
         search_path: str,
         raw_path: str,
         out_path: str,
-        config_path: str = None,
+        config_path: Optional[str],
         mzml_reader_package: str = "pymzml",
     ):
         """

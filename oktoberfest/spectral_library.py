@@ -6,6 +6,7 @@ from typing import Optional
 import pandas as pd
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from spectrum_io.file import csv
+from spectrum_io.spectral_library import digest
 
 # from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
@@ -31,7 +32,7 @@ class SpectralLibrary:
     num_threads: int
     grpc_output: dict
 
-    def __init__(self, path: str, out_path: str, config_path: str = None):
+    def __init__(self, path: str, out_path: str, config_path: Optional[str]):
         """
         Initialize a SpectralLibrary object.
 
@@ -66,7 +67,6 @@ class SpectralLibrary:
         if self.config.fasta:
             self.read_fasta()
         else:
-            print(self.path)
             for file in os.listdir(self.path):
                 if file.endswith(".csv"):
                     library_df = csv.read_file(os.path.join(self.path, file))
@@ -91,11 +91,12 @@ class SpectralLibrary:
         path = Path(__file__).parent / "certificates/"
         logger.info(path)
         predictor = PROSITpredictor(
-            server="proteomicsdb.org:8500",
+            server=self.config.prosit_server,
             path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
             path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
             path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
         )
+
         models_dict = self.config.models
         models = []
         tmt_model = False
@@ -147,4 +148,26 @@ class SpectralLibrary:
 
     def read_fasta(self):
         """Read fasta file."""
-        pass
+        cmd = [
+            "--fasta",
+            f"{self.config.fasta()}",
+            "--prosit_input",
+            f"{os.path.join(self.path, 'prosit_input.csv')}",
+            "--fragmentation",
+            f"{self.config.fragmentation()}",
+            "--digestion",
+            f"{self.config.digestion()}",
+            "--cleavages",
+            f"{self.config.cleavages()}",
+            "--db",
+            f"{self.config.db()}",
+            "--enzyme",
+            f"{self.config.enzyme()}",
+            "--special-aas",
+            f"{self.config.special_aas()}",
+            "--min-length",
+            f"{self.config.min_length()}",
+            "--max-length",
+            f"{self.config.max_length()}",
+        ]
+        digest.main(cmd)
