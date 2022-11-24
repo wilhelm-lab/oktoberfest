@@ -86,30 +86,30 @@ The following flags are relevant only if a FASTA file is provided:
 
 -   `fastaDigestOptions`
 
--   `fragmentation` = fragmentation method (HCD or CID)
+    -   `fragmentation` = fragmentation method (HCD or CID)
 
--   `digestion` = digestion mode (full, semi or none); default = full
+    -   `digestion` = digestion mode (full, semi or none); default = full
 
--   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+    -   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
 
--   `minLength` = minimum peptide length allowed used in the search engine; default = 7
+    -   `minLength` = minimum peptide length allowed used in the search engine; default = 7
 
--   `maxLength` = maximum peptide length allowed used in the search engine; default = 60
+    -   `maxLength` = maximum peptide length allowed used in the search engine; default = 60
 
--   `enzyme` = type of enzyme used in the search engine; default = trypsin
+    -   `enzyme` = type of enzyme used in the search engine; default = trypsin
 
--   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = KR
+    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = KR
 
--   `db` = Target, decoy or concat; default = concat
+    -   `db` = Target, decoy or concat; default = concat
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
 For `prosit_server` and `jobId`: ask Wassim Gabriel (wassim.gabriel@tum.de) or Ludwig Lautenbacher (Ludwig.Lautenbacher@tum.de).
 
-Finally, go to `/oktoberfest/oktoberfest/` and run
+Finally, run
 
 ```bash
-python oktoberfest.py —search_dir path_to_search_dir —config_path path_to_config_file
+python oktoberfest/run_oktoberfest.py —search_dir path_to_search_dir —config_path path_to_config_file
 ```
 
 Note: The search_dir should contain both the raw files and the MaxQuant's `msms.txt` from a search.

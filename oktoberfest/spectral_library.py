@@ -66,12 +66,13 @@ class SpectralLibrary:
         """
         if self.config.fasta:
             self.read_fasta()
+            library_df = csv.read_file(os.path.join(self.path, "prosit_input.csv"))
         else:
             for file in os.listdir(self.path):
                 if file.endswith(".csv"):
                     library_df = csv.read_file(os.path.join(self.path, file))
-            library_df.columns = library_df.columns.str.upper()
-            self.library.add_columns(library_df)
+        library_df.columns = library_df.columns.str.upper()
+        self.library.add_columns(library_df)
 
     @property
     def mod_str_offset(self) -> int:
@@ -150,24 +151,24 @@ class SpectralLibrary:
         """Read fasta file."""
         cmd = [
             "--fasta",
-            f"{self.config.fasta()}",
+            f"{self.config.fasta}",
             "--prosit_input",
             f"{os.path.join(self.path, 'prosit_input.csv')}",
             "--fragmentation",
-            f"{self.config.fragmentation()}",
+            f"{self.config.fragmentation}",
             "--digestion",
-            f"{self.config.digestion()}",
+            f"{self.config.digestion}",
             "--cleavages",
-            f"{self.config.cleavages()}",
+            f"{self.config.cleavages}",
             "--db",
-            f"{self.config.db()}",
+            f"{self.config.db}",
             "--enzyme",
-            f"{self.config.enzyme()}",
+            f"{self.config.enzyme}",
             "--special-aas",
-            f"{self.config.special_aas()}",
+            f"{self.config.special_aas}",
             "--min-length",
-            f"{self.config.min_length()}",
+            f"{self.config.min_length}",
             "--max-length",
-            f"{self.config.max_length()}",
+            f"{self.config.max_length}",
         ]
         digest.main(cmd)
