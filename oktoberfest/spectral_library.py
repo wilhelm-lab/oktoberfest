@@ -93,7 +93,7 @@ class SpectralLibrary:
         for _, value in models_dict.items():
             if not value:
                 continue
-            tmt_model = True if "TMT" in value else False
+            tmt_model = True if "TMT" in value else tmt_model
             models.append(value)
             if alignment:
                 break
