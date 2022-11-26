@@ -1,6 +1,5 @@
 import logging
 import os
-from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -8,7 +7,6 @@ from prosit_grpc.predictPROSIT import PROSITpredictor
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
 
-# from .constants import CERTIFICATES, PROSIT_SERVER
 from .constants_dir import CONFIG_PATH
 from .data.spectra import FragmentType, Spectra
 from .utils.config import Config
@@ -74,13 +72,6 @@ class SpectralLibrary:
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
 
-    @property
-    def mod_str_offset(self) -> int:
-        """Get length of unimod accession (13 for tmtpro and 12 for other tags)."""
-        if self.config.tag == "tmtpro":
-            return 13
-        return 12
-
     def grpc_predict(self, library: Spectra, alignment: bool = False):
         """
         Use grpc to predict library and add predictions to library.
@@ -89,37 +80,32 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        path = Path(__file__).parent / "certificates/"
-        logger.info(path)
         predictor = PROSITpredictor(
             server=self.config.prosit_server,
-            path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
-            path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
-            path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
+            path_to_ca_certificate=None,
+            path_to_certificate=None,
+            path_to_key_certificate=None,
         )
 
         models_dict = self.config.models
         models = []
         tmt_model = False
-        unimod_length = self.mod_str_offset
         for _, value in models_dict.items():
-            if value and "TMT" in value:
-                tmt_model = True
-                # TODO: find better way instead of hard coded x[12:]
-                library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(
-                    lambda x: x[unimod_length:]
-                )
-                library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
-                    lambda x: 2 if x == "HCD" else 1
-                )
-                models.append(value)
-            if value and alignment:
+            if not value:
+                continue
+            tmt_model = True if "TMT" in value else False
+            models.append(value)
+            if alignment:
                 break
 
-        if not tmt_model:
-            library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
+        if tmt_model:
+            library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
+                lambda x: 2 if x == "HCD" else 1
+            )
+
+        library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
         try:
-            predictions, sequences = predictor.predict(
+            predictions = predictor.predict(
                 sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
                 charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
                 collision_energies=library.spectra_data["COLLISION_ENERGY"].values / 100.0,
@@ -142,7 +128,6 @@ class SpectralLibrary:
             return
         irt_pred = predictions[models[1]]
         library.add_column(irt_pred, "PREDICTED_IRT")
-
         if len(models) > 2:
             proteotypicity_pred = predictions[models[2]]
             library.add_column(proteotypicity_pred, "PROTEOTYPICITY")

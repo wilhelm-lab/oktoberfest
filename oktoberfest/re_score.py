@@ -224,6 +224,10 @@ class ReScore(CalculateFeatures):
                     fout.write(f.read())
                 os.remove(percolator_input_path)
 
+        df_prosit = pd.read_csv(merged_perc_input_file_prosit, sep="\t")
+        df_prosit = df_prosit.fillna(0)
+        df_prosit.to_csv(merged_perc_input_file_prosit, sep="\t", index=False)
+
         if search_type == "prosit":
             self.merge_input_step_prosit.mark_done()
         else:

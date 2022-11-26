@@ -1,6 +1,6 @@
 {
-    "jobType": "CeCalibration",
-    "tag": "itraq4",
+    "jobType": "MaxQuantRescoring",
+    "tag": "tmt",
     "allFeatures": false,
     "fileUploads": {
         "search_type": "maxquant",
@@ -21,7 +21,7 @@
         "proteotypicity": "Prosit_2020_proteotypicity"
     },
     "spectralLibraryOutputFormat": "msp",
-    "prosit_server": "131.159.152.7:8500",
+    "prosit_server": "10.152.135.57:8500",
     "numThreads": 1,
     "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
 }

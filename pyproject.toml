@@ -56,6 +56,7 @@ sphinx-rtd-dark-mode = ">=1.2.3"
 Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 pyupgrade = ">=2.31.0"
+openpyxl = ">=3.0.10"
 
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
