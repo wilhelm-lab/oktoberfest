@@ -1,6 +1,7 @@
 import logging
 import os
 
+import spec_fundamentals.constants as c
 from spec_fundamentals.fragments import compute_peptide_mass
 from spec_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
@@ -75,10 +76,11 @@ def generate_spectral_lib(search_dir: str, config_path: str):
         if value:
             if "TMT" in value:
                 tmt_model = True
-    if tmt_model:
+    if tmt_model and spec_library.config.tag != "":
+        unimod_tag = c.TMT_MODS[spec_library.config.tag]
         spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
             spec_library.library.spectra_data["MODIFIED_SEQUENCE"],
-            fixed_mods={"C": "C[UNIMOD:4]", "^_": "_[UNIMOD:737]", "K": "K[UNIMOD:737]"},
+            fixed_mods={"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}", "K": f"K{unimod_tag}"},
         )
     else:
         spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
@@ -97,7 +99,7 @@ def generate_spectral_lib(search_dir: str, config_path: str):
         elif (i * 7000) < no_of_spectra:
             spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000 :]
             logger.info(f"Last Batch from index {i * 7000}")
-            logger.info(f"  Batch of size {len(spectra_div.spectra_data.index)}")
+            logger.info(f"Batch of size {len(spectra_div.spectra_data.index)}")
         else:
             break
 
