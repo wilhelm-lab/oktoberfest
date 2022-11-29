@@ -6,6 +6,7 @@ from typing import List, Optional
 import pandas as pd
 
 from .calculate_features import CalculateFeatures
+from .utils.multiprocessing_pool import JobPool
 from .utils.process_step import ProcessStep
 
 logger = logging.getLogger(__name__)
@@ -144,8 +145,6 @@ class ReScore(CalculateFeatures):
         num_threads = self.config.num_threads
         self.config
         if num_threads > 1:
-            from .utils.multiprocessing_pool import JobPool
-
             processing_pool = JobPool(processes=num_threads)
 
         mzml_path = self.get_mzml_folder_path()
@@ -169,7 +168,7 @@ class ReScore(CalculateFeatures):
             split_msms_path = self._get_split_msms_path(raw_file)
 
             if num_threads > 1:
-                processing_pool.applyAsync(
+                processing_pool.apply_async(
                     calculate_features_single,
                     (
                         raw_file_path,
@@ -191,7 +190,7 @@ class ReScore(CalculateFeatures):
                 )
 
         if num_threads > 1:
-            processing_pool.checkPool(printProgressEvery=1)
+            processing_pool.check_pool(print_progress_every=1)
 
     def merge_input(self, search_type: str = "prosit"):
         """
