@@ -1,14 +1,11 @@
 import json
 import logging
-from typing import Dict
 
 logger = logging.getLogger(__name__)
 
 
 class Config:
     """Read config file and get information from it."""
-
-    data: Dict
 
     def __init__(self):
         """Initialize config file data."""

@@ -13,8 +13,7 @@ def parse_args():
         "--search_dir",
         default=None,
         metavar="S",
-        help="""Directory containing the msms.txt and raw files
-                            """,
+        help="""Directory containing the msms.txt and raw files""",
     )
 
     apars.add_argument(
@@ -26,7 +25,6 @@ def parse_args():
     )
 
     args = apars.parse_args()
-
     return args
 
 

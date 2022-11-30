@@ -39,10 +39,10 @@ Prosit will:
 After cloning the repository of oktoberfest, create a new conda environment:
 
 ```bash
-conda create -n oktoberfest python=3.8
+conda create -n oktoberfest
 ```
 
-Then, go to the main folder with the repository of oktoberfest and run:
+After activating the newly-created conda environment, go to the main folder with the repository of oktoberfest and run:
 
 ```bash
 pip install .
@@ -115,3 +115,18 @@ python oktoberfest/run_oktoberfest.py —search_dir path_to_search_dir —config
 Note: The search_dir should contain both the raw files and the MaxQuant's `msms.txt` from a search.
 
 ## Models
+
+-   `intensity models`
+
+    -   `Prosit_2019_intensity`
+    -   `Prosit_2020_intensity_hcd`
+    -   `Prosit_2020_intensity_cid`
+    -   `Prosit_2020_intensityTMT`
+    -   `Prosit_2020_intensityTMT_Phospho`
+
+-   `irt models`
+-   `Prosit_2019_irt`
+-   `Prosit_2020_irt_TMT`
+
+-   `proteotypicity models`
+-   `Prosit_2020_proteotypicity`
