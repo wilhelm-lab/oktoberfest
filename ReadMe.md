@@ -125,8 +125,9 @@ Note: The search_dir should contain both the raw files and the MaxQuant's `msms.
     -   `Prosit_2020_intensityTMT_Phospho`
 
 -   `irt models`
--   `Prosit_2019_irt`
--   `Prosit_2020_irt_TMT`
+
+    -   `Prosit_2019_irt`
+    -   `Prosit_2019_irt_TMT`
 
 -   `proteotypicity models`
--   `Prosit_2020_proteotypicity`
+    -   `Prosit_2020_proteotypicity`
