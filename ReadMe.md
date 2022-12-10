@@ -131,3 +131,13 @@ Note: The search_dir should contain both the raw files and the MaxQuant's `msms.
 
 -   `proteotypicity models`
     -   `Prosit_2020_proteotypicity`
+
+## License
+
+The project is licensed under the [MIT license](https://github.com/wilhelm-lab/PROSPECT/blob/main/LICENSE).
+
+## References
+
+[1] Gessulat S, Schmidt T, Zolg DP, Samaras P, Schnatbaum K, Zerweck J, Knaute T, Rechenberger J, Delanghe B, Huhmer A, Reimer U, Ehrlich HC, Aiche S, Kuster B, Wilhelm M: “PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning”. Nature Methods. 2019; 16(6):509-518. doi: 10.1038/s41592-019-0426-7.
+
+[2] Gabriel, Wassim & The, Matthew & Zolg, Daniel & Bayer, Florian & Shouman, Omar & Lautenbacher, Ludwig & Schnatbaum, Karsten & Zerweck, Johannes & Knaute, Tobias & Delanghe, Bernard & Huhmer, Andreas & Wenschuh, Holger & Reimer, Ulf & Médard, Guillaume & Kuster, Bernhard & Wilhelm, Mathias. (2022). Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides. Analytical Chemistry. 94. 10.1021/acs.analchem.1c05435.
