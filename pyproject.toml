@@ -25,7 +25,7 @@ click = ">=8.0.0"
 rich = ">=10.3.0"
 PyYAML = ">=5.4.1"
 
-spec_fundamentals = {git = "git@github.com:wilhelm-lab/spec_fundamentals.git", rev = "search_engines"}
+spectrum_fundamentals = {git = "git@github.com:wilhelm-lab/spectrum_fundamentals.git", rev = "search_engines"}
 spectrum_io = {git = "git@github.com:wilhelm-lab/spectrum_io.git", rev = "search_engines"}
 prosit_grpc = {git = "git@github.com:wilhelm-lab/prosit_grpc.git", rev = "development"}
 [tool.poetry.dev-dependencies]

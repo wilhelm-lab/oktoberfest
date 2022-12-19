@@ -1,9 +1,9 @@
 import logging
 import os
 
-import spec_fundamentals.constants as c
-from spec_fundamentals.fragments import compute_peptide_mass
-from spec_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+import spectrum_fundamentals.constants as c
+from spectrum_fundamentals.fragments import compute_peptide_mass
+from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
 from spectrum_io.spectral_library import MSP
 

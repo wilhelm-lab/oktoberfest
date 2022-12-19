@@ -5,7 +5,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import scipy
-import spec_fundamentals.constants as c
+import spectrum_fundamentals.constants as c
 from scipy.sparse import coo_matrix, spmatrix
 from spectrum_io.file import hdf5
 
