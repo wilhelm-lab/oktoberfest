@@ -122,15 +122,11 @@ Note: The search_dir should contain both the raw files and the MaxQuant's `msms.
     -   `Prosit_2020_intensity_hcd`
     -   `Prosit_2020_intensity_cid`
     -   `Prosit_2020_intensityTMT`
-    -   `Prosit_2020_intensityTMT_Phospho`
 
 -   `irt models`
 
     -   `Prosit_2019_irt`
     -   `Prosit_2019_irt_TMT`
-
--   `proteotypicity models`
-    -   `Prosit_2020_proteotypicity`
 
 ## License
 
