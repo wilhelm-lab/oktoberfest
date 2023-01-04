@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import pandas as pd
-from spec_fundamentals.metrics.percolator import Percolator
+from spectrum_fundamentals.metrics.percolator import Percolator
 
 from .ce_calibration import CeCalibration
 from .data.spectra import FragmentType

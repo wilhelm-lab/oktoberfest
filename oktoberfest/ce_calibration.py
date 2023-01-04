@@ -4,8 +4,8 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from spec_fundamentals.annotation.annotation import annotate_spectra
-from spec_fundamentals.metrics.similarity import SimilarityMetrics
+from spectrum_fundamentals.annotation.annotation import annotate_spectra
+from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
