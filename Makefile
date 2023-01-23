@@ -16,6 +16,7 @@ jump:
 
 # --no-cache
 build: dependencies
+	git describe --long --dirty --always > hash.file
 	docker build -f Dockerfile -t $(IMAGE) . || (exit 1)
 
 

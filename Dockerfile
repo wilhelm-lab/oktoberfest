@@ -21,12 +21,12 @@ WORKDIR /root
 ADD keys /root/.ssh
 RUN chmod 700 /root/.ssh/id_rsa
 
-RUN pip install poetry==1.1.10
+RUN pip install poetry==1.3.2
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
 ADD pyproject.toml /root/pyproject.toml
 ADD poetry.lock /root/poetry.lock
-RUN poetry install
+RUN poetry install --no-root
 
 # install percolator
 RUN ZIP=ubuntu.tar.gz && \
