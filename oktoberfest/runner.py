@@ -105,17 +105,19 @@ def generate_spectral_lib(search_dir: str, config_path: str):
 
         grpc_output_sec = spec_library.grpc_predict(spectra_div)
         if spec_library.config.output_format == "msp":
-            out_lib = MSP(
+            out_lib_msp = MSP(
                 spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.msp")
             )
+            out_lib_msp.prepare_spectrum()
+            out_lib_msp.write()
         elif spec_library.config.output_format == "spectronaut":
-            out_lib = Spectronaut(
+            out_lib_spectronaut = Spectronaut(
                 spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.csv")
             )
+            out_lib_spectronaut.prepare_spectrum()
+            out_lib_spectronaut.write()
         else:
             raise ValueError(f"{spec_library.config.output_format} is not supported as spectral library type")
-        out_lib.prepare_spectrum()
-        out_lib.write()
 
 
 def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):

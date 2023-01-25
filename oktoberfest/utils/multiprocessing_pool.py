@@ -3,8 +3,7 @@ import signal
 import sys
 import traceback
 import warnings
-from multiprocessing import Pool
-from multiprocessing.pool import AsyncResult
+from multiprocessing import Pool, pool
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -13,11 +12,15 @@ logger = logging.getLogger(__name__)
 class JobPool:
     """JobPool class for multiprocessing."""
 
+    results: List[pool.AsyncResult]
+    warning_filter: str
+    pool: pool.Pool
+
     def __init__(self, processes: int = 1, warning_filter: str = "default"):
         """Initialize JobPool."""
         self.warning_filter = warning_filter
         self.pool = Pool(processes, self.init_worker)
-        self.results = []  # type: List[AsyncResult]
+        self.results = []
 
     def apply_async(self, f, args):
         """Apply async."""
@@ -31,7 +34,7 @@ class JobPool:
     def check_pool(self, print_progress_every: int = -1):
         """Check the pool."""
         try:
-            outputs = [AsyncResult]
+            outputs = [pool.AsyncResult]
             for res in self.results:
                 outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
                 if print_progress_every > 0 and len(outputs) % print_progress_every == 0:
