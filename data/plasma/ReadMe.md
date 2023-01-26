@@ -11,3 +11,9 @@ Change your directory to the root directory of oktoberfest, then run:
 ```
 python tests/integration_tests/test_re_score.py
 ```
+
+# Running this example with docker
+
+```
+IMAGE=gitlab.lrz.de:5005/proteomics/github/oktoberfest:development DATA=$(realpath data/plasma)/ make all
+```
