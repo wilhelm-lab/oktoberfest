@@ -121,7 +121,6 @@ class ReScore(CalculateFeatures):
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby("RAW_FILE"):
-
             if not os.path.isfile(os.path.join(self.raw_path, raw_file + ".raw")):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
