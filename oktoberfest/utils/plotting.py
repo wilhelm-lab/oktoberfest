@@ -1,0 +1,152 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+
+def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, search_type: str, directory: str):
+    """Generate target-decoy distribution of the score."""
+    plt.figure(figsize=(8, 6))
+    bins = np.linspace(-3, 2, 15)
+    plt.hist(target.score, bins, label="Targets", rwidth=0.5, color="#48AF00")
+    plt.hist(decoy.score, bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.xlabel("Score", size=14)
+    plt.title(f"{search_type} Target vs Decoys ({type})")
+    plt.legend(loc="upper right")
+    plt.savefig(directory + f"/{search_type}_Target_vs_Decoys_{type}_bins.png", dpi=300)
+
+
+def joint_plot(
+    prosit_target: pd.DataFrame,
+    prosit_decoy: pd.DataFrame,
+    andromeda_target: pd.DataFrame,
+    andromeda_decoy: pd.DataFrame,
+    type: str,
+    directory: str,
+):
+    """Generate joint plot (correlation between Prosit and Andromeda score)."""
+    targets = prosit_target.merge(andromeda_target, on="proteinIds", how="outer", suffixes=["", "_"], indicator=True)
+    decoys = prosit_decoy.merge(andromeda_decoy, on="proteinIds", how="outer", suffixes=["", "_"], indicator=True)
+    df_targets = pd.DataFrame()
+    df_targets["prosit_score"] = targets.score
+    df_targets["and_score"] = targets.score_
+    df_targets["type"] = "targets"
+    df_targets["color"] = "#48AF00"
+
+    df_decoys = pd.DataFrame()
+    df_decoys["prosit_score"] = decoys.score
+    df_decoys["and_score"] = decoys.score_
+    df_decoys["type"] = "decoys"
+    df_decoys["color"] = "#FE7312"
+
+    df_all = pd.concat([df_targets, df_decoys], axis=0)
+    sns.jointplot(
+        data=df_all,
+        x="and_score",
+        y="prosit_score",
+        marginal_ticks=True,
+        hue=df_all.type,
+        palette=["#48AF00", "#FE7312"],
+        ratio=2,
+        height=10,
+    )
+    plt.savefig(directory + f"/Prosit_Andromeda_joint_plot_{type}.png", dpi=300)
+
+
+def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str):
+    """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
+    andromeda_target = andromeda_target[andromeda_target["q-value"] < 0.01]
+    prosit_target = prosit_target[prosit_target["q-value"] < 0.01]
+    merged_df = prosit_target.merge(andromeda_target, how="inner", on="peptide")
+
+    shared = len(merged_df.index)
+    gained = len(prosit_target.index) - shared
+    lost = len(andromeda_target.index) - shared
+
+    shared_perc = [shared * 100 / len(andromeda_target.index), shared * 100 / len(andromeda_target.index)]
+    gained_perc = [gained * 100 / len(andromeda_target.index), gained * 100 / len(andromeda_target.index)]
+    lost_perc = [-lost * 100 / len(andromeda_target.index), -lost * 100 / len(andromeda_target.index)]
+
+    fig, ax = plt.subplots(1, figsize=(1.5, 10))
+    labels = [""]
+    ax1 = ax.bar(labels, shared_perc, width=0.5, color="#115795")
+    ax2 = ax.bar(labels, gained_perc, width=0.5, bottom=shared_perc, color="#007D3E")
+    ax3 = ax.bar(labels, lost_perc, color="#E17224", width=0.5)
+
+    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, shared_perc, gained_perc, lost_perc):
+        h1 = r1.get_height()
+        h2 = r2.get_height()
+        plt.text(
+            r1.get_x() + r1.get_width() / 2.0,
+            h1 / 2.0,
+            "%d" % v1,
+            ha="center",
+            va="bottom",
+            color="white",
+            fontsize=12,
+            fontweight="bold",
+        )
+        plt.text(
+            r2.get_x() + r2.get_width() / 2.0,
+            h1 + h2 / 2,
+            "%d" % v2,
+            ha="center",
+            va="bottom",
+            color="black",
+            fontsize=12,
+        )
+        plt.text(
+            r3.get_x() + r3.get_width() / 2.0, -10, "%d" % -v3, ha="center", va="bottom", color="black", fontsize=12
+        )
+
+    plt.ylim(-12, h1 + h2 + 30)
+    # remove spines
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    # grid
+    ax.set_ylabel("Percentage", fontsize=14)
+    ax.set_axisbelow(True)
+    ax.yaxis.grid(color="gray")
+    ax.tick_params(axis="both", which="major", labelsize=13)
+
+    legend_label = ["Common", "Gained", "Lost"]
+    plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
+    plt.title(f"{type} 1% FDR\n", fontsize=14)
+    plt.savefig(directory + f"/{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
+
+
+def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str):
+    """Generate plot (ce vs mean sa)."""
+    df = sa_ce_df.to_frame()
+    df = df.reset_index()
+    df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
+    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=3, truncate=False)
+    plt.savefig(directory + "/mean_spectral_angle_ce.png", dpi=300)
+
+
+def plot_all(percolator_path: str):
+    """Generate all plots and save them as png in the percolator folder."""
+    prosit_pep_target = pd.read_csv(percolator_path + "/prosit_target.peptides", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(percolator_path + "/prosit_decoy.peptides", delimiter="\t")
+    prosit_psms_target = pd.read_csv(percolator_path + "/prosit_target.psms", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(percolator_path + "/prosit_decoy.psms", delimiter="\t")
+
+    andromeda_pep_target = pd.read_csv(percolator_path + "/andromeda_target.peptides", delimiter="\t")
+    andromeda_pep_decoy = pd.read_csv(percolator_path + "/andromeda_decoy.peptides", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(percolator_path + "/andromeda_target.psms", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(percolator_path + "/andromeda_decoy.psms", delimiter="\t")
+
+    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Prosit", percolator_path)
+    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Prosit", percolator_path)
+    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Andromeda", percolator_path)
+    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Andromeda", percolator_path)
+    joint_plot(
+        prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
+    )
+    joint_plot(
+        prosit_psms_target, prosit_psms_decoy, andromeda_psms_target, andromeda_psms_decoy, "PSMs", percolator_path
+    )
+    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
+    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)

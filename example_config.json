@@ -1,5 +1,5 @@
 {
-    "jobType": "MaxQuantRescoring",
+    "jobType": "Rescoring",
     "tag": "tmt",
     "allFeatures": false,
     "fileUploads": {
