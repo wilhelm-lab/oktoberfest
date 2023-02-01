@@ -190,7 +190,7 @@ def run_job(search_dir: str, config_path: str):
         generate_spectral_lib(search_dir, config_path)
     elif job_type == "CollisionEnergyAlignment":
         run_ce_calibration(msms_path, search_dir, config_path)
-    elif job_type == "MaxQuantRescoring":
+    elif job_type == "Rescoring":
         run_rescoring(msms_path, search_dir, config_path)
     else:
         raise ValueError(f"Unknown job_type in config: {job_type}")

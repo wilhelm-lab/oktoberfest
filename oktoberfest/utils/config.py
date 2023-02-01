@@ -76,7 +76,7 @@ class Config:
 
     @property
     def job_type(self) -> str:
-        """Get jobType flag (CollisionEnergyAlignment, MaxQuantRescoring or SpectralLibraryGeneration) from the config file."""
+        """Get jobType flag (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
         if "jobType" in self.data:
             return self.data["jobType"]
         elif "type" in self.data:

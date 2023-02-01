@@ -23,7 +23,7 @@ When a FASTA file is provided, Prosit will:
 2. Predict all spectra at the given collision energy.
    When a CSV with peptides is provided, Prosit will directly predict all spectra.
 
--   Rescoring (MaxQuantRescoring)
+-   Rescoring (Rescoring)
 
 This task rescores an existing MaxQuant search (FDR 100%) using features generated from fragmentation prediction. You need to upload a RAW file as well as the MaxQuant's msms.txt file from a search.
 Prosit will:
@@ -50,7 +50,7 @@ pip install .
 
 Create a `config.json` file which should contain the following flags:
 
--   `jobType` = CollisionEnergyAlignment, MaxQuantRescoring or SpectralLibraryGeneration
+-   `jobType` = CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring
 
 -   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
@@ -109,7 +109,7 @@ For `prosit_server` and `jobId`: ask Wassim Gabriel (wassim.gabriel@tum.de) or L
 Finally, run
 
 ```bash
-python oktoberfest/run_oktoberfest.py —search_dir path_to_search_dir —config_path path_to_config_file
+python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
 ```
 
 Note: The search_dir should contain both the raw files and the MaxQuant's `msms.txt` from a search.
