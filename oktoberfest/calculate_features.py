@@ -38,9 +38,9 @@ class CalculateFeatures(CeCalibration):
         """
         perc_features = Percolator(
             self.library.get_meta_data(),
+            search_type,
             self.library.get_matrix(FragmentType.PRED),
             self.library.get_matrix(FragmentType.RAW),
-            search_type,
             self.config.all_features,
         )
         perc_features.calc()
