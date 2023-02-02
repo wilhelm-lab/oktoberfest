@@ -25,8 +25,14 @@ def joint_plot(
     directory: str,
 ):
     """Generate joint plot (correlation between Prosit and Andromeda score)."""
-    targets = prosit_target.merge(andromeda_target, on="proteinIds", how="outer", suffixes=["", "_"], indicator=True)
-    decoys = prosit_decoy.merge(andromeda_decoy, on="proteinIds", how="outer", suffixes=["", "_"], indicator=True)
+    
+    if type == 'Peptides':
+        join_col = "proteinIds"
+    else:
+        join_col = "PSMId"
+        
+    targets = prosit_target.merge(andromeda_target, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
+    decoys = prosit_decoy.merge(andromeda_decoy, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
     df_targets = pd.DataFrame()
     df_targets["prosit_score"] = targets.score
     df_targets["and_score"] = targets.score_
@@ -55,25 +61,27 @@ def joint_plot(
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
+    
+    if type == 'Peptides':
+        join_col = "peptide"
+    else:
+        join_col = "PSMId"
+        
     andromeda_target = andromeda_target[andromeda_target["q-value"] < 0.01]
     prosit_target = prosit_target[prosit_target["q-value"] < 0.01]
-    merged_df = prosit_target.merge(andromeda_target, how="inner", on="peptide")
+    merged_df = prosit_target.merge(andromeda_target, how="inner", on=join_col)
 
     shared = len(merged_df.index)
-    gained = len(prosit_target.index) - shared
-    lost = len(andromeda_target.index) - shared
-
-    shared_perc = [shared * 100 / len(andromeda_target.index), shared * 100 / len(andromeda_target.index)]
-    gained_perc = [gained * 100 / len(andromeda_target.index), gained * 100 / len(andromeda_target.index)]
-    lost_perc = [-lost * 100 / len(andromeda_target.index), -lost * 100 / len(andromeda_target.index)]
+    gained = len(prosit_target.index)-shared
+    lost = len(andromeda_target.index)-shared
 
     fig, ax = plt.subplots(1, figsize=(1.5, 10))
     labels = [""]
-    ax1 = ax.bar(labels, shared_perc, width=0.5, color="#115795")
-    ax2 = ax.bar(labels, gained_perc, width=0.5, bottom=shared_perc, color="#007D3E")
-    ax3 = ax.bar(labels, lost_perc, color="#E17224", width=0.5)
+    ax1 = ax.bar(labels, shared, width=0.5, color="#115795")
+    ax2 = ax.bar(labels, gained, width=0.5, bottom=shared, color="#007D3E")
+    ax3 = ax.bar(labels, -lost, color="#E17224", width=0.5)
 
-    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, shared_perc, gained_perc, lost_perc):
+    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, [shared], [gained], [lost]):
         h1 = r1.get_height()
         h2 = r2.get_height()
         plt.text(
@@ -96,10 +104,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
             fontsize=12,
         )
         plt.text(
-            r3.get_x() + r3.get_width() / 2.0, -10, "%d" % -v3, ha="center", va="bottom", color="black", fontsize=12
+            r3.get_x() + r3.get_width() / 2.0, -0.025*gained, "%d" % -v3, ha="center", va="bottom", color="black", fontsize=12
         )
 
-    plt.ylim(-12, h1 + h2 + 30)
+    plt.ylim(-lost-100, h1 + h2 + 30)
     # remove spines
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_visible(False)
@@ -109,7 +117,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.set_ylabel("Percentage", fontsize=14)
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="gray")
-    ax.tick_params(axis="both", which="major", labelsize=13)
+    ax.tick_params(axis="y", which="major", labelsize=13)
+    ax.set_xticks([])
+    # for minor ticks
+    ax.set_xticks([], minor=True)
 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
@@ -117,13 +128,13 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     plt.savefig(directory + f"/{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
 
 
-def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str):
+def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     """Generate plot (ce vs mean sa)."""
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
-    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=3, truncate=False)
-    plt.savefig(directory + "/mean_spectral_angle_ce.png", dpi=300)
+    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=5, truncate=False)
+    plt.savefig(directory + "/" + raw_file_name +"mean_spectral_angle_ce.png", dpi=300)
 
 
 def plot_all(percolator_path: str):
