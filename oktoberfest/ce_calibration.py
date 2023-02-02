@@ -11,6 +11,7 @@ from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
+from .utils.plotting import plot_mean_sa_ce
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,10 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
+
+        plot_mean_sa_ce(
+            self.ce_alignment, self.raw_path.rsplit("/", 1)[0] + "/results/percolator", self.raw_path.rsplit("/")[-1]
+        )
 
     def _get_best_ce(self):
         """Get aligned ce for this lib."""
