@@ -25,7 +25,6 @@ def joint_plot(
     directory: str,
 ):
     """Generate joint plot (correlation between Prosit and Andromeda score)."""
-    
     if type == 'Peptides':
         join_col = "proteinIds"
     else:
@@ -61,7 +60,6 @@ def joint_plot(
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
-    
     if type == 'Peptides':
         join_col = "peptide"
     else:
