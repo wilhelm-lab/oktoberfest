@@ -11,7 +11,7 @@ class ProcessStep:
         """
         Init raw file path and step name.
 
-        :param raw_path: path to raw file
+        :param out_path: path to raw file
         :param step_name: name of the current step
         """
         self.out_path = out_path

@@ -25,11 +25,11 @@ def joint_plot(
     directory: str,
 ):
     """Generate joint plot (correlation between Prosit and Andromeda score)."""
-    if type == 'Peptides':
+    if type == "Peptides":
         join_col = "proteinIds"
     else:
         join_col = "PSMId"
-        
+
     targets = prosit_target.merge(andromeda_target, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
     decoys = prosit_decoy.merge(andromeda_decoy, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
     df_targets = pd.DataFrame()
@@ -60,18 +60,18 @@ def joint_plot(
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
-    if type == 'Peptides':
+    if type == "Peptides":
         join_col = "peptide"
     else:
         join_col = "PSMId"
-        
+
     andromeda_target = andromeda_target[andromeda_target["q-value"] < 0.01]
     prosit_target = prosit_target[prosit_target["q-value"] < 0.01]
     merged_df = prosit_target.merge(andromeda_target, how="inner", on=join_col)
 
     shared = len(merged_df.index)
-    gained = len(prosit_target.index)-shared
-    lost = len(andromeda_target.index)-shared
+    gained = len(prosit_target.index) - shared
+    lost = len(andromeda_target.index) - shared
 
     fig, ax = plt.subplots(1, figsize=(1.5, 10))
     labels = [""]
@@ -102,10 +102,16 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
             fontsize=12,
         )
         plt.text(
-            r3.get_x() + r3.get_width() / 2.0, -0.025*gained, "%d" % -v3, ha="center", va="bottom", color="black", fontsize=12
+            r3.get_x() + r3.get_width() / 2.0,
+            -0.025 * gained,
+            "%d" % -v3,
+            ha="center",
+            va="bottom",
+            color="black",
+            fontsize=12,
         )
 
-    plt.ylim(-lost-100, h1 + h2 + 30)
+    plt.ylim(-lost - 100, h1 + h2 + 30)
     # remove spines
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_visible(False)
@@ -132,7 +138,7 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
     sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=5, truncate=False)
-    plt.savefig(directory + "/" + raw_file_name +"mean_spectral_angle_ce.png", dpi=300)
+    plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
 
 
 def plot_all(percolator_path: str):

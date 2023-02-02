@@ -199,7 +199,9 @@ class CeCalibration(SpectralLibrary):
             "SPECTRAL_ANGLE"
         ].mean()
 
-        plot_mean_sa_ce(self.ce_alignment, self.raw_path.rsplit("/", 1)[0] + "/results/percolator", self.raw_path.rsplit("/")[-1])
+        plot_mean_sa_ce(
+            self.ce_alignment, self.raw_path.rsplit("/", 1)[0] + "/results/percolator", self.raw_path.rsplit("/")[-1]
+        )
 
     def _get_best_ce(self):
         """Get aligned ce for this lib."""
