@@ -122,7 +122,8 @@ class ReScore(CalculateFeatures):
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby("RAW_FILE"):
-            if not os.path.isfile(os.path.join(self.raw_path, raw_file + ".raw")):
+            raw_file_path = os.path.join(self.raw_path, raw_file)
+            if not (os.path.isfile(raw_file_path + ".raw") or os.path.isfile(raw_file_path + ".RAW")):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
 
@@ -161,8 +162,7 @@ class ReScore(CalculateFeatures):
                 continue
 
             raw_file_path = os.path.join(self.raw_path, raw_file)
-
-            mzml_file_path = os.path.join(mzml_path, raw_file.replace(".raw", ".mzML"))
+            mzml_file_path = os.path.join(mzml_path, os.path.splitext(raw_file)[0] + ".mzML")
 
             percolator_input_path = self._get_split_perc_input_path(raw_file, "prosit")
             split_msms_path = self._get_split_msms_path(raw_file)
