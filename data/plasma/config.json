@@ -1,5 +1,5 @@
 {
-    "type": "MaxQuantRescoring",
+    "type": "Rescoring",
     "uploads": {
         "msms.txt": true,
         "RAW": true,

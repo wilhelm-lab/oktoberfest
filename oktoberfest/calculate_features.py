@@ -37,11 +37,11 @@ class CalculateFeatures(CeCalibration):
         :param file_path: path to percolator input file as a string
         """
         perc_features = Percolator(
-            self.library.get_meta_data(),
-            search_type,
-            self.library.get_matrix(FragmentType.PRED),
-            self.library.get_matrix(FragmentType.RAW),
-            self.config.all_features,
+            metadata=self.library.get_meta_data(),
+            pred_intensities=self.library.get_matrix(FragmentType.PRED),
+            true_intensities=self.library.get_matrix(FragmentType.RAW),
+            input_type=search_type,
+            all_features_flag=self.config.all_features,
         )
         perc_features.calc()
         if file_path:
