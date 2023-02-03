@@ -197,9 +197,10 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
-
+        print(self.raw_path)
         plot_mean_sa_ce(
-            self.ce_alignment, self.raw_path.rsplit("/", 1)[0] + "/results/percolator", self.raw_path.rsplit("/")[-1]
+            sa_ce_df = self.ce_alignment, directory = os.path.join(('/').join(self.raw_path.split("\\")[:-1]),'results')
+            , raw_file_name = self.raw_path.split("\\")[-1]
         )
 
     def _get_best_ce(self):

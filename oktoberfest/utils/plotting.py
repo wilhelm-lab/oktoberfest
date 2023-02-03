@@ -45,17 +45,19 @@ def joint_plot(
     df_decoys["color"] = "#FE7312"
 
     df_all = pd.concat([df_targets, df_decoys], axis=0)
-    sns.jointplot(
+    jplot = sns.jointplot(
         data=df_all,
-        x="and_score",
-        y="prosit_score",
+        x="prosit_score",
+        y="and_score",
         marginal_ticks=True,
         hue=df_all.type,
         palette=["#48AF00", "#FE7312"],
         ratio=2,
         height=10,
     )
-    plt.savefig(directory + f"/Prosit_Andromeda_joint_plot_{type}.png", dpi=300)
+    jplot.ax_joint.set_xlabel('rescored_score')
+    jplot.ax_joint.set_ylabel('original_score')
+    plt.savefig(directory + f"/Rescored_Original_joint_plot_{type}.png", dpi=300)
 
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str):
@@ -134,10 +136,11 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
 def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     """Generate plot (ce vs mean sa)."""
+    directory = directory.replace('/mzML','')
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
-    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=5, truncate=False)
+    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=2, truncate=False)
     plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
 
 
@@ -153,10 +156,11 @@ def plot_all(percolator_path: str):
     andromeda_psms_target = pd.read_csv(percolator_path + "/original_target.psms", delimiter="\t")
     andromeda_psms_decoy = pd.read_csv(percolator_path + "/original_decoy.psms", delimiter="\t")
 
-    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "rescore", percolator_path)
-    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "rescore", percolator_path)
-    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "original", percolator_path)
-    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "original", percolator_path)
+    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Rescore", percolator_path)
+    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", percolator_path)
+    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Original", percolator_path)
+    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Original", percolator_path)
+
     joint_plot(
         prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
     )

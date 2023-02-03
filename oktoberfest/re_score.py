@@ -227,7 +227,7 @@ class ReScore(CalculateFeatures):
         df_prosit = df_prosit.fillna(0)
         df_prosit.to_csv(merged_perc_input_file_prosit, sep="\t", index=False)
 
-        if search_type == "prosit":
+        if search_type == "rescore":
             self.merge_input_step_prosit.mark_done()
         else:
             self.merge_input_step_andromeda.mark_done()
