@@ -143,20 +143,20 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
 
 def plot_all(percolator_path: str):
     """Generate all plots and save them as png in the percolator folder."""
-    prosit_pep_target = pd.read_csv(percolator_path + "/prosit_target.peptides", delimiter="\t")
-    prosit_pep_decoy = pd.read_csv(percolator_path + "/prosit_decoy.peptides", delimiter="\t")
-    prosit_psms_target = pd.read_csv(percolator_path + "/prosit_target.psms", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(percolator_path + "/prosit_decoy.psms", delimiter="\t")
+    prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore_decoy.peptides", delimiter="\t")
+    prosit_psms_target = pd.read_csv(percolator_path + "/rescore_target.psms", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(percolator_path + "/rescore_decoy.psms", delimiter="\t")
 
-    andromeda_pep_target = pd.read_csv(percolator_path + "/andromeda_target.peptides", delimiter="\t")
-    andromeda_pep_decoy = pd.read_csv(percolator_path + "/andromeda_decoy.peptides", delimiter="\t")
-    andromeda_psms_target = pd.read_csv(percolator_path + "/andromeda_target.psms", delimiter="\t")
-    andromeda_psms_decoy = pd.read_csv(percolator_path + "/andromeda_decoy.psms", delimiter="\t")
+    andromeda_pep_target = pd.read_csv(percolator_path + "/original_target.peptides", delimiter="\t")
+    andromeda_pep_decoy = pd.read_csv(percolator_path + "/original_decoy.peptides", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(percolator_path + "/original_target.psms", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(percolator_path + "/original_decoy.psms", delimiter="\t")
 
-    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Prosit", percolator_path)
-    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Prosit", percolator_path)
-    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Andromeda", percolator_path)
-    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Andromeda", percolator_path)
+    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "rescore", percolator_path)
+    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "rescore", percolator_path)
+    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "original", percolator_path)
+    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "original", percolator_path)
     joint_plot(
         prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
     )

@@ -1,9 +1,10 @@
 {
     "jobType": "Rescoring",
     "tag": "tmt",
+    "peptide_identification_method": "percolator",
     "allFeatures": false,
     "fileUploads": {
-        "search_type": "maxquant",
+        "search_type": "Maxquant",
         "raw_type": "thermo",
         "fasta": false,
         "peptides.csv": true

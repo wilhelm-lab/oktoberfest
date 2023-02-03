@@ -30,6 +30,14 @@ class Config:
             return 1
 
     @property
+    def peptide_identification_method(self) -> str:
+        """Get peptide identification method from the config file (percolator or mokapot)."""
+        if "peptide_identification_method" in self.data:
+            return self.data["peptide_identification_method"]
+        else:
+            return "percolator"
+
+    @property
     def fasta(self) -> str:
         """Get path to fasta file from the config file."""
         if "fileUploads" in self.data:
@@ -94,11 +102,11 @@ class Config:
 
     @property
     def search_type(self) -> str:
-        """Get search type (maxquant or internal) from the config file."""
+        """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         if "fileUploads" in self.data:
             return self.data["fileUploads"]["search_type"]
         else:
-            return "maxquant"
+            return "Maxquant"
 
     @property
     def output_format(self) -> str:

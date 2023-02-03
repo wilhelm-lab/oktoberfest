@@ -54,11 +54,13 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
+-   `peptide_identification_method` = peptide identification method (percolator or mokapot); default = percolator
+
 -   `allFeatures` = true if all features should be used by the percolator; default = false
 
 -   `fileUploads`
 
-    -   `search_type` = maxquant, msfragger, mascot or internal; default = maxquant
+    -   `search_type` = Maxquant, Msfragger, Mascot or Internal; default = Maxquant
 
     -   `raw_type` = thermo or mzml; default = thermo
 
