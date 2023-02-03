@@ -30,14 +30,6 @@ class Config:
             return 1
 
     @property
-    def peptide_identification_method(self) -> str:
-        """Get peptide identification method from the config file (percolator or mokapot)."""
-        if "peptide_identification_method" in self.data:
-            return self.data["peptide_identification_method"]
-        else:
-            return "percolator"
-
-    @property
     def fasta(self) -> str:
         """Get path to fasta file from the config file."""
         if "fileUploads" in self.data:

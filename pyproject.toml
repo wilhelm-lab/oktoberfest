@@ -30,7 +30,6 @@ spectrum_io = {git = "https://github.com/wilhelm-lab/spectrum_io.git", rev = "de
 prosit_grpc = {git = "https://github.com/wilhelm-lab/prosit_grpc.git", rev = "development"}
 matplotlib = "^3.6.3"
 seaborn = "^0.12.2"
-mokapot = "^0.9.1"
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
