@@ -55,8 +55,8 @@ def joint_plot(
         ratio=2,
         height=10,
     )
-    jplot.ax_joint.set_xlabel('rescored_score')
-    jplot.ax_joint.set_ylabel('original_score')
+    jplot.ax_joint.set_xlabel("rescored_score")
+    jplot.ax_joint.set_ylabel("original_score")
     plt.savefig(directory + f"/Rescored_Original_joint_plot_{type}.png", dpi=300)
 
 
@@ -136,7 +136,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
 def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     """Generate plot (ce vs mean sa)."""
-    directory = directory.replace('/mzML','')
+    directory = directory.replace("/mzML", "")
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]

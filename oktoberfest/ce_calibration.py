@@ -199,8 +199,9 @@ class CeCalibration(SpectralLibrary):
         ].mean()
         print(self.raw_path)
         plot_mean_sa_ce(
-            sa_ce_df = self.ce_alignment, directory = os.path.join(('/').join(self.raw_path.split("\\")[:-1]),'results')
-            , raw_file_name = self.raw_path.split("\\")[-1]
+            sa_ce_df=self.ce_alignment,
+            directory=os.path.join(("/").join(self.raw_path.split("\\")[:-1]), "results"),
+            raw_file_name=self.raw_path.split("\\")[-1],
         )
 
     def _get_best_ce(self):
