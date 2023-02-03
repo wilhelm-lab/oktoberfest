@@ -164,7 +164,7 @@ class ReScore(CalculateFeatures):
             raw_file_path = os.path.join(self.raw_path, raw_file)
             mzml_file_path = os.path.join(mzml_path, os.path.splitext(raw_file)[0] + ".mzML")
 
-            percolator_input_path = self._get_split_perc_input_path(raw_file, "prosit")
+            percolator_input_path = self._get_split_perc_input_path(raw_file, "rescore")
             split_msms_path = self._get_split_msms_path(raw_file)
 
             if num_threads > 1:
@@ -227,7 +227,7 @@ class ReScore(CalculateFeatures):
         df_prosit = df_prosit.fillna(0)
         df_prosit.to_csv(merged_perc_input_file_prosit, sep="\t", index=False)
 
-        if search_type == "prosit":
+        if search_type == "rescore":
             self.merge_input_step_prosit.mark_done()
         else:
             self.merge_input_step_andromeda.mark_done()
@@ -281,7 +281,7 @@ class ReScore(CalculateFeatures):
         :param raw_file: path to raw file as a string
         :return: path to split msms file
         """
-        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".prosit")
+        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".rescore")
 
     def get_mzml_folder_path(self) -> str:
         """Get folder path to mzml."""
