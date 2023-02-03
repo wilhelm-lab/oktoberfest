@@ -84,7 +84,7 @@ class CeCalibration(SpectralLibrary):
         raw = ThermoRaw()
         if not (self.out_path.endswith(".mzML")) and (not (self.out_path.endswith(".raw"))):
             self.out_path = os.path.join(self.out_path, self.raw_path.split("/")[-1].split(".")[0] + ".mzml")
-        self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
+        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.out_path)
 
     def _load_search(self):
         """Load search type."""
