@@ -84,7 +84,7 @@ class CeCalibration(SpectralLibrary):
         raw = ThermoRaw()
         if not (self.out_path.endswith(".mzML")) and (not (self.out_path.endswith(".raw"))):
             self.out_path = os.path.join(self.out_path, self.raw_path.split("/")[-1].split(".")[0] + ".mzml")
-        self.raw_path = raw.convert_raw_mzml(self.raw_path, self.out_path)
+        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.out_path)
 
     def _load_search(self):
         """Load search type."""
@@ -114,8 +114,9 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-        self.raw_path = self.raw_path.replace(".raw", ".mzml")
-        return ThermoRaw.read_mzml(self.out_path, package=self.mzml_reader_package, search_type=search_engine)
+        print(self.raw_path)
+        self.raw_path = self.raw_path.as_posix().replace(".raw", ".mzml")
+        return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
         """
@@ -197,11 +198,14 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
-        print(self.raw_path)
+        if '/' in self.raw_path:
+            split_char = '/'
+        else:
+            split_char = '\\'
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            directory=os.path.join(("/").join(self.raw_path.split("\\")[:-1]), "results"),
-            raw_file_name=self.raw_path.split("\\")[-1],
+            directory=os.path.join((split_char).join(self.raw_path.split(split_char)[:-1]), "results"),
+            raw_file_name=self.raw_path.split(split_char)[-1],
         )
 
     def _get_best_ce(self):

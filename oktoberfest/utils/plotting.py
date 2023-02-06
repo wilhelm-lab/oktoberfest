@@ -47,16 +47,16 @@ def joint_plot(
     df_all = pd.concat([df_targets, df_decoys], axis=0)
     jplot = sns.jointplot(
         data=df_all,
-        x="prosit_score",
-        y="and_score",
+        x="and_score",
+        y="prosit_score",
         marginal_ticks=True,
         hue=df_all.type,
         palette=["#48AF00", "#FE7312"],
         ratio=2,
         height=10,
     )
-    jplot.ax_joint.set_xlabel("rescored_score")
-    jplot.ax_joint.set_ylabel("original_score")
+    jplot.ax_joint.set_ylabel("rescored_score")
+    jplot.ax_joint.set_xlabel("original_score")
     plt.savefig(directory + f"/Rescored_Original_joint_plot_{type}.png", dpi=300)
 
 
@@ -136,7 +136,9 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
 def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     """Generate plot (ce vs mean sa)."""
+    directory = directory+""
     directory = directory.replace("/mzML", "")
+    directory = directory.replace("/percolator", "")
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]

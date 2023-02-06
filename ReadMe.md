@@ -4,7 +4,7 @@
 
 What you can do with oktoberfest:
 
--   CE Calibration (CollisionEnergyAlignment)
+-   CE Calibration (CollisionEnergyCalibration)
 
 This task estimates the optimal collision energy (CE) based on a given search result. You need to upload a RAW file as well as the MaxQuant's msms.txt for calibration.
 Prosit will:

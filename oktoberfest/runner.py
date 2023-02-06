@@ -188,7 +188,7 @@ def run_job(search_dir: str, config_path: str):
 
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
-    elif job_type == "CollisionEnergyAlignment":
+    elif job_type == "CollisionEnergyCalibration":
         run_ce_calibration(msms_path, search_dir, config_path)
     elif job_type == "Rescoring":
         run_rescoring(msms_path, search_dir, config_path)

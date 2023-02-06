@@ -3,6 +3,7 @@ import os
 from typing import Optional
 
 import pandas as pd
+from pathlib import Path
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
@@ -80,11 +81,15 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
+        
+        path = Path(__file__).parent / "certificates/"
+        logger.info(path)
+
         predictor = PROSITpredictor(
             server=self.config.prosit_server,
-            path_to_ca_certificate=None,
-            path_to_certificate=None,
-            path_to_key_certificate=None,
+            path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
+            path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
+            path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
         )
 
         models_dict = self.config.models
