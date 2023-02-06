@@ -136,7 +136,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
 def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     """Generate plot (ce vs mean sa)."""
-    directory = directory+""
+    directory = directory + ""
     directory = directory.replace("/mzML", "")
     directory = directory.replace("/percolator", "")
     df = sa_ce_df.to_frame()

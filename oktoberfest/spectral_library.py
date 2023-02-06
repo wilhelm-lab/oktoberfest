@@ -1,9 +1,9 @@
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from pathlib import Path
 from prosit_grpc.predictPROSIT import PROSITpredictor
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
@@ -81,7 +81,6 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        
         path = Path(__file__).parent / "certificates/"
         logger.info(path)
 

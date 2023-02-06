@@ -198,10 +198,10 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
-        if '/' in self.raw_path:
-            split_char = '/'
+        if "/" in self.raw_path:
+            split_char = "/"
         else:
-            split_char = '\\'
+            split_char = "\\"
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
             directory=os.path.join((split_char).join(self.raw_path.split(split_char)[:-1]), "results"),
