@@ -161,11 +161,11 @@ def run_rescoring(msms_path: str, search_dir: str, config_path: str):
     re_score.split_msms()
     re_score.calculate_features()
 
-    re_score.merge_input("prosit")
-    re_score.merge_input("andromeda")
+    re_score.merge_input("rescore")
+    re_score.merge_input("original")
 
-    re_score.rescore_with_perc("prosit")
-    re_score.rescore_with_perc("andromeda")
+    re_score.rescore_with_perc("rescore")
+    re_score.rescore_with_perc("original")
 
 
 def run_job(search_dir: str, config_path: str):
@@ -188,7 +188,7 @@ def run_job(search_dir: str, config_path: str):
 
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
-    elif job_type == "CollisionEnergyAlignment":
+    elif job_type == "CollisionEnergyCalibration":
         run_ce_calibration(msms_path, search_dir, config_path)
     elif job_type == "Rescoring":
         run_rescoring(msms_path, search_dir, config_path)

@@ -3,7 +3,7 @@
     "tag": "tmt",
     "allFeatures": false,
     "fileUploads": {
-        "search_type": "maxquant",
+        "search_type": "Maxquant",
         "raw_type": "thermo",
         "fasta": false,
         "peptides.csv": true

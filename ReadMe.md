@@ -4,7 +4,7 @@
 
 What you can do with oktoberfest:
 
--   CE Calibration (CollisionEnergyAlignment)
+-   CE Calibration (CollisionEnergyCalibration)
 
 This task estimates the optimal collision energy (CE) based on a given search result. You need to upload a RAW file as well as the MaxQuant's msms.txt for calibration.
 Prosit will:
@@ -54,11 +54,13 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
+-   `peptide_identification_method` = peptide identification method (percolator or mokapot); default = percolator
+
 -   `allFeatures` = true if all features should be used by the percolator; default = false
 
 -   `fileUploads`
 
-    -   `search_type` = maxquant, msfragger, mascot or internal; default = maxquant
+    -   `search_type` = Maxquant, Msfragger, Mascot or Internal; default = Maxquant
 
     -   `raw_type` = thermo or mzml; default = thermo
 

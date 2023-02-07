@@ -33,7 +33,7 @@ class CalculateFeatures(CeCalibration):
         """
         Get all percolator metrics and add them to library.
 
-        :param search_type: model (prosit or andromeda) as a string
+        :param search_type: model (rescore or original) as a string
         :param file_path: path to percolator input file as a string
         """
         perc_features = Percolator(

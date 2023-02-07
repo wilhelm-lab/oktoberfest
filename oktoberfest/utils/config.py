@@ -94,11 +94,11 @@ class Config:
 
     @property
     def search_type(self) -> str:
-        """Get search type (maxquant or internal) from the config file."""
+        """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         if "fileUploads" in self.data:
             return self.data["fileUploads"]["search_type"]
         else:
-            return "maxquant"
+            return "Maxquant"
 
     @property
     def output_format(self) -> str:
@@ -135,8 +135,8 @@ class Config:
     @property
     def cleavages(self) -> int:
         """Get number of allowed missed cleavages used in the search engine."""
-        if "cleavages" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["cleavages"]
+        if "missedCleavages" in self.data["fastaDigestOptions"]:
+            return self.data["fastaDigestOptions"]["missedCleavages"]
         else:
             return 2
 

@@ -29,8 +29,8 @@ def calculate_features_single(
 
     df_search = pd.read_csv(split_msms_path, delimiter="\t")
     features.predict_with_aligned_ce(df_search)
-    features.gen_perc_metrics("prosit", percolator_input_path)
-    features.gen_perc_metrics("andromeda", percolator_input_path.replace("prosit", "andromeda"))
+    features.gen_perc_metrics("rescore", percolator_input_path)
+    features.gen_perc_metrics("original", percolator_input_path.replace("rescore", "original"))
 
     calc_feature_step.mark_done()
 
@@ -164,7 +164,7 @@ class ReScore(CalculateFeatures):
             raw_file_path = os.path.join(self.raw_path, raw_file)
             mzml_file_path = os.path.join(mzml_path, os.path.splitext(raw_file)[0] + ".mzML")
 
-            percolator_input_path = self._get_split_perc_input_path(raw_file, "prosit")
+            percolator_input_path = self._get_split_perc_input_path(raw_file, "rescore")
             split_msms_path = self._get_split_msms_path(raw_file)
 
             if num_threads > 1:
@@ -192,16 +192,16 @@ class ReScore(CalculateFeatures):
         if num_threads > 1:
             processing_pool.check_pool(print_progress_every=1)
 
-    def merge_input(self, search_type: str = "prosit"):
+    def merge_input(self, search_type: str = "rescore"):
         """
         Merge percolator input files into one large file for combined percolation.
 
         Fastest solution according to:
         https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
 
-        :param search_type: choose either prosit or andromeda to merge percolator files for this.
+        :param search_type: choose either rescore or original to merge percolator files for this.
         """
-        if search_type == "prosit":
+        if search_type == "rescore":
             if self.merge_input_step_prosit.is_done():
                 return
         else:
@@ -227,14 +227,14 @@ class ReScore(CalculateFeatures):
         df_prosit = df_prosit.fillna(0)
         df_prosit.to_csv(merged_perc_input_file_prosit, sep="\t", index=False)
 
-        if search_type == "prosit":
+        if search_type == "rescore":
             self.merge_input_step_prosit.mark_done()
         else:
             self.merge_input_step_andromeda.mark_done()
 
-    def rescore_with_perc(self, search_type: str = "prosit", test_fdr: float = 0.01, train_fdr: float = 0.01):
+    def rescore_with_perc(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
         """Use percolator to re-score library."""
-        if search_type == "prosit":
+        if search_type == "rescore":
             if self.percolator_step_prosit.is_done():
                 return
         else:
@@ -264,7 +264,7 @@ class ReScore(CalculateFeatures):
         logger.info(f"Starting percolator with command {cmd}")
         subprocess.run(cmd, shell=True, check=True)
 
-        if search_type == "prosit":
+        if search_type == "rescore":
             self.percolator_step_prosit.mark_done()
         else:
             plot_all(perc_path)
@@ -281,7 +281,7 @@ class ReScore(CalculateFeatures):
         :param raw_file: path to raw file as a string
         :return: path to split msms file
         """
-        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".prosit")
+        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".rescore")
 
     def get_mzml_folder_path(self) -> str:
         """Get folder path to mzml."""
@@ -296,7 +296,7 @@ class ReScore(CalculateFeatures):
         Specify search_type to differentiate between percolator and andromeda output.
 
         :param raw_file: path to raw file as a string
-        :param search_type: model (prosit or andromeda) as a string
+        :param search_type: model (rescore or original) as a string
         :return: path to split percolator input file
         """
         return os.path.join(
@@ -307,7 +307,7 @@ class ReScore(CalculateFeatures):
         """
         Get merged percolator input path.
 
-        :param search_type: model (prosit or andromeda) as a string
+        :param search_type: model (rescore or original) as a string
         :return: path to merged percolator input folder
         """
         return os.path.join(self.get_percolator_folder_path(), search_type + ".tab")
