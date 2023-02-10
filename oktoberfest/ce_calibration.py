@@ -68,13 +68,13 @@ class CeCalibration(SpectralLibrary):
             tmt_labeled = ""
 
         search_type = self.config.search_type
-        if search_type == "Maxquant":
+        if search_type.lower() == "maxquant":
             mxq = MaxQuant(self.search_path)
             self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
-        elif search_type == "Msfragger":
+        elif search_type.lower() == "msfragger":
             msf = MSFragger(self.search_path)
             self.search_path = msf.generate_internal(tmt_labeled=tmt_labeled)
-        elif search_type == "Mascot":
+        elif search_type.lower() == "mascot":
             mascot = Mascot(self.search_path)
             self.search_path = mascot.generate_internal(tmt_labeled=tmt_labeled)
 
@@ -90,15 +90,15 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch == "Maxquant" or switch == "Msfragger" or switch == "Mascot":
+        if switch.lower() == "maxquant" or switch.lower() == "msfragger" or switch.lower() == "mascot":
             self._gen_internal_search_result_from_msms()
         elif switch == "Internal":
             pass
         else:
             raise ValueError(f"{switch} is not supported as search-type")
-        if switch == "Maxquant":
+        if switch.lower() == "maxquant":
             return MaxQuant.read_internal(MaxQuant(self.search_path), self.search_path)
-        elif switch == "Msfragger":
+        elif switch.lower() == "msfragger":
             return MSFragger.read_internal(MSFragger(self.search_path), path=self.search_path)
         else:
             return Mascot.read_internal(Mascot(self.search_path), path=self.search_path)
