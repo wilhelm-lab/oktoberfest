@@ -67,7 +67,7 @@ class CeCalibration(SpectralLibrary):
         else:
             tmt_labeled = ""
 
-        search_type = self.config.search_type.lower()
+        search_type = self.config.search_type
         if search_type == "maxquant":
             mxq = MaxQuant(self.search_path)
             self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
@@ -88,7 +88,7 @@ class CeCalibration(SpectralLibrary):
 
     def _load_search(self):
         """Load search type."""
-        switch = self.config.search_type.lower()
+        switch = self.config.search_type
         logger.info(f"search_type is {switch}")
         if switch == "maxquant" or switch == "msfragger" or switch == "mascot":
             self._gen_internal_search_result_from_msms()
