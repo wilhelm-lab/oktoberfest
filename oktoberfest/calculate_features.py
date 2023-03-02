@@ -40,6 +40,7 @@ class CalculateFeatures(CeCalibration):
             metadata=self.library.get_meta_data(),
             pred_intensities=self.library.get_matrix(FragmentType.PRED),
             true_intensities=self.library.get_matrix(FragmentType.RAW),
+            mz=self.library.get_matrix(FragmentType.MZ),
             input_type=search_type,
             all_features_flag=self.config.all_features,
         )
