@@ -96,9 +96,9 @@ class Config:
     def search_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         if "fileUploads" in self.data:
-            return self.data["fileUploads"]["search_type"]
+            return self.data["fileUploads"]["search_type"].lower()
         else:
-            return "Maxquant"
+            return "maxquant"
 
     @property
     def output_format(self) -> str:
