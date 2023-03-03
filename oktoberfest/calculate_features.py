@@ -42,6 +42,7 @@ class CalculateFeatures(CeCalibration):
             true_intensities=self.library.get_matrix(FragmentType.RAW),
             input_type=search_type,
             all_features_flag=self.config.all_features,
+            regression_method=self.config.curve_fitting_method,
         )
         perc_features.calc()
         if file_path:

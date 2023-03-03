@@ -75,6 +75,15 @@ class Config:
             return False
 
     @property
+    def curve_fitting_method(self) -> str:
+        """Get regressionMethod flag (regression method for curve fitting: lowess, spline, or logistic). \
+        If not specified, lowess is applied."""
+        if "regressionMethod" in self.data:
+            return self.data["regressionMethod"]
+        else:
+            return "lowess"
+
+    @property
     def job_type(self) -> str:
         """Get jobType flag (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
         if "jobType" in self.data:
