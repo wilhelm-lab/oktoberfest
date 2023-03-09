@@ -62,7 +62,7 @@ class Config:
     def tag(self) -> str:
         """Get tag from the config file; if not specified return "tmt"."""
         if "tag" in self.data:
-            return self.data["tag"]
+            return self.data["tag"].lower()
         else:
             return "tmt"
 
@@ -79,7 +79,7 @@ class Config:
         """Get regressionMethod flag (regression method for curve fitting: lowess, spline, or logistic). \
         If not specified, lowess is applied."""
         if "regressionMethod" in self.data:
-            return self.data["regressionMethod"]
+            return self.data["regressionMethod"].lower()
         else:
             return "lowess"
 
@@ -97,7 +97,7 @@ class Config:
     def raw_type(self) -> str:
         """Get raw type (thermo or mzml) from the config file."""
         if "fileUploads" in self.data:
-            return self.data["fileUploads"]["raw_type"]
+            return self.data["fileUploads"]["raw_type"].lower()
         else:
             return "thermo"
 
@@ -113,7 +113,7 @@ class Config:
     def output_format(self) -> str:
         """Get output format from the config file."""
         if "outputFormat" in self.data:
-            return self.data["outputFormat"]
+            return self.data["outputFormat"].lower()
         else:
             return ""
 
@@ -129,7 +129,7 @@ class Config:
     def fragmentation(self) -> str:
         """Get fragmentation method from the config file (HCD or CID)."""
         if "fragmentation" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["fragmentation"]
+            return self.data["fastaDigestOptions"]["fragmentation"].upper()
         else:
             return ""
 
@@ -137,7 +137,7 @@ class Config:
     def digestion(self) -> str:
         """Get digestion mode (full, semi or none)."""
         if "digestion" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["digestion"]
+            return self.data["fastaDigestOptions"]["digestion"].lower()
         else:
             return "full"
 
@@ -169,7 +169,7 @@ class Config:
     def enzyme(self) -> str:
         """Get type of enzyme used."""
         if "enzyme" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["enzyme"]
+            return self.data["fastaDigestOptions"]["enzyme"].lower()
         else:
             return "trypsin"
 
@@ -177,7 +177,7 @@ class Config:
     def special_aas(self) -> str:
         """Get special amino acids used by MaxQuant for decoy generation."""
         if "specialAas" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["specialAas"]
+            return self.data["fastaDigestOptions"]["specialAas"].upper()
         else:
             return "KR"
 
@@ -185,6 +185,6 @@ class Config:
     def db(self) -> str:
         """Target, decoy or concat (relevant if fasta file provided)."""
         if "db" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["db"]
+            return self.data["fastaDigestOptions"]["db"].lower()
         else:
             return "concat"
