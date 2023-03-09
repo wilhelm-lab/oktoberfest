@@ -1,6 +1,6 @@
 """Initialize logger."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
 Written by
 - Wassim Gabriel (wassim.gabriel@tum.de),
