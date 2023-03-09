@@ -54,9 +54,11 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
--   `peptide_identification_method` = peptide identification method (percolator or mokapot); default = percolator
+-   `peptide_identification_method` = peptide identification method: percolator or mokapot; default = percolator
 
 -   `allFeatures` = true if all features should be used by the percolator; default = false
+
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): lowess, spline or logistic; default = lowess
 
 -   `fileUploads`
 
@@ -88,9 +90,9 @@ The following flags are relevant only if a FASTA file is provided:
 
 -   `fastaDigestOptions`
 
-    -   `fragmentation` = fragmentation method (HCD or CID)
+    -   `fragmentation` = fragmentation method: HCD or CID
 
-    -   `digestion` = digestion mode (full, semi or none); default = full
+    -   `digestion` = digestion mode: full, semi or none; default = full
 
     -   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
 
