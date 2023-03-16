@@ -4,6 +4,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+import pathlib
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.raw import ThermoRaw
@@ -115,7 +116,7 @@ class CeCalibration(SpectralLibrary):
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
         print(self.raw_path)
-        self.raw_path = self.raw_path.as_posix().replace(".raw", ".mzml")
+        self.raw_path = pathlib.Path(self.raw_path).as_posix().replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
