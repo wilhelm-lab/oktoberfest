@@ -108,6 +108,7 @@ class SpectralLibrary:
             )
 
         library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
+        predictions = None
         try:
             predictions = predictor.predict(
                 sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
@@ -124,17 +125,18 @@ class SpectralLibrary:
         # Return only in spectral library generation otherwise add to library
         if self.config.job_type == "SpectralLibraryGeneration":
             return predictions
-        intensities_pred = pd.DataFrame()
-        intensities_pred["intensity"] = predictions[models[0]]["intensity"].tolist()
+        if predictions is not None:
+            intensities_pred = pd.DataFrame()
+            intensities_pred["intensity"] = predictions[models[0]]["intensity"].tolist()
 
-        library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
-        if alignment:
-            return
-        irt_pred = predictions[models[1]]
-        library.add_column(irt_pred, "PREDICTED_IRT")
-        if len(models) > 2:
-            proteotypicity_pred = predictions[models[2]]
-            library.add_column(proteotypicity_pred, "PROTEOTYPICITY")
+            library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
+            if alignment:
+                return
+            irt_pred = predictions[models[1]]
+            library.add_column(irt_pred, "PREDICTED_IRT")
+            if len(models) > 2:
+                proteotypicity_pred = predictions[models[2]]
+                library.add_column(proteotypicity_pred, "PROTEOTYPICITY")
 
     def read_fasta(self):
         """Read fasta file."""
