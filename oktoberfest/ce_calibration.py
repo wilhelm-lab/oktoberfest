@@ -67,7 +67,6 @@ class CeCalibration(SpectralLibrary):
         else:
             tmt_labeled = ""
 
-
         search_type = self.config.search_type
         if search_type == "maxquant":
             mxq = MaxQuant(self.search_path)
