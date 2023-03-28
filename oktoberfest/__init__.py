@@ -14,7 +14,7 @@ import logging.handlers
 import sys
 import time
 
-from . import runner
+# from . import runner
 
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)
