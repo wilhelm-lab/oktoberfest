@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from oktoberfest.data.spectra import Spectra, FragmentType
+from oktoberfest.data.spectra import FragmentType, Spectra
 
 
 class TestSpectra(unittest.TestCase):
@@ -33,12 +33,9 @@ class TestSpectra(unittest.TestCase):
 
     def test_get_meta_data(self):
         """Test get_meta_data."""
-        expected_result = pd.DataFrame({
-            'metadata_1': ['a', 'b', 'c'],
-            'metadata_2': ['d', 'e', 'f']
-        })
+        expected_result = pd.DataFrame({"metadata_1": ["a", "b", "c"], "metadata_2": ["d", "e", "f"]})
         spectra = self.spectra_example()
-        spectra.add_column(pd.Series(['d', 'e', 'f']), "metadata_2")
+        spectra.add_column(pd.Series(["d", "e", "f"]), "metadata_2")
         result = spectra.get_meta_data()
         assert_frame_equal(expected_result, result)
 
@@ -51,16 +48,17 @@ class TestSpectra(unittest.TestCase):
 
     def spectra_example(self):
         """Example of spectra data."""
-        spectra_data = pd.DataFrame({
-            'INTENSITY_RAW_Y1+': [0.1, 0.2, 0.4],
-            'INTENSITY_RAW_Y1++': [0.4, 0.5, 0.6],
-            'MZ_RAW_Y1+': [100, 200, 300],
-            'MZ_RAW_Y1++': [400, 500, 600],
-            'INTENSITY_PRED_Y1+': [0.1, 0.2, 0.3],
-            'INTENSITY_PRED_Y1++': [0.4, 0.5, 0.6],
-            'metadata_1': ['a', 'b', 'c'],
-        })
+        spectra_data = pd.DataFrame(
+            {
+                "INTENSITY_RAW_Y1+": [0.1, 0.2, 0.4],
+                "INTENSITY_RAW_Y1++": [0.4, 0.5, 0.6],
+                "MZ_RAW_Y1+": [100, 200, 300],
+                "MZ_RAW_Y1++": [400, 500, 600],
+                "INTENSITY_PRED_Y1+": [0.1, 0.2, 0.3],
+                "INTENSITY_PRED_Y1++": [0.4, 0.5, 0.6],
+                "metadata_1": ["a", "b", "c"],
+            }
+        )
         spectra = Spectra()
         Spectra.add_columns(spectra, spectra_data)
         return spectra
-
