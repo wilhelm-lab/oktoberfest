@@ -108,7 +108,6 @@ class SpectralLibrary:
             )
 
         library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
-        predictions = None
         try:
             predictions = predictor.predict(
                 sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
@@ -118,14 +117,9 @@ class SpectralLibrary:
                 models=models,
                 disable_progress_bar=True,
             )
-        except BaseException:
-            logger.exception("An exception was thrown!", exc_info=True)
-            print(library.spectra_data["GRPC_SEQUENCE"])
-
-        # Return only in spectral library generation otherwise add to library
-        if self.config.job_type == "SpectralLibraryGeneration":
-            return predictions
-        if predictions is not None:
+            # Return only in spectral library generation otherwise add to library
+            if self.config.job_type == "SpectralLibraryGeneration":
+                return predictions
             intensities_pred = pd.DataFrame()
             intensities_pred["intensity"] = predictions[models[0]]["intensity"].tolist()
 
@@ -137,6 +131,8 @@ class SpectralLibrary:
             if len(models) > 2:
                 proteotypicity_pred = predictions[models[2]]
                 library.add_column(proteotypicity_pred, "PROTEOTYPICITY")
+        except Exception as e:
+            logger.error(e)
 
     def read_fasta(self):
         """Read fasta file."""
