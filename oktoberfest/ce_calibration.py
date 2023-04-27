@@ -1,10 +1,10 @@
 import logging
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-import pathlib
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.raw import ThermoRaw
@@ -27,16 +27,16 @@ class CeCalibration(SpectralLibrary):
     4- write output
     """
 
-    raw_path: str
-    out_path: str
+    raw_path: Union[str, Path]
+    out_path: Union[str, Path]
     best_ce: float
 
     def __init__(
         self,
-        search_path: str,
-        raw_path: str,
-        out_path: str,
-        config_path: Optional[str],
+        search_path: Union[str, Path],
+        raw_path: Union[str, Path],
+        out_path: Union[str, Path],
+        config_path: Optional[Union[str, Path]],
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -48,12 +48,24 @@ class CeCalibration(SpectralLibrary):
         :param config_path: path to configuration file
         :param mzml_reader_package: mzml reader (pymzml or pyteomics)
         """
+        if isinstance(search_path, str):
+            search_path = Path(search_path)
+        if isinstance(raw_path, str):
+            raw_path = Path(raw_path)
+        if isinstance(out_path, str):
+            out_path = Path(out_path)
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         super().__init__(search_path, out_path, config_path=config_path)
-        self.search_path = search_path
         self.raw_path = raw_path
         self.out_path = out_path
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
+
+    @property
+    def search_path(self):
+        """Get path."""
+        return self.path
 
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
@@ -115,8 +127,7 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-        print(self.raw_path)
-        self.raw_path = pathlib.Path(self.raw_path).as_posix().replace(".raw", ".mzml")
+        self.raw_path = Path(self.raw_path).as_posix().replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
@@ -150,11 +161,11 @@ class CeCalibration(SpectralLibrary):
 
     def get_hdf5_path(self) -> str:
         """Get path to hdf5 file."""
-        return self.out_path + ".hdf5"
+        return str(self.out_path) + ".hdf5"
 
     def get_pred_path(self) -> str:
         """Get path to prediction hdf5 file."""
-        return self.out_path + "_pred.hdf5"
+        return str(self.out_path) + "_pred.hdf5"
 
     def write_metadata_annotation(self):
         """Write metadata annotation as hdf5 file."""

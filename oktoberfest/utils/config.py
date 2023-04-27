@@ -1,5 +1,7 @@
 import json
 import logging
+from pathlib import Path
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +13,7 @@ class Config:
         """Initialize config file data."""
         self.data = {}
 
-    def read(self, config_path: str):
+    def read(self, config_path: Union[str, Path]):
         """
         Read config file.
 

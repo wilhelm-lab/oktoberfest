@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 from prosit_grpc.predictPROSIT import PROSITpredictor
@@ -24,14 +24,14 @@ class SpectralLibrary:
     3- write output
     """
 
-    path: str
+    path: Union[str, Path]
     library: Spectra
     config: Config
-    config_path: Optional[str]
+    config_path: Optional[Union[str, Path]]
     num_threads: int
     grpc_output: dict
 
-    def __init__(self, path: str, out_path: str, config_path: Optional[str]):
+    def __init__(self, path: Union[str, Path], out_path: Union[str, Path], config_path: Optional[Union[str, Path]]):
         """
         Initialize a SpectralLibrary object.
 
@@ -39,6 +39,12 @@ class SpectralLibrary:
         :param out_path: path to output folder
         :param config_path: path to configuration file
         """
+        if isinstance(path, str):
+            path = Path(path)
+        if isinstance(out_path, str):
+            out_path = Path(out_path)
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         self.path = path
         self.library = Spectra()
         self.config_path = config_path
