@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
+from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
@@ -57,26 +58,19 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
-        models_dict = self.config.models
-        tmt_model = False
-        for _, value in models_dict.items():
-            if value and "TMT" in value:
-                tmt_model = True
-        if tmt_model:
-            tmt_labeled = self.config.tag
-        else:
-            tmt_labeled = ""
 
         search_type = self.config.search_type
         if search_type == "maxquant":
-            mxq = MaxQuant(self.search_path)
-            self.search_path = mxq.generate_internal(tmt_labeled=tmt_labeled)
+            search_result = MaxQuant(self.search_path)
         elif search_type == "msfragger":
-            msf = MSFragger(self.search_path)
-            self.search_path = msf.generate_internal(tmt_labeled=tmt_labeled)
+            search_result = MSFragger(self.search_path)
         elif search_type == "mascot":
-            mascot = Mascot(self.search_path)
-            self.search_path = mascot.generate_internal(tmt_labeled=tmt_labeled)
+            search_result = Mascot(self.search_path)
+        else:
+            raise ValueError(f"Unknown search_type provided in config: {search_type}")
+
+        tmt_labeled = self.config.tag if any("TMT" in value for value in self.config.models.values()) else ""
+        self.search_path = search_result.generate_internal(tmt_labeled=tmt_labeled)
 
     def _gen_mzml_from_thermo(self):
         """Generate mzml from thermo raw file."""
@@ -90,18 +84,11 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch == "maxquant" or switch == "msfragger" or switch == "mascot":
+        if switch in ["maxquant", "msfragger", "mascot"]:
             self._gen_internal_search_result_from_msms()
-        elif switch == "internal":
-            pass
-        else:
+            return csv.read_read_file(self.search_path)  # read internal
+        if switch != "internal":
             raise ValueError(f"{switch} is not supported as search-type")
-        if switch == "maxquant":
-            return MaxQuant.read_internal(MaxQuant(self.search_path), self.search_path)
-        elif switch == "msfragger":
-            return MSFragger.read_internal(MSFragger(self.search_path), path=self.search_path)
-        else:
-            return Mascot.read_internal(Mascot(self.search_path), path=self.search_path)
 
     def _load_rawfile(self):
         """Load raw file."""
@@ -118,7 +105,7 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = self.raw_path.as_posix().replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
-    def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
+    def gen_lib(self, df_search: pd.DataFrame):
         """
         Read input search and raw and add it to library.
 
@@ -126,11 +113,7 @@ class CeCalibration(SpectralLibrary):
         It needs to be refactored in the future.
 
         :param df_search: search result as pd.DataFrame
-        :raises AssertionError: raises if df_search is not given
         """
-        if df_search is None:
-            raise AssertionError("You need to provide a dataframe.")
-
         df_raw = self._load_rawfile()
         # return df_search
         logger.info("Merging rawfile and search result")
@@ -155,10 +138,6 @@ class CeCalibration(SpectralLibrary):
         """Get path to prediction hdf5 file."""
         return self.out_path + "_pred.hdf5"
 
-    def write_metadata_annotation(self):
-        """Write metadata annotation as hdf5 file."""
-        self.library.write_as_hdf5(self.get_hdf5_path())
-
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
         self.alignment_library.spectra_data = self.library.spectra_data.copy()
@@ -180,9 +159,6 @@ class CeCalibration(SpectralLibrary):
         self.alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range, nrow)
         self.alignment_library.spectra_data.reset_index(inplace=True)
 
-    def _predict_alignment(self):
-        self.grpc_predict(self.alignment_library, alignment=True)
-
     def _alignment(self):
         """
         Edit library to try different ranges of ce 15-50. then predict with the new library.
@@ -198,20 +174,12 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
-        if "/" in self.raw_path:
-            split_char = "/"
-        else:
-            split_char = "\\"
+
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            directory=os.path.join((split_char).join(self.raw_path.split(split_char)[:-1]), "results"),
-            raw_file_name=self.raw_path.split(split_char)[-1],
+            directory=self.raw_path.parent / "results",
+            raw_file_name=self.raw_path.name,
         )
-
-    def _get_best_ce(self):
-        """Get aligned ce for this lib."""
-        self.best_ce = self.ce_alignment.idxmax()
-        logger.info(f"Best collision energy: {self.best_ce}")
 
     def perform_alignment(self, df_search: pd.DataFrame):
         """
@@ -225,13 +193,13 @@ class CeCalibration(SpectralLibrary):
             self.library.read_from_hdf5(hdf5_path)
         else:
             self.gen_lib(df_search)
-            self.write_metadata_annotation()
+            self.library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
         # Check if all data is HCD no need to align and return the best ce as 35
         hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
         if len(hcd_df.index) == 0:
             self.best_ce = 35.0
             return
         self._prepare_alignment_df()
-        self._predict_alignment()
+        self.grpc_predict(self.alignment_library, alignment=True)  # predict alignment
         self._alignment()
-        self._get_best_ce()
+        self.best_ce = self.ce_alignment.idxmax()
