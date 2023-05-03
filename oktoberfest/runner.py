@@ -11,6 +11,7 @@ from .ce_calibration import CeCalibration, SpectralLibrary
 from .data.spectra import Spectra
 from .re_score import ReScore
 from .utils.config import Config
+from .utils.plotting import plot_all
 
 __version__ = "0.1.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
@@ -166,6 +167,7 @@ def run_rescoring(msms_path: str, search_dir: str, config_path: str):
 
     re_score.rescore_with_perc("rescore")
     re_score.rescore_with_perc("original")
+    plot_all(re_score.get_percolator_folder_path())
 
 
 def run_job(search_dir: str, config_path: str):
