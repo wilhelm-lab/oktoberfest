@@ -27,10 +27,6 @@ class CeCalibration(SpectralLibrary):
     4- write output
     """
 
-    raw_path: Union[str, Path]
-    out_path: Union[str, Path]
-    best_ce: float
-
     def __init__(
         self,
         search_path: Union[str, Path],
@@ -48,17 +44,10 @@ class CeCalibration(SpectralLibrary):
         :param config_path: path to configuration file
         :param mzml_reader_package: mzml reader (pymzml or pyteomics)
         """
-        if isinstance(search_path, str):
-            search_path = Path(search_path)
+        super().__init__(search_path, out_path, config_path=config_path)
         if isinstance(raw_path, str):
             raw_path = Path(raw_path)
-        if isinstance(out_path, str):
-            out_path = Path(out_path)
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
-        super().__init__(search_path, out_path, config_path=config_path)
         self.raw_path = raw_path
-        self.out_path = out_path
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
@@ -127,7 +116,7 @@ class CeCalibration(SpectralLibrary):
             pass
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-        self.raw_path = Path(self.raw_path).as_posix().replace(".raw", ".mzml")
+        self.raw_path = self.raw_path.with_suffix(".mzml")
         return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
@@ -161,11 +150,11 @@ class CeCalibration(SpectralLibrary):
 
     def get_hdf5_path(self) -> str:
         """Get path to hdf5 file."""
-        return str(self.out_path) + ".hdf5"
+        return str(self.out_path.with_suffix(".hdf5"))
 
     def get_pred_path(self) -> str:
         """Get path to prediction hdf5 file."""
-        return str(self.out_path) + "_pred.hdf5"
+        return str(self.out_path.with_suffix(".pred.hdf5"))
 
     def write_metadata_annotation(self):
         """Write metadata annotation as hdf5 file."""
@@ -239,9 +228,8 @@ class CeCalibration(SpectralLibrary):
             self.gen_lib(df_search)
             self.write_metadata_annotation()
         # Check if all data is HCD no need to align and return the best ce as 35
-        hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
-        if len(hcd_df.index) == 0:
-            self.best_ce = 35.0
+        if (self.library.spectra_data["FRAGMENTATION"] == "HCD").any():
+            self.best_ce = 35  # Prosit is trained with ce=35 for HCD fragmentation
             return
         self._prepare_alignment_df()
         self._predict_alignment()

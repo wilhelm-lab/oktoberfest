@@ -24,13 +24,6 @@ class SpectralLibrary:
     3- write output
     """
 
-    path: Union[str, Path]
-    library: Spectra
-    config: Config
-    config_path: Optional[Union[str, Path]]
-    num_threads: int
-    grpc_output: dict
-
     def __init__(self, path: Union[str, Path], out_path: Union[str, Path], config_path: Optional[Union[str, Path]]):
         """
         Initialize a SpectralLibrary object.
@@ -49,6 +42,7 @@ class SpectralLibrary:
         self.library = Spectra()
         self.config_path = config_path
         self.config = Config()
+        self.out_path = out_path
         if config_path:
             self.config.read(config_path)
         else:

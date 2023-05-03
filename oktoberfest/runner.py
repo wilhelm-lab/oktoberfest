@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.fragments import compute_peptide_mass
@@ -139,9 +140,11 @@ def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
     else:
         raise ValueError(f"{raw_type} is not supported as rawfile-type")
 
-    ce_calib.raw_path = os.path.join(
-        ce_calib.raw_path,
-        [os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0],
+    ce_calib.raw_path = Path(
+        os.path.join(
+            ce_calib.raw_path,
+            [os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0],
+        )
     )
     ce_calib.perform_alignment(df_search)
     with open(os.path.join(ce_calib.results_path, "ce.txt"), "w") as f:

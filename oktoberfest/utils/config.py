@@ -20,6 +20,8 @@ class Config:
         :param config_path: path to config file as a string
         """
         logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         with open(config_path) as f:
             self.data = json.load(f)
 
