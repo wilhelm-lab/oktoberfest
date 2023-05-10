@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,30 @@ class Config:
     def prosit_server(self) -> str:
         """Get prosit server from the config file."""
         return self.data["prosit_server"]
+
+    @property
+    def ca_certificate(self) -> Optional[str]:
+        """Get path to ca certificate from the config file."""
+        if "ca_certificate" in self.data:
+            return self.data["ca_certificate"]
+        else:
+            return None
+
+    @property
+    def certificate(self) -> Optional[str]:
+        """Get path to certificate from the config file."""
+        if "certificate" in self.data:
+            return self.data["certificate"]
+        else:
+            return None
+
+    @property
+    def key_certificate(self) -> Optional[str]:
+        """Get path to key certificate from the config file."""
+        if "key_certificate" in self.data:
+            return self.data["key_certificate"]
+        else:
+            return None
 
     @property
     def models(self) -> dict:

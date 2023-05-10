@@ -80,6 +80,12 @@ Create a `config.json` file which should contain the following flags:
 
 -   `prosit_server` = server for the Prosit prediction
 
+-   `ca_certificate` = path to the CA certificate
+
+-   `certificate` = path to the certificate
+
+-   `key_certificate` = path to the key certificate
+
 -   `numThreads` = number of threads from the config file; default = 1
 
 -   `jobId` = job ID for the Prosit prediction

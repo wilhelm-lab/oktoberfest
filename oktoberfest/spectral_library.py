@@ -84,11 +84,27 @@ class SpectralLibrary:
         path = Path(__file__).parent / "certificates/"
         logger.info(path)
 
+        ca_certificate = (
+            self.config.ca_certificate
+            if self.config.ca_certificate is not None
+            else os.path.join(path, "Proteomicsdb-Prosit-v2.crt")
+        )
+        certificate = (
+            self.config.certificate
+            if self.config.certificate is not None
+            else os.path.join(path, "oktoberfest-production.crt")
+        )
+        key_certificate = (
+            self.config.key_certificate
+            if self.config.key_certificate is not None
+            else os.path.join(path, "oktoberfest-production.key")
+        )
+
         predictor = PROSITpredictor(
             server=self.config.prosit_server,
-            path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
-            path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
-            path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
+            path_to_ca_certificate=ca_certificate,
+            path_to_certificate=certificate,
+            path_to_key_certificate=key_certificate,
         )
 
         models_dict = self.config.models
