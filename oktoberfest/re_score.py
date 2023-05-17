@@ -271,7 +271,7 @@ class ReScore(CalculateFeatures):
             df = df.rename(columns={"Protein": "Proteins"})
             df.to_csv(file, sep="\t")
             psms = mokapot.read_pin(file)
-            results, models = mokapot.brew(psms, test_fdr=test_fdr)
+            results, models = mokapot.brew(psms, test_fdr=test_fdr, rng=123)
             results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
 
         if search_type == "rescore":

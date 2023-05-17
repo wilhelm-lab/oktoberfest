@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -25,13 +27,12 @@ def joint_plot(
     andromeda_decoy: pd.DataFrame,
     type: str,
     directory: str,
-    fdr_estimation_method: str,
 ):
     """Generate joint plot (correlation between Prosit and Andromeda score)."""
     if type == "Peptides":
-        join_col = "proteinIds" if fdr_estimation_method == "percolator" else "Proteins"
+        join_col = "proteinIds"
     else:
-        join_col = "PSMId" if fdr_estimation_method == "percolator" else "SpecId"
+        join_col = "PSMId"
 
     targets = prosit_target.merge(andromeda_target, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
     decoys = prosit_decoy.merge(andromeda_decoy, on=join_col, how="outer", suffixes=["", "_"], indicator=True)
@@ -65,13 +66,16 @@ def joint_plot(
 
 
 def plot_gain_loss(
-    prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: str, fdr_estimation_method: str
+    prosit_target: pd.DataFrame,
+    andromeda_target: pd.DataFrame,
+    type: str,
+    directory: str,
 ):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
     if type == "Peptides":
-        join_col = "proteinIds" if fdr_estimation_method == "percolator" else "Proteins"
+        join_col = "proteinIds"
     else:
-        join_col = "PSMId" if fdr_estimation_method == "percolator" else "SpecId"
+        join_col = "PSMId"
 
     andromeda_target = andromeda_target[andromeda_target["q-value"] < 0.01]
     prosit_target = prosit_target[prosit_target["q-value"] < 0.01]
@@ -154,41 +158,46 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
 
 def replace_func(x: str):
     """Remove mokapot."""
-    return x.replace("mokapot ", "")
+    x.replace("mokapot ", "")
+    x.replace("Proteins", "proteinIds")
+    x.replace("SpecId", "PSMId")
 
 
 def plot_all(percolator_path: str, config: Config):
     """Generate all plots and save them as png in the percolator folder."""
     fdr_estimation_method = config.fdr_estimation_method
-    if fdr_estimation_method == "percolator":
-        prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")
-        prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore_decoy.peptides", delimiter="\t")
-        prosit_psms_target = pd.read_csv(percolator_path + "/rescore_target.psms", delimiter="\t")
-        prosit_psms_decoy = pd.read_csv(percolator_path + "/rescore_decoy.psms", delimiter="\t")
+    if fdr_estimation_method == "mokapot":
+        files = [
+            "/rescore.mokapot.peptides.txt",
+            "/rescore.mokapot.decoy.peptides.txt",
+            "/rescore.mokapot.psms.txt",
+            "/rescore.mokapot.decoy.psms.txt",
+            "/original.mokapot.peptides.txt",
+            "/original.mokapot.decoy.peptides.txt",
+            "/original.mokapot.psms.txt",
+            "/original.mokapot.decoy.psms.txt",
+        ]
 
-        andromeda_pep_target = pd.read_csv(percolator_path + "/original_target.peptides", delimiter="\t")
-        andromeda_pep_decoy = pd.read_csv(percolator_path + "/original_decoy.peptides", delimiter="\t")
-        andromeda_psms_target = pd.read_csv(percolator_path + "/original_target.psms", delimiter="\t")
-        andromeda_psms_decoy = pd.read_csv(percolator_path + "/original_decoy.psms", delimiter="\t")
-    else:
-        prosit_pep_target = pd.read_csv(percolator_path + "/rescore.mokapot.peptides.txt", delimiter="\t")
-        prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore.mokapot.decoy.peptides.txt", delimiter="\t")
-        prosit_psms_target = pd.read_csv(percolator_path + "/rescore.mokapot.psms.txt", delimiter="\t")
-        prosit_psms_decoy = pd.read_csv(percolator_path + "/rescore.mokapot.decoy.psms.txt", delimiter="\t")
+        for f in files:
+            prefix = "rescore" if f.startswith("/rescore") else "original"
+            target_decoy = "decoy" if "decoy" in f else "target"
 
-        andromeda_pep_target = pd.read_csv(percolator_path + "/original.mokapot.peptides.txt", delimiter="\t")
-        andromeda_pep_decoy = pd.read_csv(percolator_path + "/original.mokapot.decoy.peptides.txt", delimiter="\t")
-        andromeda_psms_target = pd.read_csv(percolator_path + "/original.mokapot.psms.txt", delimiter="\t")
-        andromeda_psms_decoy = pd.read_csv(percolator_path + "/original.mokapot.decoy.psms.txt", delimiter="\t")
+            file = percolator_path + f
+            file_renamed = percolator_path + "/" + prefix + "_" + target_decoy + f.split(".", 1)[1]
+            df = pd.read_csv(file, delimiter="\t")
+            df = df.rename(columns=replace_func)
+            df.to_csv(file_renamed, sep="\t", index=False)
+            os.rename(file, file_renamed)
 
-        prosit_pep_target = prosit_pep_target.rename(columns=replace_func)
-        prosit_pep_decoy = prosit_pep_decoy.rename(columns=replace_func)
-        prosit_psms_target = prosit_psms_target.rename(columns=replace_func)
-        prosit_psms_decoy = prosit_psms_decoy.rename(columns=replace_func)
-        andromeda_pep_target = andromeda_pep_target.rename(columns=replace_func)
-        andromeda_pep_decoy = andromeda_pep_decoy.rename(columns=replace_func)
-        andromeda_psms_target = andromeda_psms_target.rename(columns=replace_func)
-        andromeda_psms_decoy = andromeda_psms_decoy.rename(columns=replace_func)
+    prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore_decoy.peptides", delimiter="\t")
+    prosit_psms_target = pd.read_csv(percolator_path + "/rescore_target.psms", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(percolator_path + "/rescore_decoy.psms", delimiter="\t")
+
+    andromeda_pep_target = pd.read_csv(percolator_path + "/original_target.peptides", delimiter="\t")
+    andromeda_pep_decoy = pd.read_csv(percolator_path + "/original_decoy.peptides", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(percolator_path + "/original_target.psms", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(percolator_path + "/original_decoy.psms", delimiter="\t")
 
     plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Rescore", percolator_path)
     plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", percolator_path)
@@ -196,22 +205,10 @@ def plot_all(percolator_path: str, config: Config):
     plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Original", percolator_path)
 
     joint_plot(
-        prosit_pep_target,
-        prosit_pep_decoy,
-        andromeda_pep_target,
-        andromeda_pep_decoy,
-        "Peptides",
-        percolator_path,
-        fdr_estimation_method,
+        prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
     )
     joint_plot(
-        prosit_psms_target,
-        prosit_psms_decoy,
-        andromeda_psms_target,
-        andromeda_psms_decoy,
-        "PSMs",
-        percolator_path,
-        fdr_estimation_method,
+        prosit_psms_target, prosit_psms_decoy, andromeda_psms_target, andromeda_psms_decoy, "PSMs", percolator_path
     )
-    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path, fdr_estimation_method)
-    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path, fdr_estimation_method)
+    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
+    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
