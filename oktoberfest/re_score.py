@@ -271,13 +271,13 @@ class ReScore(CalculateFeatures):
             df = df.rename(columns={"Protein": "Proteins"})
             df.to_csv(file, sep="\t")
             psms = mokapot.read_pin(file)
-            results, models = mokapot.brew(psms, test_fdr=0.01)
+            results, models = mokapot.brew(psms, test_fdr=test_fdr)
             results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
 
         if search_type == "rescore":
             self.percolator_step_prosit.mark_done()
         else:
-            plot_all(perc_path)
+            plot_all(perc_path, self.config)
             self.percolator_step_andromeda.mark_done()
 
     def get_msms_folder_path(self):
