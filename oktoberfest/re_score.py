@@ -3,6 +3,7 @@ import os
 import subprocess
 from typing import List, Optional
 
+import mokapot
 import pandas as pd
 
 from .calculate_features import CalculateFeatures
@@ -249,20 +250,29 @@ class ReScore(CalculateFeatures):
         decoy_peptides = os.path.join(perc_path, f"{search_type}_decoy.peptides")
         log_file = os.path.join(perc_path, f"{search_type}.log")
 
-        cmd = f"percolator --weights {weights_file} \
-                          --num-threads {self.config.num_threads} \
-                          --subset-max-train 500000 \
-                          --post-processing-tdc \
-                          --search-input concatenated \
-                          --testFDR {test_fdr} \
-                          --trainFDR {train_fdr} \
-                          --results-psms {target_psms} \
-                          --decoy-results-psms {decoy_psms} \
-                          --results-peptides {target_peptides} \
-                          --decoy-results-peptides {decoy_peptides} \
-                          {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
-        logger.info(f"Starting percolator with command {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
+        if self.config.fdr_estimation_method == "percolator":
+            cmd = f"percolator --weights {weights_file} \
+                            --num-threads {self.config.num_threads} \
+                            --subset-max-train 500000 \
+                            --post-processing-tdc \
+                            --search-input concatenated \
+                            --testFDR {test_fdr} \
+                            --trainFDR {train_fdr} \
+                            --results-psms {target_psms} \
+                            --decoy-results-psms {decoy_psms} \
+                            --results-peptides {target_peptides} \
+                            --decoy-results-peptides {decoy_peptides} \
+                            {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
+            logger.info(f"Starting percolator with command {cmd}")
+            subprocess.run(cmd, shell=True, check=True)
+        else:
+            file = os.path.join(perc_path, f"{search_type}.tab")
+            df = pd.read_csv(file, sep="\t")
+            df = df.rename(columns={"Protein": "Proteins"})
+            df.to_csv(file, sep="\t")
+            psms = mokapot.read_pin(file)
+            results, models = mokapot.brew(psms, test_fdr=0.01)
+            results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
 
         if search_type == "rescore":
             self.percolator_step_prosit.mark_done()
