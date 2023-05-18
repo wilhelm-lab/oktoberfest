@@ -156,13 +156,6 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
 
 
-def replace_func(x: str):
-    """Remove mokapot."""
-    x.replace("mokapot ", "")
-    x.replace("Proteins", "proteinIds")
-    x.replace("SpecId", "PSMId")
-
-
 def plot_all(percolator_path: str, config: Config):
     """Generate all plots and save them as png in the percolator folder."""
     fdr_estimation_method = config.fdr_estimation_method
@@ -180,13 +173,23 @@ def plot_all(percolator_path: str, config: Config):
 
         for f in files:
             prefix = "rescore" if f.startswith("/rescore") else "original"
-            target_decoy = "decoy" if "decoy" in f else "target"
+            target_decoy = "decoy." if "decoy" in f else "target."
 
             file = percolator_path + f
-            file_renamed = percolator_path + "/" + prefix + "_" + target_decoy + f.split(".", 1)[1]
+            file_renamed = percolator_path + "/" + prefix + "_" + target_decoy + f.split(".")[-2]
             df = pd.read_csv(file, delimiter="\t")
-            df = df.rename(columns=replace_func)
-            df.to_csv(file_renamed, sep="\t", index=False)
+            df.rename(
+                columns=(
+                    {
+                        "mokapot score": "score",
+                        "mokapot q-value": "q-value",
+                        "Proteins": "proteinIds",
+                        "SpecId": "PSMId",
+                    }
+                ),
+                inplace=True,
+            )
+            df.to_csv(file, sep="\t", index=False)
             os.rename(file, file_renamed)
 
     prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")

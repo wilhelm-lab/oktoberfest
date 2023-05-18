@@ -4,6 +4,7 @@ import subprocess
 from typing import List, Optional
 
 import mokapot
+import numpy as np
 import pandas as pd
 
 from .calculate_features import CalculateFeatures
@@ -266,12 +267,13 @@ class ReScore(CalculateFeatures):
             logger.info(f"Starting percolator with command {cmd}")
             subprocess.run(cmd, shell=True, check=True)
         else:
+            np.random.seed(123)
             file = os.path.join(perc_path, f"{search_type}.tab")
             df = pd.read_csv(file, sep="\t")
             df = df.rename(columns={"Protein": "Proteins"})
             df.to_csv(file, sep="\t")
             psms = mokapot.read_pin(file)
-            results, models = mokapot.brew(psms, test_fdr=test_fdr, rng=123)
+            results, models = mokapot.brew(psms, test_fdr=test_fdr)
             results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
 
         if search_type == "rescore":
