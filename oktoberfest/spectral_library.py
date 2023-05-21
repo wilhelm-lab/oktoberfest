@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from prosit_grpc.predictPROSIT import PROSITpredictor
+import numpy as np
+import tritonclient.grpc as grpcclient
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
 
@@ -81,58 +82,73 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        path = Path(__file__).parent / "certificates/"
-        logger.info(path)
+        triton_client = grpcclient.InferenceServerClient(url=self.config.prosit_server)
 
-        predictor = PROSITpredictor(
-            server=self.config.prosit_server,
-            path_to_ca_certificate=os.path.join(path, "Proteomicsdb-Prosit-v2.crt"),
-            path_to_certificate=os.path.join(path, "oktoberfest-production.crt"),
-            path_to_key_certificate=os.path.join(path, "oktoberfest-production.key"),
-        )
+        result = []
+        batch_size = 1000
+        num_spec = len(library.spectra_data["MODIFIED_SEQUENCE"])
+        
+        # TODO set inputs dynamically based on model
+        # CID has no collision energy
+        # TMT needs fragmentation
+        # ms2pip no ce
+        # AlphaPept needs instrument type
+        # if tmt_model:
+        #     library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
+        #         lambda x: 2 if x == "HCD" else 1
+        #     )
 
-        models_dict = self.config.models
-        models = []
-        tmt_model = False
-        for _, value in models_dict.items():
-            if not value:
-                continue
-            tmt_model = True if "TMT" in value else tmt_model
-            models.append(value)
-            if alignment:
-                break
+        for i in range(0, num_spec, batch_size):
+            if num_spec < i+batch_size:
+                current_batchsize = num_spec-i
+            else:
+                current_batchsize = batch_size
 
-        if tmt_model:
-            library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
-                lambda x: 2 if x == "HCD" else 1
-            )
+            inputs = []
+            inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES"))
+            inputs.append(grpcclient.InferInput("collision_energies", [current_batchsize, 1], "FP32"))
+            inputs.append(grpcclient.InferInput("precursor_charge", [current_batchsize, 1], "INT32"))
+            outputs = [grpcclient.InferRequestedOutput("intensities")]
 
-        library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
-        try:
-            predictions = predictor.predict(
-                sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
-                charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
-                collision_energies=library.spectra_data["COLLISION_ENERGY"].values / 100.0,
-                fragmentation=library.spectra_data["FRAGMENTATION_GRPC"].values if tmt_model else None,
-                models=models,
-                disable_progress_bar=True,
-            )
-            # Return only in spectral library generation otherwise add to library
-            if self.config.job_type == "SpectralLibraryGeneration":
-                return predictions
-            intensities_pred = pd.DataFrame()
-            intensities_pred["intensity"] = predictions[models[0]]["intensity"].tolist()
+            inputs[0].set_data_from_numpy(library.spectra_data["MODIFIED_SEQUENCE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.object_))
+            inputs[1].set_data_from_numpy(library.spectra_data["COLLISION_ENERGY"].values[i:i+current_batchsize].reshape(-1,1).astype(np.float32))
+            inputs[2].set_data_from_numpy(library.spectra_data["PRECURSOR_CHARGE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.int32))
 
-            library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
-            if alignment:
-                return
-            irt_pred = predictions[models[1]]
-            library.add_column(irt_pred, "PREDICTED_IRT")
-            if len(models) > 2:
-                proteotypicity_pred = predictions[models[2]]
-                library.add_column(proteotypicity_pred, "PROTEOTYPICITY")
-        except Exception as e:
-            logger.error(e)
+            result.append(triton_client.infer(self.config.models["intensity"], inputs=inputs, outputs=outputs).as_numpy("intensities"))
+
+        predictions = np.vstack(result)
+        predictions[np.isnan(predictions)] = -1
+
+        intensities_pred = pd.DataFrame()
+        intensities_pred["intensity"] = predictions.tolist()
+        library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
+
+        # TODO for spectral library format prediction in dictionary
+        # parse new annotation string into three seperate arrays like it was done in prosit_grpc
+        # Return only in spectral library generation otherwise add to library
+        # if self.config.job_type == "SpectralLibraryGeneration":
+        #     return predictions
+
+        if alignment:
+            return
+        
+        # iRT prediction for Rescoring
+        result = []      
+
+        for i in range(0, num_spec, batch_size):
+            if num_spec < i+batch_size:
+                current_batchsize = num_spec-i
+            else:
+                current_batchsize = batch_size
+
+            inputs = []
+            inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES")) 
+            inputs[0].set_data_from_numpy(library.spectra_data["MODIFIED_SEQUENCE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.object_))
+            outputs = [grpcclient.InferRequestedOutput("irt")]
+            result.append(triton_client.infer(self.config.models["irt"], inputs=inputs, outputs=outputs).as_numpy("irt"))
+
+        irt_pred = np.vstack(result)
+        library.add_column(irt_pred, "PREDICTED_IRT")
 
     def read_fasta(self):
         """Read fasta file."""
