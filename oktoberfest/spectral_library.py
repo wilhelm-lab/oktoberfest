@@ -107,7 +107,7 @@ class SpectralLibrary:
                 lambda x: 2 if x == "HCD" else 1
             )
 
-        library.spectra_data["GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
+        library.spectra_data.loc[:, "GRPC_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"]
         try:
             predictions = predictor.predict(
                 sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),

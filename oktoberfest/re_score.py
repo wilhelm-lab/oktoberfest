@@ -7,7 +7,6 @@ import pandas as pd
 
 from .calculate_features import CalculateFeatures
 from .utils.multiprocessing_pool import JobPool
-from .utils.plotting import plot_all
 from .utils.process_step import ProcessStep
 
 logger = logging.getLogger(__name__)
@@ -267,7 +266,6 @@ class ReScore(CalculateFeatures):
         if search_type == "rescore":
             self.percolator_step_prosit.mark_done()
         else:
-            plot_all(perc_path)
             self.percolator_step_andromeda.mark_done()
 
     def get_msms_folder_path(self):

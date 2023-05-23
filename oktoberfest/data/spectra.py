@@ -129,7 +129,7 @@ class Spectra:
         intensity_array[intensity_array == -1] = 0
 
         # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float32)
+        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(pd.SparseDtype(np.float32))
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
         self.add_columns(intensity_df)
