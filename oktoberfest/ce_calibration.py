@@ -21,7 +21,7 @@ class CeCalibration(SpectralLibrary):
     """
     Main to init a CeCalibrarion obj and go through the steps.
 
-    1- gen_lib
+    1- merge_mzml_and_msms
     2- allign_ce
     3- get_best_ce
     4- write output
@@ -105,12 +105,9 @@ class CeCalibration(SpectralLibrary):
         self.raw_path = self.raw_path.as_posix().replace(".raw", ".mzml")
         return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
-    def gen_lib(self, df_search: pd.DataFrame):
+    def merge_mzml_and_msms(self, df_search: pd.DataFrame):
         """
-        Read input search and raw and add it to library.
-
-        Method inherits from superclass, therefore the Optional is required to ensure same method signature.
-        It needs to be refactored in the future.
+        Read input search and mzml and add it to library.
 
         :param df_search: search result as pd.DataFrame
         """
@@ -192,7 +189,7 @@ class CeCalibration(SpectralLibrary):
         if os.path.isfile(hdf5_path):
             self.library.read_from_hdf5(hdf5_path)
         else:
-            self.gen_lib(df_search)
+            self.merge_mzml_and_msms(df_search)
             self.library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
         # Check if all data is HCD no need to align and return the best ce as 35
         hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]

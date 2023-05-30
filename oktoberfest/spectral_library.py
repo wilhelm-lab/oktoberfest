@@ -57,12 +57,8 @@ class SpectralLibrary:
         else:
             print("In Feature Calculation")
 
-    def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
-        """
-        Read input csv file and add it to library.
-
-        :param df_search: unused, necessary to ensure same method signature for inheriting function
-        """
+    def gen_lib(self):
+        """Read input csv file and add it to library."""
         if self.config.fasta:
             self.read_fasta()
             library_df = csv.read_file(os.path.join(self.path, "prosit_input.csv"))
