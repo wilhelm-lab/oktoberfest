@@ -57,7 +57,7 @@ class CeCalibration(SpectralLibrary):
 
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
-        logger.info(f"Converting msms.txt at location {self.search_path} to internal search result.")
+        logger.info(f"Converting msms data at {self.search_path} to internal search result.")
 
         search_type = self.config.search_type
         if search_type == "maxquant":
@@ -86,9 +86,11 @@ class CeCalibration(SpectralLibrary):
         logger.info(f"search_type is {switch}")
         if switch in ["maxquant", "msfragger", "mascot"]:
             self._gen_internal_search_result_from_msms()
-            return csv.read_read_file(self.search_path)  # read internal
-        if switch != "internal":
-            raise ValueError(f"{switch} is not supported as search-type")
+            switch = "internal"
+        if switch == "internal":
+            return csv.read_file(self.search_path)
+        else:
+            raise ValueError(f"{switch} is not a supported search type. Convert to internal format manually.")
 
     def _load_rawfile(self):
         """Load raw file."""
