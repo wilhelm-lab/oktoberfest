@@ -147,8 +147,25 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str, 
     plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
 
 
+def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: str):
+    """Generate pred rt vs irt plot."""
+    plt.figure(figsize=(12, 6))
+    plt.title("RT Alignment")
+    targets = prosit_df.merge(prosit_target, how="inner", left_on="SpecId", right_on="PSMId")
+    targets = targets[targets["q-value"] < 0.01]
+    targets = targets.sort_values("pred_RT")
+    plt.plot(targets["pred_RT"], targets["RT"], ".", c="b", label="original")
+    plt.plot(targets["pred_RT"], targets["iRT"], "-", c="r", label="curve method fit")
+    plt.xlabel("pred_RT", size=14)
+    plt.ylabel("iRT", size=14)
+    plt.legend(loc="best", fancybox=True, shadow=True)
+    plt.grid()
+    plt.savefig(directory + "/pred_rt_vs_irt.png", dpi=300)
+
+
 def plot_all(percolator_path: str):
     """Generate all plots and save them as png in the percolator folder."""
+    prosit_df = pd.read_csv(percolator_path + "/rescore.tab", delimiter="\t")
     prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore_decoy.peptides", delimiter="\t")
     prosit_psms_target = pd.read_csv(percolator_path + "/rescore_target.psms", delimiter="\t")
@@ -172,3 +189,4 @@ def plot_all(percolator_path: str):
     )
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
+    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
