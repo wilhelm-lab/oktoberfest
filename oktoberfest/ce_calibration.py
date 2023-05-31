@@ -206,6 +206,7 @@ class CeCalibration(SpectralLibrary):
             sa_ce_df=self.ce_alignment,
             directory=os.path.join((split_char).join(self.raw_path.split(split_char)[:-1]), "results"),
             raw_file_name=self.raw_path.split(split_char)[-1],
+            best_ce=self.ce_alignment.idxmax(),
         )
 
     def _get_best_ce(self):

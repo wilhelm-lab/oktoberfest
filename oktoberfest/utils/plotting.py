@@ -134,7 +134,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     plt.savefig(directory + f"/{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
 
 
-def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
+def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str, best_ce: float):
     """Generate plot (ce vs mean sa)."""
     directory = directory + ""
     directory = directory.replace("/mzML", "")
@@ -142,7 +142,8 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
-    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=2, truncate=False)
+    sns.scatterplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE")
+    plt.axvline(x=best_ce, color="red")
     plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
 
 
