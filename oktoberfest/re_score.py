@@ -1,7 +1,7 @@
 import logging
-import os
 import subprocess
-from typing import List, Optional
+from pathlib import Path
+from typing import List, Optional, Union
 
 import pandas as pd
 
@@ -14,22 +14,22 @@ logger = logging.getLogger(__name__)
 
 # This function cannot be a function inside ReScore since the multiprocessing pool does not work with class member functions
 def calculate_features_single(
-    raw_file_path: str,
-    split_msms_path: str,
-    percolator_input_path: str,
-    mzml_path: str,
-    config_path: str,
-    calc_feature_step,
+    raw_file_path: Path,
+    split_msms_path: Path,
+    percolator_rescore_path: Path,
+    percolator_orig_path: Path,
+    mzml_path: Path,
+    config_path: Path,
+    calc_feature_step: ProcessStep,
 ):
     """Create CalculateFeatures object and calculate features for a given raw file."""
     logger.info(f"Calculating features for {raw_file_path}")
-    print(raw_file_path, split_msms_path, percolator_input_path, mzml_path)
     features = CalculateFeatures(search_path="", raw_path=raw_file_path, out_path=mzml_path, config_path=config_path)
 
     df_search = pd.read_csv(split_msms_path, delimiter="\t")
     features.predict_with_aligned_ce(df_search)
-    features.gen_perc_metrics("rescore", percolator_input_path)
-    features.gen_perc_metrics("original", percolator_input_path.replace("rescore", "original"))
+    features.gen_perc_metrics("rescore", percolator_rescore_path)
+    features.gen_perc_metrics("original", percolator_orig_path)
 
     calc_feature_step.mark_done()
 
@@ -55,10 +55,10 @@ class ReScore(CalculateFeatures):
 
     def __init__(
         self,
-        search_path: str,
-        raw_path: str,
-        out_path: str,
-        config_path: Optional[str],
+        search_path: Union[str, Path],
+        raw_path: Union[str, Path],
+        out_path: Union[str, Path],
+        config_path: Optional[Union[str, Path]] = None,
         mzml_reader_package: str = "pymzml",
     ):
         """
@@ -91,42 +91,41 @@ class ReScore(CalculateFeatures):
 
         If raw_path is a file, only process this one.
         :raises ValueError: raw_type is not supported as rawfile-type
+        :raises FileNotFoundError: if raw file could not be found
         """
         self.raw_files = []
-        if os.path.isfile(self.raw_path):
+        if self.raw_path.is_file():
             self.raw_files = [self.raw_path]
-            self.raw_path = os.path.dirname(self.raw_path)
-        elif os.path.isdir(self.raw_path):
+            self.raw_path = self.raw_path.parent
+        elif self.raw_path.is_dir():
             raw_type = self.config.raw_type
             if raw_type == "thermo":
-                extension = ".raw"
+                glob_pattern = "*.[rR][aA][wW]"
             elif raw_type == "mzml":
-                extension = ".mzml"
+                glob_pattern = "*.[mM][zZ][mM][lL]"
             else:
                 raise ValueError(f"{raw_type} is not supported as rawfile-type")
-
-            self.raw_files = [os.path.basename(f) for f in os.listdir(self.raw_path) if f.lower().endswith(extension)]
+            self.raw_files = list(self.raw_path.glob(glob_pattern))
             logger.info(f"Found {len(self.raw_files)} raw files in the search directory")
+        else:
+            raise FileNotFoundError(f"{self.raw_path} does not exist.")
 
     def split_msms(self):
         """Splits msms.txt file per raw file such that we can process each raw file in parallel \
         without reading the entire msms.txt."""
         if self.split_msms_step.is_done():
             return
-
-        msms_path = self.get_msms_folder_path()
-        if not os.path.isdir(msms_path):
-            os.makedirs(msms_path)
+        self.get_msms_folder_path().mkdir(exist_ok=True)
 
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby("RAW_FILE"):
-            raw_file_path = os.path.join(self.raw_path, raw_file)
-            if not (os.path.isfile(raw_file_path + ".raw") or os.path.isfile(raw_file_path + ".RAW")):
+            raw_file_path = self.raw_path / raw_file
+            if not raw_file_path.with_suffix(".raw").is_file() or raw_file_path.with_suffix(".RAW").is_file():
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
 
-            split_msms = self._get_split_msms_path(raw_file)
+            split_msms = self._get_split_msms_path(raw_file + ".rescore")
             logger.info(f"Creating split msms.txt file {split_msms}")
             df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
             df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))]
@@ -148,45 +147,35 @@ class ReScore(CalculateFeatures):
             processing_pool = JobPool(processes=num_threads)
 
         mzml_path = self.get_mzml_folder_path()
-        if not os.path.isdir(mzml_path):
-            os.makedirs(mzml_path)
+        mzml_path.mkdir(exist_ok=True)
 
         perc_path = self.get_percolator_folder_path()
-        if not os.path.isdir(perc_path):
-            os.makedirs(perc_path)
+        perc_path.mkdir(exist_ok=True)
 
         for raw_file in self.raw_files:
-            calc_feature_step = ProcessStep(self.out_path, "calculate_features." + raw_file)
+            calc_feature_step = ProcessStep(self.out_path, "calculate_features." + raw_file.stem)
             if calc_feature_step.is_done():
                 continue
 
-            raw_file_path = os.path.join(self.raw_path, raw_file)
-            mzml_file_path = os.path.join(mzml_path, os.path.splitext(raw_file)[0] + ".mzML")
+            raw_file_path = self.raw_path / raw_file
+            percolator_rescore_path = self._get_split_perc_input_path(raw_file.stem, "rescore")
+            percolator_orig_path = self._get_split_perc_input_path(raw_file.stem, "original")
 
-            percolator_input_path = self._get_split_perc_input_path(raw_file, "rescore")
-            split_msms_path = self._get_split_msms_path(raw_file)
+            split_msms_path = self._get_split_msms_path(raw_file.with_suffix(".rescore").name)
 
+            args = [
+                raw_file_path,
+                split_msms_path,
+                percolator_rescore_path,
+                percolator_orig_path,
+                mzml_path,
+                self.config_path,
+                calc_feature_step,
+            ]
             if num_threads > 1:
-                processing_pool.apply_async(
-                    calculate_features_single,
-                    (
-                        raw_file_path,
-                        split_msms_path,
-                        percolator_input_path,
-                        mzml_file_path,
-                        self.config_path,
-                        calc_feature_step,
-                    ),
-                )
+                processing_pool.apply_async(calculate_features_single, args)
             else:
-                calculate_features_single(
-                    raw_file_path,
-                    split_msms_path,
-                    percolator_input_path,
-                    mzml_file_path,
-                    self.config_path,
-                    calc_feature_step,
-                )
+                calculate_features_single(*args)
 
         if num_threads > 1:
             processing_pool.check_pool(print_progress_every=1)
@@ -209,18 +198,18 @@ class ReScore(CalculateFeatures):
 
         merged_perc_input_file_prosit = self._get_merged_perc_input_path(search_type)
 
-        logger.info("Merging percolator input files for " + search_type)
+        logger.info(f"Merging percolator input files for {search_type}")
         with open(merged_perc_input_file_prosit, "wb") as fout:
             first = True
             for raw_file in self.raw_files:
-                percolator_input_path = self._get_split_perc_input_path(raw_file, search_type)
+                percolator_input_path = self._get_split_perc_input_path(raw_file.stem, search_type)
                 with open(percolator_input_path, "rb") as f:
                     if not first:
                         next(f)  # skip the header
                     else:
                         first = False
                     fout.write(f.read())
-                os.remove(percolator_input_path)
+                percolator_input_path.unlink()
 
         df_prosit = pd.read_csv(merged_perc_input_file_prosit, sep="\t")
         df_prosit = df_prosit.fillna(0)
@@ -233,20 +222,18 @@ class ReScore(CalculateFeatures):
 
     def rescore_with_perc(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
         """Use percolator to re-score library."""
-        if search_type == "rescore":
-            if self.percolator_step_prosit.is_done():
-                return
-        else:
-            if self.percolator_step_andromeda.is_done():
-                return
+        if search_type == "rescore" and self.percolator_step_prosit.is_done():
+            return
+        elif self.percolator_step_andromeda.is_done():
+            return
 
         perc_path = self.get_percolator_folder_path()
-        weights_file = os.path.join(perc_path, f"{search_type}_weights.csv")
-        target_psms = os.path.join(perc_path, f"{search_type}_target.psms")
-        decoy_psms = os.path.join(perc_path, f"{search_type}_decoy.psms")
-        target_peptides = os.path.join(perc_path, f"{search_type}_target.peptides")
-        decoy_peptides = os.path.join(perc_path, f"{search_type}_decoy.peptides")
-        log_file = os.path.join(perc_path, f"{search_type}.log")
+        weights_file = perc_path / f"{search_type}.weights.csv"
+        target_psms = perc_path / f"{search_type}.target.psms"
+        decoy_psms = perc_path / f"{search_type}.decoy.psms"
+        target_peptides = perc_path / f"{search_type}.target.peptides"
+        decoy_peptides = perc_path / f"{search_type}.decoy.peptides"
+        log_file = perc_path / f"{search_type}.log"
 
         cmd = f"percolator --weights {weights_file} \
                           --num-threads {self.config.num_threads} \
@@ -268,28 +255,28 @@ class ReScore(CalculateFeatures):
         else:
             self.percolator_step_andromeda.mark_done()
 
-    def get_msms_folder_path(self):
+    def get_msms_folder_path(self) -> Path:
         """Get folder path to msms."""
-        return os.path.join(self.out_path, "msms")
+        return self.out_path / "msms"
 
-    def _get_split_msms_path(self, raw_file: str) -> str:
+    def _get_split_msms_path(self, raw_file: str) -> Path:
         """
         Get path to split msms.
 
         :param raw_file: path to raw file as a string
         :return: path to split msms file
         """
-        return os.path.join(self.get_msms_folder_path(), os.path.splitext(raw_file)[0] + ".rescore")
+        return self.get_msms_folder_path() / raw_file
 
-    def get_mzml_folder_path(self) -> str:
+    def get_mzml_folder_path(self) -> Path:
         """Get folder path to mzml."""
-        return os.path.join(self.out_path, "mzML")
+        return self.out_path / "mzML"
 
-    def get_percolator_folder_path(self) -> str:
+    def get_percolator_folder_path(self) -> Path:
         """Get folder path to percolator."""
-        return os.path.join(self.results_path, "percolator")
+        return self.results_path / "percolator"
 
-    def _get_split_perc_input_path(self, raw_file: str, search_type: str):
+    def _get_split_perc_input_path(self, raw_file: str, search_type: str) -> Path:
         """
         Specify search_type to differentiate between percolator and andromeda output.
 
@@ -297,15 +284,13 @@ class ReScore(CalculateFeatures):
         :param search_type: model (rescore or original) as a string
         :return: path to split percolator input file
         """
-        return os.path.join(
-            self.get_percolator_folder_path(), os.path.splitext(raw_file)[0] + "_" + search_type + ".tab"
-        )
+        return self.get_percolator_folder_path() / f"{raw_file}.{search_type}.tab"
 
-    def _get_merged_perc_input_path(self, search_type: str):
+    def _get_merged_perc_input_path(self, search_type: str) -> Path:
         """
         Get merged percolator input path.
 
         :param search_type: model (rescore or original) as a string
         :return: path to merged percolator input folder
         """
-        return os.path.join(self.get_percolator_folder_path(), search_type + ".tab")
+        return self.get_percolator_folder_path() / f"{search_type}.tab"

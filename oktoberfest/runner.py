@@ -35,7 +35,7 @@ def generate_spectral_lib(search_dir: str, config_path: str):
     :param config_path: path to config file
     :raises ValueError: spectral library output format is not supported as spectral library type
     """
-    spec_library = SpectralLibrary(path=search_dir, out_path=search_dir, config_path=config_path)
+    spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
         "MODIFIED_SEQUENCE"
@@ -131,6 +131,8 @@ def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
     :raises ValueError: raw_type is not supported as rawfile-type
     """
     ce_calib = CeCalibration(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
+    ce_calib.out_path = ce_calib.out_path / "mzML"
+
     df_search = ce_calib._load_search()
     raw_type = ce_calib.config.raw_type
     if raw_type == "thermo":
@@ -140,12 +142,10 @@ def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
     else:
         raise ValueError(f"{raw_type} is not supported as rawfile-type")
 
-    ce_calib.raw_path = os.path.join(
-        ce_calib.raw_path,
-        [os.path.basename(f) for f in os.listdir(ce_calib.raw_path) if f.lower().endswith(extension)][0],
-    )
-    ce_calib.perform_alignment(df_search)
-    with open(os.path.join(ce_calib.results_path, "ce.txt"), "w") as f:
+    for raw_file in ce_calib.raw_path.glob(f"*{extension}"):
+        ce_calib.raw_path = ce_calib.raw_path / raw_file
+        ce_calib.perform_alignment(df_search)
+    with open(ce_calib.results_path / "ce.txt", "w") as f:
         f.write(str(ce_calib.best_ce))
 
 

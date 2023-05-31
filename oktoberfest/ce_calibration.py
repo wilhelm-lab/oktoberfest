@@ -1,6 +1,6 @@
 import logging
-import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -27,16 +27,14 @@ class CeCalibration(SpectralLibrary):
     4- write output
     """
 
-    raw_path: str
-    out_path: str
     best_ce: float
 
     def __init__(
         self,
-        search_path: str,
-        raw_path: str,
-        out_path: str,
-        config_path: Optional[str],
+        search_path: Union[str, Path],
+        raw_path: Union[str, Path],
+        out_path: Union[str, Path],
+        config_path: Optional[Union[str, Path]] = None,
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -49,9 +47,9 @@ class CeCalibration(SpectralLibrary):
         :param mzml_reader_package: mzml reader (pymzml or pyteomics)
         """
         super().__init__(search_path, out_path, config_path=config_path)
-        self.search_path = search_path
+        if isinstance(raw_path, str):
+            raw_path = Path(raw_path)
         self.raw_path = raw_path
-        self.out_path = out_path
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
@@ -76,9 +74,7 @@ class CeCalibration(SpectralLibrary):
         """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        if not (self.out_path.endswith(".mzML")) and (not (self.out_path.endswith(".raw"))):
-            self.out_path = os.path.join(self.out_path, self.raw_path.split("/")[-1].split(".")[0] + ".mzml")
-        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.out_path)
+        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.get_mzml_path())
 
     def _load_search(self):
         """Load search type."""
@@ -99,13 +95,14 @@ class CeCalibration(SpectralLibrary):
         logger.info(f"raw_type is {switch}")
         if switch == "thermo":
             self._gen_mzml_from_thermo()
-        elif switch == "mzml":
-            pass
+            switch = "mzml"
+        if switch == "mzml":
+            self.raw_path = self.raw_path.with_suffix(".mzML")
+            return ThermoRaw.read_mzml(
+                source=self.raw_path, package=self.mzml_reader_package, search_type=search_engine
+            )
         else:
             raise ValueError(f"{switch} is not supported as rawfile-type")
-        print(self.raw_path)
-        self.raw_path = self.raw_path.as_posix().replace(".raw", ".mzml")
-        return ThermoRaw.read_mzml(source=self.out_path, package=self.mzml_reader_package, search_type=search_engine)
 
     def merge_mzml_and_msms(self, df_search: pd.DataFrame):
         """
@@ -129,13 +126,17 @@ class CeCalibration(SpectralLibrary):
         self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
         self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
 
-    def get_hdf5_path(self) -> str:
-        """Get path to hdf5 file."""
-        return self.out_path + ".hdf5"
+    def get_mzml_path(self) -> Path:
+        """Get path to mzml file."""
+        return self.out_path / self.raw_path.with_suffix(".mzML").name
 
-    def get_pred_path(self) -> str:
+    def get_hdf5_path(self) -> Path:
+        """Get path to hdf5 file."""
+        return self.out_path / self.raw_path.with_suffix(".mzML.hdf5").name
+
+    def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path + "_pred.hdf5"
+        return self.out_path / self.raw_path.with_suffix(".mzML.pred.hdf5").name
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -176,8 +177,7 @@ class CeCalibration(SpectralLibrary):
 
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            directory=self.raw_path.parent / "results",
-            raw_file_name=self.raw_path.name,
+            filename=self.raw_path.parent / f"results/{self.raw_path.name}_mean_spectral_angle_ce.png",
         )
 
     def perform_alignment(self, df_search: pd.DataFrame):
@@ -188,7 +188,7 @@ class CeCalibration(SpectralLibrary):
         """
         hdf5_path = self.get_hdf5_path()
         logger.info(f"Path to hdf5 file with annotations for {self.out_path}: {hdf5_path}")
-        if os.path.isfile(hdf5_path):
+        if hdf5_path.is_file():
             self.library.read_from_hdf5(hdf5_path)
         else:
             self.merge_mzml_and_msms(df_search)
