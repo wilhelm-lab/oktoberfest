@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
-from typing import List
+from pathlib import Path
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -126,10 +127,10 @@ class Spectra:
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_array[intensity_array == 0] = Spectra.EPSILON
-        intensity_array[intensity_array == -1] = 0
+        intensity_array[intensity_array == -1] = 0.0
 
         # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(np.float32)
+        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
         self.add_columns(intensity_df)
@@ -166,7 +167,7 @@ class Spectra:
         # Check if conversion is low change to coo then csr from coo
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
 
-    def write_as_hdf5(self, output_file: str) -> None:
+    def write_as_hdf5(self, output_file: Union[str, Path]) -> None:
         """
         Write intensity and mz data as hdf5.
 
@@ -181,7 +182,7 @@ class Spectra:
 
         hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
-    def write_pred_as_hdf5(self, output_file: str) -> None:
+    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> None:
         """
         Write intensity, mz, and pred data as hdf5.
 
@@ -197,12 +198,13 @@ class Spectra:
 
         hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
-    def read_from_hdf5(self, input_file: str) -> None:
+    def read_from_hdf5(self, input_file: Union[str, Path]) -> None:
         """
         Read from hdf5 file.
 
         :param input_file: path to input file
         """
+        input_file = str(input_file)
         self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
         self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
