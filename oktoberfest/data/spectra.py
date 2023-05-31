@@ -127,10 +127,10 @@ class Spectra:
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_array[intensity_array == 0] = Spectra.EPSILON
-        intensity_array[intensity_array == -1] = 0
+        intensity_array[intensity_array == -1] = 0.0
 
         # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array)).astype(pd.SparseDtype(np.float32))
+        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
         columns = self._gen_column_names(fragment_type)
         intensity_df.columns = columns
         self.add_columns(intensity_df)
