@@ -1,5 +1,7 @@
 import logging
 import os
+from pathlib import Path
+from typing import Union
 
 import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.fragments import compute_peptide_mass
@@ -27,7 +29,7 @@ at the Technical University of Munich."""
 logger = logging.getLogger(__name__)
 
 
-def generate_spectral_lib(search_dir: str, config_path: str):
+def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, Path]):
     """
     Create a SpectralLibrary object and generate the spectral library.
 
@@ -121,7 +123,7 @@ def generate_spectral_lib(search_dir: str, config_path: str):
             raise ValueError(f"{spec_library.config.output_format} is not supported as spectral library type")
 
 
-def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
+def run_ce_calibration(msms_path: Union[str, Path], search_dir: Union[str, Path], config_path: Union[str, Path]):
     """
     Create a CeCalibration object and run the CE calibration.
 
@@ -149,7 +151,7 @@ def run_ce_calibration(msms_path: str, search_dir: str, config_path: str):
         f.write(str(ce_calib.best_ce))
 
 
-def run_rescoring(msms_path: str, search_dir: str, config_path: str):
+def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], config_path: Union[str, Path]):
     """
     Create a ReScore object and run the rescoring.
 
@@ -170,7 +172,7 @@ def run_rescoring(msms_path: str, search_dir: str, config_path: str):
     plot_all(re_score.get_percolator_folder_path())
 
 
-def run_job(search_dir: str, config_path: str):
+def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
     """
     Run oktoberfest based on job type given in the config file.
 
@@ -178,8 +180,12 @@ def run_job(search_dir: str, config_path: str):
     :param config_path: path to config file as a string
     :raises ValueError: In case the job_type in the provided config file is not known
     """
+    if isinstance(search_dir, str):
+        search_dir = Path(search_dir)
     if not config_path:
-        config_path = os.path.join(search_dir, "config.json")
+        config_path = search_dir / "config.json"
+    if isinstance(config_path, str):
+        config_path = Path(config_path)
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type

@@ -89,9 +89,9 @@ class SpectralLibrary:
 
         predictor = PROSITpredictor(
             server=self.config.prosit_server,
-            path_to_ca_certificate=cert_path / "Proteomicsdb-Prosit-v2.crt",
-            path_to_certificate=cert_path / "oktoberfest-production.crt",
-            path_to_key_certificate=cert_path / "oktoberfest-production.key",
+            path_to_ca_certificate=str(cert_path / "Proteomicsdb-Prosit-v2.crt"),
+            path_to_certificate=str(cert_path / "oktoberfest-production.crt"),
+            path_to_key_certificate=str(cert_path / "oktoberfest-production.key"),
         )
 
         models_dict = self.config.models

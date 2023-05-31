@@ -45,7 +45,7 @@ class ReScore(CalculateFeatures):
     5- rescore_with_perc
     """
 
-    raw_files: List[str]
+    raw_files: List[Path]
 
     split_msms_step: ProcessStep
     merge_input_step_prosit: ProcessStep

@@ -48,4 +48,4 @@ class CalculateFeatures(CeCalibration):
         )
         perc_features.calc()
         if file_path:
-            perc_features.write_to_file(file_path)
+            perc_features.write_to_file(str(file_path))

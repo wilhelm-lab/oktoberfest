@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ class Config:
         """Initialize config file data."""
         self.data = {}
 
-    def read(self, config_path: str):
+    def read(self, config_path: Path):
         """
         Read config file.
 
