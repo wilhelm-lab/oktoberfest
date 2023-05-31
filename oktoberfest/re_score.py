@@ -168,7 +168,7 @@ class ReScore(CalculateFeatures):
                 split_msms_path,
                 percolator_rescore_path,
                 percolator_orig_path,
-                mzml_path,
+                self.out_path,
                 self.config_path,
                 calc_feature_step,
             ]

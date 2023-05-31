@@ -97,7 +97,6 @@ class CeCalibration(SpectralLibrary):
             self._gen_mzml_from_thermo()
             switch = "mzml"
         if switch == "mzml":
-            self.raw_path = self.raw_path.with_suffix(".mzML")
             return ThermoRaw.read_mzml(
                 source=self.raw_path, package=self.mzml_reader_package, search_type=search_engine
             )
@@ -128,15 +127,15 @@ class CeCalibration(SpectralLibrary):
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
-        return self.out_path / self.raw_path.with_suffix(".mzML").name
+        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML").name
 
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
-        return self.out_path / self.raw_path.with_suffix(".mzML.hdf5").name
+        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.hdf5").name
 
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -177,7 +176,7 @@ class CeCalibration(SpectralLibrary):
 
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            filename=self.raw_path.parent / f"results/{self.raw_path.name}_mean_spectral_angle_ce.png",
+            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.png",
         )
 
     def perform_alignment(self, df_search: pd.DataFrame):
