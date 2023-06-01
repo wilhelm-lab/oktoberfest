@@ -155,7 +155,7 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
     targets = targets[targets["q-value"] < 0.01]
     targets = targets.sort_values("pred_RT")
     plt.plot(targets["pred_RT"], targets["RT"], ".", c="b", label="original")
-    plt.plot(targets["pred_RT"], targets["iRT"], "-", c="r", label="curve method fit")
+    plt.plot(targets["pred_RT"], targets["iRT"], "-", c="r", label="smoothed")
     plt.xlabel("pred_RT", size=14)
     plt.ylabel("iRT", size=14)
     plt.legend(loc="best", fancybox=True, shadow=True)
