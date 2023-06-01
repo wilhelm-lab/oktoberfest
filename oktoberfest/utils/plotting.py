@@ -17,6 +17,8 @@ def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, sear
     plt.title(f"{search_type} Target vs Decoys ({type})")
     plt.legend(loc="upper right")
     plt.savefig(directory / f"{search_type}_Target_vs_Decoys_{type}_bins.png", dpi=300)
+    plt.plot()
+    plt.close()
 
 
 def joint_plot(
@@ -61,6 +63,8 @@ def joint_plot(
     jplot.ax_joint.set_ylabel("rescored_score")
     jplot.ax_joint.set_xlabel("original_score")
     plt.savefig(directory / f"Rescored_Original_joint_plot_{type}.png", dpi=300)
+    plt.plot()
+    plt.close()
 
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: Path):
@@ -135,6 +139,8 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
     plt.title(f"{type} 1% FDR\n", fontsize=14)
     plt.savefig(directory / f"{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
+    plt.plot()
+    plt.close()
 
 
 def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce: float):
@@ -145,6 +151,8 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce:
     sns.scatterplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE")
     plt.axvline(x=best_ce, color="red")
     plt.savefig(filename, dpi=300)
+    plt.plot()
+    plt.close()
 
 
 def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: Path):
@@ -165,6 +173,8 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
     plt.legend(loc="best", fancybox=True, shadow=True)
     plt.grid()
     plt.savefig(directory / "pred_rt_vs_irt.png", dpi=300)
+    plt.plot()
+    plt.close()
 
 
 def plot_all(percolator_path: Path):
