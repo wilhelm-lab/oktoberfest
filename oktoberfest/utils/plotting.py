@@ -147,20 +147,24 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce:
     plt.savefig(filename, dpi=300)
 
 
-def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: str):
+def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: Path):
     """Generate pred rt vs irt plot."""
     plt.figure(figsize=(12, 6))
     plt.title("RT Alignment")
     targets = prosit_df.merge(prosit_target, how="inner", left_on="SpecId", right_on="PSMId")
-    targets = targets[targets["q-value"] < 0.01]
-    targets = targets.sort_values("pred_RT")
-    plt.plot(targets["pred_RT"], targets["RT"], ".", c="b", label="original")
-    plt.plot(targets["pred_RT"], targets["iRT"], "-", c="r", label="smoothed")
-    plt.xlabel("pred_RT", size=14)
-    plt.ylabel("iRT", size=14)
+    targets = targets.loc[targets["q-value"] < 0.01, ["SpecId", "RT", "iRT", "pred_RT"]]
+    targets.columns = ["SpecId", "experimental RT", "aligned RT", "predicted iRT"]
+    targets["rawfile"] = targets["SpecId"].str.split("-", n=1).str[0] + " aligned RT"
+    targets.sort_values("predicted iRT")
+    sns.scatterplot(data=targets, x="predicted iRT", y="experimental RT", label="predicted iRT")
+    sns.lineplot(data=targets, x="predicted iRT", y="aligned RT", hue="rawfile")
+    # plt.plot(targets["RT"], targets["pred_RT"], ".", c="b", label="original")
+    # plt.plot(targets["iRT"], targets["pred_RT"], ".", c="r", label="smoothed")
+    plt.ylabel("(aligned) experimental RT", size=14)
+    plt.xlabel("predicted iRT", size=14)
     plt.legend(loc="best", fancybox=True, shadow=True)
     plt.grid()
-    plt.savefig(directory + "/pred_rt_vs_irt.png", dpi=300)
+    plt.savefig(directory / "pred_rt_vs_irt.png", dpi=300)
 
 
 def plot_all(percolator_path: Path):
