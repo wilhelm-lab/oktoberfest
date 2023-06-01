@@ -163,7 +163,7 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
     plt.savefig(directory + "/pred_rt_vs_irt.png", dpi=300)
 
 
-def plot_all(percolator_path: str):
+def plot_all(percolator_path: Path):
     """Generate all plots and save them as png in the percolator folder."""
     prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
@@ -188,4 +188,6 @@ def plot_all(percolator_path: str):
     )
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
+
+    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
     plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
