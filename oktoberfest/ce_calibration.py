@@ -177,6 +177,7 @@ class CeCalibration(SpectralLibrary):
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
             filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.png",
+            best_ce=self.ce_alignment.idxmax(),
         )
 
     def perform_alignment(self, df_search: pd.DataFrame):

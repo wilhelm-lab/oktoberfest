@@ -28,8 +28,8 @@ PyYAML = ">=5.4.1"
 prosit_grpc = {git = "https://github.com/wilhelm-lab/prosit_grpc.git", rev = "development"}
 matplotlib = "^3.6.3"
 seaborn = "^0.12.2"
-spectrum-fundamentals = ">=0.3.1"
-spectrum-io = "^0.1.0"
+spectrum-fundamentals = "^0.4.0"
+spectrum-io = "^0.2.0"
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
