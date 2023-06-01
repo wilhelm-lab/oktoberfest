@@ -157,14 +157,14 @@ class ReScore(CalculateFeatures):
             if calc_feature_step.is_done():
                 continue
 
-            raw_file_path = self.raw_path / raw_file
+            raw_file
             percolator_rescore_path = self._get_split_perc_input_path(raw_file.stem, "rescore")
             percolator_orig_path = self._get_split_perc_input_path(raw_file.stem, "original")
 
             split_msms_path = self._get_split_msms_path(raw_file.with_suffix(".rescore").name)
 
             args = [
-                raw_file_path,
+                raw_file,
                 split_msms_path,
                 percolator_rescore_path,
                 percolator_orig_path,
