@@ -177,8 +177,26 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
     plt.close()
 
 
+def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy_df: pd.DataFrame, directory: Path):
+    """Generate spectral angle distribution for targets and decoys."""
+    target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on="PSMId")
+    decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on="PSMId")
+    plt.figure(figsize=(8, 6))
+    bins = np.linspace(0, 1, 15)
+    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00")
+    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.xlabel("Spectral angle", size=14)
+    plt.title("Target vs Decoys Spectral Angle Distribution")
+    plt.legend(loc="upper right")
+    plt.savefig(directory / "Target_vs_Decoys_sa_distribution.png", dpi=300)
+    plt.plot()
+    plt.close()
+
+
 def plot_all(percolator_path: Path):
     """Generate all plots and save them as png in the percolator folder."""
+    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
+
     prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
     prosit_psms_target = pd.read_csv(percolator_path / "rescore.target.psms", delimiter="\t")
@@ -193,6 +211,7 @@ def plot_all(percolator_path: Path):
     plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", percolator_path)
     plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Original", percolator_path)
     plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Original", percolator_path)
+    plot_sa_distribution(prosit_df, prosit_psms_target, prosit_psms_decoy, percolator_path)
 
     joint_plot(
         prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
@@ -203,5 +222,4 @@ def plot_all(percolator_path: Path):
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
 
-    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
     plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
