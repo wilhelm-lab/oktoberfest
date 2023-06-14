@@ -1,10 +1,9 @@
 import logging
 import os
-from pathlib import Path
 from typing import Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import tritonclient.grpc as grpcclient
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
@@ -87,7 +86,7 @@ class SpectralLibrary:
         result = []
         batch_size = 1000
         num_spec = len(library.spectra_data["MODIFIED_SEQUENCE"])
-        
+
         # TODO set inputs dynamically based on model
         # CID has no collision energy
         # TMT needs fragmentation
@@ -99,22 +98,41 @@ class SpectralLibrary:
         #     )
 
         for i in range(0, num_spec, batch_size):
-            if num_spec < i+batch_size:
-                current_batchsize = num_spec-i
+            if num_spec < i + batch_size:
+                current_batchsize = num_spec - i
             else:
                 current_batchsize = batch_size
 
             inputs = []
             inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES"))
             inputs.append(grpcclient.InferInput("collision_energies", [current_batchsize, 1], "FP32"))
-            inputs.append(grpcclient.InferInput("precursor_charge", [current_batchsize, 1], "INT32"))
+            inputs.append(grpcclient.InferInput("precursor_charges", [current_batchsize, 1], "INT32"))
             outputs = [grpcclient.InferRequestedOutput("intensities")]
 
-            inputs[0].set_data_from_numpy(library.spectra_data["MODIFIED_SEQUENCE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.object_))
-            inputs[1].set_data_from_numpy(library.spectra_data["COLLISION_ENERGY"].values[i:i+current_batchsize].reshape(-1,1).astype(np.float32))
-            inputs[2].set_data_from_numpy(library.spectra_data["PRECURSOR_CHARGE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.int32))
+            inputs[0].set_data_from_numpy(
+                library.spectra_data["MODIFIED_SEQUENCE"]
+                .values[i : i + current_batchsize]
+                .reshape(-1, 1)
+                .astype(np.object_)
+            )
+            inputs[1].set_data_from_numpy(
+                library.spectra_data["COLLISION_ENERGY"]
+                .values[i : i + current_batchsize]
+                .reshape(-1, 1)
+                .astype(np.float32)
+            )
+            inputs[2].set_data_from_numpy(
+                library.spectra_data["PRECURSOR_CHARGE"]
+                .values[i : i + current_batchsize]
+                .reshape(-1, 1)
+                .astype(np.int32)
+            )
 
-            result.append(triton_client.infer(self.config.models["intensity"], inputs=inputs, outputs=outputs).as_numpy("intensities"))
+            result.append(
+                triton_client.infer(self.config.models["intensity"], inputs=inputs, outputs=outputs).as_numpy(
+                    "intensities"
+                )
+            )
 
         predictions = np.vstack(result)
         predictions[np.isnan(predictions)] = -1
@@ -131,21 +149,28 @@ class SpectralLibrary:
 
         if alignment:
             return
-        
+
         # iRT prediction for Rescoring
-        result = []      
+        result = []
 
         for i in range(0, num_spec, batch_size):
-            if num_spec < i+batch_size:
-                current_batchsize = num_spec-i
+            if num_spec < i + batch_size:
+                current_batchsize = num_spec - i
             else:
                 current_batchsize = batch_size
 
             inputs = []
-            inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES")) 
-            inputs[0].set_data_from_numpy(library.spectra_data["MODIFIED_SEQUENCE"].values[i:i+current_batchsize].reshape(-1,1).astype(np.object_))
+            inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES"))
+            inputs[0].set_data_from_numpy(
+                library.spectra_data["MODIFIED_SEQUENCE"]
+                .values[i : i + current_batchsize]
+                .reshape(-1, 1)
+                .astype(np.object_)
+            )
             outputs = [grpcclient.InferRequestedOutput("irt")]
-            result.append(triton_client.infer(self.config.models["irt"], inputs=inputs, outputs=outputs).as_numpy("irt"))
+            result.append(
+                triton_client.infer(self.config.models["irt"], inputs=inputs, outputs=outputs).as_numpy("irt")
+            )
 
         irt_pred = np.vstack(result)
         library.add_column(irt_pred, "PREDICTED_IRT")
