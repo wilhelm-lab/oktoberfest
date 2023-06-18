@@ -53,11 +53,6 @@ class CeCalibration(SpectralLibrary):
         self.mzml_reader_package = mzml_reader_package
         self.best_ce = 0
 
-    @property
-    def search_path(self):
-        """Get path."""
-        return self.path
-
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms data at {self.search_path} to internal search result.")
