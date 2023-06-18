@@ -193,12 +193,10 @@ class CeCalibration(SpectralLibrary):
         else:
             self.merge_mzml_and_msms(df_search)
             self.library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
-        # Check if all data is HCD no need to align and return the best ce as 35
-        hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
-        if len(hcd_df.index) == 0:
-            self.best_ce = 35.0
-            return
-        self._prepare_alignment_df()
-        self.grpc_predict(self.alignment_library, alignment=True)  # predict alignment
-        self._alignment()
-        self.best_ce = self.ce_alignment.idxmax()
+        if (self.library.spectra_data["FRAGMENTATION"] == "HCD").any():
+            self._prepare_alignment_df()
+            self.grpc_predict(self.alignment_library, alignment=True)  # predict alignment
+            self._alignment()
+            self.best_ce = self.ce_alignment.idxmax()
+        else:
+            self.best_ce = 35
