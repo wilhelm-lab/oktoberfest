@@ -114,8 +114,8 @@ class SpectralLibrary:
         try:
             predictions = predictor.predict(
                 sequences=library.spectra_data["GRPC_SEQUENCE"].values.tolist(),
-                charges=library.spectra_data["PRECURSOR_CHARGE"].values.tolist(),
-                collision_energies=library.spectra_data["COLLISION_ENERGY"].values / 100.0,
+                charges=library.spectra_data["PRECURSOR_CHARGE"].astype(int).values.tolist(),
+                collision_energies=library.spectra_data["COLLISION_ENERGY"].astype(int).values / 100.0,
                 fragmentation=library.spectra_data["FRAGMENTATION_GRPC"].values if tmt_model else None,
                 models=models,
                 disable_progress_bar=True,
