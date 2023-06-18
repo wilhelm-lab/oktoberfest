@@ -1,6 +1,6 @@
 import logging
-import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -24,52 +24,56 @@ class SpectralLibrary:
     3- write output
     """
 
-    path: str
     library: Spectra
     config: Config
-    config_path: Optional[str]
     num_threads: int
     grpc_output: dict
 
-    def __init__(self, path: str, out_path: str, config_path: Optional[str]):
+    def __init__(
+        self, search_path: Union[str, Path], out_path: Union[str, Path], config_path: Optional[Union[str, Path]] = None
+    ):
         """
         Initialize a SpectralLibrary object.
 
-        :param path: path to directory containing the msms.txt and raw files
+        :param search_path: path to directory containing the msms.txt and raw files
         :param out_path: path to output folder
         :param config_path: path to configuration file
         """
-        self.path = path
+        if isinstance(search_path, str):
+            search_path = Path(search_path)
+        self.search_path = search_path
+
+        if isinstance(out_path, str):
+            out_path = Path(out_path)
+        self.out_path = out_path
+
         self.library = Spectra()
+
+        if config_path is None:
+            config_path = CONFIG_PATH
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         self.config_path = config_path
         self.config = Config()
-        if config_path:
-            self.config.read(config_path)
-        else:
-            self.config.read(CONFIG_PATH)
-        self.results_path = os.path.join(out_path, "results")
-        if os.path.isdir(out_path):
-            if not os.path.isdir(self.results_path):
-                try:
-                    os.makedirs(self.results_path)
-                except Exception:
-                    print("In Feature Calculation")
-        else:
-            print("In Feature Calculation")
+        self.config.read(config_path)
 
-    def gen_lib(self, df_search: Optional[pd.DataFrame] = None):
-        """
-        Read input csv file and add it to library.
+        self.results_path = out_path / "results"
+        if out_path.exists():
+            try:
+                self.results_path.mkdir(exist_ok=True)
+            except Exception:
+                logger.info("In Feature Calculation")
+        else:
+            logger.info("In Feature Calculation")
 
-        :param df_search: unused, necessary to ensure same method signature for inheriting function
-        """
+    def gen_lib(self):
+        """Read input csv file and add it to library."""
         if self.config.fasta:
             self.read_fasta()
-            library_df = csv.read_file(os.path.join(self.path, "prosit_input.csv"))
+            library_file = self.search_path / "prosit_input.csv"
         else:
-            for file in os.listdir(self.path):
-                if file.endswith(".csv"):
-                    library_df = csv.read_file(os.path.join(self.path, file))
+            library_file = list(self.search_path.glob("*.csv"))[0]
+        library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
 
@@ -181,7 +185,7 @@ class SpectralLibrary:
             "--fasta",
             f"{self.config.fasta}",
             "--prosit_input",
-            f"{os.path.join(self.path, 'prosit_input.csv')}",
+            f"{self.search_path / 'prosit_input.csv'}",
             "--fragmentation",
             f"{self.config.fragmentation}",
             "--digestion",
