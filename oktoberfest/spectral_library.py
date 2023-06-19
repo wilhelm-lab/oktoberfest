@@ -21,10 +21,10 @@ def parse_fragment_labels(spectra_labels: List[np.ndarray]):
     pattern = rb"([y|b])([0-9]{1,2})\+([1-3])"
     annotation = {"type": [], "number": [], "charge": []}
     for spectrum_labels in spectra_labels:
+        types = []
+        numbers = []
+        charges = []
         for label in spectrum_labels:
-            types = []
-            numbers = []
-            charges = []
             match = re.match(pattern, label)
             if match:
                 groups = match.groups()
