@@ -36,6 +36,10 @@ Prosit will:
 
 ## Installation
 
+Oktoberfest can either be installed through `pip` or by creating a Docker image.
+
+### Pip
+
 After cloning the repository of oktoberfest, create a new conda environment:
 
 ```bash
@@ -47,6 +51,20 @@ After activating the newly-created conda environment, go to the main folder with
 ```bash
 pip install .
 ```
+
+### Docker image
+
+Prerequisites:
+- `make` (https://www.gnu.org/software/make/)
+- `docker` (https://www.docker.com/)
+
+After cloning the repository of oktoberfest, run:
+
+```bash
+make build
+```
+
+## Run oktoberfest
 
 Create a `config.json` file which should contain the following flags:
 
@@ -110,13 +128,21 @@ An example of the config file can be found in `/oktoberfest/example_config.json`
 
 For `prosit_server` and `jobId`: ask Wassim Gabriel (wassim.gabriel@tum.de) or Ludwig Lautenbacher (Ludwig.Lautenbacher@tum.de).
 
-Finally, run
+Finally, if you installed it as a Python package, run:
 
 ```bash
 python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
 ```
 
-Note: The search_dir should contain both the raw files and the MaxQuant's `msms.txt` from a search.
+Note: The `search_dir` should contain both the raw files and the MaxQuant's `msms.txt` from a search.
+
+If you want to run oktoberfest using the docker image, run:
+
+```bash
+DATA=path_to_data_dir make run_oktoberfest
+```
+
+Note: The `data_dir` should contain both the raw files, the MaxQuant's `msms.txt` from a search and the `config.json`. The results will be written to `data_dir/results/percolator`.
 
 ## Models
 
@@ -140,4 +166,4 @@ The project is licensed under the [MIT license](https://github.com/wilhelm-lab/P
 
 [1] Gessulat S, Schmidt T, Zolg DP, Samaras P, Schnatbaum K, Zerweck J, Knaute T, Rechenberger J, Delanghe B, Huhmer A, Reimer U, Ehrlich HC, Aiche S, Kuster B, Wilhelm M: “PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning”. Nature Methods. 2019; 16(6):509-518. doi: 10.1038/s41592-019-0426-7.
 
-[2] Gabriel, Wassim & The, Matthew & Zolg, Daniel & Bayer, Florian & Shouman, Omar & Lautenbacher, Ludwig & Schnatbaum, Karsten & Zerweck, Johannes & Knaute, Tobias & Delanghe, Bernard & Huhmer, Andreas & Wenschuh, Holger & Reimer, Ulf & Médard, Guillaume & Kuster, Bernhard & Wilhelm, Mathias. (2022). Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides. Analytical Chemistry. 94. 10.1021/acs.analchem.1c05435.
+[2] Gabriel W, The M, Zolg D, Bayer FP, Shouman O, Lautenbacher L, Schnatbaum K, Zerweck J, Knaute T, Delanghe B, Huhmer A, Wenschuh H, Reimer U, Médard G, Kuster B, Wilhelm M: “Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides”. Analytical Chemistry. 2022; 94(20):7181-7190. doi: 10.1021/acs.analchem.1c05435.

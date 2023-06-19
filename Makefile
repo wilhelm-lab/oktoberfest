@@ -31,7 +31,7 @@ all: compress
 
 
 run_local:
-	python3 -u -m oktoberfest "$(DATA)"
+	python3 -u -m oktoberfest --search_dir "$(DATA)" --config_path $(DATA)/config.json
 
 clean_data_folder:
-	rm -rf $(DATA)/{proc,msms,results,mzML,msms.prosit,err.out,results.zip}
+	bash -c "rm -rf $(DATA)/{proc,msms,results,mzML,msms.prosit,err.out,results.zip}"
