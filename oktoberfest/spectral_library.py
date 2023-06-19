@@ -1,7 +1,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,55 @@ from .utils.config import Config
 logger = logging.getLogger(__name__)
 
 
-def parse_fragment_labels(spectra_labels: List[np.ndarray]):
+def infer_predictions(
+    triton_client: grpcclient.InferenceServerClient,
+    model: str,
+    input_data: Dict[str, Tuple[np.ndarray, str]],
+    outputs: List[str],
+    batch_size: int,
+) -> Dict[str, np.ndarray]:
+    """
+    Infer predictions from a triton client.
+
+    :param triton_client: An inference client using grpc
+    :param model: a model that is recognized by the server specified in the triton client
+    :param input_data: a dictionary that contains the input names (key) for the specific model
+        and a tuple of the input_data as a numpy array of shape [:, 1] and the dtype recognized
+        by the triton client (value).
+    :param outputs: a list of output names for the specific model
+    :param batch_size: the number of elements from the input_data that should be provided to the
+        triton client at once
+    :return: a dictionary containing the predictions (values) for the given outputs (keys)
+    """
+    num_spec = len(input_data[list(input_data)[0]][0])
+    predictions = {output: [] for output in outputs}
+
+    for i in range(0, num_spec, batch_size):
+        if num_spec < i + batch_size:
+            current_batchsize = num_spec - i
+        else:
+            current_batchsize = batch_size
+
+        infer_inputs = []
+        for input_key, (data, dtype) in input_data.items():
+            infer_input = grpcclient.InferInput(input_key, [current_batchsize, 1], dtype)
+            infer_input.set_data_from_numpy(data[i : i + current_batchsize])
+            infer_inputs.append(infer_input)
+
+        infer_outputs = [grpcclient.InferRequestedOutput(output) for output in outputs]
+
+        prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
+
+        for output in outputs:
+            predictions[output].append(prediction.as_numpy(output))
+
+    for key, value in predictions.items():
+        predictions[key] = np.vstack(value)
+
+    return predictions
+
+
+def parse_fragment_labels(spectra_labels: List[np.ndarray], precursor_charges: np.ndarray, seq_lengths: np.ndarray):
     """Uses regex to parse labels."""
     pattern = rb"([y|b])([0-9]{1,2})\+([1-3])"
     annotation = {"type": [], "number": [], "charge": []}
@@ -28,7 +76,7 @@ def parse_fragment_labels(spectra_labels: List[np.ndarray]):
             match = re.match(pattern, label)
             if match:
                 groups = match.groups()
-                types.append(groups[0])
+                types.append(groups[0].decode())
                 numbers.append(int(groups[1]))
                 charges.append(int(groups[2]))
             else:
@@ -38,6 +86,10 @@ def parse_fragment_labels(spectra_labels: List[np.ndarray]):
         annotation["charge"].append(charges)
     for key, value in annotation.items():
         annotation[key] = np.array(value)
+    mask = np.where((annotation["charge"] > precursor_charges) | (annotation["number"] >= seq_lengths))
+    annotation["type"][mask] = "N"
+    annotation["number"][mask] = 0
+    annotation["charge"][mask] = 0
     return annotation
 
 
@@ -112,85 +164,62 @@ class SpectralLibrary:
         :return: grpc predictions if we are trying to generate spectral library
         """
         triton_client = grpcclient.InferenceServerClient(url=self.config.prosit_server, ssl=True)
-
         batch_size = 1000
-        num_spec = len(library.spectra_data["MODIFIED_SEQUENCE"])
 
         intensity_outputs = ["intensities", "mz", "annotation"]
+        intensity_input_data = {
+            "peptide_sequences": (
+                library.spectra_data["MODIFIED_SEQUENCE"].to_numpy().reshape(-1, 1).astype(np.object_),
+                "BYTES",
+            ),
+            "collision_energies": (
+                library.spectra_data["COLLISION_ENERGY"].to_numpy().reshape(-1, 1).astype(np.float32),
+                "FP32",
+            ),
+            "precursor_charges": (
+                library.spectra_data["PRECURSOR_CHARGE"].to_numpy().reshape(-1, 1).astype(np.int32),
+                "INT32",
+            ),
+        }
+        intensity_predictions = infer_predictions(
+            triton_client,
+            model=self.config.models["intensity"],
+            input_data=intensity_input_data,
+            outputs=intensity_outputs,
+            batch_size=batch_size,
+        )
+        intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
+
+        irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
         irt_outputs = ["irt"]
-        predictions_intensity = {output: [] for output in intensity_outputs}
-        predictions_irt = {output: [] for output in irt_outputs}
 
-        for i in range(0, num_spec, batch_size):
-            if num_spec < i + batch_size:
-                current_batchsize = num_spec - i
-            else:
-                current_batchsize = batch_size
-
-            inputs = []
-            inputs.append(grpcclient.InferInput("peptide_sequences", [current_batchsize, 1], "BYTES"))
-            inputs.append(grpcclient.InferInput("collision_energies", [current_batchsize, 1], "FP32"))
-            inputs.append(grpcclient.InferInput("precursor_charges", [current_batchsize, 1], "INT32"))
-            pred_outputs_intensity = []
-            for output in intensity_outputs:
-                pred_outputs_intensity.append(grpcclient.InferRequestedOutput(output))
-            pred_outputs_irt = []
-            for output in irt_outputs:
-                pred_outputs_irt.append(grpcclient.InferRequestedOutput(output))
-
-            inputs[0].set_data_from_numpy(
-                library.spectra_data["MODIFIED_SEQUENCE"]
-                .values[i : i + current_batchsize]
-                .reshape(-1, 1)
-                .astype(np.object_)
-            )
-            inputs[1].set_data_from_numpy(
-                library.spectra_data["COLLISION_ENERGY"]
-                .values[i : i + current_batchsize]
-                .reshape(-1, 1)
-                .astype(np.float32)
-            )
-            inputs[2].set_data_from_numpy(
-                library.spectra_data["PRECURSOR_CHARGE"]
-                .values[i : i + current_batchsize]
-                .reshape(-1, 1)
-                .astype(np.int32)
-            )
-            prediction_intensity = triton_client.infer(
-                self.config.models["intensity"], inputs=inputs, outputs=pred_outputs_intensity
-            )
-            prediction_irt = triton_client.infer(
-                self.config.models["irt"], inputs=[inputs[0]], outputs=pred_outputs_irt
-            )
-
-            for output in intensity_outputs:
-                predictions_intensity[output].append(prediction_intensity.as_numpy(output))
-            for output in irt_outputs:
-                predictions_irt[output].append(prediction_irt.as_numpy(output))
-
-        for key, value in predictions_intensity.items():
-            predictions_intensity[key] = np.vstack(value)
-
-        for key, value in predictions_irt.items():
-            predictions_irt[key] = np.vstack(value)
+        irt_predictions = infer_predictions(
+            triton_client,
+            model=self.config.models["irt"],
+            input_data=irt_input_data,
+            outputs=irt_outputs,
+            batch_size=batch_size,
+        )
 
         if self.config.job_type == "SpectralLibraryGeneration":
-            output_dict = {self.config.models["intensity"]: {}, self.config.models["irt"]: predictions_irt["irt"]}
-            output_dict[self.config.models["intensity"]]["intensity"] = predictions_intensity["intensities"]
-            output_dict[self.config.models["intensity"]]["fragmentmz"] = predictions_intensity["mz"]
+            output_dict = {self.config.models["intensity"]: {}, self.config.models["irt"]: irt_predictions["irt"]}
+            output_dict[self.config.models["intensity"]]["intensity"] = intensity_predictions["intensities"]
+            output_dict[self.config.models["intensity"]]["fragmentmz"] = intensity_predictions["mz"]
             output_dict[self.config.models["intensity"]]["annotation"] = parse_fragment_labels(
-                predictions_intensity["annotation"]
+                intensity_predictions["annotation"],
+                library.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
+                library.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
             )
             return output_dict
 
         intensities_pred = pd.DataFrame()
-        intensities_pred["intensity"] = predictions_intensity["intensities"].tolist()
+        intensities_pred["intensity"] = intensity_predictions["intensities"].tolist()
         library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
 
         if alignment:
             return
 
-        library.add_column(predictions_irt["irt"], name="PREDICTED_IRT")
+        library.add_column(irt_predictions["irt"], name="PREDICTED_IRT")
 
     def read_fasta(self):
         """Read fasta file."""
