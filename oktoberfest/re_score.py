@@ -157,7 +157,6 @@ class ReScore(CalculateFeatures):
             if calc_feature_step.is_done():
                 continue
 
-            raw_file
             percolator_rescore_path = self._get_split_perc_input_path(raw_file.stem, "rescore")
             percolator_orig_path = self._get_split_perc_input_path(raw_file.stem, "original")
 
@@ -239,7 +238,6 @@ class ReScore(CalculateFeatures):
                           --num-threads {self.config.num_threads} \
                           --subset-max-train 500000 \
                           --post-processing-tdc \
-                          --search-input concatenated \
                           --testFDR {test_fdr} \
                           --trainFDR {train_fdr} \
                           --results-psms {target_psms} \
