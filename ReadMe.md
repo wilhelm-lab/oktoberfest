@@ -55,8 +55,9 @@ pip install .
 ### Docker image
 
 Prerequisites:
-- `make` (https://www.gnu.org/software/make/)
-- `docker` (https://www.docker.com/)
+
+-   `make` (https://www.gnu.org/software/make/)
+-   `docker` (https://www.docker.com/)
 
 After cloning the repository of oktoberfest, run:
 
