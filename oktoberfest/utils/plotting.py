@@ -220,7 +220,7 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
             target_decoy = "decoy" if "decoy" in f else "target"
 
             file_path = percolator_path / f
-            file_renamed = percolator_path / prefix / f"_{target_decoy}.{f.split('.')[-2]}"
+            file_renamed = percolator_path / f"{prefix}.{target_decoy}.{f.split('.')[-2]}"
             df = pd.read_csv(file_path, delimiter="\t")
             df.rename(
                 columns=(
