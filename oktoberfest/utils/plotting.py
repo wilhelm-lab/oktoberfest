@@ -1,14 +1,13 @@
-import os
+from pathlib import Path
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from .config import Config
 
-
-def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, search_type: str, directory: str):
+def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, search_type: str, directory: Path):
     """Generate target-decoy distribution of the score."""
     plt.figure(figsize=(8, 6))
     bins = np.linspace(-3, 2, 15)
@@ -17,7 +16,9 @@ def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, sear
     plt.xlabel("Score", size=14)
     plt.title(f"{search_type} Target vs Decoys ({type})")
     plt.legend(loc="upper right")
-    plt.savefig(directory + f"/{search_type}_Target_vs_Decoys_{type}_bins.png", dpi=300)
+    plt.savefig(directory / f"{search_type}_Target_vs_Decoys_{type}_bins.png", dpi=300)
+    plt.plot()
+    plt.close()
 
 
 def joint_plot(
@@ -26,7 +27,7 @@ def joint_plot(
     andromeda_target: pd.DataFrame,
     andromeda_decoy: pd.DataFrame,
     type: str,
-    directory: str,
+    directory: Path,
 ):
     """Generate joint plot (correlation between Prosit and Andromeda score)."""
     if type == "Peptides":
@@ -62,15 +63,12 @@ def joint_plot(
     )
     jplot.ax_joint.set_ylabel("rescored_score")
     jplot.ax_joint.set_xlabel("original_score")
-    plt.savefig(directory + f"/Rescored_Original_joint_plot_{type}.png", dpi=300)
+    plt.savefig(directory / f"Rescored_Original_joint_plot_{type}.png", dpi=300)
+    plt.plot()
+    plt.close()
 
 
-def plot_gain_loss(
-    prosit_target: pd.DataFrame,
-    andromeda_target: pd.DataFrame,
-    type: str,
-    directory: str,
-):
+def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: Path):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
     if type == "Peptides":
         join_col = "proteinIds"
@@ -141,43 +139,66 @@ def plot_gain_loss(
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
     plt.title(f"{type} 1% FDR\n", fontsize=14)
-    plt.savefig(directory + f"/{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
+    plt.savefig(directory / f"{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
+    plt.plot()
+    plt.close()
 
 
-def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, directory: str, raw_file_name: str):
+def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce: float):
     """Generate plot (ce vs mean sa)."""
-    directory = directory + ""
-    directory = directory.replace("/mzML", "")
-    directory = directory.replace("/percolator", "")
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
-    sns.lmplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ci=None, order=2, truncate=False)
-    plt.savefig(directory + "/" + raw_file_name + "mean_spectral_angle_ce.png", dpi=300)
+    sns.scatterplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE")
+    plt.axvline(x=best_ce, color="red")
+    plt.savefig(filename, dpi=300)
+    plt.plot()
+    plt.close()
 
 
-def plot_all(percolator_path: str, config: Config):
+def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: Path):
+    """Generate pred rt vs irt plot."""
+    plt.figure(figsize=(12, 6))
+    plt.title("RT Alignment")
+    targets = prosit_df.merge(prosit_target, how="inner", left_on="SpecId", right_on="PSMId")
+    targets = targets.loc[targets["q-value"] < 0.01, ["SpecId", "RT", "iRT", "pred_RT"]]
+    targets.columns = ["SpecId", "experimental RT", "aligned RT", "predicted iRT"]
+    targets["rawfile"] = targets["SpecId"].str.split("-", n=1).str[0] + " aligned RT"
+    targets.sort_values("predicted iRT")
+    sns.scatterplot(data=targets, x="predicted iRT", y="experimental RT", label="predicted iRT")
+    sns.lineplot(data=targets, x="predicted iRT", y="aligned RT", hue="rawfile")
+    # plt.plot(targets["RT"], targets["pred_RT"], ".", c="b", label="original")
+    # plt.plot(targets["iRT"], targets["pred_RT"], ".", c="r", label="smoothed")
+    plt.ylabel("(aligned) experimental RT", size=14)
+    plt.xlabel("predicted iRT", size=14)
+    plt.legend(loc="best", fancybox=True, shadow=True)
+    plt.grid()
+    plt.savefig(directory / "pred_rt_vs_irt.png", dpi=300)
+    plt.plot()
+    plt.close()
+
+
+def plot_all(percolator_path: Path, fdr_estimation_method: str):
     """Generate all plots and save them as png in the percolator folder."""
-    fdr_estimation_method = config.fdr_estimation_method
     if fdr_estimation_method == "mokapot":
         files = [
-            "/rescore.mokapot.peptides.txt",
-            "/rescore.mokapot.decoy.peptides.txt",
-            "/rescore.mokapot.psms.txt",
-            "/rescore.mokapot.decoy.psms.txt",
-            "/original.mokapot.peptides.txt",
-            "/original.mokapot.decoy.peptides.txt",
-            "/original.mokapot.psms.txt",
-            "/original.mokapot.decoy.psms.txt",
+            "rescore.mokapot.peptides.txt",
+            "rescore.mokapot.decoy.peptides.txt",
+            "rescore.mokapot.psms.txt",
+            "rescore.mokapot.decoy.psms.txt",
+            "original.mokapot.peptides.txt",
+            "original.mokapot.decoy.peptides.txt",
+            "original.mokapot.psms.txt",
+            "original.mokapot.decoy.psms.txt",
         ]
 
         for f in files:
-            prefix = "rescore" if f.startswith("/rescore") else "original"
-            target_decoy = "decoy." if "decoy" in f else "target."
+            prefix = "rescore" if f.startswith("rescore") else "original"
+            target_decoy = "decoy" if "decoy" in f else "target"
 
-            file = percolator_path + f
-            file_renamed = percolator_path + "/" + prefix + "_" + target_decoy + f.split(".")[-2]
-            df = pd.read_csv(file, delimiter="\t")
+            file_path = percolator_path / f
+            file_renamed = percolator_path / prefix / f"_{target_decoy}.{f.split('.')[-2]}"
+            df = pd.read_csv(file_path, delimiter="\t")
             df.rename(
                 columns=(
                     {
@@ -189,18 +210,17 @@ def plot_all(percolator_path: str, config: Config):
                 ),
                 inplace=True,
             )
-            df.to_csv(file, sep="\t", index=False)
-            os.rename(file, file_renamed)
+            df.to_csv(file_renamed, sep="\t", index=False)
+            file_path.unlink()
+    prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
+    prosit_psms_target = pd.read_csv(percolator_path / "rescore.target.psms", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(percolator_path / "rescore.decoy.psms", delimiter="\t")
 
-    prosit_pep_target = pd.read_csv(percolator_path + "/rescore_target.peptides", delimiter="\t")
-    prosit_pep_decoy = pd.read_csv(percolator_path + "/rescore_decoy.peptides", delimiter="\t")
-    prosit_psms_target = pd.read_csv(percolator_path + "/rescore_target.psms", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(percolator_path + "/rescore_decoy.psms", delimiter="\t")
-
-    andromeda_pep_target = pd.read_csv(percolator_path + "/original_target.peptides", delimiter="\t")
-    andromeda_pep_decoy = pd.read_csv(percolator_path + "/original_decoy.peptides", delimiter="\t")
-    andromeda_psms_target = pd.read_csv(percolator_path + "/original_target.psms", delimiter="\t")
-    andromeda_psms_decoy = pd.read_csv(percolator_path + "/original_decoy.psms", delimiter="\t")
+    andromeda_pep_target = pd.read_csv(percolator_path / "original.target.peptides", delimiter="\t")
+    andromeda_pep_decoy = pd.read_csv(percolator_path / "original.decoy.peptides", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(percolator_path / "original.target.psms", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(percolator_path / "original.decoy.psms", delimiter="\t")
 
     plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Rescore", percolator_path)
     plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", percolator_path)
@@ -215,3 +235,6 @@ def plot_all(percolator_path: str, config: Config):
     )
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
+
+    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
+    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
