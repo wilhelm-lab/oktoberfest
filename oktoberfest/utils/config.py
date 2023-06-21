@@ -66,7 +66,7 @@ class Config:
     def fdr_estimation_method(self) -> str:
         """Get peptide detection method from the config file (mokapot or percolator)."""
         if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"]
+            return self.data["fdr_estimation_method"].lower()
         else:
             return "mokapot"
 

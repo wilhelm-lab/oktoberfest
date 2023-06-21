@@ -152,6 +152,7 @@ def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], con
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
     """
+    logger.info("Starting rescoring run...")
     re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
@@ -160,9 +161,10 @@ def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], con
     re_score.merge_input("rescore")
     re_score.merge_input("original")
 
-    re_score.rescore_with_perc("rescore")
-    re_score.rescore_with_perc("original")
+    re_score.rescore("rescore")
+    re_score.rescore("original")
     plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    logger.info("Finished rescoring.")
 
 
 def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
