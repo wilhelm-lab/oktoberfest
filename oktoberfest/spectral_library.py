@@ -37,7 +37,7 @@ def infer_predictions(
     :return: a dictionary containing the predictions (values) for the given outputs (keys)
     """
     num_spec = len(input_data[list(input_data)[0]][0])
-    predictions = {output: [] for output in outputs}
+    predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
     for i in range(0, num_spec, batch_size):
         if num_spec < i + batch_size:
@@ -58,16 +58,15 @@ def infer_predictions(
         for output in outputs:
             predictions[output].append(prediction.as_numpy(output))
 
-    for key, value in predictions.items():
-        predictions[key] = np.vstack(value)
-
-    return predictions
+    return {key: np.vstack(value) for key, value in predictions.items()}
 
 
-def parse_fragment_labels(spectra_labels: List[np.ndarray], precursor_charges: np.ndarray, seq_lengths: np.ndarray):
+def parse_fragment_labels(spectra_labels: np.ndarray, precursor_charges: np.ndarray, seq_lengths: np.ndarray):
     """Uses regex to parse labels."""
     pattern = rb"([y|b])([0-9]{1,2})\+([1-3])"
-    annotation = {"type": [], "number": [], "charge": []}
+    fragment_types = []
+    fragment_numbers = []
+    fragment_charges = []
     for spectrum_labels in spectra_labels:
         types = []
         numbers = []
@@ -81,16 +80,19 @@ def parse_fragment_labels(spectra_labels: List[np.ndarray], precursor_charges: n
                 charges.append(int(groups[2]))
             else:
                 raise ValueError(f"String {label} does not match the expected fragment label pattern")
-        annotation["type"].append(types)
-        annotation["number"].append(numbers)
-        annotation["charge"].append(charges)
-    for key, value in annotation.items():
-        annotation[key] = np.array(value)
-    mask = np.where((annotation["charge"] > precursor_charges) | (annotation["number"] >= seq_lengths))
-    annotation["type"][mask] = "N"
-    annotation["number"][mask] = 0
-    annotation["charge"][mask] = 0
-    return annotation
+        fragment_types.append(types)
+        fragment_numbers.append(numbers)
+        fragment_charges.append(charges)
+
+    fragment_type_array = np.array(fragment_types)
+    fragment_number_array = np.array(fragment_numbers)
+    fragment_charge_array = np.array(fragment_charges)
+    mask = np.where((fragment_charge_array > precursor_charges) | (fragment_number_array >= seq_lengths))
+    fragment_type_array[mask] = "N"
+    fragment_number_array[mask] = 0
+    fragment_charge_array[mask] = 0
+
+    return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
 class SpectralLibrary:
@@ -209,14 +211,16 @@ class SpectralLibrary:
         )
 
         if self.config.job_type == "SpectralLibraryGeneration":
-            output_dict = {intensity_model: {}, irt_model: irt_predictions["irt"]}
-            output_dict[self.config.models["intensity"]]["intensity"] = intensity_predictions["intensities"]
-            output_dict[self.config.models["intensity"]]["fragmentmz"] = intensity_predictions["mz"]
-            output_dict[self.config.models["intensity"]]["annotation"] = parse_fragment_labels(
-                intensity_predictions["annotation"],
-                library.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
-                library.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
-            )
+            intensity_prediction_dict = {
+                "intensity": intensity_predictions["intensities"],
+                "fragmentmz": intensity_predictions["mz"],
+                "annotation": parse_fragment_labels(
+                    intensity_predictions["annotation"],
+                    library.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
+                    library.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
+                ),
+            }
+            output_dict = {intensity_model: intensity_prediction_dict, irt_model: irt_predictions["irt"]}
             return output_dict
 
         intensities_pred = pd.DataFrame()
