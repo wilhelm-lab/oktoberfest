@@ -181,28 +181,35 @@ class SpectralLibrary:
                 "INT32",
             ),
         }
+        intensity_model = self.config.models["intensity"]
+        if "tmt" in intensity_model.lower():
+            intensity_input_data["fragmentation_types"] = (
+                library.spectra_data["FRAGMENTATION_GRPC"].to_numpy().reshape(-1, 1).astype(np.float32),
+                "FP32",
+            )
+
         intensity_predictions = infer_predictions(
             triton_client,
-            model=self.config.models["intensity"],
+            model=intensity_model,
             input_data=intensity_input_data,
             outputs=intensity_outputs,
             batch_size=batch_size,
         )
         intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
 
+        irt_model = self.config.models["irt"]
         irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
         irt_outputs = ["irt"]
-
         irt_predictions = infer_predictions(
             triton_client,
-            model=self.config.models["irt"],
+            model=irt_model,
             input_data=irt_input_data,
             outputs=irt_outputs,
             batch_size=batch_size,
         )
 
         if self.config.job_type == "SpectralLibraryGeneration":
-            output_dict = {self.config.models["intensity"]: {}, self.config.models["irt"]: irt_predictions["irt"]}
+            output_dict = {intensity_model: {}, irt_model: irt_predictions["irt"]}
             output_dict[self.config.models["intensity"]]["intensity"] = intensity_predictions["intensities"]
             output_dict[self.config.models["intensity"]]["fragmentmz"] = intensity_predictions["mz"]
             output_dict[self.config.models["intensity"]]["annotation"] = parse_fragment_labels(
