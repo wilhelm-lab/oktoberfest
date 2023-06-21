@@ -21,7 +21,7 @@
         "proteotypicity": "Prosit_2020_proteotypicity"
     },
     "spectralLibraryOutputFormat": "msp",
-    "prosit_server": "10.152.135.57:8500",
+    "prosit_server": "koina.proteomicsdb.org:443",
     "numThreads": 1,
     "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
 }
