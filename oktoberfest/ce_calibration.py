@@ -12,7 +12,7 @@ from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
-from .utils.plotting import plot_mean_sa_ce
+from .utils.plotting import plot_mean_sa_ce, plot_violin_sa_ce
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +114,6 @@ class CeCalibration(SpectralLibrary):
         logger.info("Merging rawfile and search result")
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
-
         logger.info("Annotating raw spectra")
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
@@ -127,7 +126,9 @@ class CeCalibration(SpectralLibrary):
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML").name
+        mzml_path = self.out_path / "mzML"
+        mzml_path.mkdir(exist_ok=True)
+        return mzml_path / self.raw_path.with_suffix(".mzML").name
 
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
@@ -169,14 +170,19 @@ class CeCalibration(SpectralLibrary):
         # return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity, raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-
+        self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
 
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.png",
+            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
+            best_ce=self.ce_alignment.idxmax(),
+        )
+        plot_violin_sa_ce(
+            df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+            filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
             best_ce=self.ce_alignment.idxmax(),
         )
 

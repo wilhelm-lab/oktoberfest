@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+# Set the default fontsize and linewidth
+plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
+
 
 def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, search_type: str, directory: Path):
     """Generate target-decoy distribution of the score."""
@@ -50,20 +53,21 @@ def joint_plot(
     df_decoys["color"] = "#FE7312"
 
     df_all = pd.concat([df_targets, df_decoys], axis=0)
-    df_all = df_all[~df_all.index.duplicated()]
+    df_all.dropna(inplace=True)
     jplot = sns.jointplot(
         data=df_all,
         x="and_score",
         y="prosit_score",
         marginal_ticks=True,
         hue=df_all.type,
-        palette=["#48AF00", "#FE7312"],
+        palette=["#15853B", "#E2700E"],
         ratio=2,
         height=10,
+        joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
     jplot.ax_joint.set_ylabel("rescored_score")
     jplot.ax_joint.set_xlabel("original_score")
-    plt.savefig(directory / f"Rescored_Original_joint_plot_{type}.png", dpi=300)
+    plt.savefig(directory / f"Rescored_Original_joint_plot_{type}.svg", dpi=300)
     plt.plot()
     plt.close()
 
@@ -99,7 +103,6 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
             ha="center",
             va="bottom",
             color="white",
-            fontsize=12,
             fontweight="bold",
         )
         plt.text(
@@ -109,7 +112,6 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
             ha="center",
             va="bottom",
             color="black",
-            fontsize=12,
         )
         plt.text(
             r3.get_x() + r3.get_width() / 2.0,
@@ -118,7 +120,6 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
             ha="center",
             va="bottom",
             color="black",
-            fontsize=12,
         )
 
     plt.ylim(-lost - 100, h1 + h2 + 30)
@@ -128,18 +129,18 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel("Percentage", fontsize=14)
+    ax.set_ylabel("Percentage")
     ax.set_axisbelow(True)
-    ax.yaxis.grid(color="gray")
-    ax.tick_params(axis="y", which="major", labelsize=13)
+    ax.yaxis.grid(color="black")
+    ax.tick_params(axis="y", which="major")
     ax.set_xticks([])
     # for minor ticks
     ax.set_xticks([], minor=True)
 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
-    plt.title(f"{type} 1% FDR\n", fontsize=14)
-    plt.savefig(directory / f"{type}_1%_FDR.png", dpi=300, bbox_inches="tight")
+    plt.title(f"{type} 1% FDR\n")
+    plt.savefig(directory / f"{type}_1%_FDR.svg", dpi=300, bbox_inches="tight")
     plt.plot()
     plt.close()
 
@@ -149,8 +150,21 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce:
     df = sa_ce_df.to_frame()
     df = df.reset_index()
     df = df[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]]
-    sns.scatterplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE")
-    plt.axvline(x=best_ce, color="red")
+    fig, ax = plt.subplots(figsize=(8, 8))
+    sns.scatterplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax)
+    ax.axvline(x=best_ce, color="red")
+    plt.grid()
+    plt.savefig(filename, dpi=300)
+    plt.plot()
+    plt.close()
+
+
+def plot_violin_sa_ce(df: pd.DataFrame, filename: Union[str, Path], best_ce: float):
+    """Generate plot (ce vs mean sa)."""
+    fig, ax = plt.subplots(figsize=(8, 8))
+    sns.violinplot(data=df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
+    ax.axvline(x=best_ce, color="red")
+    plt.grid()
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -158,24 +172,33 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path], best_ce:
 
 def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, directory: Path):
     """Generate pred rt vs irt plot."""
-    plt.figure(figsize=(12, 6))
-    plt.title("RT Alignment")
     targets = prosit_df.merge(prosit_target, how="inner", left_on="SpecId", right_on="PSMId")
     targets = targets.loc[targets["q-value"] < 0.01, ["SpecId", "RT", "iRT", "pred_RT"]]
     targets.columns = ["SpecId", "experimental RT", "aligned RT", "predicted iRT"]
     targets["rawfile"] = targets["SpecId"].str.split("-", n=1).str[0] + " aligned RT"
     targets.sort_values("predicted iRT")
-    sns.scatterplot(data=targets, x="predicted iRT", y="experimental RT", label="predicted iRT")
-    sns.lineplot(data=targets, x="predicted iRT", y="aligned RT", hue="rawfile")
-    # plt.plot(targets["RT"], targets["pred_RT"], ".", c="b", label="original")
-    # plt.plot(targets["iRT"], targets["pred_RT"], ".", c="r", label="smoothed")
-    plt.ylabel("(aligned) experimental RT", size=14)
-    plt.xlabel("predicted iRT", size=14)
-    plt.legend(loc="best", fancybox=True, shadow=True)
-    plt.grid()
-    plt.savefig(directory / "pred_rt_vs_irt.png", dpi=300)
-    plt.plot()
-    plt.close()
+    for rawfile in targets["rawfile"].unique():
+        fig, ax = plt.subplots(figsize=(8, 8))
+        sns.scatterplot(
+            data=targets[targets["rawfile"] == rawfile],
+            x="predicted iRT",
+            y="experimental RT",
+            label="predicted iRT",
+            ax=ax,
+        )
+        sns.lineplot(
+            data=targets[targets["rawfile"] == rawfile], x="predicted iRT", y="aligned RT", label="alignment", ax=ax
+        )
+        # plot.plot(targets["RT"], targets["pred_RT"], ".", c="b", label="original")
+        # plt.plot(targets["iRT"], targets["pred_RT"], ".", c="r", label="smoothed")
+        ax.set_ylabel("(aligned) experimental RT")
+        ax.set_xlabel("predicted iRT")
+        plt.title("RT alignment")
+        plt.legend(labels=("predicted iRT", "alignment"), loc="best", fancybox=True, shadow=True)
+        plt.grid()
+        plt.savefig(directory / f"{rawfile}_pred_rt_vs_irt.svg", dpi=300)
+        plt.plot()
+        plt.close()
 
 
 def plot_all(percolator_path: Path, fdr_estimation_method: str):

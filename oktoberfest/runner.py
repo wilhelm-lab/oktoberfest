@@ -21,7 +21,7 @@ Written by
 - Wassim Gabriel (wassim.gabriel@tum.de),
 - Ludwig Lautenbacher (ludwig.lautenbacher@tum.de),
 - Matthew The (matthew.the@tum.de),
-- Mario Picciani (mario.picciani@in.tum.de),
+- Mario Picciani (mario.picciani@tum.de),
 - Firas Hamood (firas.hamood@tum.de),
 - Cecilia Jensen (cecilia.jensen@tum.de)
 at the Technical University of Munich."""
@@ -138,9 +138,7 @@ def run_ce_calibration(
         search_dir = Path(search_dir)
 
     for raw_file in search_dir.glob(glob_pattern):
-        ce_calib = CeCalibration(
-            search_path=msms_path, raw_path=search_dir / raw_file, out_path=search_dir, config_path=config_path
-        )
+        ce_calib = CeCalibration(search_path=msms_path, raw_path=raw_file, out_path=search_dir, config_path=config_path)
         ce_calib.perform_alignment(ce_calib._load_search())
         with open(ce_calib.results_path / f"{raw_file.stem}_ce.txt", "w") as f:
             f.write(str(ce_calib.best_ce))
