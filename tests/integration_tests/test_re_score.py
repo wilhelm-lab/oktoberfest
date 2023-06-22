@@ -15,7 +15,7 @@ def integration_test():
     re_score.split_msms()
     re_score.calculate_features()
     re_score.merge_input()
-    re_score.rescore_with_perc()
+    re_score.rescore()
 
 
 if __name__ == "__main__":

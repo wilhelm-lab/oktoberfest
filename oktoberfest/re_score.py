@@ -3,6 +3,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Union
 
+import mokapot
+import numpy as np
 import pandas as pd
 
 from .calculate_features import CalculateFeatures
@@ -42,7 +44,7 @@ class ReScore(CalculateFeatures):
     2- split_msms
     3- calculate_features
     4- merge_input
-    5- rescore_with_perc
+    5- rescore_with_percolator or mokaput
     """
 
     raw_files: List[Path]
@@ -50,8 +52,8 @@ class ReScore(CalculateFeatures):
     split_msms_step: ProcessStep
     merge_input_step_prosit: ProcessStep
     merge_input_step_andromeda: ProcessStep
-    percolator_step_prosit: ProcessStep
-    percolator_step_andromeda: ProcessStep
+    rescore_step_prosit: ProcessStep
+    rescore_step_andromeda: ProcessStep
 
     def __init__(
         self,
@@ -68,7 +70,7 @@ class ReScore(CalculateFeatures):
         2- split_msms
         3- calculate_features
         4- merge_input
-        5- rescore_with_perc
+        5- rescore_with_percolator or mokapot
 
         :param search_path: path to search directory
         :param raw_path: path to raw file as a string
@@ -82,8 +84,8 @@ class ReScore(CalculateFeatures):
         self.split_msms_step = ProcessStep(out_path, "split_msms")
         self.merge_input_step_prosit = ProcessStep(out_path, "merge_input_prosit")
         self.merge_input_step_andromeda = ProcessStep(out_path, "merge_input_andromeda")
-        self.percolator_step_prosit = ProcessStep(out_path, "percolator_prosit")
-        self.percolator_step_andromeda = ProcessStep(out_path, "percolator_andromeda")
+        self.rescore_step_prosit = ProcessStep(out_path, "percolator_prosit")
+        self.rescore_step_andromeda = ProcessStep(out_path, "percolator_andromeda")
 
     def get_raw_files(self):
         """
@@ -157,7 +159,6 @@ class ReScore(CalculateFeatures):
             if calc_feature_step.is_done():
                 continue
 
-            raw_file
             percolator_rescore_path = self._get_split_perc_input_path(raw_file.stem, "rescore")
             percolator_orig_path = self._get_split_perc_input_path(raw_file.stem, "original")
 
@@ -220,11 +221,11 @@ class ReScore(CalculateFeatures):
         else:
             self.merge_input_step_andromeda.mark_done()
 
-    def rescore_with_perc(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
+    def rescore(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
         """Use percolator to re-score library."""
-        if search_type == "rescore" and self.percolator_step_prosit.is_done():
+        if search_type == "rescore" and self.rescore_step_prosit.is_done():
             return
-        elif self.percolator_step_andromeda.is_done():
+        elif self.rescore_step_andromeda.is_done():
             return
 
         perc_path = self.get_percolator_folder_path()
@@ -235,25 +236,41 @@ class ReScore(CalculateFeatures):
         decoy_peptides = perc_path / f"{search_type}.decoy.peptides"
         log_file = perc_path / f"{search_type}.log"
 
-        cmd = f"percolator --weights {weights_file} \
-                          --num-threads {self.config.num_threads} \
-                          --subset-max-train 500000 \
-                          --post-processing-tdc \
-                          --search-input concatenated \
-                          --testFDR {test_fdr} \
-                          --trainFDR {train_fdr} \
-                          --results-psms {target_psms} \
-                          --decoy-results-psms {decoy_psms} \
-                          --results-peptides {target_peptides} \
-                          --decoy-results-peptides {decoy_peptides} \
-                          {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
-        logger.info(f"Starting percolator with command {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
+        fdr_estimation_method = self.config.fdr_estimation_method
+        if fdr_estimation_method == "percolator":
+            cmd = f"percolator --weights {weights_file} \
+                            --num-threads {self.config.num_threads} \
+                            --subset-max-train 500000 \
+                            --post-processing-tdc \
+                            --testFDR {test_fdr} \
+                            --trainFDR {train_fdr} \
+                            --results-psms {target_psms} \
+                            --decoy-results-psms {decoy_psms} \
+                            --results-peptides {target_peptides} \
+                            --decoy-results-peptides {decoy_peptides} \
+                            {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
+            logger.info(f"Starting percolator with command {cmd}")
+            subprocess.run(cmd, shell=True, check=True)
+        elif fdr_estimation_method == "mokapot":
+            logger.info("Starting mokapot rescoring")
+            np.random.seed(123)
+            file_path = perc_path / f"{search_type}.tab"
+            df = pd.read_csv(file_path, sep="\t")
+            df = df.rename(columns={"Protein": "Proteins"})
+            df.to_csv(file_path, sep="\t")
+            psms = mokapot.read_pin(file_path)
+            results, models = mokapot.brew(psms, test_fdr=test_fdr)
+            results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
+        else:
+            raise ValueError(
+                f"Unknown fdr estimation method: {fdr_estimation_method}. Choose between mokapot and percolator."
+            )
 
         if search_type == "rescore":
-            self.percolator_step_prosit.mark_done()
+            self.rescore_step_prosit.mark_done()
         else:
-            self.percolator_step_andromeda.mark_done()
+            self.rescore_step_andromeda.mark_done()
+        logger.info(f"Finished rescoring using {fdr_estimation_method}.")
 
     def get_msms_folder_path(self) -> Path:
         """Get folder path to msms."""

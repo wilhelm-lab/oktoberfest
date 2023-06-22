@@ -62,6 +62,14 @@ class Config:
             return self.data["models"]
 
     @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
+
+    @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return "tmt"."""
         if "tag" in self.data:

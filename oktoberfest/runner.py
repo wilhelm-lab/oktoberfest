@@ -21,7 +21,7 @@ Written by
 - Wassim Gabriel (wassim.gabriel@tum.de),
 - Ludwig Lautenbacher (ludwig.lautenbacher@tum.de),
 - Matthew The (matthew.the@tum.de),
-- Mario Picciani (mario.picciani@in.tum.de),
+- Mario Picciani (mario.picciani@tum.de),
 - Firas Hamood (firas.hamood@tum.de),
 - Cecilia Jensen (cecilia.jensen@tum.de)
 at the Technical University of Munich."""
@@ -138,9 +138,7 @@ def run_ce_calibration(
         search_dir = Path(search_dir)
 
     for raw_file in search_dir.glob(glob_pattern):
-        ce_calib = CeCalibration(
-            search_path=msms_path, raw_path=search_dir / raw_file, out_path=search_dir, config_path=config_path
-        )
+        ce_calib = CeCalibration(search_path=msms_path, raw_path=raw_file, out_path=search_dir, config_path=config_path)
         ce_calib.perform_alignment(ce_calib._load_search())
         with open(ce_calib.results_path / f"{raw_file.stem}_ce.txt", "w") as f:
             f.write(str(ce_calib.best_ce))
@@ -154,6 +152,7 @@ def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], con
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
     """
+    logger.info("Starting rescoring run...")
     re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
@@ -162,9 +161,10 @@ def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], con
     re_score.merge_input("rescore")
     re_score.merge_input("original")
 
-    re_score.rescore_with_perc("rescore")
-    re_score.rescore_with_perc("original")
-    plot_all(re_score.get_percolator_folder_path())
+    re_score.rescore("rescore")
+    re_score.rescore("original")
+    plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    logger.info("Finished rescoring.")
 
 
 def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):

@@ -20,6 +20,6 @@
         "irt": "Prosit_2019_irt"
     },
     "spectralLibraryOutputFormat": "msp",
-    "prediction_server": "10.152.135.57:8500",
+    "prediction_server": "koina.proteomicsdb.org:443",
     "numThreads": 1
 }
