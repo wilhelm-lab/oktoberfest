@@ -129,9 +129,8 @@ The following flags are relevant only if a FASTA file is provided:
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
-### Run Oktoberfest
+### Run a job
 
-We provide a jupyter notebook file in the tutorials subfolder, that guides you through the three different use cases using a public dataset.
 The general command for executing any job is:
 
 ```bash
@@ -165,6 +164,12 @@ This is the list of currently supported and tested models for peptide property p
     -   `Prosit_2020_irt_TMT`
 
 Once support for additional models is added, they will be added here.
+
+## Tutorials and Documentation
+
+We provide a jupyter notebook that you can find at "tutorials/Oktoberfest Tutorial.ipynb", guiding you through the three different use cases using a public dataset.
+
+If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
 
 ## License
 
