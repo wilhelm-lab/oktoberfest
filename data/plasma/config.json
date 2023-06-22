@@ -1,0 +1,25 @@
+{
+    "type": "Rescoring",
+    "uploads": {
+        "msms.txt": true,
+        "RAW": true,
+        "FASTA": false,
+        "peptides.csv": false,
+        "evidence.txt": false,
+        "prosit_target.psms": false,
+        "prosit_decoy.psms": false
+    },
+    "options": {
+        "collisionEnergy": 0,
+        "protease": "",
+        "missedCleavages": 0,
+        "oxidizedMethionine": 0,
+        "minPeptideLength": 0,
+        "maxPeptideLength": 0,
+        "specialAAs": ""
+    },
+    "outputFormat": "msp",
+    "selectedIntensityModel": "Prosit_2019_intensity",
+    "selectedIRTModel": "Prosit_2019_irt",
+    "prediction_server": "koina.proteomicsdb.org:443"
+}

@@ -21,7 +21,7 @@ oktoberfest
 .. |Tests| image:: https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg
    :target: https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests
    :alt: Run Tests Status
-.. |Codecov| image:: https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/master/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/wilhelm-lab/oktoberfest
    :alt: Codecov
 .. |pre-commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white

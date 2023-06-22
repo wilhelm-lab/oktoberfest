@@ -44,9 +44,9 @@ class Config:
             raise ValueError("No fasta file specified in config file")
 
     @property
-    def prosit_server(self) -> str:
+    def prediction_server(self) -> str:
         """Get prosit server from the config file."""
-        return self.data["prosit_server"]
+        return self.data["prediction_server"]
 
     @property
     def models(self) -> dict:
@@ -57,7 +57,6 @@ class Config:
             return {
                 "selectedIntensityModel": self.data["selectedIntensityModel"],
                 "selectedIRTModel": self.data["selectedIRTModel"],
-                "selectedProteotypicityModel": self.data["selectedProteotypicityModel"],
             }
         else:
             return self.data["models"]
