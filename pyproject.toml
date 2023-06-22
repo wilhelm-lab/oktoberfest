@@ -29,6 +29,7 @@ matplotlib = "^3.6.3"
 seaborn = "^0.12.2"
 spectrum-fundamentals = "^0.4.0"
 spectrum-io = "^0.2.0"
+mokapot = "^0.9.1"
 tritonclient = {extras = ["grpc"], version = "^2.34.0"}
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.3"

@@ -75,7 +75,7 @@ def joint_plot(
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, type: str, directory: Path):
     """Generate gain-loss plot (peptides/PSMs 1% FDR)."""
     if type == "Peptides":
-        join_col = "peptide"
+        join_col = "proteinIds"
     else:
         join_col = "PSMId"
 
@@ -201,8 +201,40 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
         plt.close()
 
 
-def plot_all(percolator_path: Path):
+def plot_all(percolator_path: Path, fdr_estimation_method: str):
     """Generate all plots and save them as png in the percolator folder."""
+    if fdr_estimation_method == "mokapot":
+        files = [
+            "rescore.mokapot.peptides.txt",
+            "rescore.mokapot.decoy.peptides.txt",
+            "rescore.mokapot.psms.txt",
+            "rescore.mokapot.decoy.psms.txt",
+            "original.mokapot.peptides.txt",
+            "original.mokapot.decoy.peptides.txt",
+            "original.mokapot.psms.txt",
+            "original.mokapot.decoy.psms.txt",
+        ]
+
+        for f in files:
+            prefix = "rescore" if f.startswith("rescore") else "original"
+            target_decoy = "decoy" if "decoy" in f else "target"
+
+            file_path = percolator_path / f
+            file_renamed = percolator_path / f"{prefix}.{target_decoy}.{f.split('.')[-2]}"
+            df = pd.read_csv(file_path, delimiter="\t")
+            df.rename(
+                columns=(
+                    {
+                        "mokapot score": "score",
+                        "mokapot q-value": "q-value",
+                        "Proteins": "proteinIds",
+                        "SpecId": "PSMId",
+                    }
+                ),
+                inplace=True,
+            )
+            df.to_csv(file_renamed, sep="\t", index=False)
+            file_path.unlink()
     prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
     prosit_psms_target = pd.read_csv(percolator_path / "rescore.target.psms", delimiter="\t")

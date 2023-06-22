@@ -54,7 +54,7 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
 
--   `peptide_identification_method` = peptide identification method: percolator or mokapot; default = percolator
+-   `fdr_estimation_method` = peptide detection method: percolator or mokapot; default = mokapot
 
 -   `allFeatures` = true if all features should be used by the percolator; default = false
 
