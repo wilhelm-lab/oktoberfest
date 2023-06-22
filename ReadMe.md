@@ -95,11 +95,11 @@ Create a `config.json` file which should contain the following flags:
 
 The following flags are relevant only for SpectralLibraryGeneration:
 
-    -   `outputFormat` = "spectronaut" or "msp"
+-   `outputFormat` = "spectronaut" or "msp"
     
-    -   `fasta` = path to the FASTA file, if FASTA file is provided
+-   `fasta` = path to the FASTA file, if FASTA file is provided
 
-    -   `peptides.csv` = true if you like to provide the list of peptides
+-   `peptides.csv` = true if you like to provide the list of peptides
 
 
 The following flags are relevant only if a FASTA file is provided:
