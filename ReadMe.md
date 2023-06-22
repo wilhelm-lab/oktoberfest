@@ -71,7 +71,7 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 
--   `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "percolator"
+-   `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
 
 -   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
@@ -142,10 +142,10 @@ Note: The `search_dir` should contain both the raw files and the search results 
 If you instead want to run oktoberfest using the docker image, run:
 
 ```bash
-DATA=path_to_data_dir make run_oktoberfest
+DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `DATA/results/percolator`.
+Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `<DATA>/results/percolator`.
 
 ## Supported Models
 
