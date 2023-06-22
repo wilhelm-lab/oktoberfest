@@ -3,13 +3,16 @@
 ## Installation
 
 ### Prerequisites
+
 If you are on linux or MacOS, make sure mono (https://www.mono-project.com/) is installed.
 If you want to use percolator, make sure you install version 3.05 (https://github.com/percolator/percolator/releases/tag/rel-3-05)
 
 ### Using pip (recommended)
+
 ```bash
 pip install oktoberfest
 ```
+
 ### Docker image
 
 Prerequisites:
@@ -68,17 +71,17 @@ Create a `config.json` file which should contain the following flags:
 
 -   `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 
--   `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: percolator or mokapot; default = percolator
+-   `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "percolator"
 
--   `allFeatures` = true if all features should be used for FDR estimation; default = false
+-   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
--   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): lowess, spline or logistic; default = lowess
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
 
 -   `fileUploads`
 
-    -   `search_type` = Maxquant, Msfragger, Mascot or Internal; default = Maxquant
+    -   `search_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
 
-    -   `raw_type` = thermo or mzml; default = thermo
+    -   `raw_type` = "thermo" or "mzml"; default = "thermo"
 
 -   `models`
 
@@ -92,23 +95,25 @@ Create a `config.json` file which should contain the following flags:
 
 -   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
 
+For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
+For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
+For a list of currently tested models, check the "Supported Models" section below.
 
 The following flags are relevant only for SpectralLibraryGeneration:
 
 -   `outputFormat` = "spectronaut" or "msp"
-    
+
 -   `fasta` = path to the FASTA file, if FASTA file is provided
 
 -   `peptides.csv` = true if you like to provide the list of peptides
-
 
 The following flags are relevant only if a FASTA file is provided:
 
 -   `fastaDigestOptions`
 
-    -   `fragmentation` = fragmentation method: HCD or CID
+    -   `fragmentation` = fragmentation method: "HCD" or "CID"
 
-    -   `digestion` = digestion mode: full, semi or none; default = full
+    -   `digestion` = digestion mode: "full", "semi" or None; default = "full"
 
     -   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
 
@@ -116,25 +121,23 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `maxLength` = maximum peptide length allowed used in the search engine; default = 60
 
-    -   `enzyme` = type of enzyme used in the search engine; default = trypsin
+    -   `enzyme` = type of enzyme used in the search engine; default = "trypsin"
 
-    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = KR
+    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
 
-    -   `db` = Target, decoy or concat; default = concat
-
-
-For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
-For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
-For a list of currently tested models, check the "Supported Models" section below.
+    -   `db` = "target", "decoy" or "concat"; default = "concat"
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
 ### Run Oktoberfest
+
 We provide a jupyter notebook file in the tutorials subfolder, that guides you through the three different use cases using a public dataset.
 The general command for executing any job is:
+
 ```bash
 python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
 ```
+
 Note: The `search_dir` should contain both the raw files and the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant.
 
 If you instead want to run oktoberfest using the docker image, run:
@@ -142,9 +145,11 @@ If you instead want to run oktoberfest using the docker image, run:
 ```bash
 DATA=path_to_data_dir make run_oktoberfest
 ```
+
 Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `DATA/results/percolator`.
 
 ## Supported Models
+
 This is the list of currently supported and tested models for peptide property prediction provided by koina.proteomicsdb.org:
 
 -   `intensity models`
@@ -158,7 +163,7 @@ This is the list of currently supported and tested models for peptide property p
 
     -   `Prosit_2019_irt`
     -   `Prosit_2020_irt_TMT`
- 
+
 Once support for additional models is added, they will be added here.
 
 ## License
