@@ -1,5 +1,5 @@
 IMAGE ?= oktoberfest
-DATA ?= $(HOME)/example/
+DATA ?= $(shell pwd)/data/plasma/
 LOCAL_DIR ?= /root/data
 INTERACTIVE := $(shell [ -t 0 ] && echo 1)
 MEMORY_LIMIT ?= 10gb
@@ -24,4 +24,4 @@ check_models:
 
 # clean up err.out file when restarting a job
 rm_err_file:
-	rm -f $(DATA)err.out
+	rm -f $(DATA)/err.out

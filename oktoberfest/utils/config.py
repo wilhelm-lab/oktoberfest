@@ -1,5 +1,7 @@
 import json
 import logging
+from pathlib import Path
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -11,13 +13,15 @@ class Config:
         """Initialize config file data."""
         self.data = {}
 
-    def read(self, config_path: str):
+    def read(self, config_path: Union[str, Path]):
         """
         Read config file.
 
         :param config_path: path to config file as a string
         """
         logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         with open(config_path) as f:
             self.data = json.load(f)
 
@@ -40,9 +44,9 @@ class Config:
             raise ValueError("No fasta file specified in config file")
 
     @property
-    def prosit_server(self) -> str:
+    def prediction_server(self) -> str:
         """Get prosit server from the config file."""
-        return self.data["prosit_server"]
+        return self.data["prediction_server"]
 
     @property
     def models(self) -> dict:
@@ -53,10 +57,17 @@ class Config:
             return {
                 "selectedIntensityModel": self.data["selectedIntensityModel"],
                 "selectedIRTModel": self.data["selectedIRTModel"],
-                "selectedProteotypicityModel": self.data["selectedProteotypicityModel"],
             }
         else:
             return self.data["models"]
+
+    @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
 
     @property
     def tag(self) -> str:

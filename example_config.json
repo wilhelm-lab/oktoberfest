@@ -1,6 +1,6 @@
 {
     "jobType": "Rescoring",
-    "tag": "tmt",
+    "tag": "",
     "allFeatures": false,
     "fileUploads": {
         "search_type": "Maxquant",
@@ -16,12 +16,10 @@
         "charges": false
     },
     "models": {
-        "intensity": "Prosit_2020_intensityTMT",
-        "irt": "Prosit_2020_irt_TMT",
-        "proteotypicity": "Prosit_2020_proteotypicity"
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
     },
     "spectralLibraryOutputFormat": "msp",
-    "prosit_server": "10.152.135.57:8500",
-    "numThreads": 1,
-    "jobId": "1B2C984C43488B2FC3A2BACC0438260D"
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "numThreads": 1
 }

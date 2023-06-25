@@ -17,10 +17,6 @@ RUN apt-get update && apt-get install -y \
 ENV HOME /root
 WORKDIR /root
 
-# ADD keys for our gitlab
-ADD keys /root/.ssh
-RUN chmod 700 /root/.ssh/id_rsa
-
 RUN pip install poetry==1.3.2
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
@@ -37,7 +33,6 @@ RUN ZIP=ubuntu.tar.gz && \
     rm /tmp/$ZIP
 
 # Delete ssh keys
-RUN rm -r /root/.ssh
 ADD oktoberfest/ /root/oktoberfest
 
 # Used by ProteomicsDB runs to describe the oktoberfest version
