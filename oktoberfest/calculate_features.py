@@ -1,5 +1,6 @@
 import logging
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import pandas as pd
 from spectrum_fundamentals.metrics.percolator import Percolator
@@ -29,20 +30,22 @@ class CalculateFeatures(CeCalibration):
         self.grpc_predict(self.library)
         self.library.write_pred_as_hdf5(self.get_pred_path())
 
-    def gen_perc_metrics(self, search_type: str, file_path: Optional[str]):
+    def gen_perc_metrics(self, search_type: str, file_path: Optional[Union[str, Path]] = None):
         """
         Get all percolator metrics and add them to library.
 
-        :param search_type: model (prosit or andromeda) as a string
-        :param file_path: path to percolator input file as a string
+        :param search_type: model (rescore or original) as a string
+        :param file_path: Optional path to percolator input file as a string
         """
         perc_features = Percolator(
-            self.library.get_meta_data(),
-            self.library.get_matrix(FragmentType.PRED),
-            self.library.get_matrix(FragmentType.RAW),
-            search_type,
-            self.config.all_features,
+            metadata=self.library.get_meta_data(),
+            pred_intensities=self.library.get_matrix(FragmentType.PRED),
+            true_intensities=self.library.get_matrix(FragmentType.RAW),
+            mz=self.library.get_matrix(FragmentType.MZ),
+            input_type=search_type,
+            all_features_flag=self.config.all_features,
+            regression_method=self.config.curve_fitting_method,
         )
         perc_features.calc()
         if file_path:
-            perc_features.write_to_file(file_path)
+            perc_features.write_to_file(str(file_path))

@@ -1,6 +1,6 @@
 from rich import traceback
 
-from .oktoberfest import main
+from .run_oktoberfest import main
 
 """triqler.__main__: executed when bootstrap directory is called as script."""
 

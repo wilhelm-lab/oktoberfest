@@ -7,8 +7,8 @@ dependencies:
 
 registry:
 	docker login gitlab.lrz.de:5005
-	docker build -t gitlab.lrz.de:5005/proteomics/prosit_tools/oktoberfest .
-	docker push gitlab.lrz.de:5005/proteomics/prosit_tools/oktoberfest
+	docker build -t gitlab.lrz.de:5005/proteomics/github/oktoberfest .
+	docker push gitlab.lrz.de:5005/proteomics/github/oktoberfest
 
 jump:
 	$(DOCKER_CMD) \
@@ -16,12 +16,13 @@ jump:
 
 # --no-cache
 build: dependencies
+	git describe --long --dirty --always > hash.file
 	docker build -f Dockerfile -t $(IMAGE) . || (exit 1)
 
 
 run_oktoberfest: rm_err_file
 	$(DOCKER_CMD) \
-		$(IMAGE) python3 -u -m oktoberfest /root/data --config_path /root/data/config.json || (echo "2" > $(DATA)err.out; exit 2)
+		$(IMAGE) python3 -u -m oktoberfest --search_dir $(LOCAL_DIR) --config_path $(LOCAL_DIR)/config.json || (echo "2" > $(DATA)err.out; exit 2)
 
 compress: run_oktoberfest
 	zip -j -r -9 "$(DATA)/results.zip" "$(DATA)/results/" || (echo "3" > $(DATA)err.out; exit 3)
@@ -30,7 +31,7 @@ all: compress
 
 
 run_local:
-	python3 -u -m oktoberfest "$(DATA)"
+	python3 -u -m oktoberfest --search_dir "$(DATA)" --config_path $(DATA)/config.json
 
 clean_data_folder:
-	rm -rf "$(DATA)/{proc,msms,results,mzML,msms.prosit}"
+	bash -c "rm -rf $(DATA)/{proc,msms,results,mzML,msms.prosit,err.out,results.zip}"

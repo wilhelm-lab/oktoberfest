@@ -4,3 +4,4 @@ sphinx-rtd-dark-mode>=1.2.1
 sphinx-automodapi>=0.13
 sphinx_click>=3.0.0
 click>=8.0.1
+-r ../requirements.txt
