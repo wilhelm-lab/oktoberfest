@@ -1,27 +1,22 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contributor Guide &mdash; oktoberfest 0.1.0 documentation</title>
+  <title>Contributor Guide &mdash; oktoberfest 0.3.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="_static/dark_mode_css/dark.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
-        <script src="_static/dark_mode_js/default_dark.js"></script>
-        <script src="_static/dark_mode_js/theme_switcher.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -34,14 +29,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> oktoberfest
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            oktoberfest
           </a>
               <div class="version">
-                0.1.0
+                0.3.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -52,6 +51,7 @@
 <li class="toctree-l1"><a class="reference internal" href="readme.html">oktoberfest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">oktoberfest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Contributor Guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-report-a-bug">How to report a bug</a></li>
@@ -79,10 +79,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Contributor Guide</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/contributing.rst.txt" rel="nofollow"> View page source</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/main/oktoberfest/contributing.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -119,17 +119,17 @@ highly welcomes contributions in the form of bug reports, feature requests, and 
 <li><p><a class="reference external" href="https://nox-poetry.readthedocs.io/">nox-poetry</a></p></li>
 </ul>
 <p>You can install them with:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip install poetry nox nox-poetry
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>poetry<span class="w"> </span>nox<span class="w"> </span>nox-poetry
 </pre></div>
 </div>
 <p>Install the package with development requirements:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make install
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>install
 </pre></div>
 </div>
 <p>You can now run an interactive Python session,
 or the command-line interface:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry run python
-<span class="gp">$ </span>poetry run oktoberfest
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>oktoberfest
 </pre></div>
 </div>
 </section>
@@ -140,12 +140,12 @@ or the command-line interface:</p>
 </pre></div>
 </div>
 <p>List the available Nox sessions:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox --list-sessions
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--list-sessions
 </pre></div>
 </div>
 <p>You can also run a specific Nox session.
 For example, invoke the unit test suite like this:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox --session<span class="o">=</span>tests
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests
 </pre></div>
 </div>
 <p>Unit tests are located in the <code class="docutils literal notranslate"><span class="pre">tests</span></code> directory,
@@ -156,11 +156,11 @@ and are written using the <a class="reference external" href="https://pytest.rea
 <p>This project uses <a class="reference external" href="https://www.sphinx-doc.org/en/master/">Sphinx</a> together with several extensions to build the documentation.
 It further requires <a class="reference external" href="https://pandoc.org/">Pandoc</a> to translate various formats.</p>
 <p>To install all required dependencies for the documentation run:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip install -r docs/requirements.txt
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>docs/requirements.txt
 </pre></div>
 </div>
 <p>Please note that oktoberfest itself must also be installed. To build the documentation run:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make html
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>html
 </pre></div>
 </div>
 <p>from inside the docs folder. The generated static HTML files can be found in the <cite>_build/html</cite> folder.
@@ -176,7 +176,7 @@ Simply open them with your favorite browser.</p>
 <li><p>If your changes add functionality, update the documentation accordingly.</p></li>
 </ul>
 <p>To run linting and code formatting checks before committing your change, you can install pre-commit as a Git hook by running the following command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox --session<span class="o">=</span>pre-commit -- install
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>pre-commit<span class="w"> </span>--<span class="w"> </span>install
 </pre></div>
 </div>
 <p>It is recommended to open an issue before starting work on anything.
