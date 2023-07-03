@@ -1,23 +1,50 @@
 # Oktoberfest
 
+## Installation
+
+### Prerequisites
+
+If you are on linux or MacOS, make sure mono (https://www.mono-project.com/) is installed.
+If you want to use percolator, make sure you install version 3.05 (https://github.com/percolator/percolator/releases/tag/rel-3-05)
+
+### Using pip (recommended)
+
+```bash
+pip install oktoberfest
+```
+
+### Docker image
+
+Prerequisites:
+
+-   `make` (https://www.gnu.org/software/make/)
+-   `docker` (https://www.docker.com/)
+
+After cloning the repository of oktoberfest, checkout the branch you want to build the container from.
+The latest stable version is always on the main branch.
+
+```bash
+make build
+```
+
 ## Getting started
 
 What you can do with oktoberfest:
 
 -   CE Calibration (CollisionEnergyCalibration)
 
-This task estimates the optimal collision energy (CE) based on a given search result. You need to upload a RAW file as well as the MaxQuant's msms.txt for calibration.
+This task estimates the optimal collision energy (CE) based on a given search result.
 Prosit will:
 
 1. Select a random subset of high-scoring PSMs
-2. Predict those in for each CE from 18 to 39.
+2. Predict those in for each CE from 18 to 49.
 3. Calculate which CE achieves highest correlations with the experimental spectra
    Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
 
 -   Spectral Library (SpectralLibraryGeneration)
 
 This task generates a spectral library either by digesting a given FASTA file, or by predicting a list of peptides given in a CSV file. You need to provide a collision energy (CE) for prediction. To estimate an optimal CE for prediction, please use "CE Calibration".
-When a FASTA file is provided, Prosit will:
+When a FASTA file is provided, Oktoberfest will:
 
 1. Digest the FASTA, for the given parameters (i.e. protease).
 2. Predict all spectra at the given collision energy.
@@ -25,50 +52,36 @@ When a FASTA file is provided, Prosit will:
 
 -   Rescoring (Rescoring)
 
-This task rescores an existing MaxQuant search (FDR 100%) using features generated from fragmentation prediction. You need to upload a RAW file as well as the MaxQuant's msms.txt file from a search.
-Prosit will:
+This task rescores an existing search result using features generated from peptide property prediction.
+Oktoberfest will:
 
-1. Calibrate itself against the RAW.
-2. Predict all sequences in the msms.txt.
-3. Use the predicted spectra to generate features for percolator.
+1. Calibrate CE against the provided RAW files.
+2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
+3. Use predicted spectra to generate features for percolator.
 4. Run percolator to rescore the search.
-   Please note: You need a MaxQuant search at 100% FDR, otherwise targets may be filtered by MaxQuant's FDR calculation before rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
 
-## Installation
+## Run oktoberfest
 
-After cloning the repository of oktoberfest, create a new conda environment:
-
-```bash
-conda create -n oktoberfest
-```
-
-After activating the newly-created conda environment, go to the main folder with the repository of oktoberfest and run:
-
-```bash
-pip install .
-```
+### Configuration
 
 Create a `config.json` file which should contain the following flags:
 
--   `jobType` = CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring
+-   `jobType` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
 
--   `tag` = tmt, tmtpro, itraq4 or itraq8; default = tmt
+-   `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 
--   `peptide_identification_method` = peptide identification method: percolator or mokapot; default = percolator
+-   `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
 
--   `allFeatures` = true if all features should be used by the percolator; default = false
+-   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
--   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): lowess, spline or logistic; default = lowess
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
 
 -   `fileUploads`
 
-    -   `search_type` = Maxquant, Msfragger, Mascot or Internal; default = Maxquant
+    -   `search_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
 
-    -   `raw_type` = thermo or mzml; default = thermo
-
-    -   `fasta` = path to the FASTA file, if FASTA file is provided
-
-    -   `peptides.csv` = true if you like to provide the list of peptides
+    -   `raw_type` = "thermo" or "mzml"; default = "thermo"
 
 -   `models`
 
@@ -76,23 +89,31 @@ Create a `config.json` file which should contain the following flags:
 
     -   `irt` = irt model
 
-    -   `proteotypicity` = proteotypicity model
+-   `prediction_server` = server for obtaining peptide property predictions
 
--   `prosit_server` = server for the Prosit prediction
-
--   `numThreads` = number of threads from the config file; default = 1
-
--   `jobId` = job ID for the Prosit prediction
+-   `numThreads` = number of raw files processed in parallel processes; default = 1
 
 -   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
+
+For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
+For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
+For a list of currently tested models, check the "Supported Models" section below.
+
+The following flags are relevant only for SpectralLibraryGeneration:
+
+-   `outputFormat` = "spectronaut" or "msp"
+
+-   `fasta` = path to the FASTA file, if FASTA file is provided
+
+-   `peptides.csv` = true if you like to provide the list of peptides
 
 The following flags are relevant only if a FASTA file is provided:
 
 -   `fastaDigestOptions`
 
-    -   `fragmentation` = fragmentation method: HCD or CID
+    -   `fragmentation` = fragmentation method: "HCD" or "CID"
 
-    -   `digestion` = digestion mode: full, semi or none; default = full
+    -   `digestion` = digestion mode: "full", "semi" or None; default = "full"
 
     -   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
 
@@ -100,37 +121,55 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `maxLength` = maximum peptide length allowed used in the search engine; default = 60
 
-    -   `enzyme` = type of enzyme used in the search engine; default = trypsin
+    -   `enzyme` = type of enzyme used in the search engine; default = "trypsin"
 
-    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = KR
+    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
 
-    -   `db` = Target, decoy or concat; default = concat
+    -   `db` = "target", "decoy" or "concat"; default = "concat"
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
-For `prosit_server` and `jobId`: ask Wassim Gabriel (wassim.gabriel@tum.de) or Ludwig Lautenbacher (Ludwig.Lautenbacher@tum.de).
+### Run a job
 
-Finally, run
+The general command for executing any job is:
 
 ```bash
 python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
 ```
 
-Note: The search_dir should contain both the raw files and the MaxQuant's `msms.txt` from a search.
+Note: The `search_dir` should contain both the raw files and the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant.
 
-## Models
+If you instead want to run oktoberfest using the docker image, run:
+
+```bash
+DATA=path/to/data/dir make run_oktoberfest
+```
+
+Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `<DATA>/results/percolator`.
+
+## Supported Models
+
+This is the list of currently supported and tested models for peptide property prediction provided by koina.proteomicsdb.org:
 
 -   `intensity models`
 
     -   `Prosit_2019_intensity`
-    -   `Prosit_2020_intensity_hcd`
-    -   `Prosit_2020_intensity_cid`
-    -   `Prosit_2020_intensityTMT`
+    -   `Prosit_2020_intensity_HCD`
+    -   `Prosit_2020_intensity_CID`
+    -   `Prosit_2020_intensity_TMT`
 
 -   `irt models`
 
     -   `Prosit_2019_irt`
     -   `Prosit_2020_irt_TMT`
+
+Once support for additional models is added, they will be added here.
+
+## Tutorials and Documentation
+
+We provide a jupyter notebook that you can find at "tutorials/Oktoberfest Tutorial.ipynb", guiding you through the three different use cases using a public dataset.
+
+If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
 
 ## License
 
@@ -140,4 +179,4 @@ The project is licensed under the [MIT license](https://github.com/wilhelm-lab/P
 
 [1] Gessulat S, Schmidt T, Zolg DP, Samaras P, Schnatbaum K, Zerweck J, Knaute T, Rechenberger J, Delanghe B, Huhmer A, Reimer U, Ehrlich HC, Aiche S, Kuster B, Wilhelm M: “PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning”. Nature Methods. 2019; 16(6):509-518. doi: 10.1038/s41592-019-0426-7.
 
-[2] Gabriel, Wassim & The, Matthew & Zolg, Daniel & Bayer, Florian & Shouman, Omar & Lautenbacher, Ludwig & Schnatbaum, Karsten & Zerweck, Johannes & Knaute, Tobias & Delanghe, Bernard & Huhmer, Andreas & Wenschuh, Holger & Reimer, Ulf & Médard, Guillaume & Kuster, Bernhard & Wilhelm, Mathias. (2022). Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides. Analytical Chemistry. 94. 10.1021/acs.analchem.1c05435.
+[2] Gabriel W, The M, Zolg D, Bayer FP, Shouman O, Lautenbacher L, Schnatbaum K, Zerweck J, Knaute T, Delanghe B, Huhmer A, Wenschuh H, Reimer U, Médard G, Kuster B, Wilhelm M: “Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides”. Analytical Chemistry. 2022; 94(20):7181-7190. doi: 10.1021/acs.analchem.1c05435.

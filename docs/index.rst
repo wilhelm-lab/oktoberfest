@@ -10,6 +10,7 @@ Welcome to oktoberfest's documentation!
    readme
    installation
    usage
+   modules
    reference
    contributing
    authors
