@@ -1,10 +1,10 @@
 .. sidebar:: Key Contributors
 
-   * `Mario Picciani <https://github.com/picciama>`_: lead developer 
-   * `Wassim Gabriel <https://twitter.com/WassimG>`_: developer 
-   * `Matthew The <https://github.com/MatthewThe>`_: developer 
+   * `Mario Picciani <https://github.com/picciama>`_: lead developer
+   * `Wassim Gabriel <https://twitter.com/WassimG>`_: developer
+   * `Matthew The <https://github.com/MatthewThe>`_: developer
    * `Victor-George Giurcoiu <https://github.com/victorgiurcoiu>`_: developer
-   * `Omar Shouman <https://github.com/omsh>`_: developer 
+   * `Omar Shouman <https://github.com/omsh>`_: developer
    * Firas Hamood: developer
    * `Ludwig Lautenbacher <https://github.com/LLautenbacher>`_: developer
    * Cecilia Jensen: developer
