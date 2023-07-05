@@ -193,6 +193,11 @@ class Config:
             return "KR"
 
     @property
+    def thermo_exe(self) -> Path:
+        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
+        return Path(self.data.get("thermoExe", "ThermoRawFileParser.exe"))
+
+    @property
     def db(self) -> str:
         """Target, decoy or concat (relevant if fasta file provided)."""
         if "db" in self.data["fastaDigestOptions"]:

@@ -74,7 +74,9 @@ class CeCalibration(SpectralLibrary):
         """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.get_mzml_path())
+        self.raw_path = raw.convert_raw_mzml(
+            input_path=self.raw_path, output_path=self.get_mzml_path(), thermo_exe=self.config.thermo_exe
+        )
 
     def _load_search(self):
         """Load search type."""
