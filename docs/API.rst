@@ -1,4 +1,4 @@
-oktoberfest
+API
 ===========
 
 .. toctree::

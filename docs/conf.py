@@ -7,13 +7,13 @@
 # relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
 #
-import importlib
-import inspect
 import os
-import re
-import subprocess
 import sys
-from typing import Any
+from datetime import datetime
+from pathlib import Path
+
+HERE = Path(__file__).parent
+sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -28,12 +28,36 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # Add 'sphinx_automodapi.automodapi' if you want to build modules
 extensions = [
+    "myst_parser",
     "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.doctest",
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "sphinx.ext.linkcode",
-    "sphinx_click",
+    "sphinx.ext.autosummary",
+    "matplotlib.sphinxext.plot_directive",
+    "sphinx_autodoc_typehints",
+    "scanpydoc.rtd_github_links",
+    "scanpydoc.theme",
+    "scanpydoc.definition_list_typed_field",
+    "scanpydoc.autosummary_generate_imported",
+    *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
+autosummary_generate = True
+autodoc_member_order = "bysource"
+# autodoc_default_flags = ['members']
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_use_rtype = True  # having a separate entry generally helps readability
+napoleon_use_param = True
+napoleon_custom_sections = [("Params", "Parameters")]
+todo_include_todos = False
+api_dir = HERE / "api"  # function_images
+
+typehints_defaults = "braces"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -45,9 +69,9 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = "oktoberfest"
-copyright = "2022, Victor Giurcoiu"
-author = "Victor Giurcoiu"
+project = "Oktoberfest"
+author = "Oktoberfest development team"
+copyright = f"{datetime.now():%Y}, Wilhelmlab"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -82,19 +106,23 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "scanpydoc"
 
 # Theme options are theme-specific and customize the look and feel of a
 # theme further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
-
+html_theme_options = dict(
+    navigation_depth=4,
+    logo_only=True,
+    docsearch_index="scanpy",
+    docsearch_key="fa4304eb95d2134997e3729553a674b2",
+)
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
-
+html_show_sphinx = False
 
 # -- Options for HTMLHelp output ---------------------------------------
 
@@ -167,68 +195,14 @@ texinfo_documents = [
     ),
 ]
 
-html_css_files = [
-    "custom_cookietemple.css",
-]
 
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "wilhelm-lab",  # Username
     "github_repo": "oktoberfest",  # Repo name
-    "github_version": "main",  # Version
-    "conf_py_path": "/oktoberfest/",  # Path in the checkout to the docs root
+    "github_version": "development",  # Version
+    "conf_py_path": "/docs/",  # Path in the checkout to the docs root
     "github_url": "https://github.com/wilhelm-lab/oktoberfest/",
 }
 
 repository_url = "https://github.com/wilhelm-lab/oktoberfest"
-
-# Linkcode config
-
-
-def git(*args):
-    """Gets git linkcode."""
-    return subprocess.check_output(["git", *args]).strip().decode()
-
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-# Current git reference. Uses branch/tag name if found, otherwise uses commit hash
-git_ref = None
-try:
-    git_ref = git("name-rev", "--name-only", "--no-undefined", "HEAD")
-    git_ref = re.sub(r"^(remotes/[^/]+|tags)/", "", git_ref)
-except Exception:
-    print()
-
-# (if no name found or relative ref, use commit hash instead)
-if not git_ref or re.search(r"[\^~]", git_ref):
-    try:
-        git_ref = git("rev-parse", "HEAD")
-    except Exception:
-        git_ref = "main"
-
-# https://github.com/DisnakeDev/disnake/blob/7853da70b13fcd2978c39c0b7efa59b34d298186/docs/conf.py#L192
-_module_path = os.path.dirname(importlib.util.find_spec("oktoberfest").origin)  # type: ignore
-
-
-def linkcode_resolve(domain, info):
-    """Resolves linkcode."""
-    if domain != "py":
-        return None
-
-    try:
-        obj: Any = sys.modules[info["module"]]
-        for part in info["fullname"].split("."):
-            obj = getattr(obj, part)
-        obj = inspect.unwrap(obj)
-
-        if isinstance(obj, property):
-            obj = inspect.unwrap(obj.fget)  # type: ignore
-
-        path = os.path.relpath(inspect.getsourcefile(obj), start=_module_path)  # type: ignore
-        src, lineno = inspect.getsourcelines(obj)
-    except Exception:
-        return None
-
-    path = f"{path}#L{lineno}-L{lineno + len(src) - 1}"
-    git_ref = "documentation"
-    return f"{repository_url}/blob/{git_ref}/oktoberfest/{path}"
