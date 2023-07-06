@@ -72,7 +72,7 @@ oktoberfest.spectral\_library module
 Module contents
 ---------------
 
-.. automodule:: API
+.. automodule:: oktoberfest
    :members:
    :undoc-members:
    :show-inheritance:

@@ -13,10 +13,8 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).parent
-sys.path[:0] = [str(HERE.parent), str(HERE / "extensions")]
 
 sys.path.insert(0, os.path.abspath(".."))
-
 
 # -- General configuration ---------------------------------------------
 
@@ -42,7 +40,6 @@ extensions = [
     "scanpydoc.theme",
     "scanpydoc.definition_list_typed_field",
     "scanpydoc.autosummary_generate_imported",
-    *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
 autosummary_generate = True
