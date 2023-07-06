@@ -175,6 +175,8 @@ def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
     :param config_path: path to config file as a string
     :raises ValueError: In case the job_type in the provided config file is not known
     """
+    print("test")
+    print(search_dir)
     if isinstance(search_dir, str):
         search_dir = Path(search_dir)
     if not config_path:
@@ -184,10 +186,14 @@ def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type
+    search_type=conf.search_type
     if conf.search_path:
         msms_path = conf.search_path
     else:
-        msms_path = os.path.join(search_dir, "msms.txt")
+        if search_type.lower() == "plink2":
+            msms_path = os.path.join(search_dir, "msms.csv")
+        else:
+            msms_path = os.path.join(search_dir, "msms.txt")
 
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)

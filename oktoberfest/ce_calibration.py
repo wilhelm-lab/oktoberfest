@@ -1,14 +1,14 @@
 import logging
 from pathlib import Path
 from typing import Optional, Union
-
+import os
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -63,7 +63,9 @@ class CeCalibration(SpectralLibrary):
         elif search_type == "msfragger":
             search_result = MSFragger(self.search_path)
         elif search_type == "mascot":
-            search_result = Mascot(self.search_path)
+            search_result = Mascot(self.search_path)   
+        elif search_type == "plink2":
+            search_result = Plink2(self.search_path)
         else:
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
@@ -80,7 +82,7 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch in ["maxquant", "msfragger", "mascot"]:
+        if switch in ["maxquant", "msfragger", "mascot", "plink2"]:
             self._gen_internal_search_result_from_msms()
             switch = "internal"
         if switch == "internal":
@@ -109,20 +111,21 @@ class CeCalibration(SpectralLibrary):
 
         :param df_search: search result as pd.DataFrame
         """
+
         df_raw = self._load_rawfile()
-        # return df_search
         logger.info("Merging rawfile and search result")
+        #df_search = df_search.drop(['FRAGMENTATION', 'MASS_ANALYZER'], axis=1)
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
-        # return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")
         self.library.add_columns(df_join)
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
         self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
+
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
@@ -141,7 +144,7 @@ class CeCalibration(SpectralLibrary):
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
         self.alignment_library.spectra_data = self.library.spectra_data.copy()
-
+        print(self.alignment_library.spectra_data["MZ_RAW_B1+"])
         # Remove decoy and HCD fragmented spectra
         self.alignment_library.spectra_data = self.alignment_library.spectra_data[
             (self.alignment_library.spectra_data["FRAGMENTATION"] == "HCD")
