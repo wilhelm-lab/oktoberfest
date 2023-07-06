@@ -71,8 +71,6 @@ api_dir = HERE / "api"  # function_images
 
 typehints_defaults = "braces"
 
-scanpy_tutorials_url = "https://scanpy-tutorials.readthedocs.io/en/latest/"
-
 intersphinx_mapping = dict(
     anndata=("https://anndata.readthedocs.io/en/stable/", None),
     bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
@@ -90,7 +88,6 @@ intersphinx_mapping = dict(
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
-    scanpy_tutorials=(scanpy_tutorials_url, None),
 )
 
 

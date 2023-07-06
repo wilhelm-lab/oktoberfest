@@ -14,7 +14,12 @@
 
 ### Prerequisites
 
+Oktoberfest requires python >=3.8,<=3.11. Best practise is to use a clean conda environment (https://docs.conda.io/en/latest/miniconda.html).
+
+If you provide thermo raw files, make sure ThermoRawFileParser(https://github.com/compomics/ThermoRawFileParser) is installed.
+
 If you are on linux or MacOS, make sure mono (https://www.mono-project.com/) is installed.
+
 If you want to use percolator, make sure you install version 3.05 (https://github.com/percolator/percolator/releases/tag/rel-3-05)
 
 ### Using pip (recommended)
@@ -105,6 +110,8 @@ Create a `config.json` file which should contain the following flags:
 
 -   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
 
+-   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
+
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
 For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
 For a list of currently tested models, check the "Supported Models" section below.
@@ -181,9 +188,15 @@ We provide a jupyter notebook that you can find at "tutorials/Oktoberfest Tutori
 
 If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
 
+Further information can be found at https://oktoberfest.readthedocs.io.
+
+In addition, we provide a wiki that you find at https://github.com/wilhelm-lab/oktoberfest/wiki.
+
+Information about how to use koina and which models are supported by our public koina instance can be found at https://koina.proteomicsdb.org/docs.
+
 ## License
 
-The project is licensed under the [MIT license](https://github.com/wilhelm-lab/PROSPECT/blob/main/LICENSE).
+The project is licensed under the [MIT license](https://github.com/wilhelm-lab/oktoberfest/blob/main/LICENSE).
 
 ## References
 
