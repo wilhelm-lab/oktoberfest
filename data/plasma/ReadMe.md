@@ -7,7 +7,6 @@ https://ftp.pride.ebi.ac.uk/pride/data/archive/2021/02/PXD023650/
 # Running this example
 
 First, you will need to download the raw file "Plamsa_03401_RD2_30min_Top10_86ms_RP13_R1" from the above resource and store it in this directory.
-Make sure to install and provide the correct path to ThermoRawFileParser in the config before running this!
 
 You can then run this from the base directory using
 
@@ -15,10 +14,12 @@ You can then run this from the base directory using
 python tests/integration_tests/test_re_score.py
 ```
 
+Note: If ThermoRawFileParser.exe is not residing in the base directory, you need to alter the thermoExe parameter in the config to point to the executable.
+
 In case you have installed oktoberfest in a docker container, please execute
 
 ```
 DATA=$(realpath data/plasma)/ make run_oktoberfest
 ```
 
-from the base directory.
+from the base directory (ThermoRawFileParser.exe is installed in the base directory automatically).
