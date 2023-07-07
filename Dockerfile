@@ -32,7 +32,13 @@ RUN ZIP=ubuntu.tar.gz && \
     dpkg -i percolator-v3-05-linux-amd64.deb && \
     rm /tmp/$ZIP
 
-# Delete ssh keys
+# install ThermoRawFileParser
+RUN ZIP=ThermoRawFileParser1.4.2.zip && \
+    wget https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/$ZIP -O /tmp/$ZIP && \
+    unzip /tmp/$ZIP -d /root/ && \
+    rm /tmp/$ZIP
+
+# Copy source folder
 ADD oktoberfest/ /root/oktoberfest
 
 # Used by ProteomicsDB runs to describe the oktoberfest version
