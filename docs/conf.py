@@ -26,7 +26,7 @@ suppress_warnings = [
 # General information
 project = "Oktoberfest"
 author = "Oktoberfest development team"
-copyright = f"{datetime.now():%Y}, Wilhelmlab"
+copyright = f"{datetime.now():%Y}, Wilhelmlab at Technical University of Munich"
 
 # default settings
 templates_path = ["_templates"]
@@ -42,11 +42,10 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
     # 'plot_generator',
     "matplotlib.sphinxext.plot_directive",
-    "sphinx_autodoc_typehints",  # needs to be after napoleon
+    "sphinx_autodoc_typehints",
     # 'ipython_directive',
     # 'ipython_console_highlighting',
     # 'scanpydoc',  # scanpydoc.elegant_typehints causes full doc rebuilds
@@ -60,35 +59,10 @@ extensions = [
 autosummary_generate = True
 autodoc_member_order = "bysource"
 # autodoc_default_flags = ['members']
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_use_rtype = True  # having a separate entry generally helps readability
-napoleon_use_param = True
-napoleon_custom_sections = [("Params", "Parameters")]
 todo_include_todos = False
 api_dir = HERE / "api"  # function_images
 
 typehints_defaults = "braces"
-
-intersphinx_mapping = dict(
-    anndata=("https://anndata.readthedocs.io/en/stable/", None),
-    bbknn=("https://bbknn.readthedocs.io/en/latest/", None),
-    cycler=("https://matplotlib.org/cycler/", None),
-    h5py=("https://docs.h5py.org/en/stable/", None),
-    ipython=("https://ipython.readthedocs.io/en/stable/", None),
-    leidenalg=("https://leidenalg.readthedocs.io/en/latest/", None),
-    louvain=("https://louvain-igraph.readthedocs.io/en/latest/", None),
-    matplotlib=("https://matplotlib.org/stable/", None),
-    networkx=("https://networkx.org/documentation/stable/", None),
-    numpy=("https://numpy.org/doc/stable/", None),
-    pandas=("https://pandas.pydata.org/pandas-docs/stable/", None),
-    pytest=("https://docs.pytest.org/en/latest/", None),
-    python=("https://docs.python.org/3", None),
-    scipy=("https://docs.scipy.org/doc/scipy/", None),
-    seaborn=("https://seaborn.pydata.org/", None),
-    sklearn=("https://scikit-learn.org/stable/", None),
-)
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -140,9 +114,6 @@ qualname_overrides = {
     "sklearn.neighbors._dist_metrics.DistanceMetric": "sklearn.neighbors.DistanceMetric",
     # If the docs are built with an old version of numpy, this will make it work:
     "numpy.random.RandomState": "numpy.random.mtrand.RandomState",
-    "scanpy.plotting._matrixplot.MatrixPlot": "scanpy.pl.MatrixPlot",
-    "scanpy.plotting._dotplot.DotPlot": "scanpy.pl.DotPlot",
-    "scanpy.plotting._stacked_violin.StackedViolin": "scanpy.pl.StackedViolin",
     "pandas.core.series.Series": "pandas.Series",
 }
 
