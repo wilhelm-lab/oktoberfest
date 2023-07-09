@@ -1,0 +1,24 @@
+{
+    "jobType": "CollisionEnergyCalibration",
+    "fdr_estimation_method": "percolator",
+    "fileUploads": {
+        "msms.txt": false,
+        "raw_type": "thermo",
+        "FASTA": false,
+        "peptides.csv": true,
+        "evidence.txt": false,
+        "search_type": "Plink2",
+        "prosit_target.psms": false,
+        "prosit_decoy.psms": false
+    },
+    "models": {
+        "intensity": "Prosit_2023_intensity_XL_CMS2"
+    },
+    "spectralLibraryOutputFormat": "msp",
+    "prediction_server": "10.157.98.13:8505",
+    "numThreads": 1
+}
+
+
+
+
