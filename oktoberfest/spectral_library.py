@@ -157,6 +157,7 @@ class SpectralLibrary:
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
 
+    
     def grpc_predict(self, library: Spectra, alignment: bool = False):
         """
         Use grpc to predict library and add predictions to library.
@@ -168,8 +169,28 @@ class SpectralLibrary:
         triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=True)
         batch_size = 1000
 
-        intensity_outputs = ["intensities", "mz", "annotation"]
-        intensity_input_data = {
+        intensity_model = self.config.models["intensity"]
+        if "xl" in intensity_model.lower():
+             intensity_input_data = {
+            "peptide_sequences_1": (
+                library.spectra_data["MODIFIED_SEQUENCE_A"].to_numpy().reshape(-1, 1).astype(np.object_),
+                "BYTES",
+            ),
+            "peptide_sequences_2": (
+                library.spectra_data["MODIFIED_SEQUENCE_B"].to_numpy().reshape(-1, 1).astype(np.object_),
+                "BYTES",
+            ),
+            "collision_energies": (
+                library.spectra_data["COLLISION_ENERGY"].to_numpy().reshape(-1, 1).astype(np.float32),
+                "FP32",
+            ),
+            "precursor_charges": (
+                library.spectra_data["PRECURSOR_CHARGE"].to_numpy().reshape(-1, 1).astype(np.int32),
+                "INT32",
+            ),
+        }
+        else:
+              intensity_input_data = {
             "peptide_sequences": (
                 library.spectra_data["MODIFIED_SEQUENCE"].to_numpy().reshape(-1, 1).astype(np.object_),
                 "BYTES",
@@ -183,13 +204,15 @@ class SpectralLibrary:
                 "INT32",
             ),
         }
-        intensity_model = self.config.models["intensity"]
+
+        intensity_outputs = ["intensities", "mz", "annotation"]
+
+       
         if "tmt" in intensity_model.lower():
             intensity_input_data["fragmentation_types"] = (
                 library.spectra_data["FRAGMENTATION_GRPC"].to_numpy().reshape(-1, 1).astype(np.float32),
                 "FP32",
             )
-
         intensity_predictions = infer_predictions(
             triton_client,
             model=intensity_model,

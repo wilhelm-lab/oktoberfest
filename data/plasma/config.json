@@ -1,25 +1,27 @@
 {
-    "type": "Rescoring",
-    "uploads": {
-        "msms.txt": true,
-        "RAW": true,
-        "FASTA": false,
-        "peptides.csv": false,
-        "evidence.txt": false,
-        "prosit_target.psms": false,
-        "prosit_decoy.psms": false
+    "fdr_estimation_method": "percolator",
+    "jobType": "CollisionEnergyCalibration",
+    "tag": "",
+    "allFeatures": false,
+    "fileUploads": {
+        "raw_type": "thermo",
+        "search_type": "Plink2",
+        "fasta": false,
+        "peptides.csv": true
     },
-    "options": {
-        "collisionEnergy": 0,
-        "protease": "",
-        "missedCleavages": 0,
-        "oxidizedMethionine": 0,
-        "minPeptideLength": 0,
-        "maxPeptideLength": 0,
-        "specialAAs": ""
+    "fastaDigestOptions": {
+        "collisionEnergy": false,
+        "protease": false,
+        "missedCleavages": false,
+        "oxidizedMethionine": false,
+        "charges": false
     },
-    "outputFormat": "msp",
-    "selectedIntensityModel": "Prosit_2019_intensity",
-    "selectedIRTModel": "Prosit_2019_irt",
-    "prediction_server": "koina.proteomicsdb.org:443"
+    
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
+    },
+    "spectralLibraryOutputFormat": "msp",
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "numThreads": 1
 }

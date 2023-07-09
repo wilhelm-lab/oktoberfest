@@ -9,6 +9,9 @@ import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import coo_matrix, spmatrix
 from spectrum_io.file import hdf5
+#from utils.config import Config
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,16 @@ class Spectra:
         """
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
-        for i in range(1, 30):
+        #config = Config()
+        #print(config.search_type)
+        #if config.search_type == "Plink2":
+        
+        search_type = "Plink2"
+        if search_type == "Plink2":
+            max_range = 59
+        else:
+            max_range = 30 
+        for i in range(1, max_range):
             for column in Spectra.COLUMNS_FRAGMENT_ION:
                 columns.append(prefix + "_" + column.replace("1", str(i)))
         return columns
@@ -122,8 +134,14 @@ class Spectra:
         intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
-        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
-
+        #config = Config()
+        search_type = "Plink2"
+        #if config.search_type == "Plink2":
+        if search_type == "Plink2":      
+            intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH_CMS2)
+        else:
+             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
+ 
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_array[intensity_array == 0] = Spectra.EPSILON
@@ -132,6 +150,7 @@ class Spectra:
         # generate column names and build dataframe from sparse matrix
         intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
         columns = self._gen_column_names(fragment_type)
+        #print(columns)
         intensity_df.columns = columns
         self.add_columns(intensity_df)
 

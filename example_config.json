@@ -3,7 +3,7 @@
     "tag": "",
     "allFeatures": false,
     "fileUploads": {
-        "search_type": "Maxquant",
+        "search_type": "Plink2",
         "raw_type": "thermo",
         "fasta": false,
         "peptides.csv": true

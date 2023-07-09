@@ -1,1 +1,1 @@
-CONFIG_PATH = "/home/victor/oktoberfest/example_config.json"
+CONFIG_PATH = "/home/mkalhor/wilhelmlab/notebooks/notebooks/config.json"
