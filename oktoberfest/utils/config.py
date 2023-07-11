@@ -49,6 +49,11 @@ class Config:
         return self.data["prediction_server"]
 
     @property
+    def ssl(self) -> bool:
+        """Get ssl flag for prediction server."""
+        return self.data.get("ssl", False)
+
+    @property
     def models(self) -> dict:
         """Get intensity, IRT, and proteotypicity models from the config file."""
         if "models" in self.data:
