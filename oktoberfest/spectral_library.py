@@ -166,9 +166,9 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=True)
+        triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=False)
         batch_size = 1000
-
+        
         intensity_model = self.config.models["intensity"]
         if "xl" in intensity_model.lower():
              intensity_input_data = {
@@ -221,7 +221,7 @@ class SpectralLibrary:
             batch_size=batch_size,
         )
         intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
-
+        """
         irt_model = self.config.models["irt"]
         irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
         irt_outputs = ["irt"]
@@ -232,7 +232,7 @@ class SpectralLibrary:
             outputs=irt_outputs,
             batch_size=batch_size,
         )
-
+        """
         if self.config.job_type == "SpectralLibraryGeneration":
             intensity_prediction_dict = {
                 "intensity": intensity_predictions["intensities"],

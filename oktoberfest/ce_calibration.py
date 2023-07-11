@@ -114,19 +114,7 @@ class CeCalibration(SpectralLibrary):
 
         df_raw = self._load_rawfile()
         logger.info("Merging rawfile and search result")
-<<<<<<< HEAD
-<<<<<<< HEAD
-        df_raw.to_csv("/home/mkalhor/wilhelmlab/notebooks/notebooks/df_raw.csv")
-        df_search.to_csv("/home/mkalhor/wilhelmlab/notebooks/notebooks/df_search.csv")
-        #print(df_search.columns)
-=======
-        #df_search = df_search.drop(['FRAGMENTATION', 'MASS_ANALYZER'], axis=1)
->>>>>>> e07f45424e23d84d2ac8e4160719276462eaed50
-=======
-        #df_search = df_search.drop(['FRAGMENTATION', 'MASS_ANALYZER'], axis=1)
->>>>>>> e07f45424e23d84d2ac8e4160719276462eaed50
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
-        df_join.to_csv("/home/mkalhor/wilhelmlab/notebooks/notebooks/df_join.csv")
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
         df_annotated_spectra = annotate_spectra(df_join)
@@ -136,9 +124,6 @@ class CeCalibration(SpectralLibrary):
         self.library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
         self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
         self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
-        #self.library.to_csv("/home/mkalhor/wilhelmlab/oktoberfest/data/plasma/library.csv")
-        #print(self.library)
-
 
 
     def get_mzml_path(self) -> Path:
@@ -157,17 +142,7 @@ class CeCalibration(SpectralLibrary):
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
-        #self.alignment_library.to_csv("/home/mkalhor/wilhelmlab/notebooks/notebooks/library.csv")
         self.alignment_library.spectra_data = self.library.spectra_data.copy()
-<<<<<<< HEAD
-<<<<<<< HEAD
-        self.alignment_library.spectra_data.to_csv("/home/mkalhor/wilhelmlab/notebooks/notebooks/alignment_library.csv")
-=======
-        print(self.alignment_library.spectra_data["MZ_RAW_B1+"])
->>>>>>> e07f45424e23d84d2ac8e4160719276462eaed50
-=======
-        print(self.alignment_library.spectra_data["MZ_RAW_B1+"])
->>>>>>> e07f45424e23d84d2ac8e4160719276462eaed50
         # Remove decoy and HCD fragmented spectra
         self.alignment_library.spectra_data = self.alignment_library.spectra_data[
             (self.alignment_library.spectra_data["FRAGMENTATION"] == "HCD")

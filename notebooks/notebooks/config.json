@@ -15,7 +15,7 @@
         "intensity": "Prosit_2023_intensity_XL_CMS2"
     },
     "spectralLibraryOutputFormat": "msp",
-    "prediction_server": "10.157.98.13:8505",
+    "prediction_server": "10.157.98.13:8506",
     "numThreads": 1
 }
 
