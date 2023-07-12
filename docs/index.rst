@@ -23,5 +23,3 @@
 
 .. _github: https://github.com/wilhelm-lab/oktoberfest
 
-GitHub Repository: :github:`wilhelm-lab/oktoberfest`
-

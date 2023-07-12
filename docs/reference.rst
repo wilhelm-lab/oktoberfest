@@ -1,5 +1,5 @@
 References
-=========
+==========
 
 .. [Prosit] Gessulat S, Schmidt T, Zolg DP, Samaras P, Schnatbaum K, Zerweck J, Knaute T, Rechenberger J, Delanghe B, Huhmer A, Reimer U, Ehrlich HC, Aiche S, Kuster B, Wilhelm M (2019),
    *TriMap: PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning*,
