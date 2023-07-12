@@ -57,7 +57,7 @@ class CeCalibration(SpectralLibrary):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms data at {self.search_path} to internal search result.")
 
-        search_type = self.config.search_type
+        search_type = self.config.search_results_type
         if search_type == "maxquant":
             search_result = MaxQuant(self.search_path)
         elif search_type == "msfragger":
@@ -80,7 +80,7 @@ class CeCalibration(SpectralLibrary):
 
     def _load_search(self):
         """Load search type."""
-        switch = self.config.search_type
+        switch = self.config.search_results_type
         logger.info(f"search_type is {switch}")
         if switch in ["maxquant", "msfragger", "mascot"]:
             self._gen_internal_search_result_from_msms()
@@ -92,10 +92,10 @@ class CeCalibration(SpectralLibrary):
 
     def _load_rawfile(self):
         """Load raw file."""
-        switch = self.config.raw_type
-        search_engine = self.config.search_type
+        switch = self.config.spectra_type
+        search_engine = self.config.search_results_type
         logger.info(f"raw_type is {switch}")
-        if switch == "thermo":
+        if switch == "raw":
             self._gen_mzml_from_thermo()
             switch = "mzml"
         if switch == "mzml":

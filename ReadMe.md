@@ -82,9 +82,15 @@ Create a `config.json` file which should contain the following flags:
 
 -   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
 
--   `fileUploads`
+-   `inputs`
 
-    -   `search_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+    -   `search_results` = path to the msms.txt
+
+    -   `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+
+    -   `spectra` = path to the search results (raw or mzml files)
+
+    -   `spectra_type` = "raw" or "mzml"; default = "raw"
 
     -   `raw_type` = "thermo" or "mzml"; default = "thermo"
 
@@ -110,11 +116,13 @@ For a list of currently tested models, check the "Supported Models" section belo
 
 The following flags are relevant only for SpectralLibraryGeneration:
 
+-   `inputs`
+
+    -   `library_input` = path to the FASTA or peptides file
+
+    -   `library_input_type` = library input type: "fasta" or "peptides
+
 -   `outputFormat` = "spectronaut" or "msp"
-
--   `fasta` = path to the FASTA file, if FASTA file is provided
-
--   `peptides.csv` = true if you like to provide the list of peptides
 
 The following flags are relevant only if a FASTA file is provided:
 

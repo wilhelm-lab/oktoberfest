@@ -34,16 +34,6 @@ class Config:
             return 1
 
     @property
-    def fasta(self) -> str:
-        """Get path to fasta file from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["fasta"]
-        elif "uploads" in self.data:
-            return self.data["uploads"]["FASTA"]
-        else:
-            raise ValueError("No fasta file specified in config file")
-
-    @property
     def prediction_server(self) -> str:
         """Get prosit server from the config file."""
         return self.data["prediction_server"]
@@ -107,23 +97,58 @@ class Config:
         elif "type" in self.data:
             return self.data["type"]
         else:
-            raise ValueError("No job type specified in config file")
+            raise ValueError("No job type specified in config file.")
 
     @property
-    def raw_type(self) -> str:
-        """Get raw type (thermo or mzml) from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["raw_type"].lower()
+    def inputs(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("inputs", {})
+
+    @property
+    def search_results(self) -> Path:
+        """Get path to the search results file (msms.txt) from the config file."""
+        search_results_path = self.inputs.get("search_results")
+        if search_results_path is not None:
+            return Path(search_results_path)
         else:
-            return "thermo"
+            raise ValueError("No path to a msms.txt specified in config file.")
 
     @property
-    def search_type(self) -> str:
+    def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["search_type"].lower()
+        return self.inputs.get("search_results_type", "maxquant").lower()
+
+    @property
+    def spectra(self) -> Path:
+        """Get spectra path to raw or mzml files from the config file."""
+        spectra_path = self.inputs.get("spectra")
+        if spectra_path is not None:
+            return Path(spectra_path)
         else:
-            return "maxquant"
+            raise ValueError("No spectra path specified in config file.")
+
+    @property
+    def spectra_type(self) -> str:
+        """Get spectra type (raw or mzml) from the config file."""
+        return self.inputs.get("spectra_type", "raw").lower()
+
+    @property
+    def library_input(self) -> Path:
+        """Get path to library input file (fasta or peptides) from the config file."""
+        library_input_path = self.inputs.get("library_input")
+        if library_input_path is not None:
+            return Path(library_input_path)
+        else:
+            raise ValueError("No fasta or peptides file specified in config file.")
+
+    @property
+    def library_input_type(self) -> str:
+        """Get library input file type (fasta or peptides) from the config file."""
+        library_input_type = self.inputs.get("library_input_type")
+        if library_input_type is not None:
+            return library_input_type
+        else:
+            raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
     @property
     def output_format(self) -> str:
@@ -142,70 +167,52 @@ class Config:
             return ""
 
     @property
+    def fasta_digest_options(self) -> dict:
+        """Get fastaDigestOptions dictionary from the config file."""
+        return self.data.get("fastaDigestOptions", {})
+
+    @property
     def fragmentation(self) -> str:
         """Get fragmentation method from the config file (HCD or CID)."""
-        if "fragmentation" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["fragmentation"].upper()
-        else:
-            return ""
+        # check default
+        return self.fasta_digest_options.get("fragmentation", "").lower()
 
     @property
     def digestion(self) -> str:
         """Get digestion mode (full, semi or none)."""
-        if "digestion" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["digestion"].lower()
-        else:
-            return "full"
+        return self.fasta_digest_options.get("digestion", "full").lower()
 
     @property
     def cleavages(self) -> int:
         """Get number of allowed missed cleavages used in the search engine."""
-        if "missedCleavages" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["missedCleavages"]
-        else:
-            return 2
+        return self.fasta_digest_options.get("missedCleavages", 2)
 
     @property
     def min_length(self) -> int:
         """Get minimum peptide length allowed used in the search engine."""
-        if "minLength" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["minLength"]
-        else:
-            return 7
+        return self.fasta_digest_options.get("minLength", 7)
 
     @property
     def max_length(self) -> int:
         """Get maximum peptide length allowed used in the search engine."""
-        if "maxLength" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["maxLength"]
-        else:
-            return 60
+        return self.fasta_digest_options.get("maxLength", 60)
 
     @property
     def enzyme(self) -> str:
         """Get type of enzyme used."""
-        if "enzyme" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["enzyme"].lower()
-        else:
-            return "trypsin"
+        return self.fasta_digest_options.get("enzyme", "trypsin").lower()
 
     @property
     def special_aas(self) -> str:
         """Get special amino acids used by MaxQuant for decoy generation."""
-        if "specialAas" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["specialAas"].upper()
-        else:
-            return "KR"
+        return self.fasta_digest_options.get("specialAas", "KR").upper()
+
+    @property
+    def db(self) -> str:
+        """Target, decoy or concat (relevant if fasta file provided)."""
+        return self.fasta_digest_options.get("db", "concat").lower()
 
     @property
     def thermo_exe(self) -> Path:
         """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
         return Path(self.data.get("thermoExe", "ThermoRawFileParser.exe"))
-
-    @property
-    def db(self) -> str:
-        """Target, decoy or concat (relevant if fasta file provided)."""
-        if "db" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["db"].lower()
-        else:
-            return "concat"

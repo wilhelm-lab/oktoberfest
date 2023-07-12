@@ -192,8 +192,8 @@ def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
     elif job_type == "CollisionEnergyCalibration":
-        raw_type = conf.raw_type
-        if raw_type == "thermo":
+        raw_type = conf.spectra_type
+        if raw_type == "raw":
             glob_pattern = "*.[rR][aA][wW]"
         elif raw_type == "mzml":
             glob_pattern = "*.[mM][zZ][mM][lL]"
