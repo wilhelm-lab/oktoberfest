@@ -19,11 +19,12 @@ Example config file:
     task_config_ce_calibration = {
         "type": "CollisionEnergyCalibration",
         "tag": "",
-        "fileUploads": {
+        "output": "path_to_output_folder",
+        "inputs": {
+            "search_results": "path_to_msms",
             "search_type": "Maxquant",
-            "raw_type": "thermo",
-            "fasta": False,
-            "peptides.csv": False
+            "spectra": "path_to_spectra_files",
+            "spectra_type": "raw"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -51,11 +52,12 @@ Example config file:
     task_config_spectral_lib = {
         "type": "SpectralLibraryGeneration",
         "tag": "",
-        "fileUploads": {
-            "search_type": "",
-            "raw_type": "",
-            "fasta": False,
-            "peptides.csv": True
+        "output": "path_to_output_folder",
+        "inputs": {
+            "search_results": "path_to_msms",
+            "search_type": "Maxquant",
+            "library_input": "path_to_peptides_csv,
+            "library_input_type": "peptides"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -95,11 +97,12 @@ Example config file:
     task_config_rescoring = {
         "type": "Rescoring",
         "tag": "",
-        "fileUploads": {
+        "output": "path_to_output_folder",
+        "inputs": {
+            "search_results": "path_to_msms",
             "search_type": "Maxquant",
-            "raw_type": "thermo",
-            "fasta": False,
-            "peptides.csv": False
+            "spectra": "path_to_spectra_files",
+            "spectra_type": "raw"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -112,3 +115,4 @@ Example config file:
         "allFeatures": False,
         "regressionMethod": "lowess"
     }
+
