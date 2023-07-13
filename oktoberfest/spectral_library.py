@@ -148,7 +148,7 @@ class SpectralLibrary:
 
     def gen_lib(self):
         """Read input csv file and add it to library."""
-        if self.config.fasta:
+        if self.config.library_input_type == "fasta":
             self.read_fasta()
             library_file = self.search_path / "prosit_input.csv"
         else:
@@ -239,7 +239,7 @@ class SpectralLibrary:
         """Read fasta file."""
         cmd = [
             "--fasta",
-            f"{self.config.fasta}",
+            f"{self.config.library_input}",
             "--prosit_input",
             f"{self.search_path / 'prosit_input.csv'}",
             "--fragmentation",

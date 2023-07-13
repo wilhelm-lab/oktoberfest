@@ -128,17 +128,26 @@ class CeCalibration(SpectralLibrary):
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
-        mzml_path = self.out_path / "mzML"
+        if self.config.spectra_type == "mzml":
+            mzml_path = self.config.spectra
+        else:
+            mzml_path = self.out_path / "data"
         mzml_path.mkdir(exist_ok=True)
         return mzml_path / self.raw_path.with_suffix(".mzML").name
 
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.hdf5").name
+        if self.config.spectra_type == "mzml":
+            return self.config.spectra / self.raw_path.with_suffix(".mzML.hdf5").name
+        else:
+            return self.out_path / "data" / self.raw_path.with_suffix(".mzML.hdf5").name
 
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        if self.config.spectra_type == "mzml":
+            return self.config.spectra / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        else:
+            return self.out_path / "data" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()

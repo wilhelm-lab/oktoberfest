@@ -84,15 +84,13 @@ Create a `config.json` file which should contain the following flags:
 
 -   `inputs`
 
-    -   `search_results` = path to the msms.txt
+    -   `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
 
     -   `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
 
     -   `spectra` = path to the search results (raw or mzml files)
 
     -   `spectra_type` = "raw" or "mzml"; default = "raw"
-
-    -   `raw_type` = "thermo" or "mzml"; default = "thermo"
 
 -   `models`
 
@@ -105,8 +103,6 @@ Create a `config.json` file which should contain the following flags:
 -   `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
 
 -   `numThreads` = number of raw files processed in parallel processes; default = 1
-
--   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
 
 -   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
 
@@ -123,6 +119,8 @@ The following flags are relevant only for SpectralLibraryGeneration:
     -   `library_input_type` = library input type: "fasta" or "peptides
 
 -   `outputFormat` = "spectronaut" or "msp"
+
+-   `output` = path to the output folder; if not provided search_dir will be used
 
 The following flags are relevant only if a FASTA file is provided:
 

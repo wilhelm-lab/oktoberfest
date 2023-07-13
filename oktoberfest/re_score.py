@@ -36,6 +36,22 @@ def calculate_features_single(
     calc_feature_step.mark_done()
 
 
+def get_glob_pattern(spectra_type: str) -> str:
+    """
+    Get global pattern depending on spectra_type.
+
+    :param spectra_type: The type of spectra file. Accepted values are "raw" or "mzml".
+    :return: The glob pattern corresponding to the spectra_type.
+    :raises ValueError: If an unsupported spectra_type is provided.
+    """
+    if spectra_type == "raw":
+        return "*.[rR][aA][wW]"
+    elif spectra_type == "mzml":
+        return "*.[mM][zZ][mM][lL]"
+    else:
+        raise ValueError(f"{spectra_type} is not supported as rawfile-type")
+
+
 class ReScore(CalculateFeatures):
     """
     Main to init a re-score obj and go through the steps.
@@ -100,13 +116,8 @@ class ReScore(CalculateFeatures):
             self.raw_files = [self.raw_path]
             self.raw_path = self.raw_path.parent
         elif self.raw_path.is_dir():
-            raw_type = self.config.raw_type
-            if raw_type == "thermo":
-                glob_pattern = "*.[rR][aA][wW]"
-            elif raw_type == "mzml":
-                glob_pattern = "*.[mM][zZ][mM][lL]"
-            else:
-                raise ValueError(f"{raw_type} is not supported as rawfile-type")
+            spectra_type = self.config.spectra_type
+            glob_pattern = get_glob_pattern(spectra_type)
             self.raw_files = list(self.raw_path.glob(glob_pattern))
             logger.info(f"Found {len(self.raw_files)} raw files in the search directory")
         else:
@@ -122,11 +133,13 @@ class ReScore(CalculateFeatures):
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby("RAW_FILE"):
-            raw_file_path = self.raw_path / raw_file
-            if not (raw_file_path.with_suffix(".raw").is_file() or raw_file_path.with_suffix(".RAW").is_file()):
+            spectra_file_path = self.raw_path / raw_file
+            spectra_type = self.config.spectra_type
+            glob_pattern = get_glob_pattern(spectra_type)
+            matched_files = [file for file in spectra_file_path.parent.glob(glob_pattern)]
+            if not any(path.is_file() for path in matched_files):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
-
             split_msms = self._get_split_msms_path(raw_file + ".rescore")
             logger.info(f"Creating split msms.txt file {split_msms}")
             df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
@@ -287,7 +300,10 @@ class ReScore(CalculateFeatures):
 
     def get_mzml_folder_path(self) -> Path:
         """Get folder path to mzml."""
-        return self.out_path / "mzML"
+        if self.config.spectra_type == "mzml":
+            return self.config.spectra
+        else:
+            return self.out_path / "mzML"
 
     def get_percolator_folder_path(self) -> Path:
         """Get folder path to percolator."""

@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +165,11 @@ class Config:
             return self.data["searchPath"]
         else:
             return ""
+
+    @property
+    def output(self) -> Optional[Path]:
+        """Get path to the output directory from the config file."""
+        return self.data.get("output", None)
 
     @property
     def fasta_digest_options(self) -> dict:
