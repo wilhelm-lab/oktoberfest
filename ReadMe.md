@@ -82,7 +82,7 @@ Oktoberfest will:
 
 Create a `config.json` file which should contain the following flags:
 
--   `jobType` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
+-   `type` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
 
 -   `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 
@@ -116,6 +116,8 @@ Create a `config.json` file which should contain the following flags:
 
 -   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
 
+-   `output` = path to the output folder; if not provided the current working directory will be used.
+
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
 For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
 For a list of currently tested models, check the "Supported Models" section below.
@@ -129,8 +131,6 @@ The following flags are relevant only for SpectralLibraryGeneration:
     -   `library_input_type` = library input type: "fasta" or "peptides
 
 -   `outputFormat` = "spectronaut" or "msp"
-
--   `output` = path to the output folder; if not provided search_dir will be used
 
 The following flags are relevant only if a FASTA file is provided:
 
@@ -159,10 +159,8 @@ An example of the config file can be found in `/oktoberfest/example_config.json`
 The general command for executing any job is:
 
 ```bash
-python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
+python oktoberfest/run_oktoberfest.py --config_path path_to_config_file
 ```
-
-Note: The `search_dir` should contain both the raw files and the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant.
 
 If you instead want to run oktoberfest using the docker image, run:
 
@@ -170,7 +168,7 @@ If you instead want to run oktoberfest using the docker image, run:
 DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `<DATA>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
 
 ## Supported Models
 
