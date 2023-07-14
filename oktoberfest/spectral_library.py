@@ -148,13 +148,11 @@ class SpectralLibrary:
 
     def gen_lib(self):
         """Read input csv file and add it to library."""
-        if self.config.library_input_type == "fasta":
-            if self.config.library_input.endswith((".fasta", ".FASTA", ".fa")):
-                self.read_fasta()
-            else:
-                raise ValueError("Invalid format for library_input. Expected a .fasta file.")
-            library_file = self.search_path / "prosit_input.csv"
-        else:
+        library_input_type = self.config.library_input_type
+        if library_input_type == "fasta":
+            self.read_fasta()
+            library_file = self.out_path / "prosit_input.csv"
+        elif library_input_type == "csv":
             library_file = self.config.library_input
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
@@ -244,7 +242,7 @@ class SpectralLibrary:
             "--fasta",
             f"{self.config.library_input}",
             "--prosit_input",
-            f"{self.search_path / 'prosit_input.csv'}",
+            f"{self.out_path / 'prosit_input.csv'}",
             "--fragmentation",
             f"{self.config.fragmentation}",
             "--digestion",
