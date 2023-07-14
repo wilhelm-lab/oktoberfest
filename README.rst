@@ -121,10 +121,8 @@ Create a `config.json` file which should contain the following flags:
    - `spectra` = path to the search results (raw or mzml files)
    - `spectra_type` = "raw" or "mzml"; default = "raw"
 - `models`
-   - `intensity`
-      intensity model
-   - `irt`
-      irt model
+   - `intensity` = intensity model
+   - `irt` = irt model
 - `prediction_server` = server for obtaining peptide property predictions
 - `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
 - `numThreads` = number of raw files processed in parallel processes; default = 1
