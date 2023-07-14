@@ -115,7 +115,7 @@ Create a `config.json` file which should contain the following flags:
 - `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
 - `allFeatures`` = True if all features should be used for FDR estimation; default = False
 - `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
-- `inputs``
+- `inputs`
    - `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
    - `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
    - `spectra` = path to the search results (raw or mzml files)
