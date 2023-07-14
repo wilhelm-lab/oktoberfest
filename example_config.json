@@ -3,15 +3,16 @@
     "tag": "",
     "allFeatures": false,
     "inputs": {
-        "search_results": "path_to_msms",
+        "search_results": "./msms.txt",
         "search_type": "Maxquant",
-        "spectra": "path_to_spectra_files",
+        "spectra": "./",
         "spectra_type": "raw"
     },
     "models": {
         "intensity": "Prosit_2020_intensity_HCD",
         "irt": "Prosit_2019_irt"
     },
+    "output": "./out",
     "outputFormat": "",
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,

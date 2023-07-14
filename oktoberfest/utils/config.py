@@ -165,7 +165,7 @@ class Config:
     @property
     def output_format(self) -> str:
         """Get output format from the config file."""
-        self.data.get("outputFormat", "").lower()
+        return self.data.get("outputFormat", "").lower()
 
     @property
     def output(self) -> Path:
