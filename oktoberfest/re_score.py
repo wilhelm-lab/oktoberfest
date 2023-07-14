@@ -126,6 +126,9 @@ class ReScore(CalculateFeatures):
     def split_msms(self):
         """Splits msms.txt file per raw file such that we can process each raw file in parallel \
         without reading the entire msms.txt."""
+        out_path = self.out_path
+        out_path.mkdir(exist_ok=True)
+
         if self.split_msms_step.is_done():
             return
         self.get_msms_folder_path().mkdir(exist_ok=True)

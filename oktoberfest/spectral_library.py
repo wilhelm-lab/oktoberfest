@@ -136,7 +136,7 @@ class SpectralLibrary:
         self.config_path = config_path
         self.config = Config()
         self.config.read(config_path)
-
+        self.out_path.mkdir(exist_ok=True)
         self.results_path = out_path / "results"
         if out_path.exists():
             try:
