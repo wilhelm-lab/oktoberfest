@@ -131,7 +131,7 @@ class CeCalibration(SpectralLibrary):
         if self.config.spectra_type == "mzml":
             spectra_path = self.config.spectra
         else:
-            spectra_path = self.out_path / "data"
+            spectra_path = self.out_path / "mzML"
         spectra_path.mkdir(exist_ok=True)
         return spectra_path / self.raw_path.with_suffix(".mzML").name
 
