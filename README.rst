@@ -134,6 +134,7 @@ For models, you should choose the models that fit your use case. You can see ava
 For a list of currently tested models, check the "Supported Models" section below.
 
 The following flags are relevant only for SpectralLibraryGeneration:
+
 - `inputs`
    - `library_input` = path to the FASTA or peptides file
    - `library_input_type` = library input type: "fasta" or "peptides
@@ -142,14 +143,14 @@ The following flags are relevant only for SpectralLibraryGeneration:
 The following flags are relevant only if a FASTA file is provided:
 
 - `fastaDigestOptions`
-  - `fragmentation` = fragmentation method: "HCD" or "CID"
-  - `digestion` = digestion mode: "full", "semi" or None; default = "full"
-  - `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
-  - `minLength` = minimum peptide length allowed used in the search engine; default = 7
-  - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
-  - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
-  - `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
-  - `db` = "target", "decoy" or "concat"; default = "concat"
+   - `fragmentation` = fragmentation method: "HCD" or "CID"
+   - `digestion` = digestion mode: "full", "semi" or None; default = "full"
+   - `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+   - `minLength` = minimum peptide length allowed used in the search engine; default = 7
+   - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
+   - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
+   - `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+   - `db` = "target", "decoy" or "concat"; default = "concat"
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
@@ -176,14 +177,14 @@ Supported Models
 This is the list of currently supported and tested models for peptide property prediction provided by `koina.proteomicsdb.org`:
 
 - Intensity models:
-  - Prosit_2019_intensity
-  - Prosit_2020_intensity_HCD
-  - Prosit_2020_intensity_CID
-  - Prosit_2020_intensity_TMT
+   - Prosit_2019_intensity
+   - Prosit_2020_intensity_HCD
+   - Prosit_2020_intensity_CID
+   - Prosit_2020_intensity_TMT
 
 - iRT models:
-  - Prosit_2019_irt
-  - Prosit_2020_irt_TMT
+   - Prosit_2019_irt
+   - Prosit_2020_irt_TMT
 
 Once support for additional models is added, they will be added here.
 
