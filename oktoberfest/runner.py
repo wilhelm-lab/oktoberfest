@@ -197,7 +197,7 @@ def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type
-    output_path = conf.output if conf.output is not None else search_dir
+    output_path = conf.output
     if conf.search_results:
         msms_path = conf.search_results
     else:
