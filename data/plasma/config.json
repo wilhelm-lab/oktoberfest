@@ -3,9 +3,9 @@
     "tag": "",
     "allFeatures": false,
     "inputs": {
-        "search_results": "path_to_msms",
+        "search_results": "./",
         "search_type": "Maxquant",
-        "spectra": "path_to_spectra_files",
+        "spectra": "./",
         "spectra_type": "raw"
     },
     "models": {

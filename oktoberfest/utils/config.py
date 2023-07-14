@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ class Config:
 
     @property
     def search_results(self) -> Path:
-        """Get path to the search results file (msms.txt) from the config file."""
+        """Get path to the search results file from the config file."""
         search_results_path = self.inputs.get("search_results")
         if search_results_path is not None:
             return Path(search_results_path)
@@ -121,11 +121,7 @@ class Config:
     @property
     def spectra(self) -> Path:
         """Get spectra path to raw or mzml files from the config file."""
-        spectra_path = self.inputs.get("spectra")
-        if spectra_path is not None:
-            return Path(spectra_path)
-        else:
-            raise ValueError("No spectra path specified in config file.")
+        return Path(self.inputs.get("spectra", "./"))
 
     @property
     def spectra_type(self) -> str:
@@ -139,14 +135,14 @@ class Config:
         if library_input_path is not None:
             return Path(library_input_path)
         else:
-            raise ValueError("No fasta or peptides file specified in config file.")
+            raise ValueError("No fasta or peptides file specified using library_input in config file.")
 
     @property
     def library_input_type(self) -> str:
         """Get library input file type (fasta or peptides) from the config file."""
         library_input_type = self.inputs.get("library_input_type")
         if library_input_type is not None:
-            return library_input_type
+            return library_input_type.lower()
         else:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
@@ -167,9 +163,9 @@ class Config:
             return ""
 
     @property
-    def output(self) -> Optional[Path]:
+    def output(self) -> Path:
         """Get path to the output directory from the config file."""
-        return self.data.get("output", None)
+        return Path(self.data.get("output", "./"))
 
     @property
     def fasta_digest_options(self) -> dict:
