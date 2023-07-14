@@ -19,7 +19,7 @@ Note: If ThermoRawFileParser.exe is not residing in the base directory, you need
 In case you have installed oktoberfest in a docker container, please execute
 
 ```
-DATA=$(realpath data/plasma)/ make run_oktoberfest
+DATA=data/plasma make run_oktoberfest
 ```
 
 from the base directory (ThermoRawFileParser.exe is installed in the base directory automatically).
