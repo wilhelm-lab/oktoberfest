@@ -32,7 +32,9 @@ Example config file:
         },
         "outputFormat": "",
         "prediction_server": "koina.proteomicsdb.org:443",
-        "regressionMethod": "lowess"
+        "regressionMethod": "lowess",
+        "ssl": True,
+        "thermoExe": "ThermoRawFileParser.exe"
     }
 
 B. Spectral Library (SpectralLibraryGeneration)
@@ -66,6 +68,8 @@ Example config file:
         "outputFormat": "spectronaut",
         "prediction_server": "koina.proteomicsdb.org:443",
         "numThreads": 1,
+        "ssl": True,
+        "thermoExe": "ThermoRawFileParser.exe"
         "fastaDigestOptions": {
             "fragmentation": "",
             "digestion": "full",
@@ -75,7 +79,7 @@ Example config file:
             "enzyme", "trypsin",
             "specialAas": "KR",
             "db": "concat"
-      }
+    }
 
 
 C. Rescoring (Rescoring)
@@ -113,6 +117,8 @@ Example config file:
         "numThreads": 4,
         "fdr_estimation_method": "mokapot",
         "allFeatures": False,
-        "regressionMethod": "lowess"
+        "regressionMethod": "lowess",
+        "ssl": True,
+        "thermoExe": "ThermoRawFileParser.exe"
     }
 
