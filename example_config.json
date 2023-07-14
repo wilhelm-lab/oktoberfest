@@ -21,6 +21,7 @@
     },
     "spectralLibraryOutputFormat": "msp",
     "prediction_server": "koina.proteomicsdb.org:443",
+    "ssl": true,
     "numThreads": 1,
     "thermoExe": "ThermoRawFileParser.exe"
 }

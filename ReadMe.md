@@ -106,6 +106,8 @@ Create a `config.json` file which should contain the following flags:
 
 -   `prediction_server` = server for obtaining peptide property predictions
 
+-   `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
+
 -   `numThreads` = number of raw files processed in parallel processes; default = 1
 
 -   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
