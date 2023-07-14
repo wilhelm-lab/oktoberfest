@@ -24,6 +24,7 @@ class Config:
             config_path = Path(config_path)
         with open(config_path) as f:
             self.data = json.load(f)
+        self.base_path = config_path.parent
 
     @property
     def num_threads(self) -> int:
@@ -109,7 +110,12 @@ class Config:
         """Get path to the search results file from the config file."""
         search_results_path = self.inputs.get("search_results")
         if search_results_path is not None:
-            return Path(search_results_path)
+            # check if search_results_path is absolute and if not, append with the directory
+            # of the config file to resolve paths relative to the config location. This is
+            # required to make sure it always works no matter from which working directory
+            # oktoberfest is executed in case a relative path is provided, which would
+            # otherwise be relative to the working directory.
+            return self.base_path / search_results_path
         else:
             raise ValueError("No path to a msms.txt specified in config file.")
 
@@ -121,7 +127,12 @@ class Config:
     @property
     def spectra(self) -> Path:
         """Get spectra path to raw or mzml files from the config file."""
-        return Path(self.inputs.get("spectra", "./"))
+        # check if spectra is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.inputs.get("spectra", "./"))
 
     @property
     def spectra_type(self) -> str:
@@ -131,9 +142,14 @@ class Config:
     @property
     def library_input(self) -> Path:
         """Get path to library input file (fasta or peptides) from the config file."""
+        # check if library_input is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
         library_input_path = self.inputs.get("library_input")
         if library_input_path is not None:
-            return Path(library_input_path)
+            return self.base_path / Path(library_input_path)
         else:
             raise ValueError("No fasta or peptides file specified using library_input in config file.")
 
@@ -149,23 +165,17 @@ class Config:
     @property
     def output_format(self) -> str:
         """Get output format from the config file."""
-        if "outputFormat" in self.data:
-            return self.data["outputFormat"].lower()
-        else:
-            return ""
-
-    @property
-    def search_path(self) -> str:
-        """Get search path from the config file."""
-        if "searchPath" in self.data:
-            return self.data["searchPath"]
-        else:
-            return ""
+        self.data.get("outputFormat", "").lower()
 
     @property
     def output(self) -> Path:
         """Get path to the output directory from the config file."""
-        return Path(self.data.get("output", "./"))
+        # check if output is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.data.get("output", "./"))
 
     @property
     def fasta_digest_options(self) -> dict:
