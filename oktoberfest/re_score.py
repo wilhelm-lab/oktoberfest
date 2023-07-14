@@ -164,6 +164,9 @@ class ReScore(CalculateFeatures):
         mzml_path = self.get_mzml_folder_path()
         mzml_path.mkdir(exist_ok=True)
 
+        data_path = self.out_path / "data"
+        data_path.mkdir(exist_ok=True)
+
         perc_path = self.get_percolator_folder_path()
         perc_path.mkdir(exist_ok=True)
 
