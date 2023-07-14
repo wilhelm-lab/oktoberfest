@@ -180,28 +180,23 @@ def run_rescoring(
     logger.info("Finished rescoring.")
 
 
-def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
+def run_job(config_path: Union[str, Path]):
     """
     Run oktoberfest based on job type given in the config file.
 
-    :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file as a string
     :raises ValueError: In case the job_type in the provided config file is not known
     """
-    if isinstance(search_dir, str):
-        search_dir = Path(search_dir)
     if not config_path:
-        config_path = search_dir / "config.json"
+        config_path = "./config.json"
     if isinstance(config_path, str):
         config_path = Path(config_path)
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type
+    search_dir = conf.spectra
     output_path = conf.output
-    if conf.search_results:
-        msms_path = conf.search_results
-    else:
-        msms_path = Path(os.path.join(search_dir, "msms.txt"))
+    msms_path = conf.search_results
     if job_type == "SpectralLibraryGeneration":
         generate_spectral_lib(search_dir, config_path)
     elif job_type == "CollisionEnergyCalibration":

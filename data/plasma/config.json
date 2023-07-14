@@ -3,7 +3,7 @@
     "tag": "",
     "allFeatures": false,
     "inputs": {
-        "search_results": "./",
+        "search_results": "./msms.txt",
         "search_type": "Maxquant",
         "spectra": "./",
         "spectra_type": "raw"
@@ -14,5 +14,6 @@
     },
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
-    "thermoExe": "ThermoRawFileParser.exe"
+    "thermoExe": "ThermoRawFileParser.exe",
+    "output": "./out"
 }
