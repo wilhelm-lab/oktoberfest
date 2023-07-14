@@ -22,7 +22,7 @@ build: dependencies
 
 run_oktoberfest: rm_err_file
 	$(DOCKER_CMD) \
-		$(IMAGE) python3 -u -m oktoberfest --search_dir $(LOCAL_DIR) --config_path $(LOCAL_DIR)/config.json || (echo "2" > $(DATA)err.out; exit 2)
+		$(IMAGE) python3 -u -m oktoberfest --config_path $(LOCAL_DIR)/config.json || (echo "2" > $(DATA)err.out; exit 2)
 
 compress: run_oktoberfest
 	zip -j -r -9 "$(DATA)/results.zip" "$(DATA)/results/" || (echo "3" > $(DATA)err.out; exit 3)
@@ -31,7 +31,7 @@ all: compress
 
 
 run_local:
-	python3 -u -m oktoberfest --search_dir "$(DATA)" --config_path $(DATA)/config.json
+	python3 -u -m oktoberfest --config_path $(DATA)/config.json
 
 clean_data_folder:
 	bash -c "rm -rf $(DATA)/{proc,msms,results,mzML,msms.prosit,err.out,results.zip}"

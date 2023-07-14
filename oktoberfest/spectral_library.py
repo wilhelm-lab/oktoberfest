@@ -136,7 +136,7 @@ class SpectralLibrary:
         self.config_path = config_path
         self.config = Config()
         self.config.read(config_path)
-
+        self.out_path.mkdir(exist_ok=True)
         self.results_path = out_path / "results"
         if out_path.exists():
             try:
@@ -148,11 +148,12 @@ class SpectralLibrary:
 
     def gen_lib(self):
         """Read input csv file and add it to library."""
-        if self.config.fasta:
+        library_input_type = self.config.library_input_type
+        if library_input_type == "fasta":
             self.read_fasta()
-            library_file = self.search_path / "prosit_input.csv"
-        else:
-            library_file = list(self.search_path.glob("*.csv"))[0]
+            library_file = self.out_path / "prosit_input.csv"
+        elif library_input_type == "csv":
+            library_file = self.config.library_input
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
@@ -239,9 +240,9 @@ class SpectralLibrary:
         """Read fasta file."""
         cmd = [
             "--fasta",
-            f"{self.config.fasta}",
+            f"{self.config.library_input}",
             "--prosit_input",
-            f"{self.search_path / 'prosit_input.csv'}",
+            f"{self.out_path / 'prosit_input.csv'}",
             "--fragmentation",
             f"{self.config.fragmentation}",
             "--digestion",

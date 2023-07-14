@@ -1,25 +1,19 @@
 {
-    "jobType": "Rescoring",
+    "type": "Rescoring",
     "tag": "",
     "allFeatures": false,
-    "fileUploads": {
+    "inputs": {
+        "search_results": "./msms.txt",
         "search_type": "Maxquant",
-        "raw_type": "thermo",
-        "fasta": false,
-        "peptides.csv": true
-    },
-    "fastaDigestOptions": {
-        "collisionEnergy": false,
-        "protease": false,
-        "missedCleavages": false,
-        "oxidizedMethionine": false,
-        "charges": false
+        "spectra": "./",
+        "spectra_type": "raw"
     },
     "models": {
         "intensity": "Prosit_2020_intensity_HCD",
         "irt": "Prosit_2019_irt"
     },
-    "spectralLibraryOutputFormat": "msp",
+    "output": "./out",
+    "outputFormat": "",
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
     "numThreads": 1,

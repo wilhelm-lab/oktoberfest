@@ -2,11 +2,11 @@
     "jobType": "Rescoring",
     "tag": "",
     "allFeatures": false,
-    "fileUploads": {
+    "inputs": {
+        "search_results": "./msms.txt",
         "search_type": "Maxquant",
-        "raw_type": "thermo",
-        "fasta": false,
-        "peptides.csv": true
+        "spectra": "./",
+        "spectra_type": "raw"
     },
     "models": {
         "intensity": "Prosit_2020_intensity_HCD",
@@ -14,5 +14,6 @@
     },
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
-    "thermoExe": "ThermoRawFileParser.exe"
+    "thermoExe": "ThermoRawFileParser.exe",
+    "output": "./out"
 }

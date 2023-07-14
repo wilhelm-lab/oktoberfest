@@ -19,18 +19,17 @@ Example config file:
     task_config_ce_calibration = {
         "type": "CollisionEnergyCalibration",
         "tag": "",
-        "output": "path_to_output_folder",
+        "output": "./out",
         "inputs": {
-            "search_results": "path_to_msms",
+            "search_results": "./msms.txt",
             "search_type": "Maxquant",
-            "spectra": "path_to_spectra_files",
+            "spectra": "./",
             "spectra_type": "raw"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "outputFormat": "",
         "prediction_server": "koina.proteomicsdb.org:443",
         "regressionMethod": "lowess",
         "ssl": True,
@@ -54,11 +53,11 @@ Example config file:
     task_config_spectral_lib = {
         "type": "SpectralLibraryGeneration",
         "tag": "",
-        "output": "path_to_output_folder",
+        "output": "./out",
         "inputs": {
-            "search_results": "path_to_msms",
+            "search_results": "./msms.txt",
             "search_type": "Maxquant",
-            "library_input": "path_to_peptides_csv,
+            "library_input": "./peptides.csv",
             "library_input_type": "peptides"
         },
         "models": {
@@ -101,20 +100,19 @@ Example config file:
     task_config_rescoring = {
         "type": "Rescoring",
         "tag": "",
-        "output": "path_to_output_folder",
+        "output": "./out",
         "inputs": {
-            "search_results": "path_to_msms",
+            "search_results": "./msms.txt",
             "search_type": "Maxquant",
-            "spectra": "path_to_spectra_files",
+            "spectra": "./",
             "spectra_type": "raw"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "outputFormat": "",
         "prediction_server": "koina.proteomicsdb.org:443",
-        "numThreads": 4,
+        "numThreads": 1,
         "fdr_estimation_method": "mokapot",
         "allFeatures": False,
         "regressionMethod": "lowess",

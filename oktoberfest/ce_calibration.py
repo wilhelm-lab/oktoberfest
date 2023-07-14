@@ -57,7 +57,7 @@ class CeCalibration(SpectralLibrary):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms data at {self.search_path} to internal search result.")
 
-        search_type = self.config.search_type
+        search_type = self.config.search_results_type
         if search_type == "maxquant":
             search_result = MaxQuant(self.search_path)
         elif search_type == "msfragger":
@@ -80,7 +80,7 @@ class CeCalibration(SpectralLibrary):
 
     def _load_search(self):
         """Load search type."""
-        switch = self.config.search_type
+        switch = self.config.search_results_type
         logger.info(f"search_type is {switch}")
         if switch in ["maxquant", "msfragger", "mascot"]:
             self._gen_internal_search_result_from_msms()
@@ -92,10 +92,10 @@ class CeCalibration(SpectralLibrary):
 
     def _load_rawfile(self):
         """Load raw file."""
-        switch = self.config.raw_type
-        search_engine = self.config.search_type
+        switch = self.config.spectra_type
+        search_engine = self.config.search_results_type
         logger.info(f"raw_type is {switch}")
-        if switch == "thermo":
+        if switch == "raw":
             self._gen_mzml_from_thermo()
             switch = "mzml"
         if switch == "mzml":
@@ -128,17 +128,20 @@ class CeCalibration(SpectralLibrary):
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
-        mzml_path = self.out_path / "mzML"
-        mzml_path.mkdir(exist_ok=True)
-        return mzml_path / self.raw_path.with_suffix(".mzML").name
+        if self.config.spectra_type == "mzml":
+            spectra_path = self.config.spectra
+        else:
+            spectra_path = self.out_path / "mzML"
+        spectra_path.mkdir(exist_ok=True)
+        return spectra_path / self.raw_path.with_suffix(".mzML").name
 
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.hdf5").name
+        return self.out_path / "data" / self.raw_path.with_suffix(".mzML.hdf5").name
 
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        return self.out_path / "data" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()

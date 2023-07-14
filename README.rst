@@ -110,26 +110,24 @@ Configuration
 
 Create a `config.json` file which should contain the following flags:
 
-- `jobType` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
+- `type` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
 - `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 - `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
-- allFeatures = True if all features should be used for FDR estimation; default = False
+- `allFeatures`` = True if all features should be used for FDR estimation; default = False
 - `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
-- `fileUploads``
-   - `search_type``
-      This refers to the search engine that was used to produce the search result file(s).
-      Valid keys: "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
-   - `raw_type`
-      "thermo" or "mzml"; default = "thermo"
+- `inputs`
+   - `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
+   - `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+   - `spectra` = path to the search results (raw or mzml files)
+   - `spectra_type` = "raw" or "mzml"; default = "raw"
 - `models`
-   - `intensity`
-      intensity model
-   - `irt`
-      irt model
+   - `intensity` = intensity model
+   - `irt` = irt model
 - `prediction_server` = server for obtaining peptide property predictions
+- `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
 - `numThreads` = number of raw files processed in parallel processes; default = 1
-- `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
 - `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
+- `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the `koina <https://koina.proteomicsdb.org/>`_ instance we provide at `koina.proteomicsdb.org:443`.
 For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at `https://koina.proteomicsdb.org/docs`.
@@ -137,21 +135,22 @@ For a list of currently tested models, check the "Supported Models" section belo
 
 The following flags are relevant only for SpectralLibraryGeneration:
 
+- `inputs`
+   - `library_input` = path to the FASTA or peptides file
+   - `library_input_type` = library input type: "fasta" or "peptides
 - `outputFormat` = "spectronaut" or "msp"
-- `fasta` = path to the FASTA file, if FASTA file is provided
-- `peptides.csv` = true if you like to provide the list of peptides
 
 The following flags are relevant only if a FASTA file is provided:
 
 - `fastaDigestOptions`
-  - `fragmentation` = fragmentation method: "HCD" or "CID"
-  - `digestion` = digestion mode: "full", "semi" or None; default = "full"
-  - `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
-  - `minLength` = minimum peptide length allowed used in the search engine; default = 7
-  - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
-  - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
-  - `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
-  - `db` = "target", "decoy" or "concat"; default = "concat"
+   - `fragmentation` = fragmentation method: "HCD" or "CID"
+   - `digestion` = digestion mode: "full", "semi" or None; default = "full"
+   - `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+   - `minLength` = minimum peptide length allowed used in the search engine; default = 7
+   - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
+   - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
+   - `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+   - `db` = "target", "decoy" or "concat"; default = "concat"
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
 
@@ -162,9 +161,7 @@ The general command for executing any job is:
 
 .. code-block:: bash
 
-   python oktoberfest/run_oktoberfest.py --search_dir path_to_search_dir --config_path path_to_config_file
-
-Note: The ``search_dir`` should contain both the raw files and the search results that fit the specified ``search_type`` in the config, e.g., ``msms.txt`` for MaxQuant.
+   python oktoberfest/run_oktoberfest.py --config_path path_to_config_file
 
 If you instead want to run oktoberfest using the docker image, run:
 
@@ -172,7 +169,7 @@ If you instead want to run oktoberfest using the docker image, run:
 
    DATA=path/to/data/dir make run_oktoberfest
 
-Note: ``DATA`` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified ``search_type`` in the config, e.g., ``msms.txt`` for MaxQuant, and the ``config.json``. The results will be written to ``<DATA>/results/percolator``.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
 
 Supported Models
 ----------------
@@ -180,14 +177,14 @@ Supported Models
 This is the list of currently supported and tested models for peptide property prediction provided by `koina.proteomicsdb.org`:
 
 - Intensity models:
-  - Prosit_2019_intensity
-  - Prosit_2020_intensity_HCD
-  - Prosit_2020_intensity_CID
-  - Prosit_2020_intensity_TMT
+   - Prosit_2019_intensity
+   - Prosit_2020_intensity_HCD
+   - Prosit_2020_intensity_CID
+   - Prosit_2020_intensity_TMT
 
 - iRT models:
-  - Prosit_2019_irt
-  - Prosit_2020_irt_TMT
+   - Prosit_2019_irt
+   - Prosit_2020_irt_TMT
 
 Once support for additional models is added, they will be added here.
 
