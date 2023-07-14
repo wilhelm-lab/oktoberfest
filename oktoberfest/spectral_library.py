@@ -5,9 +5,9 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-import tritonclient.grpc as grpcclient
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
+from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
 
 from .constants_dir import CONFIG_PATH
 from .data.spectra import FragmentType, Spectra
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def infer_predictions(
-    triton_client: grpcclient.InferenceServerClient,
+    triton_client: InferenceServerClient,
     model: str,
     input_data: Dict[str, Tuple[np.ndarray, str]],
     outputs: List[str],
@@ -47,11 +47,11 @@ def infer_predictions(
 
         infer_inputs = []
         for input_key, (data, dtype) in input_data.items():
-            infer_input = grpcclient.InferInput(input_key, [current_batchsize, 1], dtype)
+            infer_input = InferInput(input_key, [current_batchsize, 1], dtype)
             infer_input.set_data_from_numpy(data[i : i + current_batchsize])
             infer_inputs.append(infer_input)
 
-        infer_outputs = [grpcclient.InferRequestedOutput(output) for output in outputs]
+        infer_outputs = [InferRequestedOutput(output) for output in outputs]
 
         prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
 
@@ -166,7 +166,7 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=self.config.ssl)
+        triton_client = InferenceServerClient(url=self.config.prediction_server, ssl=self.config.ssl)
         batch_size = 1000
 
         intensity_outputs = ["intensities", "mz", "annotation"]
