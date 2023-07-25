@@ -40,6 +40,7 @@ def infer_predictions(
     predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
     for i in range(0, num_spec, batch_size):
+        logger.info(f"Predicting batch {i}/{num_spec}.")
         if num_spec < i + batch_size:
             current_batchsize = num_spec - i
         else:

@@ -39,7 +39,7 @@ class JobPool:
                 outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
                 if print_progress_every > 0 and len(outputs) % print_progress_every == 0:
                     logger.info(
-                        f' {len(outputs)} / {len(self.results)} {"%.2f" % (float(len(outputs)) / len(self.results) * 100)}%'
+                        f' {len(outputs) - 1} / {len(self.results)} {"%.2f" % (float(len(outputs) - 1) / len(self.results) * 100)}%'
                     )
             self.pool.close()
             self.pool.join()
