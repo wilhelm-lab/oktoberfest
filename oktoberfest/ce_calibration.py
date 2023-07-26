@@ -8,7 +8,7 @@ from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2, XlinkX
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -66,6 +66,8 @@ class CeCalibration(SpectralLibrary):
             search_result = Mascot(self.search_path)   
         elif search_type == "plink2":
             search_result = Plink2(self.search_path)
+        elif search_type == "xlinkx":
+            search_result = XlinkX(self.search_path)
         else:
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
@@ -82,7 +84,7 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch in ["maxquant", "msfragger", "mascot", "plink2"]:
+        if switch in ["maxquant", "msfragger", "mascot", "plink2","xlinkx"]:
             self._gen_internal_search_result_from_msms()
             switch = "internal"
         if switch == "internal":
@@ -151,7 +153,7 @@ class CeCalibration(SpectralLibrary):
         # Select the 1000 highest scoring or all if there are less than 1000
         self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
-        ).iloc[:1000]
+        ).iloc[:120]
 
         # Repeat dataframe for each CE
         ce_range = range(18, 50)
@@ -175,7 +177,6 @@ class CeCalibration(SpectralLibrary):
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
-
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
             filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",

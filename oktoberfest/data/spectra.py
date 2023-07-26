@@ -53,8 +53,8 @@ class Spectra:
         #print(config.search_type)
         #if config.search_type == "Plink2":
         
-        search_type = "Plink2"
-        if search_type == "Plink2":
+        search_type = "XlinkX"
+        if search_type == "XlinkX":
             max_range = 59
         else:
             max_range = 30 
@@ -135,9 +135,9 @@ class Spectra:
 
         # reshape based on the number of fragments
         #config = Config()
-        search_type = "Plink2"
+        search_type = "XlinkX"
         #if config.search_type == "Plink2":
-        if search_type == "Plink2":      
+        if search_type == "XlinkX":      
             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH_CMS2)
         else:
              intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
