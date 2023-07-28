@@ -232,10 +232,7 @@ class SpectralLibrary:
             intensities_pred_a["intensity"] = intensity_predictions_a["intensities"].tolist()
             intensities_pred_b["intensity"] = intensity_predictions_b["intensities"].tolist()
             library.add_matrix(intensities_pred_a["intensity"], FragmentType.PRED_A)
-            #print("FragmentType.PRED_A")
             library.add_matrix(intensities_pred_b["intensity"], FragmentType.PRED_B)
-            #print("FragmentType.PRED_B")
-            #dir(library)
             if alignment:
                 return
         

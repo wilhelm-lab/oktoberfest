@@ -172,8 +172,6 @@ class Spectra:
         
         intensity_df.columns = columns
         self.add_columns(intensity_df)
-        #print(intensity_df)
-        #print(intensity_df.shape)
 
     def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
         """
@@ -205,8 +203,6 @@ class Spectra:
         if return_column_names:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
         # Check if conversion is low change to coo then csr from coo
-        #print(scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values))
-        #print(scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].shape))
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
 
     def write_as_hdf5(self, output_file: Union[str, Path]) -> None:
