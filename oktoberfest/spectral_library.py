@@ -152,7 +152,7 @@ class SpectralLibrary:
         if library_input_type == "fasta":
             self.read_fasta()
             library_file = self.out_path / "prosit_input.csv"
-        elif library_input_type == "csv":
+        elif library_input_type == "peptides":
             library_file = self.config.library_input
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()

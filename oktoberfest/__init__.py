@@ -14,6 +14,8 @@ import logging.handlers
 import sys
 import time
 
+from oktoberfest import preprocessing as pp
+
 from . import runner
 
 CONSOLE_LOG_LEVEL = logging.INFO
