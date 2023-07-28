@@ -122,10 +122,23 @@ class CeCalibration(SpectralLibrary):
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         logger.info("Preparing library")
-        self.library.add_columns(df_join)
-        self.library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
-        self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
-        self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+            self.library.add_columns(df_join)
+            self.library.add_matrix(df_annotated_spectra["INTENSITIES_A"], FragmentType.RAW_A)
+            #print("FragmentType.RAW_A")
+            self.library.add_matrix(df_annotated_spectra["INTENSITIES_B"], FragmentType.RAW_B)
+            #print("FragmentType.RAW_B")
+            self.library.add_matrix(df_annotated_spectra["MZ_A"], FragmentType.MZ_A)
+            #print("FragmentType.MZ_A")
+            self.library.add_matrix(df_annotated_spectra["MZ_B"], FragmentType.MZ_B)
+            #print("FragmentType.MZ_B")
+            self.library.add_column(df_annotated_spectra["CALCULATED_MASS_A"], "CALCULATED_MASS_A")
+            self.library.add_column(df_annotated_spectra["CALCULATED_MASS_B"], "CALCULATED_MASS_B")
+        else:
+            self.library.add_columns(df_join)
+            self.library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
+            self.library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
+            self.library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
 
 
     def get_mzml_path(self) -> Path:
@@ -150,11 +163,16 @@ class CeCalibration(SpectralLibrary):
             (self.alignment_library.spectra_data["FRAGMENTATION"] == "HCD")
             & (~self.alignment_library.spectra_data["REVERSE"])
         ]
-        # Select the 1000 highest scoring or all if there are less than 1000
-        self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
+        # Select the 1000 highest scoring or all if there are less than 1000 
+        # Select the 500 highest scoring for crosslinked peptides
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+            self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
-        ).iloc[:120]
-
+        ).iloc[:1000]
+        else:
+            self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
+            by="SCORE", ascending=False
+        ).iloc[:1000]
         # Repeat dataframe for each CE
         ce_range = range(18, 50)
         nrow = len(self.alignment_library.spectra_data)
@@ -168,26 +186,47 @@ class CeCalibration(SpectralLibrary):
 
         Check https://gitlab.lrz.de/proteomics/prosit_tools/oktoberfest/-/blob/develop/oktoberfest/ce_calibration/grpc_alignment.py
         """
-        pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
-        raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
-        # return pred_intensity.toarray(), raw_intensity.toarray()
-        sm = SimilarityMetrics(pred_intensity, raw_intensity)
-        self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-        self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
-        self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
-            "SPECTRAL_ANGLE"
-        ].mean()
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+            pred_intensity_a = self.alignment_library.get_matrix(FragmentType.PRED_A)
+            
+            pred_intensity_b = self.alignment_library.get_matrix(FragmentType.PRED_B)
+            raw_intensity_a = self.alignment_library.get_matrix(FragmentType.RAW_A)
+            raw_intensity_b = self.alignment_library.get_matrix(FragmentType.RAW_B)
+            #print(pred_intensity_a.shape)
+            #print(pred_intensity_b.shape)
+            #print(raw_intensity_a.shape)
+            #print(raw_intensity_b.shape)
+            sm_a = SimilarityMetrics(pred_intensity_a, raw_intensity_a)
+            sm_b = SimilarityMetrics(pred_intensity_b, raw_intensity_b)
+            self.alignment_library.spectra_data["SPECTRAL_ANGLE_A"] = sm_a.spectral_angle(raw_intensity_a, pred_intensity_a, 0)
+            self.alignment_library.spectra_data["SPECTRAL_ANGLE_B"] = sm_a.spectral_angle(raw_intensity_b, pred_intensity_b, 0)
+            self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = (self.alignment_library.spectra_data["SPECTRAL_ANGLE_A"]+
+                                                                     self.alignment_library.spectra_data["SPECTRAL_ANGLE_B"]) / 2
+            self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
+            self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
+            "SPECTRAL_ANGLE"].mean()      
+        else:
+            pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
+            raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
+            
+            # return pred_intensity.toarray(), raw_intensity.toarray()
+            sm = SimilarityMetrics(pred_intensity, raw_intensity)
+            self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
+            self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
+            self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
+                "SPECTRAL_ANGLE"
+            ].mean()
         plot_mean_sa_ce(
-            sa_ce_df=self.ce_alignment,
-            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
-            best_ce=self.ce_alignment.idxmax(),
-        )
+                sa_ce_df=self.ce_alignment,
+                filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
+                best_ce=self.ce_alignment.idxmax(),
+            )
         plot_violin_sa_ce(
             df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
             filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
             best_ce=self.ce_alignment.idxmax(),
         )
-
+   
     def perform_alignment(self, df_search: pd.DataFrame):
         """
         Perform alignment and get the best CE.

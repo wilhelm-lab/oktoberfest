@@ -9,9 +9,8 @@ import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import coo_matrix, spmatrix
 from spectrum_io.file import hdf5
-#from utils.config import Config
-
-
+from ..utils.config import Config
+from ..constants_dir import CONFIG_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +18,29 @@ logger = logging.getLogger(__name__)
 class FragmentType(Enum):
     """FragmentType class to enumerate pred, raw, and mz."""
 
-    PRED = 1
-    RAW = 2
-    MZ = 3
+    PRED   = 1
+    PRED_A = 2
+    PRED_B = 3
+    RAW    = 4
+    RAW_A  = 5
+    RAW_B  = 6
+    MZ     = 7
+    MZ_A   = 8
+    MZ_B   = 9
 
 
 class Spectra:
     """Main to init spectra data."""
 
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
+    INTENSITY_COLUMN_PREFIX_A = "INTENSITY_RAW_A"
+    INTENSITY_COLUMN_PREFIX_B = "INTENSITY_RAW_B"
     INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
+    INTENSITY_PRED_PREFIX_A = "INTENSITY_PRED_A"
+    INTENSITY_PRED_PREFIX_B = "INTENSITY_PRED_B"
     MZ_COLUMN_PREFIX = "MZ_RAW"
+    MZ_COLUMN_PREFIX_A = "MZ_RAW_A"
+    MZ_COLUMN_PREFIX_B = "MZ_RAW_B"
     EPSILON = 1e-7
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
@@ -49,12 +60,9 @@ class Spectra:
         """
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
-        #config = Config()
-        #print(config.search_type)
-        #if config.search_type == "Plink2":
-        
-        search_type = "XlinkX"
-        if search_type == "XlinkX":
+        config = Config()
+        config.read(CONFIG_PATH)
+        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]): 
             max_range = 59
         else:
             max_range = 30 
@@ -75,9 +83,21 @@ class Spectra:
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
-            prefix = Spectra.INTENSITY_COLUMN_PREFIX
-        else:
+            prefix = Spectra.INTENSITY_PRED_PREFIX_A    
+        elif fragment_type.value == 3:
+            prefix = Spectra.INTENSITY_PRED_PREFIX_B
+        elif fragment_type.value == 4:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX   
+        elif fragment_type.value == 5:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_A
+        elif fragment_type.value == 6:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_B
+        elif fragment_type.value == 7:
             prefix = Spectra.MZ_COLUMN_PREFIX
+        elif fragment_type.value == 8:
+            prefix = Spectra.MZ_COLUMN_PREFIX_A       
+        else:
+            prefix = Spectra.MZ_COLUMN_PREFIX_B
         return prefix
 
     def add_column(self, column_data: pd.Series, name: str) -> None:
@@ -134,13 +154,12 @@ class Spectra:
         intensity_df = intensity_data.explode()
 
         # reshape based on the number of fragments
-        #config = Config()
-        search_type = "XlinkX"
-        #if config.search_type == "Plink2":
-        if search_type == "XlinkX":      
+        config = Config()
+        config.read(CONFIG_PATH)
+        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH_CMS2)
         else:
-             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
+            intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
  
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
@@ -150,9 +169,11 @@ class Spectra:
         # generate column names and build dataframe from sparse matrix
         intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
         columns = self._gen_column_names(fragment_type)
-        #print(columns)
+        
         intensity_df.columns = columns
         self.add_columns(intensity_df)
+        #print(intensity_df)
+        #print(intensity_df.shape)
 
     def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
         """
@@ -184,6 +205,8 @@ class Spectra:
         if return_column_names:
             return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
         # Check if conversion is low change to coo then csr from coo
+        #print(scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values))
+        #print(scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].shape))
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values)
 
     def write_as_hdf5(self, output_file: Union[str, Path]) -> None:

@@ -171,7 +171,7 @@ class SpectralLibrary:
         
         intensity_model = self.config.models["intensity"]
         if "xl" in intensity_model.lower():
-             intensity_input_data = {
+            intensity_input_data_a = {
             "peptide_sequences_1": (
                 library.spectra_data["MODIFIED_SEQUENCE_A"].to_numpy().reshape(-1, 1).astype(np.object_),
                 "BYTES",
@@ -188,7 +188,57 @@ class SpectralLibrary:
                 library.spectra_data["PRECURSOR_CHARGE"].to_numpy().reshape(-1, 1).astype(np.int32),
                 "INT32",
             ),
-        }
+            }
+            intensity_input_data_b = {
+            "peptide_sequences_1": (
+                library.spectra_data["MODIFIED_SEQUENCE_B"].to_numpy().reshape(-1, 1).astype(np.object_),
+                "BYTES",
+            ),
+            "peptide_sequences_2": (
+                library.spectra_data["MODIFIED_SEQUENCE_A"].to_numpy().reshape(-1, 1).astype(np.object_),
+                "BYTES",
+            ),
+            "collision_energies": (
+                library.spectra_data["COLLISION_ENERGY"].to_numpy().reshape(-1, 1).astype(np.float32),
+                "FP32",
+            ),
+            "precursor_charges": (
+                library.spectra_data["PRECURSOR_CHARGE"].to_numpy().reshape(-1, 1).astype(np.int32),
+                "INT32",
+            ),
+            }
+            intensity_outputs_a = ["intensities", "mz", "annotation"]
+            intensity_outputs_b = ["intensities", "mz", "annotation"]
+
+            intensity_predictions_a = infer_predictions(
+            triton_client,
+            model=intensity_model,
+            input_data=intensity_input_data_a,
+            outputs=intensity_outputs_a,
+            batch_size=batch_size,
+        )
+            intensity_predictions_b = infer_predictions(
+            triton_client,
+            model=intensity_model,
+            input_data=intensity_input_data_b,
+            outputs=intensity_outputs_b,
+            batch_size=batch_size,
+        )
+            intensity_predictions_a["intensities"][np.where(intensity_predictions_a["intensities"] < 1e-7)] = 0.0
+            intensity_predictions_b["intensities"][np.where(intensity_predictions_b["intensities"] < 1e-7)] = 0.0
+
+            intensities_pred_a = pd.DataFrame()
+            intensities_pred_b = pd.DataFrame()
+            intensities_pred_a["intensity"] = intensity_predictions_a["intensities"].tolist()
+            intensities_pred_b["intensity"] = intensity_predictions_b["intensities"].tolist()
+            library.add_matrix(intensities_pred_a["intensity"], FragmentType.PRED_A)
+            #print("FragmentType.PRED_A")
+            library.add_matrix(intensities_pred_b["intensity"], FragmentType.PRED_B)
+            #print("FragmentType.PRED_B")
+            #dir(library)
+            if alignment:
+                return
+        
         else:
               intensity_input_data = {
             "peptide_sequences": (
@@ -221,7 +271,7 @@ class SpectralLibrary:
             batch_size=batch_size,
         )
         intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
-        """
+        
         irt_model = self.config.models["irt"]
         irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
         irt_outputs = ["irt"]
@@ -232,7 +282,7 @@ class SpectralLibrary:
             outputs=irt_outputs,
             batch_size=batch_size,
         )
-        """
+        
         if self.config.job_type == "SpectralLibraryGeneration":
             intensity_prediction_dict = {
                 "intensity": intensity_predictions["intensities"],
