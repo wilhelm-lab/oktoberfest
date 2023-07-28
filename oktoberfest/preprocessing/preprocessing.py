@@ -1,20 +1,22 @@
-from pathlib import Path
 import logging
-import pandas as pd
+from pathlib import Path
 
-from spectrum_io.spectral_library import digest
-from ..data.spectra import FragmentType, Spectra
-from ..utils.config import Config
-from spectrum_io.file import csv
-from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+import pandas as pd
 import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.fragments import compute_peptide_mass
+from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+from spectrum_io.file import csv
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
+from spectrum_io.spectral_library import digest
+
+from ..data.spectra import Spectra
+from ..utils.config import Config
 from ..utils.process_step import ProcessStep
 
 logger = logging.getLogger(__name__)
 
-##SpectralLibrary
+
+# SpectralLibrary
 def gen_lib(config: Config, library: Spectra) -> Spectra:
     """Read input csv file and add it to library."""
     library_input_type = config.library_input_type
@@ -27,6 +29,7 @@ def gen_lib(config: Config, library: Spectra) -> Spectra:
     library_df.columns = library_df.columns.str.upper()
     library.add_columns(library_df)
     return library
+
 
 def read_fasta(config: Config, out_path: Path):
     """Read fasta file."""
@@ -54,6 +57,7 @@ def read_fasta(config: Config, out_path: Path):
     ]
     digest.main(cmd)
 
+
 def process_and_filter_spectra_data(config: Config, library: Spectra) -> Spectra:
     """
     Process and filter the spectra data in the given SpectralLibrary object.
@@ -63,39 +67,22 @@ def process_and_filter_spectra_data(config: Config, library: Spectra) -> Spectra
     converts the 'MODIFIED_SEQUENCE' to internal format, extracts 'SEQUENCE', and filters
     out certain entries based on specific criteria.
     """
-    library.spectra_data["MODIFIED_SEQUENCE"] = library.spectra_data[
-        "MODIFIED_SEQUENCE"
-    ].apply(lambda x: "_" + x + "_")
-    models_dict = config.models
+    library.spectra_data["MODIFIED_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
     library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
         library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods={}
     )
-    library.spectra_data["SEQUENCE"] = internal_without_mods(
-        library.spectra_data["MODIFIED_SEQUENCE"]
-    )
-    library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(
-        lambda x: len(x)
-    )
+    library.spectra_data["SEQUENCE"] = internal_without_mods(library.spectra_data["MODIFIED_SEQUENCE"])
+    library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
 
     logger.info(f"No of sequences before Filtering is {len(library.spectra_data['PEPTIDE_LENGTH'])}")
-    library.spectra_data = library.spectra_data[
-        (library.spectra_data["PEPTIDE_LENGTH"] <= 30)
-    ]
-    library.spectra_data = library.spectra_data[
-        (~library.spectra_data["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-    ]
+    library.spectra_data = library.spectra_data[(library.spectra_data["PEPTIDE_LENGTH"] <= 30)]
+    library.spectra_data = library.spectra_data[(~library.spectra_data["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))]
     library.spectra_data = library.spectra_data[
         (~library.spectra_data["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
     ]
-    library.spectra_data = library.spectra_data[
-        (~library.spectra_data["SEQUENCE"].str.contains("U"))
-    ]
-    library.spectra_data = library.spectra_data[
-        library.spectra_data["PRECURSOR_CHARGE"] <= 6
-    ]
-    library.spectra_data = library.spectra_data[
-        library.spectra_data["PEPTIDE_LENGTH"] >= 7
-    ]
+    library.spectra_data = library.spectra_data[(~library.spectra_data["SEQUENCE"].str.contains("U"))]
+    library.spectra_data = library.spectra_data[library.spectra_data["PRECURSOR_CHARGE"] <= 6]
+    library.spectra_data = library.spectra_data[library.spectra_data["PEPTIDE_LENGTH"] >= 7]
     logger.info(f"No of sequences after Filtering is {len(library.spectra_data['PEPTIDE_LENGTH'])}")
 
     tmt_model = False
@@ -110,18 +97,14 @@ def process_and_filter_spectra_data(config: Config, library: Spectra) -> Spectra
             fixed_mods={"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}", "K": f"K{unimod_tag}"},
         )
     else:
-        library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-            library.spectra_data["MODIFIED_SEQUENCE"]
-        )
+        library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.spectra_data["MODIFIED_SEQUENCE"])
 
-    library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(
-        lambda x: compute_peptide_mass(x)
-    )
+    library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
 
 
-##CeCalibration
+# CeCalibration
 def load_search(config: Config) -> pd.DataFrame:
     """Load search type."""
     switch = config.search_results_type
@@ -134,10 +117,11 @@ def load_search(config: Config) -> pd.DataFrame:
     else:
         raise ValueError(f"{switch} is not a supported search type. Convert to internal format manually.")
 
+
 def _gen_internal_search_result_from_msms(config: Config) -> Path:
     """Generate internal search result from msms.txt."""
     logger.info(f"Converting msms data at {config.search_results} to internal search result.")
-    
+
     search_type = config.search_results_type
     if search_type == "maxquant":
         search_result = MaxQuant(config.search_results)
@@ -153,7 +137,7 @@ def _gen_internal_search_result_from_msms(config: Config) -> Path:
     return search_path
 
 
-##ReScore
+# ReScore
 def get_raw_files(config: Config):
     """
     Obtains raw files by scanning through the raw_path directory.
@@ -165,7 +149,6 @@ def get_raw_files(config: Config):
     raw_files = []
     if config.spectra.is_file():
         raw_files = [config.spectra]
-        raw_path = config.spectra.parent
     elif config.spectra.is_dir():
         spectra_type = config.spectra_type
         glob_pattern = _get_glob_pattern(spectra_type)
@@ -189,6 +172,7 @@ def _get_glob_pattern(spectra_type: str) -> str:
         return "*.[mM][zZ][mM][lL]"
     else:
         raise ValueError(f"{spectra_type} is not supported as rawfile-type")
+
 
 def split_msms(config: Config, split_msms_step: ProcessStep):
     """Splits msms.txt file per raw file such that we can process each raw file in parallel \
@@ -224,9 +208,11 @@ def split_msms(config: Config, split_msms_step: ProcessStep):
 
     split_msms_step.mark_done()
 
+
 def get_msms_folder_path(config: Config) -> Path:
     """Get folder path to msms."""
     return config.output / "msms"
+
 
 def _get_split_msms_path(config: Config, raw_file: str) -> Path:
     """
