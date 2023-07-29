@@ -1,15 +1,18 @@
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
+from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.file import csv
+from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 from spectrum_io.spectral_library import digest
 
-from ..data.spectra import Spectra
+from ..data.spectra import FragmentType, Spectra
 from ..utils.config import Config
 from ..utils.process_step import ProcessStep
 
@@ -222,3 +225,88 @@ def _get_split_msms_path(config: Config, raw_file: str) -> Path:
     :return: path to split msms file
     """
     return get_msms_folder_path(config) / raw_file
+
+
+def merge_mzml_and_msms(config: Config, library: Spectra, df_search: pd.DataFrame) -> Spectra:
+    """
+    Read input search and mzml and add it to library.
+
+    :param df_search: search result as pd.DataFrame
+    """
+    df_raw = _load_rawfile(config)
+    # return df_search
+    logger.info("Merging rawfile and search result")
+    df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
+    logger.info(f"There are {len(df_join)} matched identifications")
+    logger.info("Annotating raw spectra")
+    df_annotated_spectra = annotate_spectra(df_join)
+    df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
+    # return df_annotated_spectra["INTENSITIES"]
+    logger.info("Preparing library")
+    library.add_columns(df_join)
+    library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
+    library.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
+    library.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
+    return library
+
+
+def _load_rawfile(config: Config):
+    """Load raw file."""
+    switch = config.spectra_type
+    search_engine = config.search_results_type
+    logger.info(f"raw_type is {switch}")
+    if switch == "raw":
+        raw_path = _gen_mzml_from_thermo(config)
+        switch = "mzml"
+    if switch == "mzml":
+        # TODO self.mzml_reader_package
+        return ThermoRaw.read_mzml(source=raw_path, package="pyteomics", search_type=search_engine)
+    else:
+        raise ValueError(f"{switch} is not supported as rawfile-type")
+
+
+def _gen_mzml_from_thermo(config: Config):
+    """Generate mzml from thermo raw file."""
+    logger.info("Converting thermo rawfile to mzml.")
+    raw = ThermoRaw()
+    raw_path = raw.convert_raw_mzml(
+        input_path=config.spectra, output_path=get_mzml_path(config), thermo_exe=config.thermo_exe
+    )
+    return raw_path
+
+
+def get_mzml_path(config: Config) -> Path:
+    """Get path to mzml file."""
+    if config.spectra_type == "mzml":
+        spectra_path = config.spectra
+    else:
+        spectra_path = config.output / "mzML"
+    spectra_path.mkdir(exist_ok=True)
+    return spectra_path / config.spectra.with_suffix(".mzML").name
+
+
+def prepare_alignment_df(library: Spectra) -> Spectra:
+    """
+    Prepare an alignment DataFrame from the given Spectra library.
+
+    This function creates an alignment DataFrame by removing decoy and HCD fragmented spectra
+    from the input library, selecting the top 1000 highest-scoring spectra, and repeating the
+    DataFrame for each collision energy (CE) in the range [18, 50].
+    """
+    alignment_library = Spectra()
+    alignment_library.spectra_data = library.spectra_data.copy()
+
+    # Remove decoy and HCD fragmented spectra
+    alignment_library.spectra_data = alignment_library.spectra_data[
+        (alignment_library.spectra_data["FRAGMENTATION"] == "HCD") & (~alignment_library.spectra_data["REVERSE"])
+    ]
+    # Select the 1000 highest scoring or all if there are less than 1000
+    alignment_library.spectra_data = alignment_library.spectra_data.sort_values(by="SCORE", ascending=False).iloc[:1000]
+
+    # Repeat dataframe for each CE
+    ce_range = range(18, 50)
+    nrow = len(alignment_library.spectra_data)
+    alignment_library.spectra_data = pd.concat([alignment_library.spectra_data for _ in ce_range], axis=0)
+    alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range, nrow)
+    alignment_library.spectra_data.reset_index(inplace=True)
+    return alignment_library

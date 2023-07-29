@@ -7,5 +7,8 @@ docstring-convention = google
 per-file-ignores =
 	tests/*:S101
 	oktoberfest/__init__.py:F401
+        oktoberfest/plotting/__init__.py:F401,F403
+        oktoberfest/preprocessing/__init__.py:F401,F403
+        oktoberfest/predict/__init__.py:F401,F403
         docs/conf.py:S404,S607,S603
 docstring_style = sphinx
