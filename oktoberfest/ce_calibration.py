@@ -117,7 +117,7 @@ class CeCalibration(SpectralLibrary):
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
-        df_annotated_spectra = annotate_spectra(df_join)
+        df_annotated_spectra = annotate_spectra(df_join, self.config.mass_tolerance)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         # return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")

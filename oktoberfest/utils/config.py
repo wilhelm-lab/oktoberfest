@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,11 @@ class Config:
     def inputs(self) -> dict:
         """Get inputs dictionary from the config file."""
         return self.data.get("inputs", {})
+
+    @property
+    def mass_tolerance(self) -> Optional[float]:
+        """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
+        return self.data.get("massTolerance", None)
 
     @property
     def search_results(self) -> Path:
