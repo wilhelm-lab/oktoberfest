@@ -4,7 +4,7 @@
     "allFeatures": false,
     "inputs": {
         "search_results": "./msms.txt",
-        "search_type": "Maxquant",
+        "search_results_type": "Maxquant",
         "spectra": "./",
         "spectra_type": "raw"
     },
