@@ -29,15 +29,16 @@ at the Technical University of Munich."""
 logger = logging.getLogger(__name__)
 
 
-def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, Path]):
+def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, Path], out_path: Union[str, Path]):
     """
     Create a SpectralLibrary object and generate the spectral library.
 
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
+    :param out_path: path to which all outputs are written
     :raises ValueError: spectral library output format is not supported as spectral library type
     """
-    spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
+    spec_library = SpectralLibrary(search_path=search_dir, out_path=out_path, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
         "MODIFIED_SEQUENCE"
@@ -198,7 +199,7 @@ def run_job(config_path: Union[str, Path]):
     output_path = conf.output
     msms_path = conf.search_results
     if job_type == "SpectralLibraryGeneration":
-        generate_spectral_lib(search_dir, config_path)
+        generate_spectral_lib(search_dir, config_path, output_path)
     elif job_type == "CollisionEnergyCalibration":
         spectra_type = conf.spectra_type
         if spectra_type == "raw":
