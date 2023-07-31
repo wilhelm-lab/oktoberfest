@@ -10,5 +10,6 @@ per-file-ignores =
         oktoberfest/plotting/__init__.py:F401,F403
         oktoberfest/preprocessing/__init__.py:F401,F403
         oktoberfest/predict/__init__.py:F401,F403
+        oktoberfest/rescore/__init__.py:F401,F403
         docs/conf.py:S404,S607,S603
 docstring_style = sphinx

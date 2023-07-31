@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -141,7 +142,7 @@ def _gen_internal_search_result_from_msms(config: Config) -> Path:
 
 
 # ReScore
-def get_raw_files(config: Config):
+def get_raw_files(config: Config) -> List[Path]:
     """
     Obtains raw files by scanning through the raw_path directory.
 
@@ -152,11 +153,13 @@ def get_raw_files(config: Config):
     raw_files = []
     if config.spectra.is_file():
         raw_files = [config.spectra]
+        return raw_files
     elif config.spectra.is_dir():
         spectra_type = config.spectra_type
         glob_pattern = _get_glob_pattern(spectra_type)
         raw_files = list(config.spectra.glob(glob_pattern))
         logger.info(f"Found {len(raw_files)} raw files in the search directory")
+        return raw_files
     else:
         raise FileNotFoundError(f"{config.spectra} does not exist.")
 
