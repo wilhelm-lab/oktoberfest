@@ -87,6 +87,7 @@ html_context = {
 repository_url = "https://github.com/wilhelm-lab/oktoberfest"
 html_static_path = ["_static"]
 html_show_sphinx = False
+html_logo = "_static/img/Oktoberfest.svg"
 
 
 # -- Options for other output formats ------------------------------------------
