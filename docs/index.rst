@@ -1,6 +1,5 @@
 
-.. include:: ../README.rst
-   :end-line: 34
+.. include:: readme.rst
 
 .. include:: _key_contributors.rst
 
@@ -18,7 +17,6 @@
    usage
    API
    contributing
-   contributors
    reference
 
 .. _github: https://github.com/wilhelm-lab/oktoberfest
