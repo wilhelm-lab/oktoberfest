@@ -54,7 +54,7 @@ Prosit will:
 1. Select a random subset of high-scoring PSMs
 2. Predict those in for each CE from 18 to 49.
 3. Calculate which CE achieves highest correlations with the experimental spectra
-   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 -   Spectral Library (SpectralLibraryGeneration)
 
@@ -71,10 +71,10 @@ This task rescores an existing search result using features generated from pepti
 Oktoberfest will:
 
 1. Calibrate CE against the provided RAW files.
-2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
+2. Predict all sequences in the search results file.
 3. Use predicted spectra to generate features for percolator.
 4. Run percolator to rescore the search.
-   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 ## Run oktoberfest
 
@@ -94,11 +94,11 @@ Create a `config.json` file which should contain the following flags:
 
 -   `inputs`
 
-    -   `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
+    -   `search_results` = path to the file containing the search results
 
-    -   `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+    -   `search_results_type` = the tool used to produce the search results, can be "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
 
-    -   `spectra` = path to the search results (raw or mzml files)
+    -   `spectra` = path to a folder or a single file containing mass spectrometry results (raw or mzml files)
 
     -   `spectra_type` = "raw" or "mzml"; default = "raw"
 
@@ -148,7 +148,7 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `enzyme` = type of enzyme used in the search engine; default = "trypsin"
 
-    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+    -   `specialAas` = special amino acids used for decoy generation; default = "KR"
 
     -   `db` = "target", "decoy" or "concat"; default = "concat"
 
@@ -168,7 +168,7 @@ If you instead want to run oktoberfest using the docker image, run:
 DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
 
 ## Supported Models
 
