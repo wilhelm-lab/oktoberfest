@@ -147,13 +147,22 @@ class SpectralLibrary:
             logger.info("In Feature Calculation")
 
     def gen_lib(self):
-        """Read input csv file and add it to library."""
+        """
+        Read input csv file and add it to library.
+
+        :raises ValueError: If the value provided for library_input_type in the config file
+            is sth. other than "peptides" or "fasta".
+        """
         library_input_type = self.config.library_input_type
         if library_input_type == "fasta":
             self.read_fasta()
             library_file = self.out_path / "prosit_input.csv"
-        elif library_input_type == "csv":
+        elif library_input_type == "peptides":
             library_file = self.config.library_input
+        else:
+            raise ValueError(
+                f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".'
+            )
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
