@@ -22,7 +22,7 @@ Example config file:
         "output": "./out",
         "inputs": {
             "search_results": "./msms.txt",
-            "search_type": "Maxquant",
+            "search_results_type": "Maxquant",
             "spectra": "./",
             "spectra_type": "raw"
         },
@@ -56,7 +56,7 @@ Example config file:
         "output": "./out",
         "inputs": {
             "search_results": "./msms.txt",
-            "search_type": "Maxquant",
+            "search_results_type": "Maxquant",
             "library_input": "./peptides.csv",
             "library_input_type": "peptides"
         },
@@ -103,7 +103,7 @@ Example config file:
         "output": "./out",
         "inputs": {
             "search_results": "./msms.txt",
-            "search_type": "Maxquant",
+            "search_results_type": "Maxquant",
             "spectra": "./",
             "spectra_type": "raw"
         },
