@@ -116,6 +116,10 @@ Create a `config.json` file which should contain the following flags:
 
 -   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
 
+-   `massTolerance` = mass tolerance value with which to caluculate the min and max mass values
+
+-   `unitMassTolerance` = unit for the mass tolerance from the config file: "da" or "ppm"
+
 -   `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.

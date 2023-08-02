@@ -111,6 +111,11 @@ class Config:
         return self.data.get("massTolerance", None)
 
     @property
+    def unit_mass_tolerance(self) -> Optional[str]:
+        """Get unit for the mass tolerance from the config file (da or ppm)."""
+        return self.data.get("unitMassTolerance", None)
+
+    @property
     def search_results(self) -> Path:
         """Get path to the search results file from the config file."""
         search_results_path = self.inputs.get("search_results")
