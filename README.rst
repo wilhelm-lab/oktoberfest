@@ -127,6 +127,8 @@ Create a `config.json` file which should contain the following flags:
 - `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
 - `numThreads` = number of raw files processed in parallel processes; default = 1
 - `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
+- `massTolerance` = mass tolerance value defining the allowed tolerance between theoretical and experimentally observered fragment mass during peak filtering and annotation. Default depends on the mass analyzer: 20 (FTMS), 40 (TOF), 0.35 (ITMS)
+- `unitMassTolerance` = unit for the mass tolerance, either "da" or "ppm". Default is da (mass analyzer is ITMS) and ppm (mass analyzer is FTMS or TOF)
 - `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the `koina <https://koina.proteomicsdb.org/>`_ instance we provide at `koina.proteomicsdb.org:443`.

@@ -37,7 +37,9 @@ Example config file:
         "prediction_server": "koina.proteomicsdb.org:443",
         "regressionMethod": "lowess",
         "ssl": True,
-        "thermoExe": "ThermoRawFileParser.exe"
+        "thermoExe": "ThermoRawFileParser.exe",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm"
     }
 
 B. Spectral Library Generation
@@ -133,6 +135,8 @@ Example config file:
         "allFeatures": False,
         "regressionMethod": "lowess",
         "ssl": True,
-        "thermoExe": "ThermoRawFileParser.exe"
+        "thermoExe": "ThermoRawFileParser.exe",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm"
     }
 

@@ -17,5 +17,7 @@
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
     "numThreads": 1,
-    "thermoExe": "ThermoRawFileParser.exe"
+    "thermoExe": "ThermoRawFileParser.exe",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm"
 }
