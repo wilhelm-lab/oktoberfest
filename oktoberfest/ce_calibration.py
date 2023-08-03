@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ class CeCalibration(SpectralLibrary):
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -117,7 +117,7 @@ class CeCalibration(SpectralLibrary):
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
-        df_annotated_spectra = annotate_spectra(df_join)
+        df_annotated_spectra = annotate_spectra(df_join, self.config.mass_tolerance, self.config.unit_mass_tolerance)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         # return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")

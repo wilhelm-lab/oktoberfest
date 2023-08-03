@@ -116,6 +116,10 @@ Create a `config.json` file which should contain the following flags:
 
 -   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
 
+-   `massTolerance` = mass tolerance value defining the allowed tolerance between theoretical and experimentally observered fragment mass during peak filtering and annotation. Default depends on the mass analyzer: 20 (FTMS), 40 (TOF), 0.35 (ITMS)
+
+-   `unitMassTolerance` = unit for the mass tolerance, either "da" or "ppm". Default depends on the mass analyzer: da (ITMS), ppm (FTMS or TOF)
+
 -   `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
