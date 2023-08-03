@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ class CeCalibration(SpectralLibrary):
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pyteomics",
     ):
         """
