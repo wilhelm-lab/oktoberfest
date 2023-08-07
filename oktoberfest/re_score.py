@@ -126,18 +126,37 @@ class ReScore(CalculateFeatures):
             if not raw_file_path.with_suffix(".raw").is_file() or raw_file_path.with_suffix(".RAW").is_file():
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
-
-            split_msms = self._get_split_msms_path(raw_file + ".rescore")
-            logger.info(f"Creating split msms.txt file {split_msms}")
-            df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
-            df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))]
-            df_search_split = df_search_split[
-                (~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-            ]
-            df_search_split = df_search_split[(~df_search_split["SEQUENCE"].str.contains("U"))]
-            df_search_split = df_search_split[df_search_split["PRECURSOR_CHARGE"] <= 6]
-            df_search_split = df_search_split[df_search_split["PEPTIDE_LENGTH"] >= 7]
-            df_search_split.to_csv(split_msms, sep="\t", index=False)
+            if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+                split_msms = self._get_split_msms_path(raw_file + ".rescore")
+                logger.info(f"Creating split msms.txt file {split_msms}")
+                df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH_A"] <= 30)]
+                df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH_B"] <= 30)]
+                df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE_A"].str.contains(r"\(ac\)"))]
+                df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE_B"].str.contains(r"\(ac\)"))]
+                df_search_split = df_search_split[
+                    (~df_search_split["MODIFIED_SEQUENCE_A"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+                ]
+                df_search_split = df_search_split[
+                    (~df_search_split["MODIFIED_SEQUENCE_B"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+                ]
+                df_search_split = df_search_split[(~df_search_split["SEQUENCE_A"].str.contains("U"))]
+                df_search_split = df_search_split[(~df_search_split["SEQUENCE_B"].str.contains("U"))]
+                df_search_split = df_search_split[df_search_split["PRECURSOR_CHARGE"] <= 6]
+                df_search_split = df_search_split[df_search_split["PEPTIDE_LENGTH_A"] >= 6]
+                df_search_split = df_search_split[df_search_split["PEPTIDE_LENGTH_B"] >= 6]
+                df_search_split.to_csv(split_msms, sep="\t", index=False)
+            else:
+                split_msms = self._get_split_msms_path(raw_file + ".rescore")
+                logger.info(f"Creating split msms.txt file {split_msms}")
+                df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
+                df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))]
+                df_search_split = df_search_split[
+                    (~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+                ]
+                df_search_split = df_search_split[(~df_search_split["SEQUENCE"].str.contains("U"))]
+                df_search_split = df_search_split[df_search_split["PRECURSOR_CHARGE"] <= 6]
+                df_search_split = df_search_split[df_search_split["PEPTIDE_LENGTH"] >= 7]
+                df_search_split.to_csv(split_msms, sep="\t", index=False)
 
         self.split_msms_step.mark_done()
 

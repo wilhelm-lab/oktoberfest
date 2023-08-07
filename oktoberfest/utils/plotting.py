@@ -260,4 +260,4 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
 
     prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
+    #plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)

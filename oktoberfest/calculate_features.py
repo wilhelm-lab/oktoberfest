@@ -7,6 +7,9 @@ from spectrum_fundamentals.metrics.percolator import Percolator
 
 from .ce_calibration import CeCalibration
 from .data.spectra import FragmentType
+#from .utils.config import Config
+#from .constants_dir import CONFIG_PATH
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,8 @@ class CalculateFeatures(CeCalibration):
         self.perform_alignment(df_search)
         self.library.spectra_data["COLLISION_ENERGY"] = self.best_ce
         self.grpc_predict(self.library)
+        print("library")
+        print(self.library)
         self.library.write_pred_as_hdf5(self.get_pred_path())
 
     def gen_perc_metrics(self, search_type: str, file_path: Optional[Union[str, Path]] = None):
@@ -37,11 +42,18 @@ class CalculateFeatures(CeCalibration):
         :param search_type: model (rescore or original) as a string
         :param file_path: Optional path to percolator input file as a string
         """
+
         perc_features = Percolator(
             metadata=self.library.get_meta_data(),
             pred_intensities=self.library.get_matrix(FragmentType.PRED),
+            #pred_intensities_a=self.library.get_matrix(FragmentType.PRED_A),
+            #pred_intensities_b=self.library.get_matrix(FragmentType.PRED_B),
             true_intensities=self.library.get_matrix(FragmentType.RAW),
+            #true_intensities_a=self.library.get_matrix(FragmentType.RAW_A),
+            #true_intensities_b=self.library.get_matrix(FragmentType.RAW_B),
             mz=self.library.get_matrix(FragmentType.MZ),
+            #mz_a=self.library.get_matrix(FragmentType.MZ_A),
+            #mz_b=self.library.get_matrix(FragmentType.MZ_B),
             input_type=search_type,
             all_features_flag=self.config.all_features,
             regression_method=self.config.curve_fitting_method,

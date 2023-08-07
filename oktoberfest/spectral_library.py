@@ -235,9 +235,10 @@ class SpectralLibrary:
             library.add_matrix(intensities_pred_b["intensity"], FragmentType.PRED_B)
             if alignment:
                 return
+            
         
         else:
-              intensity_input_data = {
+            intensity_input_data = {
             "peptide_sequences": (
                 library.spectra_data["MODIFIED_SEQUENCE"].to_numpy().reshape(-1, 1).astype(np.object_),
                 "BYTES",
@@ -252,55 +253,55 @@ class SpectralLibrary:
             ),
         }
 
-        intensity_outputs = ["intensities", "mz", "annotation"]
+            intensity_outputs = ["intensities", "mz", "annotation"]
 
-       
-        if "tmt" in intensity_model.lower():
-            intensity_input_data["fragmentation_types"] = (
-                library.spectra_data["FRAGMENTATION_GRPC"].to_numpy().reshape(-1, 1).astype(np.float32),
-                "FP32",
+        
+            if "tmt" in intensity_model.lower():
+                intensity_input_data["fragmentation_types"] = (
+                    library.spectra_data["FRAGMENTATION_GRPC"].to_numpy().reshape(-1, 1).astype(np.float32),
+                    "FP32",
+                )
+            intensity_predictions = infer_predictions(
+                triton_client,
+                model=intensity_model,
+                input_data=intensity_input_data,
+                outputs=intensity_outputs,
+                batch_size=batch_size,
             )
-        intensity_predictions = infer_predictions(
-            triton_client,
-            model=intensity_model,
-            input_data=intensity_input_data,
-            outputs=intensity_outputs,
-            batch_size=batch_size,
-        )
-        intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
-        
-        irt_model = self.config.models["irt"]
-        irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
-        irt_outputs = ["irt"]
-        irt_predictions = infer_predictions(
-            triton_client,
-            model=irt_model,
-            input_data=irt_input_data,
-            outputs=irt_outputs,
-            batch_size=batch_size,
-        )
-        
-        if self.config.job_type == "SpectralLibraryGeneration":
-            intensity_prediction_dict = {
-                "intensity": intensity_predictions["intensities"],
-                "fragmentmz": intensity_predictions["mz"],
-                "annotation": parse_fragment_labels(
-                    intensity_predictions["annotation"],
-                    library.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
-                    library.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
-                ),
-            }
-            output_dict = {intensity_model: intensity_prediction_dict, irt_model: irt_predictions["irt"]}
-            return output_dict
+            intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
+            
+            irt_model = self.config.models["irt"]
+            irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
+            irt_outputs = ["irt"]
+            irt_predictions = infer_predictions(
+                triton_client,
+                model=irt_model,
+                input_data=irt_input_data,
+                outputs=irt_outputs,
+                batch_size=batch_size,
+            )
+            
+            if self.config.job_type == "SpectralLibraryGeneration":
+                intensity_prediction_dict = {
+                    "intensity": intensity_predictions["intensities"],
+                    "fragmentmz": intensity_predictions["mz"],
+                    "annotation": parse_fragment_labels(
+                        intensity_predictions["annotation"],
+                        library.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
+                        library.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
+                    ),
+                }
+                output_dict = {intensity_model: intensity_prediction_dict, irt_model: irt_predictions["irt"]}
+                return output_dict
 
-        intensities_pred = pd.DataFrame()
-        intensities_pred["intensity"] = intensity_predictions["intensities"].tolist()
-        library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
+            intensities_pred = pd.DataFrame()
+            intensities_pred["intensity"] = intensity_predictions["intensities"].tolist()
+            library.add_matrix(intensities_pred["intensity"], FragmentType.PRED)
 
-        if alignment:
-            return
+            if alignment:
+                return
 
-        library.add_column(irt_predictions["irt"], name="PREDICTED_IRT")
+            library.add_column(irt_predictions["irt"], name="PREDICTED_IRT")
 
     def read_fasta(self):
         """Read fasta file."""

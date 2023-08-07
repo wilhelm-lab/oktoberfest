@@ -164,7 +164,7 @@ class CeCalibration(SpectralLibrary):
         if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
-        ).iloc[:1000]
+        ).iloc[:30]
         else:
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
@@ -196,7 +196,8 @@ class CeCalibration(SpectralLibrary):
                                                                      self.alignment_library.spectra_data["SPECTRAL_ANGLE_B"]) / 2
             self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
             self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
-            "SPECTRAL_ANGLE"].mean()      
+            "SPECTRAL_ANGLE"].mean()
+          
         else:
             pred_intensity = self.alignment_library.get_matrix(FragmentType.PRED)
             raw_intensity = self.alignment_library.get_matrix(FragmentType.RAW)
@@ -212,7 +213,7 @@ class CeCalibration(SpectralLibrary):
                 sa_ce_df=self.ce_alignment,
                 filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
                 best_ce=self.ce_alignment.idxmax(),
-            )
+            )  
         plot_violin_sa_ce(
             df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
             filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
