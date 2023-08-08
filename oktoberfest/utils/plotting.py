@@ -10,9 +10,6 @@ from scipy import stats
 # Set the default fontsize and linewidth
 plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
 
-# Set the default fontsize and linewidth
-plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
-
 
 def plot_target_decoy(target: pd.DataFrame, decoy: pd.DataFrame, type: str, search_type: str, directory: Path):
     """Generate target-decoy distribution of the score."""
