@@ -1,8 +1,10 @@
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
+import mokapot
+import numpy as np
 import pandas as pd
 
 from .calculate_features import CalculateFeatures
@@ -34,6 +36,22 @@ def calculate_features_single(
     calc_feature_step.mark_done()
 
 
+def get_glob_pattern(spectra_type: str) -> str:
+    """
+    Get global pattern depending on spectra_type.
+
+    :param spectra_type: The type of spectra file. Accepted values are "raw" or "mzml".
+    :return: The glob pattern corresponding to the spectra_type.
+    :raises ValueError: If an unsupported spectra_type is provided.
+    """
+    if spectra_type == "raw":
+        return "*.[rR][aA][wW]"
+    elif spectra_type == "mzml":
+        return "*.[mM][zZ][mM][lL]"
+    else:
+        raise ValueError(f"{spectra_type} is not supported as rawfile-type")
+
+
 class ReScore(CalculateFeatures):
     """
     Main to init a re-score obj and go through the steps.
@@ -42,7 +60,7 @@ class ReScore(CalculateFeatures):
     2- split_msms
     3- calculate_features
     4- merge_input
-    5- rescore_with_perc
+    5- rescore_with_percolator or mokaput
     """
 
     raw_files: List[Path]
@@ -50,15 +68,15 @@ class ReScore(CalculateFeatures):
     split_msms_step: ProcessStep
     merge_input_step_prosit: ProcessStep
     merge_input_step_andromeda: ProcessStep
-    percolator_step_prosit: ProcessStep
-    percolator_step_andromeda: ProcessStep
+    rescore_step_prosit: ProcessStep
+    rescore_step_andromeda: ProcessStep
 
     def __init__(
         self,
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pymzml",
     ):
         """
@@ -68,7 +86,7 @@ class ReScore(CalculateFeatures):
         2- split_msms
         3- calculate_features
         4- merge_input
-        5- rescore_with_perc
+        5- rescore_with_percolator or mokapot
 
         :param search_path: path to search directory
         :param raw_path: path to raw file as a string
@@ -82,15 +100,14 @@ class ReScore(CalculateFeatures):
         self.split_msms_step = ProcessStep(out_path, "split_msms")
         self.merge_input_step_prosit = ProcessStep(out_path, "merge_input_prosit")
         self.merge_input_step_andromeda = ProcessStep(out_path, "merge_input_andromeda")
-        self.percolator_step_prosit = ProcessStep(out_path, "percolator_prosit")
-        self.percolator_step_andromeda = ProcessStep(out_path, "percolator_andromeda")
+        self.rescore_step_prosit = ProcessStep(out_path, "percolator_prosit")
+        self.rescore_step_andromeda = ProcessStep(out_path, "percolator_andromeda")
 
     def get_raw_files(self):
         """
         Obtains raw files by scanning through the raw_path directory.
 
         If raw_path is a file, only process this one.
-        :raises ValueError: raw_type is not supported as rawfile-type
         :raises FileNotFoundError: if raw file could not be found
         """
         self.raw_files = []
@@ -98,13 +115,8 @@ class ReScore(CalculateFeatures):
             self.raw_files = [self.raw_path]
             self.raw_path = self.raw_path.parent
         elif self.raw_path.is_dir():
-            raw_type = self.config.raw_type
-            if raw_type == "thermo":
-                glob_pattern = "*.[rR][aA][wW]"
-            elif raw_type == "mzml":
-                glob_pattern = "*.[mM][zZ][mM][lL]"
-            else:
-                raise ValueError(f"{raw_type} is not supported as rawfile-type")
+            spectra_type = self.config.spectra_type
+            glob_pattern = get_glob_pattern(spectra_type)
             self.raw_files = list(self.raw_path.glob(glob_pattern))
             logger.info(f"Found {len(self.raw_files)} raw files in the search directory")
         else:
@@ -113,6 +125,9 @@ class ReScore(CalculateFeatures):
     def split_msms(self):
         """Splits msms.txt file per raw file such that we can process each raw file in parallel \
         without reading the entire msms.txt."""
+        out_path = self.out_path
+        out_path.mkdir(exist_ok=True)
+
         if self.split_msms_step.is_done():
             return
         self.get_msms_folder_path().mkdir(exist_ok=True)
@@ -120,11 +135,13 @@ class ReScore(CalculateFeatures):
         df_search = self._load_search()
         logger.info(f"Read {len(df_search.index)} PSMs from {self.search_path}")
         for raw_file, df_search_split in df_search.groupby("RAW_FILE"):
-            raw_file_path = self.raw_path / raw_file
-            if not raw_file_path.with_suffix(".raw").is_file() or raw_file_path.with_suffix(".RAW").is_file():
+            spectra_file_path = self.raw_path / raw_file
+            spectra_type = self.config.spectra_type
+            glob_pattern = get_glob_pattern(spectra_type)
+            matched_files = [file for file in spectra_file_path.parent.glob(glob_pattern)]
+            if not any(path.is_file() for path in matched_files):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
-
             split_msms = self._get_split_msms_path(raw_file + ".rescore")
             logger.info(f"Creating split msms.txt file {split_msms}")
             df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
@@ -149,6 +166,9 @@ class ReScore(CalculateFeatures):
         mzml_path = self.get_mzml_folder_path()
         mzml_path.mkdir(exist_ok=True)
 
+        data_path = self.out_path / "data"
+        data_path.mkdir(exist_ok=True)
+
         perc_path = self.get_percolator_folder_path()
         perc_path.mkdir(exist_ok=True)
 
@@ -157,7 +177,6 @@ class ReScore(CalculateFeatures):
             if calc_feature_step.is_done():
                 continue
 
-            raw_file
             percolator_rescore_path = self._get_split_perc_input_path(raw_file.stem, "rescore")
             percolator_orig_path = self._get_split_perc_input_path(raw_file.stem, "original")
 
@@ -220,11 +239,11 @@ class ReScore(CalculateFeatures):
         else:
             self.merge_input_step_andromeda.mark_done()
 
-    def rescore_with_perc(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
+    def rescore(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
         """Use percolator to re-score library."""
-        if search_type == "rescore" and self.percolator_step_prosit.is_done():
+        if search_type == "rescore" and self.rescore_step_prosit.is_done():
             return
-        elif self.percolator_step_andromeda.is_done():
+        elif self.rescore_step_andromeda.is_done():
             return
 
         perc_path = self.get_percolator_folder_path()
@@ -235,25 +254,41 @@ class ReScore(CalculateFeatures):
         decoy_peptides = perc_path / f"{search_type}.decoy.peptides"
         log_file = perc_path / f"{search_type}.log"
 
-        cmd = f"percolator --weights {weights_file} \
-                          --num-threads {self.config.num_threads} \
-                          --subset-max-train 500000 \
-                          --post-processing-tdc \
-                          --search-input concatenated \
-                          --testFDR {test_fdr} \
-                          --trainFDR {train_fdr} \
-                          --results-psms {target_psms} \
-                          --decoy-results-psms {decoy_psms} \
-                          --results-peptides {target_peptides} \
-                          --decoy-results-peptides {decoy_peptides} \
-                          {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
-        logger.info(f"Starting percolator with command {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
+        fdr_estimation_method = self.config.fdr_estimation_method
+        if fdr_estimation_method == "percolator":
+            cmd = f"percolator --weights {weights_file} \
+                            --num-threads {self.config.num_threads} \
+                            --subset-max-train 500000 \
+                            --post-processing-tdc \
+                            --testFDR {test_fdr} \
+                            --trainFDR {train_fdr} \
+                            --results-psms {target_psms} \
+                            --decoy-results-psms {decoy_psms} \
+                            --results-peptides {target_peptides} \
+                            --decoy-results-peptides {decoy_peptides} \
+                            {self._get_merged_perc_input_path(search_type)} 2> {log_file}"
+            logger.info(f"Starting percolator with command {cmd}")
+            subprocess.run(cmd, shell=True, check=True)
+        elif fdr_estimation_method == "mokapot":
+            logger.info("Starting mokapot rescoring")
+            np.random.seed(123)
+            file_path = perc_path / f"{search_type}.tab"
+            df = pd.read_csv(file_path, sep="\t")
+            df = df.rename(columns={"Protein": "Proteins"})
+            df.to_csv(file_path, sep="\t")
+            psms = mokapot.read_pin(file_path)
+            results, models = mokapot.brew(psms, test_fdr=test_fdr)
+            results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
+        else:
+            raise ValueError(
+                f"Unknown fdr estimation method: {fdr_estimation_method}. Choose between mokapot and percolator."
+            )
 
         if search_type == "rescore":
-            self.percolator_step_prosit.mark_done()
+            self.rescore_step_prosit.mark_done()
         else:
-            self.percolator_step_andromeda.mark_done()
+            self.rescore_step_andromeda.mark_done()
+        logger.info(f"Finished rescoring using {fdr_estimation_method}.")
 
     def get_msms_folder_path(self) -> Path:
         """Get folder path to msms."""
@@ -270,7 +305,10 @@ class ReScore(CalculateFeatures):
 
     def get_mzml_folder_path(self) -> Path:
         """Get folder path to mzml."""
-        return self.out_path / "mzML"
+        if self.config.spectra_type == "mzml":
+            return self.config.spectra
+        else:
+            return self.out_path / "mzML"
 
     def get_percolator_folder_path(self) -> Path:
         """Get folder path to percolator."""

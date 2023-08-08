@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
-from .utils.plotting import plot_mean_sa_ce
+from .utils.plotting import plot_mean_sa_ce, plot_violin_sa_ce
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class CeCalibration(SpectralLibrary):
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -57,7 +57,7 @@ class CeCalibration(SpectralLibrary):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms data at {self.search_path} to internal search result.")
 
-        search_type = self.config.search_type
+        search_type = self.config.search_results_type
         if search_type == "maxquant":
             search_result = MaxQuant(self.search_path)
         elif search_type == "msfragger":
@@ -74,11 +74,13 @@ class CeCalibration(SpectralLibrary):
         """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.get_mzml_path())
+        self.raw_path = raw.convert_raw_mzml(
+            input_path=self.raw_path, output_path=self.get_mzml_path(), thermo_exe=self.config.thermo_exe
+        )
 
     def _load_search(self):
         """Load search type."""
-        switch = self.config.search_type
+        switch = self.config.search_results_type
         logger.info(f"search_type is {switch}")
         if switch in ["maxquant", "msfragger", "mascot"]:
             self._gen_internal_search_result_from_msms()
@@ -90,10 +92,10 @@ class CeCalibration(SpectralLibrary):
 
     def _load_rawfile(self):
         """Load raw file."""
-        switch = self.config.raw_type
-        search_engine = self.config.search_type
+        switch = self.config.spectra_type
+        search_engine = self.config.search_results_type
         logger.info(f"raw_type is {switch}")
-        if switch == "thermo":
+        if switch == "raw":
             self._gen_mzml_from_thermo()
             switch = "mzml"
         if switch == "mzml":
@@ -114,9 +116,8 @@ class CeCalibration(SpectralLibrary):
         logger.info("Merging rawfile and search result")
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
-
         logger.info("Annotating raw spectra")
-        df_annotated_spectra = annotate_spectra(df_join)
+        df_annotated_spectra = annotate_spectra(df_join, self.config.mass_tolerance, self.config.unit_mass_tolerance)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         # return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")
@@ -127,15 +128,25 @@ class CeCalibration(SpectralLibrary):
 
     def get_mzml_path(self) -> Path:
         """Get path to mzml file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML").name
+        if self.config.spectra_type == "mzml":
+            spectra_path = self.config.spectra
+        else:
+            spectra_path = self.out_path / "mzML"
+        spectra_path.mkdir(exist_ok=True)
+        return spectra_path / self.raw_path.with_suffix(".mzML").name
+
+    def _get_data_path(self) -> Path:
+        data_path = self.out_path / "data"
+        data_path.mkdir(exist_ok=True)
+        return data_path
 
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.hdf5").name
+        return self._get_data_path() / self.raw_path.with_suffix(".mzML.hdf5").name
 
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path / "mzML" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        return self._get_data_path() / self.raw_path.with_suffix(".mzML.pred.hdf5").name
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -169,14 +180,19 @@ class CeCalibration(SpectralLibrary):
         # return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity, raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-
+        self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
 
         plot_mean_sa_ce(
             sa_ce_df=self.ce_alignment,
-            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.png",
+            filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
+            best_ce=self.ce_alignment.idxmax(),
+        )
+        plot_violin_sa_ce(
+            df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+            filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
             best_ce=self.ce_alignment.idxmax(),
         )
 
@@ -193,12 +209,10 @@ class CeCalibration(SpectralLibrary):
         else:
             self.merge_mzml_and_msms(df_search)
             self.library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
-        # Check if all data is HCD no need to align and return the best ce as 35
-        hcd_df = self.library.spectra_data[(self.library.spectra_data["FRAGMENTATION"] == "HCD")]
-        if len(hcd_df.index) == 0:
-            self.best_ce = 35.0
-            return
-        self._prepare_alignment_df()
-        self.grpc_predict(self.alignment_library, alignment=True)  # predict alignment
-        self._alignment()
-        self.best_ce = self.ce_alignment.idxmax()
+        if (self.library.spectra_data["FRAGMENTATION"] == "HCD").any():
+            self._prepare_alignment_df()
+            self.grpc_predict(self.alignment_library, alignment=True)  # predict alignment
+            self._alignment()
+            self.best_ce = self.ce_alignment.idxmax()
+        else:
+            self.best_ce = 35

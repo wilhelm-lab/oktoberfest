@@ -17,10 +17,6 @@ RUN apt-get update && apt-get install -y \
 ENV HOME /root
 WORKDIR /root
 
-# ADD keys for our gitlab
-ADD keys /root/.ssh
-RUN chmod 700 /root/.ssh/id_rsa
-
 RUN pip install poetry==1.3.2
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
@@ -36,8 +32,13 @@ RUN ZIP=ubuntu.tar.gz && \
     dpkg -i percolator-v3-05-linux-amd64.deb && \
     rm /tmp/$ZIP
 
-# Delete ssh keys
-RUN rm -r /root/.ssh
+# install ThermoRawFileParser
+RUN ZIP=ThermoRawFileParser1.4.2.zip && \
+    wget https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/$ZIP -O /tmp/$ZIP && \
+    unzip /tmp/$ZIP -d /root/ && \
+    rm /tmp/$ZIP
+
+# Copy source folder
 ADD oktoberfest/ /root/oktoberfest
 
 # Used by ProteomicsDB runs to describe the oktoberfest version

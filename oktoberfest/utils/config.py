@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -12,15 +13,18 @@ class Config:
         """Initialize config file data."""
         self.data = {}
 
-    def read(self, config_path: Path):
+    def read(self, config_path: Union[str, Path]):
         """
         Read config file.
 
         :param config_path: path to config file as a string
         """
         logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
         with open(config_path) as f:
             self.data = json.load(f)
+        self.base_path = config_path.parent
 
     @property
     def num_threads(self) -> int:
@@ -31,19 +35,14 @@ class Config:
             return 1
 
     @property
-    def fasta(self) -> str:
-        """Get path to fasta file from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["fasta"]
-        elif "uploads" in self.data:
-            return self.data["uploads"]["FASTA"]
-        else:
-            raise ValueError("No fasta file specified in config file")
+    def prediction_server(self) -> str:
+        """Get prosit server from the config file."""
+        return self.data["prediction_server"]
 
     @property
-    def prosit_server(self) -> str:
-        """Get prosit server from the config file."""
-        return self.data["prosit_server"]
+    def ssl(self) -> bool:
+        """Get ssl flag for prediction server."""
+        return self.data.get("ssl", False)
 
     @property
     def models(self) -> dict:
@@ -54,10 +53,17 @@ class Config:
             return {
                 "selectedIntensityModel": self.data["selectedIntensityModel"],
                 "selectedIRTModel": self.data["selectedIRTModel"],
-                "selectedProteotypicityModel": self.data["selectedProteotypicityModel"],
             }
         else:
             return self.data["models"]
+
+    @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
 
     @property
     def tag(self) -> str:
@@ -92,100 +98,142 @@ class Config:
         elif "type" in self.data:
             return self.data["type"]
         else:
-            raise ValueError("No job type specified in config file")
+            raise ValueError("No job type specified in config file.")
 
     @property
-    def raw_type(self) -> str:
-        """Get raw type (thermo or mzml) from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["raw_type"].lower()
+    def inputs(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("inputs", {})
+
+    @property
+    def mass_tolerance(self) -> Optional[float]:
+        """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
+        return self.data.get("massTolerance", None)
+
+    @property
+    def unit_mass_tolerance(self) -> Optional[str]:
+        """Get unit for the mass tolerance from the config file (da or ppm)."""
+        return self.data.get("unitMassTolerance", None)
+
+    @property
+    def search_results(self) -> Path:
+        """Get path to the search results file from the config file."""
+        search_results_path = self.inputs.get("search_results")
+        if search_results_path is not None:
+            # check if search_results_path is absolute and if not, append with the directory
+            # of the config file to resolve paths relative to the config location. This is
+            # required to make sure it always works no matter from which working directory
+            # oktoberfest is executed in case a relative path is provided, which would
+            # otherwise be relative to the working directory.
+            return self.base_path / search_results_path
         else:
-            return "thermo"
+            raise ValueError("No path to a msms.txt specified in config file.")
 
     @property
-    def search_type(self) -> str:
+    def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
-        if "fileUploads" in self.data:
-            return self.data["fileUploads"]["search_type"].lower()
+        return self.inputs.get("search_results_type", "maxquant").lower()
+
+    @property
+    def spectra(self) -> Path:
+        """Get spectra path to raw or mzml files from the config file."""
+        # check if spectra is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.inputs.get("spectra", "./"))
+
+    @property
+    def spectra_type(self) -> str:
+        """Get spectra type (raw or mzml) from the config file."""
+        return self.inputs.get("spectra_type", "raw").lower()
+
+    @property
+    def library_input(self) -> Path:
+        """Get path to library input file (fasta or peptides) from the config file."""
+        # check if library_input is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        library_input_path = self.inputs.get("library_input")
+        if library_input_path is not None:
+            return self.base_path / Path(library_input_path)
         else:
-            return "maxquant"
+            raise ValueError("No fasta or peptides file specified using library_input in config file.")
+
+    @property
+    def library_input_type(self) -> str:
+        """Get library input file type (fasta or peptides) from the config file."""
+        library_input_type = self.inputs.get("library_input_type")
+        if library_input_type is not None:
+            return library_input_type.lower()
+        else:
+            raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
     @property
     def output_format(self) -> str:
         """Get output format from the config file."""
-        if "outputFormat" in self.data:
-            return self.data["outputFormat"].lower()
-        else:
-            return ""
+        return self.data.get("outputFormat", "").lower()
 
     @property
-    def search_path(self) -> str:
-        """Get search path from the config file."""
-        if "searchPath" in self.data:
-            return self.data["searchPath"]
-        else:
-            return ""
+    def output(self) -> Path:
+        """Get path to the output directory from the config file."""
+        # check if output is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.data.get("output", "./"))
+
+    @property
+    def fasta_digest_options(self) -> dict:
+        """Get fastaDigestOptions dictionary from the config file."""
+        return self.data.get("fastaDigestOptions", {})
 
     @property
     def fragmentation(self) -> str:
         """Get fragmentation method from the config file (HCD or CID)."""
-        if "fragmentation" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["fragmentation"].upper()
-        else:
-            return ""
+        # check default
+        return self.fasta_digest_options.get("fragmentation", "").lower()
 
     @property
     def digestion(self) -> str:
         """Get digestion mode (full, semi or none)."""
-        if "digestion" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["digestion"].lower()
-        else:
-            return "full"
+        return self.fasta_digest_options.get("digestion", "full").lower()
 
     @property
     def cleavages(self) -> int:
         """Get number of allowed missed cleavages used in the search engine."""
-        if "missedCleavages" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["missedCleavages"]
-        else:
-            return 2
+        return self.fasta_digest_options.get("missedCleavages", 2)
 
     @property
     def min_length(self) -> int:
         """Get minimum peptide length allowed used in the search engine."""
-        if "minLength" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["minLength"]
-        else:
-            return 7
+        return self.fasta_digest_options.get("minLength", 7)
 
     @property
     def max_length(self) -> int:
         """Get maximum peptide length allowed used in the search engine."""
-        if "maxLength" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["maxLength"]
-        else:
-            return 60
+        return self.fasta_digest_options.get("maxLength", 60)
 
     @property
     def enzyme(self) -> str:
         """Get type of enzyme used."""
-        if "enzyme" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["enzyme"].lower()
-        else:
-            return "trypsin"
+        return self.fasta_digest_options.get("enzyme", "trypsin").lower()
 
     @property
     def special_aas(self) -> str:
         """Get special amino acids used by MaxQuant for decoy generation."""
-        if "specialAas" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["specialAas"].upper()
-        else:
-            return "KR"
+        return self.fasta_digest_options.get("specialAas", "KR").upper()
 
     @property
     def db(self) -> str:
         """Target, decoy or concat (relevant if fasta file provided)."""
-        if "db" in self.data["fastaDigestOptions"]:
-            return self.data["fastaDigestOptions"]["db"].lower()
-        else:
-            return "concat"
+        return self.fasta_digest_options.get("db", "concat").lower()
+
+    @property
+    def thermo_exe(self) -> Path:
+        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
+        return Path(self.data.get("thermoExe", "ThermoRawFileParser.exe"))

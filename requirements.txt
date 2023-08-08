@@ -1,0 +1,9 @@
+click>=8.0.0
+rich>=10.3.0
+PyYAML>=5.4.1
+matplotlib>=3.6.3
+seaborn>=0.12.2
+spectrum-fundamentals>=0.4.0
+spectrum-io>=0.3.0
+tritonclient[grpc]>=2.34.0
+mokapot>=0.9.1

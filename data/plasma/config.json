@@ -1,28 +1,21 @@
 {
-    "type": "Rescoring",
-    "uploads": {
-        "msms.txt": true,
-        "RAW": true,
-        "FASTA": false,
-        "peptides.csv": false,
-        "evidence.txt": false,
-        "prosit_target.psms": false,
-        "prosit_decoy.psms": false
+    "jobType": "Rescoring",
+    "tag": "",
+    "allFeatures": false,
+    "inputs": {
+        "search_results": "./msms.txt",
+        "search_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw"
     },
-    "options": {
-        "collisionEnergy": 0,
-        "protease": "",
-        "missedCleavages": 0,
-        "oxidizedMethionine": 0,
-        "minPeptideLength": 0,
-        "maxPeptideLength": 0,
-        "specialAAs": ""
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
     },
-    "outputFormat": "msp",
-    "selectedIntensityModel": "Prosit_2019_intensity",
-    "selectedIRTModel": "Prosit_2019_irt",
-    "selectedProteotypicityModel": "Prosit_2020_proteotypicity",
-    "prosit_server": "131.159.152.7:8500",
-    "prosit_server_rest": "131.159.152.7:8501",
-    "id": "fc5d2bc7-73ae-4471-ba22-07f8d77cf0ab"
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "ssl": true,
+    "thermoExe": "ThermoRawFileParser.exe",
+    "output": "./out",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm"
 }

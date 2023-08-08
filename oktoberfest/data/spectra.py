@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from scipy.sparse import coo_matrix, spmatrix
+from scipy.sparse import coo_matrix
 from spectrum_io.file import hdf5
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ class Spectra:
         intensity_df.columns = columns
         self.add_columns(intensity_df)
 
-    def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
+    def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> coo_matrix:
         """
         Get intensities sparse matrix from dataframe.
 
@@ -151,7 +151,7 @@ class Spectra:
         # Check if conversion is low change to coo then csr from coo
         return self.spectra_data[columns_to_select]
 
-    def get_matrix(self, fragment_type: FragmentType, return_column_names: bool = False) -> spmatrix:
+    def get_matrix(self, fragment_type: FragmentType, return_column_names: bool = False) -> coo_matrix:
         """
         Get intensities sparse matrix from dataframe.
 
