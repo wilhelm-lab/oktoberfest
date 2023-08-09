@@ -216,3 +216,6 @@ class CeCalibration(SpectralLibrary):
             self.best_ce = self.ce_alignment.idxmax()
         else:
             self.best_ce = 35
+
+        with open(self.results_path / f"{self.raw_path.stem}_ce.txt", "w") as f:
+            f.write(str(self.best_ce))
