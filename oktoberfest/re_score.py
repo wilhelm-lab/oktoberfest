@@ -123,8 +123,8 @@ class ReScore(CalculateFeatures):
             raise FileNotFoundError(f"{self.raw_path} does not exist.")
 
     def split_msms(self):
-        """Splits msms.txt file per raw file such that we can process each raw file in parallel \
-        without reading the entire msms.txt."""
+        """Splits search results per raw file identifier such that we can process each raw file in parallel \
+        without reading the entire search results multiple times."""
         out_path = self.out_path
         out_path.mkdir(exist_ok=True)
 
@@ -143,7 +143,7 @@ class ReScore(CalculateFeatures):
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
             split_msms = self._get_split_msms_path(raw_file + ".rescore")
-            logger.info(f"Creating split msms.txt file {split_msms}")
+            logger.info(f"Creating split search results file {split_msms}")
             df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH"] <= 30)]
             df_search_split = df_search_split[(~df_search_split["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))]
             df_search_split = df_search_split[
@@ -296,10 +296,10 @@ class ReScore(CalculateFeatures):
 
     def _get_split_msms_path(self, raw_file: str) -> Path:
         """
-        Get path to split msms.
+        Get path to split search results file.
 
         :param raw_file: path to raw file as a string
-        :return: path to split msms file
+        :return: path to split search results file
         """
         return self.get_msms_folder_path() / raw_file
 
