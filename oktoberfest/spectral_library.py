@@ -39,17 +39,14 @@ def infer_predictions(
     num_spec = len(input_data[list(input_data)[0]][0])
     predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
+    n_batches = np.math.ceil(num_spec / batch_size)
     for i in range(0, num_spec, batch_size):
-        logger.info(f"Predicting batch {i}/{num_spec}.")
-        if num_spec < i + batch_size:
-            current_batchsize = num_spec - i
-        else:
-            current_batchsize = batch_size
-
+        logger.info(f"Predicting batch {i+1}/{n_batches}.")
         infer_inputs = []
         for input_key, (data, dtype) in input_data.items():
-            infer_input = InferInput(input_key, [current_batchsize, 1], dtype)
-            infer_input.set_data_from_numpy(data[i : i + current_batchsize])
+            batch_data = data[i : i + batch_size]
+            infer_input = InferInput(input_key, batch_data.shape, dtype)
+            infer_input.set_data_from_numpy(batch_data)
             infer_inputs.append(infer_input)
 
         infer_outputs = [InferRequestedOutput(output) for output in outputs]
