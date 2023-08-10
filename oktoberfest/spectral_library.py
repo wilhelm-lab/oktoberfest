@@ -1,7 +1,7 @@
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
 from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
 
-from .constants_dir import CONFIG_PATH
 from .data.spectra import FragmentType, Spectra
 from .utils.config import Config
 
@@ -107,9 +106,7 @@ class SpectralLibrary:
     num_threads: int
     grpc_output: dict
 
-    def __init__(
-        self, search_path: Union[str, Path], out_path: Union[str, Path], config_path: Optional[Union[str, Path]] = None
-    ):
+    def __init__(self, search_path: Union[str, Path], out_path: Union[str, Path], config_path: Union[str, Path]):
         """
         Initialize a SpectralLibrary object.
 
@@ -127,13 +124,12 @@ class SpectralLibrary:
 
         self.library = Spectra()
 
-        if config_path is None:
-            config_path = CONFIG_PATH
         if isinstance(config_path, str):
             config_path = Path(config_path)
         self.config_path = config_path
         self.config = Config()
         self.config.read(config_path)
+
         self.out_path.mkdir(exist_ok=True)
         self.results_path = out_path / "results"
         if out_path.exists():
@@ -145,13 +141,22 @@ class SpectralLibrary:
             logger.info("In Feature Calculation")
 
     def gen_lib(self):
-        """Read input csv file and add it to library."""
+        """
+        Read input csv file and add it to library.
+
+        :raises ValueError: If the value provided for library_input_type in the config file
+            is sth. other than "peptides" or "fasta".
+        """
         library_input_type = self.config.library_input_type
         if library_input_type == "fasta":
             self.read_fasta()
             library_file = self.out_path / "prosit_input.csv"
-        elif library_input_type == "csv":
+        elif library_input_type == "peptides":
             library_file = self.config.library_input
+        else:
+            raise ValueError(
+                f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".'
+            )
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)
