@@ -190,7 +190,7 @@ class CeCalibration(SpectralLibrary):
             filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
         )
         plot_violin_sa_ce(
-            df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+            sa_ce_df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
             filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
         )
 

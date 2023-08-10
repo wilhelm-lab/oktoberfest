@@ -126,7 +126,7 @@ def joint_plot(
 
 def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, level: str, filename: Union[str, Path]):
     """
-    Generate venn barplots to compare gains and losses between rescoring with and without peptide property predictions.
+    Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.
 
     :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
     :param andromeda_target: mokapot / percolator target output for rescoring without peptide property prediction
@@ -194,7 +194,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel("Percentage")
+    ax.set_ylabel("number of lost-common-shared targets below 1% FDR")
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="black")
     ax.tick_params(axis="y", which="major")
@@ -204,7 +204,6 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
-    plt.title(f"{type} 1% FDR\n")
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.plot()
     plt.close()
