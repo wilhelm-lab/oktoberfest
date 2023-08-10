@@ -1,7 +1,7 @@
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 import mokapot
 import numpy as np
@@ -76,7 +76,7 @@ class ReScore(CalculateFeatures):
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pymzml",
     ):
         """
@@ -108,7 +108,6 @@ class ReScore(CalculateFeatures):
         Obtains raw files by scanning through the raw_path directory.
 
         If raw_path is a file, only process this one.
-        :raises ValueError: raw_type is not supported as rawfile-type
         :raises FileNotFoundError: if raw file could not be found
         """
         self.raw_files = []
