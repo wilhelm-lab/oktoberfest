@@ -32,10 +32,10 @@ class CalculateFeatures(CeCalibration):
 
     def gen_perc_metrics(self, search_type: str, file_path: Optional[Union[str, Path]] = None):
         """
-        Get all percolator metrics and add them to library.
+        Get all percolator / mokapot metrics and add them to library.
 
-        :param search_type: model (rescore or original) as a string
-        :param file_path: Optional path to percolator input file as a string
+        :param search_type: model (rescore or original)
+        :param file_path: Optional path to percolator / mokapot input file
         """
         perc_features = Percolator(
             metadata=self.library.get_meta_data(),
