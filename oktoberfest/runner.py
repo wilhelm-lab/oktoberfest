@@ -148,8 +148,6 @@ def run_ce_calibration(
             search_path=msms_path, raw_path=raw_file, out_path=output_path, config_path=config_path
         )
         ce_calib.perform_alignment(ce_calib._load_search())
-        with open(ce_calib.results_path / f"{raw_file.stem}_ce.txt", "w") as f:
-            f.write(str(ce_calib.best_ce))
 
 
 def run_rescoring(
@@ -177,7 +175,7 @@ def run_rescoring(
 
     re_score.rescore("rescore")
     re_score.rescore("original")
-    plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    plot_all(re_score.get_fdr_estimation_method_folder_path(), re_score.config.fdr_estimation_method)
     logger.info("Finished rescoring.")
 
 

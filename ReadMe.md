@@ -72,8 +72,8 @@ Oktoberfest will:
 
 1. Calibrate CE against the provided RAW files.
 2. Predict all sequences in the search results file.
-3. Use predicted spectra to generate features for percolator.
-4. Run percolator to rescore the search.
+3. Use predicted spectra and retention time to generate features for rescoring.
+4. Run percolator or mokapot to rescore the search and perform FDR estimation.
    Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 ## Run oktoberfest
@@ -172,7 +172,7 @@ If you instead want to run oktoberfest using the docker image, run:
 DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator` or `<DATA>/<output>/results/mokapot` depending on the chosen fdr estimation method.
 
 ## Supported Models
 
