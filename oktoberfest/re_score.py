@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import subprocess
 from pathlib import Path
 from typing import List, Union
@@ -270,14 +271,25 @@ class ReScore(CalculateFeatures):
             subprocess.run(cmd, shell=True, check=True)
         elif fdr_estimation_method == "mokapot":
             logger.info("Starting mokapot rescoring")
+            mokapot_logger = logging.getLogger("mokapot")
+            mokapot_logger.setLevel(logging.INFO)
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setLevel(logging.INFO)
+            log_formatter = logging.Formatter("%(levelname)s: %(message)s")
+            file_handler.setFormatter(log_formatter)
+            mokapot_logger.addHandler(file_handler)
             np.random.seed(123)
             file_path = fdr_estimation_method_path / f"{search_type}.tab"
             df = pd.read_csv(file_path, sep="\t")
             df = df.rename(columns={"Protein": "Proteins"})
             df.to_csv(file_path, sep="\t")
             psms = mokapot.read_pin(file_path)
+            num_cores = multiprocessing.cpu_count()
+            logger.info(f"Running mokapot on {num_cores} cores")
             results, models = mokapot.brew(psms, test_fdr=test_fdr)
             results.to_txt(dest_dir=fdr_estimation_method_path, file_root=f"{search_type}", decoys=True)
+            logger.info(f"Number of PSMs used for training: {len(psms)}")
+
         else:
             raise ValueError(
                 f"Unknown fdr estimation method: {fdr_estimation_method}. Choose between mokapot and percolator."
