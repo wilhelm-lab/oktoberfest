@@ -201,8 +201,8 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, di
         plt.close()
 
 
-def plot_all(percolator_path: Path, fdr_estimation_method: str):
-    """Generate all plots and save them as png in the percolator folder."""
+def plot_all(fdr_estimation_method_path: Path, fdr_estimation_method: str):
+    """Generate all plots and save them as png in the percolator/mokapot folder."""
     if fdr_estimation_method == "mokapot":
         files = [
             "rescore.mokapot.peptides.txt",
@@ -219,8 +219,8 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
             prefix = "rescore" if f.startswith("rescore") else "original"
             target_decoy = "decoy" if "decoy" in f else "target"
 
-            file_path = percolator_path / f
-            file_renamed = percolator_path / f"{prefix}.{target_decoy}.{f.split('.')[-2]}"
+            file_path = fdr_estimation_method_path / f
+            file_renamed = fdr_estimation_method_path / f"{prefix}.{target_decoy}.{f.split('.')[-2]}"
             df = pd.read_csv(file_path, delimiter="\t")
             df.rename(
                 columns=(
@@ -235,29 +235,39 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
             )
             df.to_csv(file_renamed, sep="\t", index=False)
             file_path.unlink()
-    prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
-    prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
-    prosit_psms_target = pd.read_csv(percolator_path / "rescore.target.psms", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(percolator_path / "rescore.decoy.psms", delimiter="\t")
+    prosit_pep_target = pd.read_csv(fdr_estimation_method_path / "rescore.target.peptides", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(fdr_estimation_method_path / "rescore.decoy.peptides", delimiter="\t")
+    prosit_psms_target = pd.read_csv(fdr_estimation_method_path / "rescore.target.psms", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(fdr_estimation_method_path / "rescore.decoy.psms", delimiter="\t")
 
-    andromeda_pep_target = pd.read_csv(percolator_path / "original.target.peptides", delimiter="\t")
-    andromeda_pep_decoy = pd.read_csv(percolator_path / "original.decoy.peptides", delimiter="\t")
-    andromeda_psms_target = pd.read_csv(percolator_path / "original.target.psms", delimiter="\t")
-    andromeda_psms_decoy = pd.read_csv(percolator_path / "original.decoy.psms", delimiter="\t")
+    andromeda_pep_target = pd.read_csv(fdr_estimation_method_path / "original.target.peptides", delimiter="\t")
+    andromeda_pep_decoy = pd.read_csv(fdr_estimation_method_path / "original.decoy.peptides", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(fdr_estimation_method_path / "original.target.psms", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(fdr_estimation_method_path / "original.decoy.psms", delimiter="\t")
 
-    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Rescore", percolator_path)
-    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", percolator_path)
-    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Original", percolator_path)
-    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Original", percolator_path)
+    plot_target_decoy(prosit_pep_target, prosit_pep_decoy, "Peptides", "Rescore", fdr_estimation_method_path)
+    plot_target_decoy(prosit_psms_target, prosit_psms_decoy, "PSMs", "Rescore", fdr_estimation_method_path)
+    plot_target_decoy(andromeda_pep_target, andromeda_pep_decoy, "Peptides", "Original", fdr_estimation_method_path)
+    plot_target_decoy(andromeda_psms_target, andromeda_psms_decoy, "PSMs", "Original", fdr_estimation_method_path)
 
     joint_plot(
-        prosit_pep_target, prosit_pep_decoy, andromeda_pep_target, andromeda_pep_decoy, "Peptides", percolator_path
+        prosit_pep_target,
+        prosit_pep_decoy,
+        andromeda_pep_target,
+        andromeda_pep_decoy,
+        "Peptides",
+        fdr_estimation_method_path,
     )
     joint_plot(
-        prosit_psms_target, prosit_psms_decoy, andromeda_psms_target, andromeda_psms_decoy, "PSMs", percolator_path
+        prosit_psms_target,
+        prosit_psms_decoy,
+        andromeda_psms_target,
+        andromeda_psms_decoy,
+        "PSMs",
+        fdr_estimation_method_path,
     )
-    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", percolator_path)
-    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", percolator_path)
+    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "Peptides", fdr_estimation_method_path)
+    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "PSMs", fdr_estimation_method_path)
 
-    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path)
+    prosit_df = pd.read_csv(fdr_estimation_method_path / "rescore.tab", delimiter="\t")
+    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, fdr_estimation_method_path)

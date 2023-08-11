@@ -175,7 +175,7 @@ def run_rescoring(
 
     re_score.rescore("rescore")
     re_score.rescore("original")
-    plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    plot_all(re_score.get_fdr_estimation_method_folder_path(), re_score.config.fdr_estimation_method)
     logger.info("Finished rescoring.")
 
 
