@@ -75,7 +75,7 @@ class Config:
 
     @property
     def all_features(self) -> bool:
-        """Get allFeatures flag (decides whether all features should be used by the percolator)."""
+        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
         if "allFeatures" in self.data:
             return self.data["allFeatures"]
         else:

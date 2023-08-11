@@ -301,45 +301,53 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-def plot_all(percolator_path: Path, fdr_estimation_method: str):
+def plot_all(fdr_estimation_method_path: Path, fdr_estimation_method: str):
     """Generate all plots and save them as png in the percolator folder."""
-    prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
-    prosit_pep_target = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.peptides.txt", delimiter="\t")
-    prosit_pep_decoy = pd.read_csv(
-        percolator_path / f"rescore.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
+    prosit_df = pd.read_csv(fdr_estimation_method_path / "rescore.tab", delimiter="\t")
+    prosit_pep_target = pd.read_csv(
+      fdr_estimation_method_path / f"rescore.{fdr_estimation_method}.peptides.txt", delimiter="\t"
     )
-    prosit_psms_target = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.psms.txt", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(
+        fdr_estimation_method_path / f"rescore.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
+    )
+    prosit_psms_target = pd.read_csv(
+      fdr_estimation_method_path / f"rescore.{fdr_estimation_method}.psms.txt", delimiter="\t"
+    )
+    prosit_psms_decoy = pd.read_csv(
+      fdr_estimation_method_path / f"rescore.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t"
+    )
 
     andromeda_pep_target = pd.read_csv(
-        percolator_path / f"original.{fdr_estimation_method}.peptides.txt", delimiter="\t"
+        fdr_estimation_method_path / f"original.{fdr_estimation_method}.peptides.txt", delimiter="\t"
     )
     andromeda_pep_decoy = pd.read_csv(
-        percolator_path / f"original.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
+        fdr_estimation_method_path / f"original.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
     )
-    andromeda_psms_target = pd.read_csv(percolator_path / f"original.{fdr_estimation_method}.psms.txt", delimiter="\t")
+    andromeda_psms_target = pd.read_csv(
+      fdr_estimation_method_path / f"original.{fdr_estimation_method}.psms.txt", delimiter="\t"
+    )
     andromeda_psms_decoy = pd.read_csv(
-        percolator_path / f"original.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t"
+      fdr_estimation_method_path / f"original.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t"
     )
 
     plot_score_distribution(
-        prosit_pep_target, prosit_pep_decoy, "peptide", percolator_path / "rescore_target_vs_decoys_peptide_bins.png"
+        prosit_pep_target, prosit_pep_decoy, "peptide", fdr_estimation_method_path / "rescore_target_vs_decoys_peptide_bins.png"
     )
     plot_score_distribution(
-        prosit_psms_target, prosit_psms_decoy, "psm", percolator_path / "rescore_target_vs_decoys_psm_bins.png"
+        prosit_psms_target, prosit_psms_decoy, "psm", fdr_estimation_method_path / "rescore_target_vs_decoys_psm_bins.png"
     )
     plot_score_distribution(
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        percolator_path / "original_target_vs_decoys_peptide_bins.png",
+        fdr_estimation_method_path / "original_target_vs_decoys_peptide_bins.png",
     )
     plot_score_distribution(
-        andromeda_psms_target, andromeda_psms_decoy, "psm", percolator_path / "original_target_vs_decoys_psm_bins.png"
+        andromeda_psms_target, andromeda_psms_decoy, "psm", fdr_estimation_method_path / "original_target_vs_decoys_psm_bins.png"
     )
 
     plot_sa_distribution(
-        prosit_df, prosit_psms_target, prosit_psms_decoy, percolator_path / "target_vs_decoys_sa_distribution.svg"
+        prosit_df, prosit_psms_target, prosit_psms_decoy, fdr_estimation_method_path / "target_vs_decoys_sa_distribution.svg"
     )
 
     joint_plot(
@@ -348,7 +356,7 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        percolator_path / "rescore_original_joint_plot_peptide.svg",
+        fdr_estimation_method_path / "rescore_original_joint_plot_peptide.svg",
     )
     joint_plot(
         prosit_psms_target,
@@ -356,9 +364,9 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
         andromeda_psms_target,
         andromeda_psms_decoy,
         "psm",
-        percolator_path / "rescore_original_joint_plot_psm.svg",
+        fdr_estimation_method_path / "rescore_original_joint_plot_psm.svg",
     )
-    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", percolator_path / "peptide_1%_FDR.svg")
-    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", percolator_path / "psm_1%_FDR.svg")
+    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", fdr_estimation_method_path / "peptide_1%_FDR.svg")
+    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", fdr_estimation_method_path / "psm_1%_FDR.svg")
 
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path, "irt_vs_pred_rt.svg")
+    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, fdr_estimation_method_path, "irt_vs_pred_rt.svg")
