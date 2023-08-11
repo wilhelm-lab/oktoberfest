@@ -27,13 +27,13 @@ def _check_columns(df: pd.DataFrame):
         "SpecId": "PSMId",
     }
     if set(mokapot_mapping.keys()).issubset(df.columns):
-        column_names = mokapot_mapping.keys()
+        column_names = list(mokapot_mapping.keys())
     elif set(mokapot_mapping.values()).issubset(df.columns):
-        column_names = mokapot_mapping.values()
+        column_names = list(mokapot_mapping.values())
     else:
         raise AssertionError("Missing columns in one of the input files. Please check.")
 
-    return list(column_names)
+    return column_names
 
 
 def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: str, filename: Union[str, Path]):
@@ -241,20 +241,23 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
     plt.close()
 
 
-def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, filename: Union[str, Path]):
+def plot_pred_rt_vs_irt(
+    prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, outpath: Union[str, Path], suffix: Union[str, Path]
+):
     """
     Generate scatterplot to compare predicted indexed retention time against (aligned) experimentally observed retention time.
 
     :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
     :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
-    :param filename: the path to the location used for storing the plot
+    :param outpath: the path to the location used for storing the plot without the filename
+    :param suffix: the suffix of the filename, which will be prepended by the rawfile name
     """
     _, qval_col, _, psm_col = _check_columns(prosit_target)
 
     targets = prosit_df.merge(prosit_target, how="inner", left_on="SpecId", right_on=psm_col)
     targets = targets.loc[targets[qval_col] < 0.01, ["SpecId", "RT", "iRT", "pred_RT"]]
     targets.columns = ["SpecId", "experimental RT", "aligned RT", "predicted iRT"]
-    targets["rawfile"] = targets["SpecId"].str.split("-", n=1).str[0] + " aligned RT"
+    targets["rawfile"] = targets["SpecId"].str.split("-", n=1).str[0]
     targets.sort_values("predicted iRT")
     for rawfile in targets["rawfile"].unique():
         fig, ax = plt.subplots(figsize=(8, 8))
@@ -270,7 +273,7 @@ def plot_pred_rt_vs_irt(prosit_df: pd.DataFrame, prosit_target: pd.DataFrame, fi
         plt.title("RT alignment")
         plt.legend(labels=("predicted iRT", "alignment"), loc="best", fancybox=True, shadow=True)
         plt.grid()
-        plt.savefig(filename, dpi=300)
+        plt.savefig(Path(outpath) / f"{rawfile}_{suffix}", dpi=300)
         plt.plot()
         plt.close()
 
@@ -301,15 +304,23 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
 def plot_all(percolator_path: Path, fdr_estimation_method: str):
     """Generate all plots and save them as png in the percolator folder."""
     prosit_df = pd.read_csv(percolator_path / "rescore.tab", delimiter="\t")
-    prosit_pep_target = pd.read_csv(percolator_path / "rescore.target.peptides", delimiter="\t")
-    prosit_pep_decoy = pd.read_csv(percolator_path / "rescore.decoy.peptides", delimiter="\t")
-    prosit_psms_target = pd.read_csv(percolator_path / "rescore.target.psms", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(percolator_path / "rescore.decoy.psms", delimiter="\t")
+    prosit_pep_target = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.peptides.txt", delimiter="\t")
+    prosit_pep_decoy = pd.read_csv(
+        percolator_path / f"rescore.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
+    )
+    prosit_psms_target = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.psms.txt", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(percolator_path / f"rescore.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t")
 
-    andromeda_pep_target = pd.read_csv(percolator_path / "original.target.peptides", delimiter="\t")
-    andromeda_pep_decoy = pd.read_csv(percolator_path / "original.decoy.peptides", delimiter="\t")
-    andromeda_psms_target = pd.read_csv(percolator_path / "original.target.psms", delimiter="\t")
-    andromeda_psms_decoy = pd.read_csv(percolator_path / "original.decoy.psms", delimiter="\t")
+    andromeda_pep_target = pd.read_csv(
+        percolator_path / f"original.{fdr_estimation_method}.peptides.txt", delimiter="\t"
+    )
+    andromeda_pep_decoy = pd.read_csv(
+        percolator_path / f"original.{fdr_estimation_method}.decoy.peptides.txt", delimiter="\t"
+    )
+    andromeda_psms_target = pd.read_csv(percolator_path / f"original.{fdr_estimation_method}.psms.txt", delimiter="\t")
+    andromeda_psms_decoy = pd.read_csv(
+        percolator_path / f"original.{fdr_estimation_method}.decoy.psms.txt", delimiter="\t"
+    )
 
     plot_score_distribution(
         prosit_pep_target, prosit_pep_decoy, "peptide", percolator_path / "rescore_target_vs_decoys_peptide_bins.png"
@@ -350,4 +361,4 @@ def plot_all(percolator_path: Path, fdr_estimation_method: str):
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", percolator_path / "peptide_1%_FDR.svg")
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", percolator_path / "psm_1%_FDR.svg")
 
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path / "irt_vs_pred_rt.svg")
+    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, percolator_path, "irt_vs_pred_rt.svg")

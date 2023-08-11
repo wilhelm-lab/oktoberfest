@@ -228,7 +228,6 @@ class ReScore(CalculateFeatures):
                     else:
                         first = False
                     fout.write(f.read())
-                percolator_input_path.unlink()
 
         df_prosit = pd.read_csv(merged_perc_input_file_prosit, sep="\t")
         df_prosit = df_prosit.fillna(0)
@@ -247,11 +246,11 @@ class ReScore(CalculateFeatures):
             return
 
         perc_path = self.get_percolator_folder_path()
-        weights_file = perc_path / f"{search_type}.weights.csv"
-        target_psms = perc_path / f"{search_type}.target.psms"
-        decoy_psms = perc_path / f"{search_type}.decoy.psms"
-        target_peptides = perc_path / f"{search_type}.target.peptides"
-        decoy_peptides = perc_path / f"{search_type}.decoy.peptides"
+        weights_file = perc_path / f"{search_type}.percolator.weights.csv"
+        target_psms = perc_path / f"{search_type}.percolator.psms.txt"
+        decoy_psms = perc_path / f"{search_type}.percolator.decoy.psms.txt"
+        target_peptides = perc_path / f"{search_type}.percolator.peptides.txt"
+        decoy_peptides = perc_path / f"{search_type}.percolator.decoy.peptides.txt"
         log_file = perc_path / f"{search_type}.log"
 
         fdr_estimation_method = self.config.fdr_estimation_method
