@@ -90,7 +90,7 @@ Create a `config.json` file which should contain the following flags:
 
 -   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
--   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "spline"
 
 -   `inputs`
 

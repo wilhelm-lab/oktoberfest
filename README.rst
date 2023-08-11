@@ -114,7 +114,7 @@ Create a `config.json` file which should contain the following flags:
 - `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 - `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
 - `allFeatures`` = True if all features should be used for FDR estimation; default = False
-- `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
+- `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "spline"
 - `inputs`
    - `search_results` = path to the file containing the search results
    - `search_results_type` = the tool used to produce the search results, can be "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
