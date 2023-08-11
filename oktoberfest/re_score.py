@@ -245,7 +245,7 @@ class ReScore(CalculateFeatures):
         elif self.rescore_step_andromeda.is_done():
             return
 
-        fdr_estimation_method_path = self.get_percolator_folder_path()
+        fdr_estimation_method_path = self.get_fdr_estimation_method_folder_path()
         weights_file = fdr_estimation_method_path / f"{search_type}.percolator.weights.csv"
         target_psms = fdr_estimation_method_path / f"{search_type}.percolator.psms.txt"
         decoy_psms = fdr_estimation_method_path / f"{search_type}.percolator.decoy.psms.txt"
