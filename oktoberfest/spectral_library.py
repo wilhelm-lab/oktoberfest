@@ -1,5 +1,7 @@
 import logging
 import re
+from math import ceil
+from multiprocessing import current_process
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
@@ -7,6 +9,7 @@ import numpy as np
 import pandas as pd
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
+from tqdm.auto import tqdm
 from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
 
 from .data.spectra import FragmentType, Spectra
@@ -38,22 +41,35 @@ def infer_predictions(
     num_spec = len(input_data[list(input_data)[0]][0])
     predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
-    n_batches = np.math.ceil(num_spec / batch_size)
-    for i in range(0, num_spec, batch_size):
-        logger.info(f"Predicting batch {i+1}/{n_batches}.")
-        infer_inputs = []
-        for input_key, (data, dtype) in input_data.items():
-            batch_data = data[i : i + batch_size]
-            infer_input = InferInput(input_key, batch_data.shape, dtype)
-            infer_input.set_data_from_numpy(batch_data)
-            infer_inputs.append(infer_input)
+    n_batches = ceil(num_spec / batch_size)
+    process_identity = current_process()._identity
+    if len(process_identity) > 0:
+        position = process_identity[0]
+    else:
+        position = 0
 
-        infer_outputs = [InferRequestedOutput(output) for output in outputs]
+    with tqdm(
+        total=n_batches,
+        position=position,
+        desc=f"Inferring predictions for {num_spec} spectra with batch site {batch_size}",
+        leave=True,
+    ) as progress:
+        for i in range(0, n_batches):
+            progress.update(1)
+            # logger.info(f"Predicting batch {i+1}/{n_batches}.")
+            infer_inputs = []
+            for input_key, (data, dtype) in input_data.items():
+                batch_data = data[i * batch_size : (i + 1) * batch_size]
+                infer_input = InferInput(input_key, batch_data.shape, dtype)
+                infer_input.set_data_from_numpy(batch_data)
+                infer_inputs.append(infer_input)
 
-        prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
+            infer_outputs = [InferRequestedOutput(output) for output in outputs]
 
-        for output in outputs:
-            predictions[output].append(prediction.as_numpy(output))
+            prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
+
+            for output in outputs:
+                predictions[output].append(prediction.as_numpy(output))
 
     return {key: np.vstack(value) for key, value in predictions.items()}
 

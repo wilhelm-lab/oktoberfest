@@ -197,7 +197,7 @@ class ReScore(CalculateFeatures):
                 calculate_features_single(*args)
 
         if num_threads > 1:
-            processing_pool.check_pool(print_progress_every=1)
+            processing_pool.check_pool()
 
     def merge_input(self, search_type: str = "rescore"):
         """

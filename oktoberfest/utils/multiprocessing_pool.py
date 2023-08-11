@@ -6,6 +6,8 @@ import warnings
 from multiprocessing import Pool, pool
 from typing import List
 
+from tqdm.auto import tqdm
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,16 +33,16 @@ class JobPool:
         """Initialize the worker."""
         return init_worker(self.warning_filter)
 
-    def check_pool(self, print_progress_every: int = -1):
+    def check_pool(self):
         """Check the pool."""
         try:
-            outputs = [pool.AsyncResult]
-            for res in self.results:
-                outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
-                if print_progress_every > 0 and len(outputs) % print_progress_every == 0:
-                    logger.info(
-                        f' {len(outputs) - 1} / {len(self.results)} {"%.2f" % (float(len(outputs) - 1) / len(self.results) * 100)}%'
-                    )
+            outputs = []
+            res_len = len(self.results)
+            with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
+                for res in self.results:
+                    outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
+                    progress.update(1)
+
             self.pool.close()
             self.pool.join()
             return outputs
@@ -71,12 +73,3 @@ def init_worker(warning_filter):
 def add_one(i: int) -> int:
     """Add 1 to i."""
     return i + 1
-
-
-def unit_test():
-    """Unit test for multiprocessing."""
-    pool = JobPool(4)
-    for i in range(20):
-        pool.apply_async(add_one, [i])
-    results = pool.check_pool()
-    print(results)
