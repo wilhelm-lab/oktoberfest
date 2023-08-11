@@ -83,12 +83,16 @@ class Config:
 
     @property
     def curve_fitting_method(self) -> str:
-        """Get regressionMethod flag (regression method for curve fitting: lowess, spline, or logistic). \
-        If not specified, lowess is applied."""
-        if "regressionMethod" in self.data:
-            return self.data["regressionMethod"].lower()
-        else:
-            return "lowess"
+        """
+        Get regressionMethod flag.
+
+        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+        The supported flags are "lowess", "spline", and "logistic".
+        If not provided in the config file, returns "spline" by default.
+
+        :return: a lowercase string representation of the regression method.
+        """
+        return self.data.get("regressionMethod", "spline").lower()
 
     @property
     def job_type(self) -> str:
