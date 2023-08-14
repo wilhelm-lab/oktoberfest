@@ -41,9 +41,9 @@ Oktoberfest will:
 
 Example config file:
 
-.. code-block:: python
+.. code-block:: json
 
-    task_config_ce_calibration = {
+    {
         "type": "CollisionEnergyCalibration",
         "tag": "",
         "output": "./out",
@@ -58,8 +58,8 @@ Example config file:
             "irt": "Prosit_2019_irt"
         },
         "prediction_server": "koina.proteomicsdb.org:443",
-        "regressionMethod": "lowess",
-        "ssl": True,
+        "regressionMethod": "spline",
+        "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",
         "massTolerance": 20,
         "unitMassTolerance": "ppm"
@@ -82,9 +82,9 @@ In case a CSV with peptides is provided, Oktoberfest will directly predict all s
 
 Example config file:
 
-.. code-block:: python
+.. code-block:: json
 
-    task_config_spectral_lib = {
+    {
         "type": "SpectralLibraryGeneration",
         "tag": "",
         "output": "./out",
@@ -101,7 +101,7 @@ Example config file:
         "outputFormat": "spectronaut",
         "prediction_server": "koina.proteomicsdb.org:443",
         "numThreads": 1,
-        "ssl": True,
+        "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe"
         "fastaDigestOptions": {
             "fragmentation": "",
@@ -136,9 +136,9 @@ Oktoberfest will:
 
 Example config file:
 
-.. code-block:: python
+.. code-block:: json
 
-    task_config_rescoring = {
+    {
         "type": "Rescoring",
         "tag": "",
         "output": "./out",
@@ -155,9 +155,9 @@ Example config file:
         "prediction_server": "koina.proteomicsdb.org:443",
         "numThreads": 1,
         "fdr_estimation_method": "mokapot",
-        "allFeatures": False,
+        "allFeatures": false,
         "regressionMethod": "spline",
-        "ssl": True,
+        "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",
         "massTolerance": 20,
         "unitMassTolerance": "ppm"

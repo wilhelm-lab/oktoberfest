@@ -7,3 +7,21 @@
 .wy-side-nav-search {
     background-color: inherit;
 }
+
+table.align-default {
+    text-align: left;
+}
+
+.fixed-table th:first-child,
+.fixed-table td:first-child {
+    min-width: 250px;
+}
+
+.fixed-table th:last-child,
+.fixed-table td:last-child {
+    width: 100%;
+}
+
+.fixed-table {
+    margin-left: 0;
+}
