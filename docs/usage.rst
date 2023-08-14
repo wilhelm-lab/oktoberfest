@@ -8,6 +8,7 @@ The following outlines how to run a job with the high level API, the three types
     :maxdepth: 1
 
     jobs
-    predictions
     config
-    formatting
+    predictions
+    internal_format
+    peptides_format

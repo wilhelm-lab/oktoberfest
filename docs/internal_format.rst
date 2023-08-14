@@ -1,7 +1,7 @@
 Custom search results
 =====================
 
-If the search engine you get your results from is not directly supported by Oktoberfest, the outputs can be manually transformed into the internal prosit file format. If you want to use this format, you need have the following flag in your config file:
+If the search engine you get your results from is not directly supported by Oktoberfest, the outputs can be manually transformed into the internal prosit file format. If you want to use this format, you need have the following parameter in your config file:
 
 .. code-block:: json
 
@@ -10,7 +10,7 @@ If the search engine you get your results from is not directly supported by Okto
 Internal file format specification
 ----------------------------------
 
-Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the description of individual columns.
+Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the file format specification.
 
 
 .. table::
@@ -18,17 +18,17 @@ Oktoberfest expects a csv formatted file where each row represents a PSM. The fo
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
     | Column Header     | Explanation                                                                                                                                              |
     +===================+==========================================================================================================================================================+
-    | RAW_FILE          | Name of the RAW file or mzml file associated with the PSM without the file extension.                                                                    |
+    | RAW_FILE          | Name of the RAW file or mzml file associated with the PSM without the file extension                                                                     |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
     | SCAN_NUMBER       | RAW file derived sequential number of an individal scan during the mass spectrometry run                                                                 |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | MODIFIED_SEQUENCE | Peptide sequence including modifications in UNIMOD format.                                                                                               |
+    | MODIFIED_SEQUENCE | Peptide sequence including modifications in UNIMOD format                                                                                                |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | PRECURSOR_CHARGE  | Charge state of the precursor ion.                                                                                                                       |
+    | PRECURSOR_CHARGE  | Charge state of the precursor ion                                                                                                                        |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
     | SCAN_EVENT_NUMBER | Optional number of the specific scan event in relation to the acquisition cycle that depends on the used search engine and might not be present          |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | MASS              | Monoisotopic mass of the peptide including modifications.                                                                                                |
+    | MASS              | Monoisotopic mass of the peptide including modifications                                                                                                 |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
     | SCORE             | Search engine derived score (highest score is considered "best", i.e. needs manual transformation if the search engine score is not following this rule) |
     +-------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+

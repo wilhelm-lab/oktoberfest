@@ -25,3 +25,22 @@ table.align-default {
 .fixed-table {
     margin-left: 0;
 }
+
+.main-config-table tbody tr:nth-child(n + 4):nth-child(-n + 5) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-rescore-config-table
+    tbody
+    tr:nth-child(n + 2):nth-child(-n + 5)
+    td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-config-table tbody tr:nth-child(n + 2):nth-child(-n + 3) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
+    padding-left: 50px;
+}

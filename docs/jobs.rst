@@ -1,5 +1,13 @@
-Running a job
-=============
+Running Oktoberfest
+===================
+
+This documentation provides an overview of the high level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
+
+
+Executing a job
+---------------
+
+Oktoberfest can be run in three different ways. The only input required is a configuration for setting up the job (we provide examples further down and a full documentation on the next page).
 
 The command for executing a job from terminal:
 
