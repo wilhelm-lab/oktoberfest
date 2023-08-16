@@ -1,7 +1,7 @@
 Retrieving predictions
 ======================
 
-Oktoberfest relies on retrieving predictions from a `koina <https://koina.proteomicsdb.org/>`_ or any other community server that hosts specific models for peptide property prediction. server that hosts supported models for peptide property predictions. Users can use any publicly available community server or host their own server.
+Oktoberfest relies on retrieving predictions from a `Koina <https://koina.proteomicsdb.org/>`_ server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.
 
 Connecting to a community server
 --------------------------------
@@ -26,34 +26,32 @@ This is the list of currently supported and tested models for Oktoberfest provid
 .. table::
    :class: fixed-table
 
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Intensity models           |                             Description                                                                                                                                                      |
-   +============================+==============================================================================================================================================================================================+
-   | Prosit_2019_intensity      | deprecated, please use the 2020 model                                                                                                                                                        |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Prosit_2020_intensity_HCD  | your go to model for fragment intensity prediction for HCD fragmentation, find out more about this model `here <https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_HCD/infer>`_ |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Prosit_2020_intensity_CID  | your go to model for fragment intensity prediction for CID fragmentation, find out more about this model `here <https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_CID/infer>`_ |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Prosit_2020_intensity_TMT  | your go to model for fragment intensity prediction for TMT, find out more about this model `here <https://koina.proteomicsdb.org/docs/#post-/Prosit_2020_intensity_TMT/infer>`_              |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   +----------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | Intensity models                                                                                         |                             Description                                                                                                                                                      |
+   +==========================================================================================================+==============================================================================================================================================================================================+
+   | Prosit_2019_intensity                                                                                    | Developed for HCD tryptic peptides only. We recommend using the Prosit_2020_intensity_HCD model instead, since it showed slightly superior performance on tryptic peptides as well.          |
+   +----------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | `Prosit_2020_intensity_HCD <https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_HCD/infer>`_ | Developed for HCD tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for HCD.                              |
+   +----------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | `Prosit_2020_intensity_CID <https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_CID/infer>`_ | Developed for CID tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for CID.                              |
+   +----------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | `Prosit_2020_intensity_TMT <https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_TMT/infer>`_ | Developed for HCD and CID, tryptic and non-tryptic peptides. Latest version we commend for TMT labeled peptides in general.                                                                  |
+   +----------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. table::
    :class: fixed-table
 
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | iRT models\ \              |                             Description                                                                                                                                                      |
-   +============================+==============================================================================================================================================================================================+
-   | Prosit_2019_irt            | all purpose model for retention time prediction, find out more about this model `here <https://koina.proteomicsdb.org/docs/#post-/Prosit_2019_irt/infer>`_                                   |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Prosit_2020_irt_TMT        | your go to model for retention time prediction for TMT, find out more about this model `here <https://koina.proteomicsdb.org/docs/#post-/Prosit_2020_irt_TMT/infer>`_                        |
-   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+   | iRT models                                                                                    |                             Description                                                                                   |
+   +===============================================================================================+===========================================================================================================================+
+   | `Prosit_2019_irt <https://koina.proteomicsdb.org/docs#post-/Prosit_2019_irt/infer>`_          | While developed for tryptic peptides only, we did not observe a drop in prediction performance for non-tryptic peptides.  |
+   +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+   | `Prosit_2020_irt_TMT <https://koina.proteomicsdb.org/docs/#post-/Prosit_2020_irt_TMT/infer>`_ | Developed for TMT labeled peptides.                                                                                       |
+   +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
 
 Once support for additional models is implemented in Oktoberfest, they will be added here.
 
 Hosting and adding your own models
 ----------------------------------
 
-In case you are planning to host your own private or public instance of koina or want us to host your model, please refer to the official `koina documentation <https://koina.proteomicsdb.org/docs#overview>`_.
-
-
+In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official `Koina documentation <https://koina.proteomicsdb.org/docs#overview>`_.
