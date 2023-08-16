@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuration &mdash; Oktoberfest 0.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Retrieving predictions" href="predictions.html" />
+    <link rel="prev" title="Running Oktoberfest" href="jobs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.4.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage Principles</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#always-required">Always required</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#required-for-spectral-library-generation-and-rescoring">Required for spectral library generation and rescoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-spectral-library-generation">Additional parameters required for spectral library generation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-in-silico-digestion">Additional parameters required for in-silico digestion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-rescoring">Additional parameters required for rescoring</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Oktoberfest</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage Principles</a></li>
+      <li class="breadcrumb-item active">Configuration</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/config.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h1>
+<p>The following provides an overview of all available flags in the configuration file to use the high level API and run jobs.</p>
+<section id="always-required">
+<h2>Always required<a class="headerlink" href="#always-required" title="Permalink to this heading"></a></h2>
+<table class="fixed-table main-config-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>type</p></td>
+<td><p>The type of job; can be one of “CollisionEnergyAlignment”, “SpectralLibraryGeneration” or “Rescoring”</p></td>
+</tr>
+<tr class="row-odd"><td><p>tag</p></td>
+<td><p>Optional mass tag Can be “tmt”, “tmtpro”, “itraq4” or “itraq8”; default is “”</p></td>
+</tr>
+<tr class="row-even"><td><p>models</p></td>
+<td><p>Contains information about the used models for peptide property prediction (see following 2 nested parameters)</p></td>
+</tr>
+<tr class="row-odd"><td><p>intensity</p></td>
+<td><p>Name of the model used for fragment intensity prediction</p></td>
+</tr>
+<tr class="row-even"><td><p>irt</p></td>
+<td><p>Name of the model used for indexed retention time prediction</p></td>
+</tr>
+<tr class="row-odd"><td><p>prediction_server</p></td>
+<td><p>Server and port for obtaining peptide property predictions; default: “koina.proteomicsdb.org:443”</p></td>
+</tr>
+<tr class="row-even"><td><p>ssl</p></td>
+<td><p>Use ssl when making requests to the prediction server, can be true or false; default = true</p></td>
+</tr>
+<tr class="row-odd"><td><p>output</p></td>
+<td><p>Path to the output folder (relative to the location of the config file); default = “./”</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="required-for-spectral-library-generation-and-rescoring">
+<h2>Required for spectral library generation and rescoring<a class="headerlink" href="#required-for-spectral-library-generation-and-rescoring" title="Permalink to this heading"></a></h2>
+<table class="fixed-table lib-rescore-config-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>inputs</p></td>
+<td><p>Contains information about inputs and the type of the inputs (see following 4 nested parameters)</p></td>
+</tr>
+<tr class="row-odd"><td><p>search_results</p></td>
+<td><p>Path to directory or file containing the search results</p></td>
+</tr>
+<tr class="row-even"><td><p>search_results_type</p></td>
+<td><p>Format description for search results; can be “Maxquant”, “Msfragger”, “Mascot” or “<a class="reference external" href="./internal_format.html">Internal</a>”; default = “Maxquant”</p></td>
+</tr>
+<tr class="row-odd"><td><p>spectra</p></td>
+<td><p>Path to directory or file containing mass spectrometry results</p></td>
+</tr>
+<tr class="row-even"><td><p>spectra_type</p></td>
+<td><p>Format description for files containing spectra; can be “raw” or “mzml”; default = “raw”; in case of mixed input, select “raw”.</p></td>
+</tr>
+<tr class="row-odd"><td><p>numThreads</p></td>
+<td><p>Number of raw/mzml files processed in parallel (parallelisation on file level); more processes than files has no effect and should be avoided; default = 1</p></td>
+</tr>
+<tr class="row-even"><td><p>thermoExe</p></td>
+<td><p>Path to ThermoRawFileParser executable; needed if spectra are provided in RAW format; default “ThermoRawFileParser.exe”</p></td>
+</tr>
+<tr class="row-odd"><td><p>massTolerance</p></td>
+<td><p>Defines the allowed tolerance between theoretical and experimentally observered fragment mass during peak annotation; default = 20 (FTMS), 40 (TOF), 0.35 (ITMS)</p></td>
+</tr>
+<tr class="row-even"><td><p>unitMassTolerance</p></td>
+<td><p>Defines the measure of tolerance, either “da” or “ppm”; default = da (mass analyzer is ITMS), ppm (mass analyzer is FTMS or TOF)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="additional-parameters-required-for-spectral-library-generation">
+<h2>Additional parameters required for spectral library generation<a class="headerlink" href="#additional-parameters-required-for-spectral-library-generation" title="Permalink to this heading"></a></h2>
+<table class="fixed-table lib-config-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>inputs</p></td>
+<td><p>Contains information about additional inputs required for spectral library generation and the type of the inputs (see following 2 nested parameters)</p></td>
+</tr>
+<tr class="row-odd"><td><p>library_input</p></td>
+<td><p>Path to fasta file for in-silico digestion (also see the required parameters in the following section) or an existing output file from a digestion</p></td>
+</tr>
+<tr class="row-even"><td><p>library_input_type</p></td>
+<td><p>Library input type description; can be “fasta” if an additional in-silico digestion is required or “<a class="reference external" href="./peptides_format.html">peptides</a>”</p></td>
+</tr>
+<tr class="row-odd"><td><p>outputFormat</p></td>
+<td><p>Output format of the generated spectral library; can be “spectronaut” or “msp”</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="additional-parameters-required-for-in-silico-digestion">
+<h2>Additional parameters required for in-silico digestion<a class="headerlink" href="#additional-parameters-required-for-in-silico-digestion" title="Permalink to this heading"></a></h2>
+<table class="fixed-table digest-config-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>fastaDigestOptions</p></td>
+<td><p>Contains specific settings for the in-silico digestion of a provided fasta file (see following 8 nested parameters)</p></td>
+</tr>
+<tr class="row-odd"><td><p>fragmentation</p></td>
+<td><p>Method used for fragmentation; can be “HCD” or “CID”</p></td>
+</tr>
+<tr class="row-even"><td><p>digestion</p></td>
+<td><p>Digestion mode; can be “full”, “semi” or None; default = “full”</p></td>
+</tr>
+<tr class="row-odd"><td><p>cleavages</p></td>
+<td><p>Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2</p></td>
+</tr>
+<tr class="row-even"><td><p>minLength</p></td>
+<td><p>Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 7</p></td>
+</tr>
+<tr class="row-odd"><td><p>maxLength</p></td>
+<td><p>Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 60</p></td>
+</tr>
+<tr class="row-even"><td><p>enzyme</p></td>
+<td><p>Name of the enzyme used in the search engine; default = “trypsin”</p></td>
+</tr>
+<tr class="row-odd"><td><p>specialAas</p></td>
+<td><p>Special amino acids for decoy generation; default = “KR”</p></td>
+</tr>
+<tr class="row-even"><td><p>db</p></td>
+<td><p>Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be “target”, “decoy” or “concat”; default = “concat”</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="additional-parameters-required-for-rescoring">
+<h2>Additional parameters required for rescoring<a class="headerlink" href="#additional-parameters-required-for-rescoring" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>fdr_estimation_method</p></td>
+<td><p>Method used for target / decoy separation and FDR estimation on PSM and peptide level: “percolator” or “mokapot”; default = “mokapot”</p></td>
+</tr>
+<tr class="row-odd"><td><p>allFeatures</p></td>
+<td><p>Defines whether all features should be used; can be True or False; default = False</p></td>
+</tr>
+<tr class="row-even"><td><p>regressionMethod</p></td>
+<td><p>Regression method for curve fitting (mapping from predicted iRT values to experimental retention times); can be “spline”, “lowess”, or “logistic”; default = “spline”</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="jobs.html" class="btn btn-neutral float-left" title="Running Oktoberfest" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="predictions.html" class="btn btn-neutral float-right" title="Retrieving predictions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; oktoberfest 0.3.0 documentation</title>
+  <title>Installation &mdash; Oktoberfest 0.4.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -20,8 +20,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Usage" href="usage.html" />
-    <link rel="prev" title="oktoberfest" href="readme.html" /> 
+    <link rel="next" title="Usage Principles" href="usage.html" />
+    <link rel="prev" title="Oktoberfest: Rescoring and Spectral Library Generation for Proteomics" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -32,11 +32,12 @@
 
           
           
-          <a href="index.html" class="icon icon-home">
-            oktoberfest
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.3.0
+                0.4.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -48,18 +49,16 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="readme.html">oktoberfest</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#stable-release">Stable release</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-pip-recommended">Using pip (recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#docker-image">Docker image</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">oktoberfest</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
 </ul>
 
         </div>
@@ -68,7 +67,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">oktoberfest</a>
+          <a href="index.html">Oktoberfest</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -78,7 +77,7 @@
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">Installation</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/main/oktoberfest/installation.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/installation.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -88,30 +87,28 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
-<section id="stable-release">
-<h2>Stable release<a class="headerlink" href="#stable-release" title="Permalink to this heading"></a></h2>
-<p>To install oktoberfest, run this command in your terminal:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>oktoberfest
-</pre></div>
-</div>
-<p>This is the preferred method to install oktoberfest, as it will always install the most recent stable release.</p>
-<p>If you don’t have <a class="reference external" href="https://pip.pypa.io">pip</a> installed, this <a class="reference external" href="http://docs.python-guide.org/en/latest/starting/installation/">Python installation guide</a> can guide
-you through the process.</p>
+<hr class="docutils" />
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading"></a></h2>
+<p>Oktoberfest requires python &gt;=3.8,&lt;=3.11. Best practise is to use a clean conda environment (<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>).</p>
+<p>If you provide thermo raw files, make sure <a class="reference external" href="https://github.com/compomics/ThermoRawFileParser">ThermoRawFileParser</a> is installed.</p>
+<p>If you are on linux or MacOS, make sure <a class="reference external" href="https://www.mono-project.com/">mono</a> is installed.</p>
+<p>If you want to use percolator, make sure you install version 3.05 (<a class="reference external" href="https://github.com/percolator/percolator/releases/tag/rel-3-05">percolator</a>).</p>
 </section>
-<section id="from-sources">
-<h2>From sources<a class="headerlink" href="#from-sources" title="Permalink to this heading"></a></h2>
-<p>The sources for oktoberfest can be downloaded from the <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest">Github repo</a>.
-Please note that you require <a class="reference external" href="https://python-poetry.org/">poetry</a> to be installed.</p>
-<p>You can either clone the public repository:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>git://github.com/wilhelm-lab/oktoberfest
+<section id="using-pip-recommended">
+<h2>Using pip (recommended)<a class="headerlink" href="#using-pip-recommended" title="Permalink to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>oktoberfest
 </pre></div>
 </div>
-<p>Or download the <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/tarball/master">tarball</a>:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>curl<span class="w"> </span>-OJL<span class="w"> </span>https://github.com/wilhelm-lab/oktoberfest/tarball/master
-</pre></div>
-</div>
-<p>Once you have a copy of the source, you can install it with:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>install
+</section>
+<section id="docker-image">
+<h2>Docker image<a class="headerlink" href="#docker-image" title="Permalink to this heading"></a></h2>
+<p>Prerequisites:
+- <a class="reference external" href="https://www.gnu.org/software/make/">make</a>
+- <a class="reference external" href="https://www.docker.com/">docker</a></p>
+<p>After cloning the repository of oktoberfest, checkout the branch you want to build the container from.
+The latest stable version is always on the main branch.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build
 </pre></div>
 </div>
 </section>
@@ -121,14 +118,14 @@ Please note that you require <a class="reference external" href="https://python-
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="readme.html" class="btn btn-neutral float-left" title="oktoberfest" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="usage.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Oktoberfest: Rescoring and Spectral Library Generation for Proteomics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="usage.html" class="btn btn-neutral float-right" title="Usage Principles" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Victor Giurcoiu.</p>
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

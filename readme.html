@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest &mdash; oktoberfest 0.3.0 documentation</title>
+  <title>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics &mdash; Oktoberfest 0.4.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -19,9 +19,7 @@
         <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installation" href="installation.html" />
-    <link rel="prev" title="oktoberfest" href="index.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -32,11 +30,12 @@
 
           
           
-          <a href="index.html" class="icon icon-home">
-            oktoberfest
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.3.0
+                0.4.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -47,21 +46,12 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">oktoberfest</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#features">Features</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#credits">Credits</a></li>
-</ul>
-</li>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">oktoberfest</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
 </ul>
 
         </div>
@@ -70,7 +60,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">oktoberfest</a>
+          <a href="index.html">Oktoberfest</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -78,9 +68,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">oktoberfest</li>
+      <li class="breadcrumb-item active">Oktoberfest: Rescoring and Spectral Library Generation for Proteomics</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/main/oktoberfest/readme.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/readme.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -88,44 +78,21 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest">
-<h1>oktoberfest<a class="headerlink" href="#oktoberfest" title="Permalink to this heading"></a></h1>
-<p><a class="reference external" href="https://pypi.org/project/oktoberfest/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oktoberfest.svg" /></a> <a class="reference external" href="https://pypi.org/project/oktoberfest"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/oktoberfest" /></a> <a class="reference external" href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/wilhelm-lab/oktoberfest" /></a> <a class="reference external" href="https://oktoberfest.readthedocs.io/"><img alt="Read the documentation at https://oktoberfest.readthedocs.io/" src="https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/wilhelm-lab/oktoberfest"><img alt="Codecov" src="https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
-<section id="features">
-<h2>Features<a class="headerlink" href="#features" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p>TODO</p></li>
-</ul>
-</section>
-<section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h2>
-<p>You can install <em>oktoberfest</em> via <a class="reference external" href="https://pip.pypa.io/">pip</a> from <a class="reference external" href="https://pypi.org/">PyPI</a>:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>oktoberfest
-</pre></div>
-</div>
-</section>
-<section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h2>
-<p>Please see the <a class="reference external" href="https://oktoberfest.readthedocs.io/en/latest/usage.html">Command-line Reference</a> for details.</p>
-</section>
-<section id="credits">
-<h2>Credits<a class="headerlink" href="#credits" title="Permalink to this heading"></a></h2>
-<p>This package was created with <a class="reference external" href="https://cookietemple.com">cookietemple</a> using <a class="reference external" href="https://github.com/audreyr/cookiecutter">Cookiecutter</a> based on <a class="reference external" href="https://github.com/cjolowicz/cookiecutter-hypermodern-python">Hypermodern_Python_Cookiecutter</a>.</p>
-</section>
+  <p><a class="reference external" href="https://pypi.org/project/oktoberfest/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oktoberfest.svg" /></a> <a class="reference external" href="https://pypi.org/project/oktoberfest"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/oktoberfest" /></a> <a class="reference external" href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/wilhelm-lab/oktoberfest" /></a> <a class="reference external" href="https://oktoberfest.readthedocs.io/"><img alt="Read the documentation at https://oktoberfest.readthedocs.io/" src="https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/wilhelm-lab/oktoberfest"><img alt="Codecov" src="https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
+<section id="oktoberfest-rescoring-and-spectral-library-generation-for-proteomics">
+<h1>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics<a class="headerlink" href="#oktoberfest-rescoring-and-spectral-library-generation-for-proteomics" title="Permalink to this heading"></a></h1>
+<p>Oktoberfest is a python tool for rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.</p>
 </section>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="oktoberfest" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Victor Giurcoiu.</p>
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

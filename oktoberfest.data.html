@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.data package &mdash; oktoberfest 0.3.0 documentation</title>
+  <title>oktoberfest.data package &mdash; Oktoberfest 0.4.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -32,11 +32,12 @@
 
           
           
-          <a href="index.html" class="icon icon-home">
-            oktoberfest
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.3.0
+                0.4.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -48,10 +49,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="readme.html">oktoberfest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="modules.html">oktoberfest</a><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="API.html">API (under development)</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="oktoberfest.html">oktoberfest package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="oktoberfest.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.data package</a></li>
@@ -59,14 +59,13 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-calculate-features-module">oktoberfest.calculate_features module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-ce-calibration-module">oktoberfest.ce_calibration module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-constants-dir-module">oktoberfest.constants_dir module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-re-score-module">oktoberfest.re_score module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-run-oktoberfest-module">oktoberfest.run_oktoberfest module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-runner-module">oktoberfest.runner module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-spectral-library-module">oktoberfest.spectral_library module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-contents">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.calculate_features">oktoberfest.calculate_features module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.ce_calibration">oktoberfest.ce_calibration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.re_score">oktoberfest.re_score module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.run_oktoberfest">oktoberfest.run_oktoberfest module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.runner">oktoberfest.runner module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.spectral_library">oktoberfest.spectral_library module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">oktoberfest.data package</a><ul>
@@ -82,10 +81,8 @@
 <li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html">oktoberfest.utils package</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
 </ul>
 
         </div>
@@ -94,7 +91,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">oktoberfest</a>
+          <a href="index.html">Oktoberfest</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -102,11 +99,11 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="modules.html">oktoberfest</a></li>
+          <li class="breadcrumb-item"><a href="API.html">API (under development)</a></li>
           <li class="breadcrumb-item"><a href="oktoberfest.html">oktoberfest package</a></li>
       <li class="breadcrumb-item active">oktoberfest.data package</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/main/oktoberfest/oktoberfest.data.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/oktoberfest.data.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -123,8 +120,8 @@
 <span id="oktoberfest-data-spectra-module"></span><h2>oktoberfest.data.spectra module<a class="headerlink" href="#module-oktoberfest.data.spectra" title="Permalink to this heading"></a></h2>
 <dl class="py class">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.FragmentType">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.data.spectra.</span></span><span class="sig-name descname"><span class="pre">FragmentType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L16-L21"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.FragmentType" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.data.spectra.</span></span><span class="sig-name descname"><span class="pre">FragmentType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.FragmentType" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
 <p>FragmentType class to enumerate pred, raw, and mz.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.FragmentType.MZ">
@@ -145,8 +142,8 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.data.spectra.</span></span><span class="sig-name descname"><span class="pre">Spectra</span></span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L24-L210"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.data.spectra.</span></span><span class="sig-name descname"><span class="pre">Spectra</span></span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Main to init spectra data.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.COLUMNS_FRAGMENT_ION">
@@ -175,163 +172,163 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.add_column">
-<span class="sig-name descname"><span class="pre">add_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L71-L78"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_column" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">add_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_column" title="Permalink to this definition"></a></dt>
 <dd><p>Add column to spectra data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>column_data</strong> (<em>Series</em>) – data for a column as np</p></li>
-<li><p><strong>name</strong> (<em>str</em>) – name of the column</p></li>
+<li><p><strong>column_data</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></a>) – data for a column as np</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – name of the column</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.add_columns">
-<span class="sig-name descname"><span class="pre">add_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns_data</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L80-L87"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_columns" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">add_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_columns" title="Permalink to this definition"></a></dt>
 <dd><p>Add columns to spectra data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>columns_data</strong> (<em>DataFrame</em>) – a pandas data frame to add can be metrics or metadata</p>
+<dd class="field-odd"><p><strong>columns_data</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – a pandas data frame to add can be metrics or metadata</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.add_matrix">
-<span class="sig-name descname"><span class="pre">add_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L115-L136"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_matrix" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">add_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_matrix" title="Permalink to this definition"></a></dt>
 <dd><p>Concatenate intensity df as a sparse matrix to our data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>intensity_data</strong> (<em>DataFrame</em>) – intensity numpy array to add</p></li>
-<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><em>FragmentType</em></a>) – choose predicted, raw, or mz</p></li>
+<li><p><strong>intensity_data</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – intensity numpy array to add</p></li>
+<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><code class="xref py py-class docutils literal notranslate"><span class="pre">FragmentType</span></code></a>) – choose predicted, raw, or mz</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.add_matrix_from_hdf5">
-<span class="sig-name descname"><span class="pre">add_matrix_from_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L103-L113"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_matrix_from_hdf5" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">add_matrix_from_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensity_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.add_matrix_from_hdf5" title="Permalink to this definition"></a></dt>
 <dd><p>Concatenate intensity df as a sparse matrix to our data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>intensity_data</strong> (<em>DataFrame</em>) – intensity sparse matrix</p></li>
-<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><em>FragmentType</em></a>) – choose predicted, raw, or mz</p></li>
+<li><p><strong>intensity_data</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – intensity sparse matrix</p></li>
+<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><code class="xref py py-class docutils literal notranslate"><span class="pre">FragmentType</span></code></a>) – choose predicted, raw, or mz</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.get_columns">
-<span class="sig-name descname"><span class="pre">get_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L138-L152"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_columns" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_columns" title="Permalink to this definition"></a></dt>
 <dd><p>Get intensities sparse matrix from dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><em>FragmentType</em></a>) – choose predicted, raw, or mz</p></li>
-<li><p><strong>return_column_names</strong> (<em>bool</em>) – whether column names should be returned</p></li>
+<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><code class="xref py py-class docutils literal notranslate"><span class="pre">FragmentType</span></code></a>) – choose predicted, raw, or mz</p></li>
+<li><p><strong>return_column_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>) – whether column names should be returned</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>sparse matrix with the required data</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html#scipy.sparse.coo_matrix" title="(in SciPy v1.11.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">coo_matrix</span></code></a></p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><em>spmatrix</em></p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sparse matrix with the required data</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.get_matrix">
-<span class="sig-name descname"><span class="pre">get_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L154-L168"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_matrix" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_column_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_matrix" title="Permalink to this definition"></a></dt>
 <dd><p>Get intensities sparse matrix from dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><em>FragmentType</em></a>) – choose predicted, raw, or mz</p></li>
-<li><p><strong>return_column_names</strong> (<em>bool</em>) – whether column names should be returned</p></li>
+<li><p><strong>fragment_type</strong> (<a class="reference internal" href="#oktoberfest.data.spectra.FragmentType" title="oktoberfest.data.spectra.FragmentType"><code class="xref py py-class docutils literal notranslate"><span class="pre">FragmentType</span></code></a>) – choose predicted, raw, or mz</p></li>
+<li><p><strong>return_column_names</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>) – whether column names should be returned</p></li>
 </ul>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>sparse matrix with the required data</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.coo_matrix.html#scipy.sparse.coo_matrix" title="(in SciPy v1.11.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">coo_matrix</span></code></a></p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><em>spmatrix</em></p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>sparse matrix with the required data</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.get_meta_data">
-<span class="sig-name descname"><span class="pre">get_meta_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L89-L101"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_meta_data" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_meta_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.get_meta_data" title="Permalink to this definition"></a></dt>
 <dd><p>Get meta data with intensity, mz and intensity predictions as pd.DataFrame.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><em>DataFrame</em></p>
+<dd class="field-odd"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.read_from_hdf5">
-<span class="sig-name descname"><span class="pre">read_from_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L201-L210"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.read_from_hdf5" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">read_from_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.read_from_hdf5" title="Permalink to this definition"></a></dt>
 <dd><p>Read from hdf5 file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>input_file</strong> (<em>str</em><em> | </em><em>Path</em>) – path to input file</p>
+<dd class="field-odd"><p><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – path to input file</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.spectra_data">
-<span class="sig-name descname"><span class="pre">spectra_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></em><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.spectra_data" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">spectra_data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></em><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.spectra_data" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.write_as_hdf5">
-<span class="sig-name descname"><span class="pre">write_as_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L170-L183"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.write_as_hdf5" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">write_as_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.write_as_hdf5" title="Permalink to this definition"></a></dt>
 <dd><p>Write intensity and mz data as hdf5.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>output_file</strong> (<em>str</em><em> | </em><em>Path</em>) – path to output file</p>
+<dd class="field-odd"><p><strong>output_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – path to output file</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="oktoberfest.data.spectra.Spectra.write_pred_as_hdf5">
-<span class="sig-name descname"><span class="pre">write_pred_as_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/documentation/oktoberfest/data/spectra.py#L185-L199"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.write_pred_as_hdf5" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">write_pred_as_hdf5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.data.spectra.Spectra.write_pred_as_hdf5" title="Permalink to this definition"></a></dt>
 <dd><p>Write intensity, mz, and pred data as hdf5.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>output_file</strong> (<em>str</em><em> | </em><em>Path</em>) – path to output file</p>
+<dd class="field-odd"><p><strong>output_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – path to output file</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -356,7 +353,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Victor Giurcoiu.</p>
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

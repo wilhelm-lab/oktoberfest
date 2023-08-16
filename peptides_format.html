@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Custom in-silico digestion &mdash; Oktoberfest 0.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Generated outputs" href="outputs.html" />
+    <link rel="prev" title="Custom search results" href="internal_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.4.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage Principles</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Custom in-silico digestion</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#internal-file-format-specification">Internal file format specification</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Oktoberfest</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage Principles</a></li>
+      <li class="breadcrumb-item active">Custom in-silico digestion</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/peptides_format.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="custom-in-silico-digestion">
+<h1>Custom in-silico digestion<a class="headerlink" href="#custom-in-silico-digestion" title="Permalink to this heading"></a></h1>
+<p>While Oktoberfest can do in-silico digestion by providing a fasta file, you can provide a list of peptides with the required metadata directly. In this case, you need to have the following parameter in your config file:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;library_input_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;peptides&quot;</span><span class="p">,</span>
+</pre></div>
+</div>
+<section id="internal-file-format-specification">
+<h2>Internal file format specification<a class="headerlink" href="#internal-file-format-specification" title="Permalink to this heading"></a></h2>
+<p>Oktoberfest expects a csv formatted file where each row represents a peptide fragment with given metadata. The following table provides the file format specification.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Column Header</p></th>
+<th class="head"><p>Explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>modified_sequence</p></td>
+<td><p>The peptide sequence including modifications in unimod format (only M[UNIMOD:35] supported) and excluding the fixed modification C[UNIMOD:35] (Carbamidomethylation) as this modification will be added automatically. If you add C[UNIMOD:35] manually, you will get wrong results.</p></td>
+</tr>
+<tr class="row-odd"><td><p>collision_energy</p></td>
+<td><p>The collision energy to use in peptide property prediction</p></td>
+</tr>
+<tr class="row-even"><td><p>precursor_charge</p></td>
+<td><p>Charge state of the precursor ion</p></td>
+</tr>
+<tr class="row-odd"><td><p>fragmentation</p></td>
+<td><p>Method used for fragmentation; can be “HCD” or “CID”</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">modified_sequence</span><span class="p">,</span><span class="n">collision_energy</span><span class="p">,</span><span class="n">precursor_charge</span><span class="p">,</span><span class="n">fragmentation</span>
+<span class="n">ASPTQPIQL</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">KIIDRAITSL</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">KIEKLKVEL</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">KINQQKLKL</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">MLGNM</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span><span class="n">NVFMAVLGIILC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">SGFLAAYFSHK</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">TYC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">DATKC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">FTVTE</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
+<span class="n">VIPSIAYTEPEVAWVGLTEKEAKEK</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="internal_format.html" class="btn btn-neutral float-left" title="Custom search results" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="outputs.html" class="btn btn-neutral float-right" title="Generated outputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

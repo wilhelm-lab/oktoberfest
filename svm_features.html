@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Features for target / decoy separation &mdash; Oktoberfest 0.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API (under development)" href="API.html" />
+    <link rel="prev" title="Generated outputs" href="outputs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.4.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage Principles</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Features for target / decoy separation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#always-present">Always present</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#features-related-to-prosit">Features related to Prosit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#features-adopted-from-ms2pip-ms2rescore">Features adopted from MS2PIP/MS2Rescore</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Oktoberfest</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage Principles</a></li>
+      <li class="breadcrumb-item active">Features for target / decoy separation</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/svm_features.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="features-for-target-decoy-separation">
+<h1>Features for target / decoy separation<a class="headerlink" href="#features-for-target-decoy-separation" title="Permalink to this heading"></a></h1>
+<p>Oktoberfest creates tab files for target / decoy separation and fdr estimation using Percolator and mokapot. This provides an overview of the features that are used for rescoring with and without peptide property prediction.</p>
+<section id="always-present">
+<h2>Always present<a class="headerlink" href="#always-present" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SpecId</p></td>
+<td><p>internal spectrum ID</p></td>
+</tr>
+<tr class="row-odd"><td><p>ScanNr</p></td>
+<td><p>scan number hash</p></td>
+</tr>
+<tr class="row-even"><td><p>Peptide</p></td>
+<td><p>peptide sequence</p></td>
+</tr>
+<tr class="row-odd"><td><p>missedCleavages</p></td>
+<td><p>number of missed cleavages</p></td>
+</tr>
+<tr class="row-even"><td><p>sequence_length</p></td>
+<td><p>peptide sequence length</p></td>
+</tr>
+<tr class="row-odd"><td><p>Mass</p></td>
+<td><p>experimental mass</p></td>
+</tr>
+<tr class="row-even"><td><p>ExpMass</p></td>
+<td><p>fixed constant to allow PSMs with different theoretical mass to compete
+for the same PSM in target-decoy competition</p></td>
+</tr>
+<tr class="row-odd"><td><p>Label</p></td>
+<td><p>1 indicates target, -1 decoy</p></td>
+</tr>
+<tr class="row-even"><td><p>Protein</p></td>
+<td><p>protein description</p></td>
+</tr>
+<tr class="row-odd"><td><p>deltaM_ppm</p></td>
+<td><p>delta mass in ppm</p></td>
+</tr>
+<tr class="row-even"><td><p>absDeltaM_ppm</p></td>
+<td><p>absolute delta mass in ppm</p></td>
+</tr>
+<tr class="row-odd"><td><p>deltaM_da</p></td>
+<td><p>delta mass in Da</p></td>
+</tr>
+<tr class="row-even"><td><p>absDeltaM_da</p></td>
+<td><p>absolute delta mass in Da</p></td>
+</tr>
+<tr class="row-odd"><td><p>Charge2</p></td>
+<td><p>boolean for charge state 2</p></td>
+</tr>
+<tr class="row-even"><td><p>Charge3</p></td>
+<td><p>boolean for charge state 3</p></td>
+</tr>
+<tr class="row-odd"><td><p>KR</p></td>
+<td><p>number of K or R amino acids in sequence</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="features-related-to-prosit">
+<h2>Features related to Prosit<a class="headerlink" href="#features-related-to-prosit" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>spectral_angle</p></td>
+<td><p>Normalized spectral contrast angle (SA) on all potential y- and b-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_seen_nonzero</p></td>
+<td><p>number of observed non-zero ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-even"><td><p>not_pred_seen</p></td>
+<td><p>number of observed non-zero ions not predicted</p></td>
+</tr>
+<tr class="row-odd"><td><p>not_pred_seen_b</p></td>
+<td><p>number of observed non-zero b-ions not predicted</p></td>
+</tr>
+<tr class="row-even"><td><p>not_pred_seen_y</p></td>
+<td><p>number of observed non-zero y-ions not predicted</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_nonZero_fragments</p></td>
+<td><p>number of ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-even"><td><p>pred_nonZero_b</p></td>
+<td><p>number of b-ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_nonZero_y</p></td>
+<td><p>number of y-ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-even"><td><p>pred_not_seen</p></td>
+<td><p>number of ions with non-zero predicted intensity not observed</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_not_seen_b</p></td>
+<td><p>number of b-ions with non-zero predicted intensity not observed</p></td>
+</tr>
+<tr class="row-even"><td><p>pred_not_seen_y</p></td>
+<td><p>number of y-ions with non-zero predicted intensity not observed</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_seen_nonzero_b</p></td>
+<td><p>number of observed b-ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-even"><td><p>pred_seen_nonzero_y</p></td>
+<td><p>number of observed y-ions with non-zero predicted intensity</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_seen_zero</p></td>
+<td><p>number of predicted and observed zero-intensity ions</p></td>
+</tr>
+<tr class="row-even"><td><p>pred_seen_zero_b</p></td>
+<td><p>number of predicted and observed zero-intensity b-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>pred_seen_zero_y</p></td>
+<td><p>number of predicted and observed zero-intensity y-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>raw_nonZero_fragments</p></td>
+<td><p>number of observed ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>raw_nonZero_b</p></td>
+<td><p>number of observed b-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>raw_nonZero_y</p></td>
+<td><p>number of observed y-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_not_pred_seen</p></td>
+<td><p>(number of observed ions not predicted) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_not_pred_seen_b</p></td>
+<td><p>(number of observed b-ions not predicted) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_not_pred_seen_y</p></td>
+<td><p>(number of observed y-ions not predicted) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_nonZero_b</p></td>
+<td><p>(number of observed b-ions not predicted) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_pred_nonZero_y</p></td>
+<td><p>(number of observed y-ions not predicted) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_not_seen</p></td>
+<td><p>(number of ions predicted, but not observed) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_pred_not_seen_b</p></td>
+<td><p>(number of b-ions ions predicted, but not observed) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_not_seen_y</p></td>
+<td><p>(number of y-ions ions predicted, but not observed) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_pred_seen_nonzero</p></td>
+<td><p>(number of observed ions predicted ) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_seen_nonzero_b</p></td>
+<td><p>(number of observed b-ions predicted) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_pred_seen_nonzero_y</p></td>
+<td><p>(number of observed y-ions predicted) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_seen_zero</p></td>
+<td><p>(number of predicted and observed zero-intensity ions) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_pred_seen_zero_b</p></td>
+<td><p>(number of predicted and observed zero-intensity b-ions) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_pred_seen_zero_y</p></td>
+<td><p>(number of predicted and observed zero-intensity y-ions) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_raw_nonZero_fragments</p></td>
+<td><p>(number of observed ions) / (number of theoretically observable fragments [length*charge^2])</p></td>
+</tr>
+<tr class="row-even"><td><p>rel_raw_nonZero_b</p></td>
+<td><p>(number of observed b-ions) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-odd"><td><p>rel_raw_nonZero_y</p></td>
+<td><p>(number of observed y-ions) / (number of theoretically observable fragments [length*charge])</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_not_pred_seen2pred_nonZero_fragments</p></td>
+<td><p>(number of observed non-zero ions not predicted) / (number of ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_not_pred_seen_b2pred_nonZero_b</p></td>
+<td><p>(number of observed non-zero b-ions not predicted) / (number of b-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_not_pred_seen_y2pred_nonZero_y</p></td>
+<td><p>(number of observed non-zero y-ions not predicted) / (number of y-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_nonZero_b2pred_nonZero_b</p></td>
+<td><p>(number of b-ions with non-zero predicted intensity) / (number of b-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_pred_nonZero_y2pred_nonZero_y</p></td>
+<td><p>(number of y-ions with non-zero predicted intensity) / (number of y-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_not_seen_b2pred_nonZero_b</p></td>
+<td><p>(number of b-ions with non-zero predicted intensity not observed) / (number of b-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_pred_not_seen_y2pred_nonZero_y</p></td>
+<td><p>(number of y-ions with non-zero predicted intensity not observed) / (number of y-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_not_seen2pred_nonZero_fragments</p></td>
+<td><p>(number of ions with non-zero predicted intensity not observed) / (number of ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_pred_seen_nonzero_b2pred_nonZero_b</p></td>
+<td><p>(number of observed b-ions with non-zero predicted intensity) / (number of b-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_seen_nonzero_y2pred_nonZero_y</p></td>
+<td><p>(number of observed y-ions with non-zero predicted intensity) / (number of y-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_pred_seen_nonzero2pred_nonZero_fragments</p></td>
+<td><p>(number of observed non-zero ions with non-zero predicted intensity) / (number of ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_seen_zero_b2pred_nonZero_b</p></td>
+<td><p>(number of predicted and observed zero-intensity b-ions) / (number of b-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>relpred_pred_seen_zero_y2pred_nonZero_y</p></td>
+<td><p>(number of predicted and observed zero-intensity y-ions) / (number of y-ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-odd"><td><p>relpred_pred_seen_zero2pred_nonZero_fragments</p></td>
+<td><p>(number of predicted and observed zero-intensity ions) / (number of ions with non-zero predicted intensity)</p></td>
+</tr>
+<tr class="row-even"><td><p>abs_rt_diff</p></td>
+<td><p>absolute difference between retention time and aligned predicted retention time</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="features-adopted-from-ms2pip-ms2rescore">
+<h2>Features adopted from MS2PIP/MS2Rescore<a class="headerlink" href="#features-adopted-from-ms2pip-ms2rescore" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>pearson_corr</p></td>
+<td><p>Pearson correlation on all potential y- and
+b-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>spearman_corr</p></td>
+<td><p>Spearman correlation on all potential y- and
+b-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>mse</p></td>
+<td><p>Mean square error</p></td>
+</tr>
+<tr class="row-odd"><td><p>cos</p></td>
+<td><p>Cosine similarity</p></td>
+</tr>
+<tr class="row-even"><td><p>std_abs_diff</p></td>
+<td><p>Standard deviation of the absolute differences</p></td>
+</tr>
+<tr class="row-odd"><td><p>abs_diff_Q3</p></td>
+<td><p>Quantile 3 of the absolute differences</p></td>
+</tr>
+<tr class="row-even"><td><p>abs_diff_Q2</p></td>
+<td><p>Quantile 2 of the absolute differences</p></td>
+</tr>
+<tr class="row-odd"><td><p>abs_diff_Q1</p></td>
+<td><p>Quantile 1 of the absolute differences</p></td>
+</tr>
+<tr class="row-even"><td><p>min_abs_diff</p></td>
+<td><p>Minimum absolute difference</p></td>
+</tr>
+<tr class="row-odd"><td><p>max_abs_diff</p></td>
+<td><p>Maximum absolute difference</p></td>
+</tr>
+<tr class="row-even"><td><p>spectral_angle_single_charge</p></td>
+<td><p>Normalized spectral contrast angle (SA) on
+singly charged ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>spectral_angle_double_charge</p></td>
+<td><p>Normalized spectral contrast angle (SA) on
+doubly charged ions</p></td>
+</tr>
+<tr class="row-even"><td><p>spectral_angle_triple_charge</p></td>
+<td><p>Normalized spectral contrast angle (SA) on
+triply charged ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>spectral_angle_b_ions</p></td>
+<td><p>Normalized spectral contrast angle (SA) on
+b-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>spectral_angle_y_ions</p></td>
+<td><p>Normalized spectral contrast angle (SA) on
+y-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>pearson_corr_single_charge</p></td>
+<td><p>Pearson correlation on singly charged ions</p></td>
+</tr>
+<tr class="row-even"><td><p>pearson_corr_double_charge</p></td>
+<td><p>Pearson correlation on doubly charged ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>pearson_corr_triple_charge</p></td>
+<td><p>Pearson correlation on triply charged ions</p></td>
+</tr>
+<tr class="row-even"><td><p>pearson_corr_b_ions</p></td>
+<td><p>Pearson correlation on b-ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>pearson_corr_y_ions</p></td>
+<td><p>Pearson correlation on y-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>spearman_corr_single_charge</p></td>
+<td><p>Spearman correlation on singly charged ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>spearman_corr_double_charge</p></td>
+<td><p>Spearman correlation on doubly charged ions</p></td>
+</tr>
+<tr class="row-even"><td><p>spearman_corr_triple_charge</p></td>
+<td><p>Spearman correlation on triply charged ions</p></td>
+</tr>
+<tr class="row-odd"><td><p>spearman_corr_b_ions</p></td>
+<td><p>Spearman correlation on b-ions</p></td>
+</tr>
+<tr class="row-even"><td><p>spearman_corr_y_ions</p></td>
+<td><p>Spearman correlation on y-ions</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="outputs.html" class="btn btn-neutral float-left" title="Generated outputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="API.html" class="btn btn-neutral float-right" title="API (under development)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

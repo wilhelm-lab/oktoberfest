@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.utils package &mdash; oktoberfest 0.3.0 documentation</title>
+  <title>oktoberfest.utils package &mdash; Oktoberfest 0.4.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -20,7 +20,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Reference" href="reference.html" />
+    <link rel="next" title="Contributor Guide" href="contributing.html" />
     <link rel="prev" title="oktoberfest.data package" href="oktoberfest.data.html" /> 
 </head>
 
@@ -32,11 +32,12 @@
 
           
           
-          <a href="index.html" class="icon icon-home">
-            oktoberfest
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.3.0
+                0.4.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -48,10 +49,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="readme.html">oktoberfest</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="modules.html">oktoberfest</a><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="API.html">API (under development)</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="oktoberfest.html">oktoberfest package</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="oktoberfest.html#subpackages">Subpackages</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html">oktoberfest.data package</a></li>
@@ -59,32 +59,50 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-calculate-features-module">oktoberfest.calculate_features module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-ce-calibration-module">oktoberfest.ce_calibration module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-constants-dir-module">oktoberfest.constants_dir module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-re-score-module">oktoberfest.re_score module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-run-oktoberfest-module">oktoberfest.run_oktoberfest module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-runner-module">oktoberfest.runner module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest-spectral-library-module">oktoberfest.spectral_library module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-contents">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.calculate_features">oktoberfest.calculate_features module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.ce_calibration">oktoberfest.ce_calibration module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.re_score">oktoberfest.re_score module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.run_oktoberfest">oktoberfest.run_oktoberfest module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.runner">oktoberfest.runner module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.spectral_library">oktoberfest.spectral_library module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#module-oktoberfest">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="oktoberfest.data.html">oktoberfest.data package</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">oktoberfest.utils package</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#oktoberfest-utils-config-module">oktoberfest.utils.config module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#oktoberfest-utils-multiprocessing-pool-module">oktoberfest.utils.multiprocessing_pool module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#oktoberfest-utils-plotting-module">oktoberfest.utils.plotting module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#oktoberfest-utils-process-step-module">oktoberfest.utils.process_step module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-oktoberfest.utils.config">oktoberfest.utils.config module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.config.Config"><code class="docutils literal notranslate"><span class="pre">Config</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-oktoberfest.utils.multiprocessing_pool">oktoberfest.utils.multiprocessing_pool module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.multiprocessing_pool.JobPool"><code class="docutils literal notranslate"><span class="pre">JobPool</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.multiprocessing_pool.add_one"><code class="docutils literal notranslate"><span class="pre">add_one()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.multiprocessing_pool.init_worker"><code class="docutils literal notranslate"><span class="pre">init_worker()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-oktoberfest.utils.plotting">oktoberfest.utils.plotting module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.joint_plot"><code class="docutils literal notranslate"><span class="pre">joint_plot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_all"><code class="docutils literal notranslate"><span class="pre">plot_all()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_gain_loss"><code class="docutils literal notranslate"><span class="pre">plot_gain_loss()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_mean_sa_ce"><code class="docutils literal notranslate"><span class="pre">plot_mean_sa_ce()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_pred_rt_vs_irt"><code class="docutils literal notranslate"><span class="pre">plot_pred_rt_vs_irt()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_sa_distribution"><code class="docutils literal notranslate"><span class="pre">plot_sa_distribution()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_score_distribution"><code class="docutils literal notranslate"><span class="pre">plot_score_distribution()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.plotting.plot_violin_sa_ce"><code class="docutils literal notranslate"><span class="pre">plot_violin_sa_ce()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-oktoberfest.utils.process_step">oktoberfest.utils.process_step module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.utils.process_step.ProcessStep"><code class="docutils literal notranslate"><span class="pre">ProcessStep</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-oktoberfest.utils">Module contents</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
-<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
 </ul>
 
         </div>
@@ -93,7 +111,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">oktoberfest</a>
+          <a href="index.html">Oktoberfest</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -101,11 +119,11 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="modules.html">oktoberfest</a></li>
+          <li class="breadcrumb-item"><a href="API.html">API (under development)</a></li>
           <li class="breadcrumb-item"><a href="oktoberfest.html">oktoberfest package</a></li>
       <li class="breadcrumb-item active">oktoberfest.utils package</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/main/oktoberfest/oktoberfest.utils.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/oktoberfest.utils.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -118,20 +136,457 @@
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
 </section>
-<section id="oktoberfest-utils-config-module">
-<h2>oktoberfest.utils.config module<a class="headerlink" href="#oktoberfest-utils-config-module" title="Permalink to this heading"></a></h2>
+<section id="module-oktoberfest.utils.config">
+<span id="oktoberfest-utils-config-module"></span><h2>oktoberfest.utils.config module<a class="headerlink" href="#module-oktoberfest.utils.config" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.config.</span></span><span class="sig-name descname"><span class="pre">Config</span></span><a class="headerlink" href="#oktoberfest.utils.config.Config" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Read config file and get information from it.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.all_features">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">all_features</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.all_features" title="Permalink to this definition"></a></dt>
+<dd><p>Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.cleavages">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cleavages</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.cleavages" title="Permalink to this definition"></a></dt>
+<dd><p>Get number of allowed missed cleavages used in the search engine.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.curve_fitting_method">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">curve_fitting_method</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.curve_fitting_method" title="Permalink to this definition"></a></dt>
+<dd><p>Get regressionMethod flag.</p>
+<p>Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+The supported flags are “lowess”, “spline”, and “logistic”.
+If not provided in the config file, returns “spline” by default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a lowercase string representation of the regression method.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.db">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">db</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.db" title="Permalink to this definition"></a></dt>
+<dd><p>Target, decoy or concat (relevant if fasta file provided).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.digestion">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">digestion</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.digestion" title="Permalink to this definition"></a></dt>
+<dd><p>Get digestion mode (full, semi or none).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.enzyme">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">enzyme</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.enzyme" title="Permalink to this definition"></a></dt>
+<dd><p>Get type of enzyme used.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.fasta_digest_options">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fasta_digest_options</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><span class="pre">dict</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.fasta_digest_options" title="Permalink to this definition"></a></dt>
+<dd><p>Get fastaDigestOptions dictionary from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.fdr_estimation_method">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fdr_estimation_method</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.fdr_estimation_method" title="Permalink to this definition"></a></dt>
+<dd><p>Get peptide detection method from the config file (mokapot or percolator).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.fragmentation">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fragmentation</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.fragmentation" title="Permalink to this definition"></a></dt>
+<dd><p>Get fragmentation method from the config file (HCD or CID).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.inputs">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">inputs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><span class="pre">dict</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.inputs" title="Permalink to this definition"></a></dt>
+<dd><p>Get inputs dictionary from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.job_type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">job_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.job_type" title="Permalink to this definition"></a></dt>
+<dd><p>Get jobType flag (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.library_input">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">library_input</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><span class="pre">Path</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.library_input" title="Permalink to this definition"></a></dt>
+<dd><p>Get path to library input file (fasta or peptides) from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.library_input_type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">library_input_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.library_input_type" title="Permalink to this definition"></a></dt>
+<dd><p>Get library input file type (fasta or peptides) from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.mass_tolerance">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mass_tolerance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><span class="pre">None</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.mass_tolerance" title="Permalink to this definition"></a></dt>
+<dd><p>Get mass tolerance value from the config file with which to caluculate the min and max mass values.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.max_length">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.max_length" title="Permalink to this definition"></a></dt>
+<dd><p>Get maximum peptide length allowed used in the search engine.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.min_length">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">min_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.min_length" title="Permalink to this definition"></a></dt>
+<dd><p>Get minimum peptide length allowed used in the search engine.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.models">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">models</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)"><span class="pre">dict</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.models" title="Permalink to this definition"></a></dt>
+<dd><p>Get intensity, IRT, and proteotypicity models from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.num_threads">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_threads</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.num_threads" title="Permalink to this definition"></a></dt>
+<dd><p>Get the number of threads from the config file; if not specified return 1.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.output">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">output</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><span class="pre">Path</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.output" title="Permalink to this definition"></a></dt>
+<dd><p>Get path to the output directory from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.output_format">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">output_format</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.output_format" title="Permalink to this definition"></a></dt>
+<dd><p>Get output format from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.prediction_server">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">prediction_server</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.prediction_server" title="Permalink to this definition"></a></dt>
+<dd><p>Get prosit server from the config file.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.read">
+<span class="sig-name descname"><span class="pre">read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.config.Config.read" title="Permalink to this definition"></a></dt>
+<dd><p>Read config file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – path to config file as a string</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.search_results">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">search_results</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><span class="pre">Path</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.search_results" title="Permalink to this definition"></a></dt>
+<dd><p>Get path to the search results file from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.search_results_type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">search_results_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.search_results_type" title="Permalink to this definition"></a></dt>
+<dd><p>Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.special_aas">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">special_aas</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.special_aas" title="Permalink to this definition"></a></dt>
+<dd><p>Get special amino acids used by MaxQuant for decoy generation.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.spectra">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spectra</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><span class="pre">Path</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.spectra" title="Permalink to this definition"></a></dt>
+<dd><p>Get spectra path to raw or mzml files from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.spectra_type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spectra_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.spectra_type" title="Permalink to this definition"></a></dt>
+<dd><p>Get spectra type (raw or mzml) from the config file.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.ssl">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ssl</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.ssl" title="Permalink to this definition"></a></dt>
+<dd><p>Get ssl flag for prediction server.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.tag">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">tag</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.tag" title="Permalink to this definition"></a></dt>
+<dd><p>Get tag from the config file; if not specified return “tmt”.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.thermo_exe">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">thermo_exe</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><span class="pre">Path</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.thermo_exe" title="Permalink to this definition"></a></dt>
+<dd><p>Get the path to the ThermoRawFileParser executable. Returns “ThermoRawFileParser.exe” if not found.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="oktoberfest.utils.config.Config.unit_mass_tolerance">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">unit_mass_tolerance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><span class="pre">None</span></a></em><a class="headerlink" href="#oktoberfest.utils.config.Config.unit_mass_tolerance" title="Permalink to this definition"></a></dt>
+<dd><p>Get unit for the mass tolerance from the config file (da or ppm).</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
-<section id="oktoberfest-utils-multiprocessing-pool-module">
-<h2>oktoberfest.utils.multiprocessing_pool module<a class="headerlink" href="#oktoberfest-utils-multiprocessing-pool-module" title="Permalink to this heading"></a></h2>
+<section id="module-oktoberfest.utils.multiprocessing_pool">
+<span id="oktoberfest-utils-multiprocessing-pool-module"></span><h2>oktoberfest.utils.multiprocessing_pool module<a class="headerlink" href="#module-oktoberfest.utils.multiprocessing_pool" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.multiprocessing_pool.</span></span><span class="sig-name descname"><span class="pre">JobPool</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">processes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warning_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'default'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>JobPool class for multiprocessing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>processes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+<li><p><strong>warning_filter</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.apply_async">
+<span class="sig-name descname"><span class="pre">apply_async</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.apply_async" title="Permalink to this definition"></a></dt>
+<dd><p>Apply async.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.check_pool">
+<span class="sig-name descname"><span class="pre">check_pool</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.check_pool" title="Permalink to this definition"></a></dt>
+<dd><p>Check the pool.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.init_worker">
+<span class="sig-name descname"><span class="pre">init_worker</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.init_worker" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize the worker.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.pool">
+<span class="sig-name descname"><span class="pre">pool</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pool</span></code></a></em><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.pool" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.results">
+<span class="sig-name descname"><span class="pre">results</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a><span class="pre">[</span><code class="xref py py-class docutils literal notranslate"><span class="pre">ApplyResult</span></code><span class="pre">]</span></em><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.results" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.JobPool.warning_filter">
+<span class="sig-name descname"><span class="pre">warning_filter</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></em><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.JobPool.warning_filter" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.add_one">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.multiprocessing_pool.</span></span><span class="sig-name descname"><span class="pre">add_one</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">i</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.add_one" title="Permalink to this definition"></a></dt>
+<dd><p>Add 1 to i.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>i</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.multiprocessing_pool.init_worker">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.multiprocessing_pool.</span></span><span class="sig-name descname"><span class="pre">init_worker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">warning_filter</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.multiprocessing_pool.init_worker" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize worker given warning filter.</p>
+</dd></dl>
+
 </section>
-<section id="oktoberfest-utils-plotting-module">
-<h2>oktoberfest.utils.plotting module<a class="headerlink" href="#oktoberfest-utils-plotting-module" title="Permalink to this heading"></a></h2>
+<section id="module-oktoberfest.utils.plotting">
+<span id="oktoberfest-utils-plotting-module"></span><h2>oktoberfest.utils.plotting module<a class="headerlink" href="#module-oktoberfest.utils.plotting" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.joint_plot">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">joint_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prosit_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.joint_plot" title="Permalink to this definition"></a></dt>
+<dd><p>Generate joint plot to compare rescoring with and without peptide property predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prosit_target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring with peptide property prediction</p></li>
+<li><p><strong>prosit_decoy</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator decoy output for rescoring with peptide property prediction</p></li>
+<li><p><strong>andromeda_target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring without peptide property prediction</p></li>
+<li><p><strong>andromeda_decoy</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator decoy output for rescoring without peptide property prediction</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – The level on which to produce the comparison. Can be either “peptide” or “psm”</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.11)"><strong>ValueError</strong></a> – if a wrong level is provided</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_all">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fdr_estimation_method_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fdr_estimation_method</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_all" title="Permalink to this definition"></a></dt>
+<dd><p>Generate all plots and save them as png in the percolator folder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fdr_estimation_method_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><em>Path</em></a>) – </p></li>
+<li><p><strong>fdr_estimation_method</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_gain_loss">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_gain_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_gain_loss" title="Permalink to this definition"></a></dt>
+<dd><p>Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prosit_target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring with peptide property prediction</p></li>
+<li><p><strong>andromeda_target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring without peptide property prediction</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – The level on which to produce the comparison. Can be either “peptide” or “psm”</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.11)"><strong>ValueError</strong></a> – if a wrong level is provided</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_mean_sa_ce">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_mean_sa_ce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sa_ce_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_mean_sa_ce" title="Permalink to this definition"></a></dt>
+<dd><p>Generate dotplot for spectral angle distribution over range of collision energies used for fragment intensity prediction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sa_ce_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – a dataframe containing the two columns “COLLISION_ENERGY”, “SPECTRAL_ANGLE”.</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_pred_rt_vs_irt">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_pred_rt_vs_irt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prosit_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outpath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_pred_rt_vs_irt" title="Permalink to this definition"></a></dt>
+<dd><p>Generate scatterplot to compare predicted indexed retention time against (aligned) experimentally observed retention time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prosit_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator input tab for rescoring with peptide property prediction</p></li>
+<li><p><strong>prosit_target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring with peptide property prediction</p></li>
+<li><p><strong>outpath</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot without the filename</p></li>
+<li><p><strong>suffix</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the suffix of the filename, which will be prepended by the rawfile name</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_sa_distribution">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_sa_distribution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decoy_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_sa_distribution" title="Permalink to this definition"></a></dt>
+<dd><p>Generate spectral angle distribution for targets and decoys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>prosit_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator input tab for rescoring with peptide property prediction</p></li>
+<li><p><strong>target_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output for rescoring with peptide property prediction on the psm level</p></li>
+<li><p><strong>decoy_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_score_distribution">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_score_distribution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_score_distribution" title="Permalink to this definition"></a></dt>
+<dd><p>Generate histogram of the score distribution for targets and decoys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator target output</p></li>
+<li><p><strong>decoy</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – mokapot / percolator decoy output</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – The level on which to produce the comparison. Can be either “peptide” or “psm”</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="oktoberfest.utils.plotting.plot_violin_sa_ce">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_violin_sa_ce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sa_ce_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.plotting.plot_violin_sa_ce" title="Permalink to this definition"></a></dt>
+<dd><p>Generate violinplot for spectral angle distribution over range of collision energies used for fragment intensity prediction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sa_ce_df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.0.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>) – a dataframe containing the two columns “COLLISION_ENERGY”, “SPECTRAL_ANGLE”.</p></li>
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – the path to the location used for storing the plot</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
-<section id="oktoberfest-utils-process-step-module">
-<h2>oktoberfest.utils.process_step module<a class="headerlink" href="#oktoberfest-utils-process-step-module" title="Permalink to this heading"></a></h2>
+<section id="module-oktoberfest.utils.process_step">
+<span id="oktoberfest-utils-process-step-module"></span><h2>oktoberfest.utils.process_step module<a class="headerlink" href="#module-oktoberfest.utils.process_step" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="oktoberfest.utils.process_step.ProcessStep">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.utils.process_step.</span></span><span class="sig-name descname"><span class="pre">ProcessStep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">out_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.process_step.ProcessStep" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Init a ProcessStep object given raw file path and step name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>out_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><em>Path</em></a>) – </p></li>
+<li><p><strong>step_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.process_step.ProcessStep.is_done">
+<span class="sig-name descname"><span class="pre">is_done</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.process_step.ProcessStep.is_done" title="Permalink to this definition"></a></dt>
+<dd><p>Retrun True if file is done.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="oktoberfest.utils.process_step.ProcessStep.mark_done">
+<span class="sig-name descname"><span class="pre">mark_done</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.utils.process_step.ProcessStep.mark_done" title="Permalink to this definition"></a></dt>
+<dd><p>Mark file as done.</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
-<section id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
+<section id="module-oktoberfest.utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-oktoberfest.utils" title="Permalink to this heading"></a></h2>
+<p>Init utils.</p>
 </section>
 </section>
 
@@ -140,13 +595,13 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="oktoberfest.data.html" class="btn btn-neutral float-left" title="oktoberfest.data package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="contributing.html" class="btn btn-neutral float-right" title="Contributor Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Victor Giurcoiu.</p>
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

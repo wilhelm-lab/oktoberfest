@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usage Principles &mdash; Oktoberfest 0.4.0 documentation</title>
+  <title>News &mdash; Oktoberfest 0.4.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -19,9 +19,7 @@
         <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Running Oktoberfest" href="jobs.html" />
-    <link rel="prev" title="Installation" href="installation.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,18 +46,9 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Usage Principles</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
-<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
-<li class="toctree-l2"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
 <li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
@@ -79,9 +68,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Usage Principles</li>
+      <li class="breadcrumb-item active">News</li>
       <li class="wy-breadcrumbs-aside">
-              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/usage.rst" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/news.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -89,30 +78,21 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="usage-principles">
-<h1>Usage Principles<a class="headerlink" href="#usage-principles" title="Permalink to this heading"></a></h1>
-<p>Oktoberfest provides a high level API that can be easily executed with a single command by providing a config file.
-The following outlines how to run a job with the high level API, the three types of jobs available and examples for configuration and manual transformation of search results.</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
-<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
-<li class="toctree-l1"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
-<li class="toctree-l1"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
-</ul>
-</div>
+  <section id="news">
+<h1>News<a class="headerlink" href="#news" title="Permalink to this heading"></a></h1>
+<section id="the-first-oktoberfest-release-is-ready-2023-06-25">
+<h2>The first Oktoberfest release is ready! <span class="small">2023-06-25</span><a class="headerlink" href="#the-first-oktoberfest-release-is-ready-2023-06-25" title="Permalink to this heading"></a></h2>
+<p>Version 0.3.0 is available on <a class="reference external" href="https://pypi.org/project/oktoberfest/">PyPI</a>.</p>
+<p>We are happy to announce that our first standalone version of Oktoberfest is finally ready.
+Besides a lot of bugfixes, new features and performance enhancements over the existing online Prosit service at <a class="reference external" href="https://proteomicsdb.org/prosit">ProteomicsDB</a>, the Oktoberfest codebase is now open source and available on <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest">GitHub</a>.
+In addition, we switched to our new online prediction service <a class="reference external" href="https://koina.proteomicsdb.org">koina</a> which allows connecting Oktoberfest to any public or self-hosted koina instance for easy prediction model integration and being independent of ProteomicsDB!</p>
+</section>
 </section>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="jobs.html" class="btn btn-neutral float-right" title="Running Oktoberfest" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

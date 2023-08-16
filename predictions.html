@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retrieving predictions &mdash; Oktoberfest 0.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Custom search results" href="internal_format.html" />
+    <link rel="prev" title="Configuration" href="config.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.4.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage Principles</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Retrieving predictions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#connecting-to-a-community-server">Connecting to a community server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#currently-supported-models">Currently supported models</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hosting-and-adding-your-own-models">Hosting and adding your own models</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="outputs.html">Generated outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Oktoberfest</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage Principles</a></li>
+      <li class="breadcrumb-item active">Retrieving predictions</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/predictions.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="retrieving-predictions">
+<h1>Retrieving predictions<a class="headerlink" href="#retrieving-predictions" title="Permalink to this heading"></a></h1>
+<p>Oktoberfest relies on retrieving predictions from a <a class="reference external" href="https://koina.proteomicsdb.org/">Koina</a> server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.</p>
+<section id="connecting-to-a-community-server">
+<h2>Connecting to a community server<a class="headerlink" href="#connecting-to-a-community-server" title="Permalink to this heading"></a></h2>
+<p>Our publicly available community server is available at <cite>koina.proteomicsdb.org:443</cite>.
+If you want to connect to it, you need to have the following flags in your config file (default settings):</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.proteomicsdb.org:443&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;ssl&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Once more community servers become available, we will add a list here.</p>
+</section>
+<section id="currently-supported-models">
+<h2>Currently supported models<a class="headerlink" href="#currently-supported-models" title="Permalink to this heading"></a></h2>
+<p>This is the list of currently supported and tested models for Oktoberfest provided by our community server.</p>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Intensity models</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Prosit_2019_intensity</p></td>
+<td><p>Developed for HCD tryptic peptides only. We recommend using the Prosit_2020_intensity_HCD model instead, since it showed slightly superior performance on tryptic peptides as well.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_HCD/infer">Prosit_2020_intensity_HCD</a></p></td>
+<td><p>Developed for HCD tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for HCD.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_CID/infer">Prosit_2020_intensity_CID</a></p></td>
+<td><p>Developed for CID tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for CID.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_TMT/infer">Prosit_2020_intensity_TMT</a></p></td>
+<td><p>Developed for HCD and CID, tryptic and non-tryptic peptides. Latest version we commend for TMT labeled peptides in general.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>iRT models</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2019_irt/infer">Prosit_2019_irt</a></p></td>
+<td><p>While developed for tryptic peptides only, we did not observe a drop in prediction performance for non-tryptic peptides.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs/#post-/Prosit_2020_irt_TMT/infer">Prosit_2020_irt_TMT</a></p></td>
+<td><p>Developed for TMT labeled peptides.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Once support for additional models is implemented in Oktoberfest, they will be added here.</p>
+</section>
+<section id="hosting-and-adding-your-own-models">
+<h2>Hosting and adding your own models<a class="headerlink" href="#hosting-and-adding-your-own-models" title="Permalink to this heading"></a></h2>
+<p>In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official <a class="reference external" href="https://koina.proteomicsdb.org/docs#overview">Koina documentation</a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="config.html" class="btn btn-neutral float-left" title="Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="internal_format.html" class="btn btn-neutral float-right" title="Custom search results" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

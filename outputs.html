@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generated outputs &mdash; Oktoberfest 0.4.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Features for target / decoy separation" href="svm_features.html" />
+    <link rel="prev" title="Custom in-silico digestion" href="peptides_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.4.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage Principles</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Generated outputs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-directory-structure">General directory structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#files-in-the-results-directory">Files in the results directory</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#files-in-the-mokapot-percolator-directory">Files in the mokapot / percolator directory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="svm_features.html">Features for target / decoy separation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Oktoberfest</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage Principles</a></li>
+      <li class="breadcrumb-item active">Generated outputs</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/outputs.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="generated-outputs">
+<h1>Generated outputs<a class="headerlink" href="#generated-outputs" title="Permalink to this heading"></a></h1>
+<p>Oktoberfest creates a variety of files and groups them within the user defined output directory. The following tables provide an overview of all subdirectories and files created depending on the job that is executed.</p>
+<section id="general-directory-structure">
+<h2>General directory structure<a class="headerlink" href="#general-directory-structure" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Directory</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>data/</p></td>
+<td><p>Contains hdf5 files that combine search results, annotated spectra, metadata in &lt;raw_file&gt;.mzML.hdf5 and predictions in &lt;raw_file&gt;.mzML.pred.hdf5 where &lt;raw_file&gt; is replaced with the specific name of the RAW file for which information is stored. The files are updated and store the progress of the current job and enable skipping specific steps when rerunning a job.</p></td>
+</tr>
+<tr class="row-odd"><td><p>msms/</p></td>
+<td><p>Contains combined msms.prosit and separated search results in &lt;raw_file&gt;.prosit where &lt;raw_file&gt; is replaced with the specific name of the RAW file for which search results are stored. The files are stored in the <a class="reference external" href="./internal_format.html">internal format</a>  and are created as part of preprocessing search results from supported search engines. If a file is present, preprocessing is skipped when rerunning a job.</p></td>
+</tr>
+<tr class="row-even"><td><p>mzML/</p></td>
+<td><p>Contains spectra files in mzML format (&lt;raw_file&gt;.mzML where &lt;raw_file&gt; is replaced with the specific name of the RAW file that was converted. If spectra are provided in mzML format already, they will not show up in this folder. If an mzML is present for a given RAW file, conversion is skipped when rerruning a job.</p></td>
+</tr>
+<tr class="row-odd"><td><p>proc/</p></td>
+<td><p>Contains information on successful job steps in &lt;job_step&gt;.done where &lt;job_step&gt; is replaced by the specfic job step completed. If a file is present, the specific step will be skipped when rerunning a job.</p></td>
+</tr>
+<tr class="row-even"><td><p>results/</p></td>
+<td><p>Contains all results of a specific job. See below results table for an overview of all files stored in this directory.</p></td>
+</tr>
+<tr class="row-odd"><td><p>results/mokapot/
+results/percolator/</p></td>
+<td><p>Subdirectory in results/ containing all inputs for running percolator / mokapot (depending on which is used) and the corresponding results and summary plots. See below percolator / mokapot table for details on the files in this directory.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="files-in-the-results-directory">
+<h2>Files in the results directory<a class="headerlink" href="#files-in-the-results-directory" title="Permalink to this heading"></a></h2>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>&lt;raw_file&gt;_ce.txt</p></td>
+<td><p>Contains the best collision energy according to the collision energy calibration where &lt;raw_file&gt; is replaced with the name of the RAW file for which the calibration was performed</p></td>
+</tr>
+<tr class="row-odd"><td><p>myPrositLib.&lt;csv|msp&gt;</p></td>
+<td><p>Contains the spectral library in either csv or msp format depending on what format was chosen</p></td>
+</tr>
+<tr class="row-even"><td><p>prosit_input.csv</p></td>
+<td><p>Contains the peptide list including metadata needed for spectral library generation when providing a fasta file for in-silico digestion</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="files-in-the-mokapot-percolator-directory">
+<h2>Files in the mokapot / percolator directory<a class="headerlink" href="#files-in-the-mokapot-percolator-directory" title="Permalink to this heading"></a></h2>
+<p>This section details the files located within the mokapot / percolator directroy. In below file names, &lt;method&gt; is replaced with either percolator or mokapot depending on which method was used for target / decoy separation and FDR estimation.</p>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>rescore.tab</p></td>
+<td><p>Input file for percolator / mokapot containing the features from peptide property prediction (see <a class="reference external" href="./svm_features.html">features for target / decoy separation</a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;raw_file&gt;.rescore.tab</p></td>
+<td><p>Input file for percolator / mokapot containing the features from peptide property prediction for a RAW file that replaces &lt;raw_file&gt; (files are concatenated into rescore.tab)</p></td>
+</tr>
+<tr class="row-even"><td><p>rescore.&lt;method&gt;.peptides.txt</p></td>
+<td><p>Percolator / mokapot output for target peptides (features from peptide property prediction)</p></td>
+</tr>
+<tr class="row-odd"><td><p>rescore.&lt;method&gt;.psms.txt</p></td>
+<td><p>Percolator / mokapot output for target PSMs (features from peptide property prediction)</p></td>
+</tr>
+<tr class="row-even"><td><p>rescore.&lt;method&gt;.decoy.peptides.txt</p></td>
+<td><p>Percolator / mokapot output for decoy peptides (features from peptide property prediction)</p></td>
+</tr>
+<tr class="row-odd"><td><p>rescore.&lt;method&gt;.decoy.psms.txt</p></td>
+<td><p>Percolator / mokapot output for decoy PSMs (features from peptide property prediction)</p></td>
+</tr>
+<tr class="row-even"><td><p>rescore.percolator.weights.csv</p></td>
+<td><p>Percolator output about individual feature weights (features from peptide property prediction, percolator only)</p></td>
+</tr>
+<tr class="row-odd"><td><p>rescore.log</p></td>
+<td><p>Log output from percolator / mokapot (features from peptide property prediction)</p></td>
+</tr>
+<tr class="row-even"><td><p>original.tab</p></td>
+<td><p>Input file for percolator / mokapot containing only the original features (see <a class="reference external" href="./svm_features.html">features for target / decoy separation</a>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;raw_file&gt;.original.tab</p></td>
+<td><p>Input file for percolator / mokapot containing only the original features for a RAW file that replaces &lt;raw_file&gt; (files are concatenated into original.tab)</p></td>
+</tr>
+<tr class="row-even"><td><p>original.&lt;method&gt;.peptides.txt</p></td>
+<td><p>Percolator / mokapot output for target peptides (original features)</p></td>
+</tr>
+<tr class="row-odd"><td><p>original.&lt;method&gt;.psms.txt</p></td>
+<td><p>Percolator / mokapot output for target PSMs (original features)</p></td>
+</tr>
+<tr class="row-even"><td><p>original.&lt;method&gt;.decoy.peptides.txt</p></td>
+<td><p>Percolator / mokapot output for decoy peptides (original features)</p></td>
+</tr>
+<tr class="row-odd"><td><p>original.&lt;method&gt;.decoy.psms.txt</p></td>
+<td><p>Percolator / mokapot output for decoy PSMs (original features)</p></td>
+</tr>
+<tr class="row-even"><td><p>original.percolator.weights.csv</p></td>
+<td><p>Percolator output about individual feature weights (original features, percolator only)</p></td>
+</tr>
+<tr class="row-odd"><td><p>original.log</p></td>
+<td><p>Log output from percolator / mokapot (original features)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="peptides_format.html" class="btn btn-neutral float-left" title="Custom in-silico digestion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="svm_features.html" class="btn btn-neutral float-right" title="Features for target / decoy separation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
