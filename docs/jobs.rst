@@ -13,7 +13,7 @@ The command for executing a job from terminal:
 
 .. code-block:: bash
 
-   python oktoberfest/run_oktoberfest.py --config_path <path/to/config.json>
+   python -m oktoberfest --config_path <path/to/config.json>
 
 The command for executing a job within python:
 
