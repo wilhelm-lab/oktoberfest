@@ -14,7 +14,7 @@ else
 endif
 
 DOCKER_CMD ?= docker run -i ${USE_TTY} \
-					-v "$(DATA)":/root/data/
+					-v "$(realpath ${DATA})":/root/data/
 					--memory=$(MEMORY_LIMIT) \
 					--cpus=$(CPU_LIMIT) \
 

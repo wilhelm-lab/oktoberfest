@@ -29,15 +29,16 @@ at the Technical University of Munich."""
 logger = logging.getLogger(__name__)
 
 
-def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, Path]):
+def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, Path], out_path: Union[str, Path]):
     """
     Create a SpectralLibrary object and generate the spectral library.
 
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
+    :param out_path: path to which all outputs are written
     :raises ValueError: spectral library output format is not supported as spectral library type
     """
-    spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
+    spec_library = SpectralLibrary(search_path=search_dir, out_path=out_path, config_path=config_path)
     spec_library.gen_lib()
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
         "MODIFIED_SEQUENCE"
@@ -124,7 +125,11 @@ def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, 
 
 
 def run_ce_calibration(
-    msms_path: Union[str, Path], search_dir: Union[str, Path], config_path: Union[str, Path], glob_pattern: str
+    msms_path: Union[str, Path],
+    search_dir: Union[str, Path],
+    config_path: Union[str, Path],
+    glob_pattern: str,
+    output_path: Union[str, Path],
 ):
     """
     Create a CeCalibration object and run the CE calibration.
@@ -133,27 +138,34 @@ def run_ce_calibration(
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
     :param glob_pattern: the pattern for raw file extensions to search for in search_dir
+    :param output_path: path to the output folder if specified in the config file, else search_dir
     """
     if isinstance(search_dir, str):
         search_dir = Path(search_dir)
 
     for raw_file in search_dir.glob(glob_pattern):
-        ce_calib = CeCalibration(search_path=msms_path, raw_path=raw_file, out_path=search_dir, config_path=config_path)
+        ce_calib = CeCalibration(
+            search_path=msms_path, raw_path=raw_file, out_path=output_path, config_path=config_path
+        )
         ce_calib.perform_alignment(ce_calib._load_search())
-        with open(ce_calib.results_path / f"{raw_file.stem}_ce.txt", "w") as f:
-            f.write(str(ce_calib.best_ce))
 
 
-def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], config_path: Union[str, Path]):
+def run_rescoring(
+    msms_path: Union[str, Path],
+    search_dir: Union[str, Path],
+    config_path: Union[str, Path],
+    output_path: Union[str, Path],
+):
     """
     Create a ReScore object and run the rescoring.
 
     :param msms_path: path to msms folder
     :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file
+    :param output_path: path to the output folder if specified in the config file, else search_dir
     """
     logger.info("Starting rescoring run...")
-    re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=search_dir, config_path=config_path)
+    re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=output_path, config_path=config_path)
     re_score.get_raw_files()
     re_score.split_msms()
     re_score.calculate_features()
@@ -163,44 +175,39 @@ def run_rescoring(msms_path: Union[str, Path], search_dir: Union[str, Path], con
 
     re_score.rescore("rescore")
     re_score.rescore("original")
-    plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    plot_all(re_score.get_fdr_estimation_method_folder_path(), re_score.config.fdr_estimation_method)
     logger.info("Finished rescoring.")
 
 
-def run_job(search_dir: Union[str, Path], config_path: Union[str, Path]):
+def run_job(config_path: Union[str, Path]):
     """
     Run oktoberfest based on job type given in the config file.
 
-    :param search_dir: path to directory containing the msms.txt and raw files
     :param config_path: path to config file as a string
     :raises ValueError: In case the job_type in the provided config file is not known
     """
-    if isinstance(search_dir, str):
-        search_dir = Path(search_dir)
     if not config_path:
-        config_path = search_dir / "config.json"
+        config_path = "./config.json"
     if isinstance(config_path, str):
         config_path = Path(config_path)
     conf = Config()
     conf.read(config_path)
     job_type = conf.job_type
-    if conf.search_path:
-        msms_path = conf.search_path
-    else:
-        msms_path = os.path.join(search_dir, "msms.txt")
-
+    search_dir = conf.spectra
+    output_path = conf.output
+    msms_path = conf.search_results
     if job_type == "SpectralLibraryGeneration":
-        generate_spectral_lib(search_dir, config_path)
+        generate_spectral_lib(search_dir, config_path, output_path)
     elif job_type == "CollisionEnergyCalibration":
-        raw_type = conf.raw_type
-        if raw_type == "thermo":
+        spectra_type = conf.spectra_type
+        if spectra_type == "raw":
             glob_pattern = "*.[rR][aA][wW]"
-        elif raw_type == "mzml":
+        elif spectra_type == "mzml":
             glob_pattern = "*.[mM][zZ][mM][lL]"
         else:
-            raise ValueError(f"{raw_type} is not supported as rawfile-type")
-        run_ce_calibration(msms_path, search_dir, config_path, glob_pattern)
+            raise ValueError(f"{spectra_type} is not supported as spectra type (supported: raw and mzml).")
+        run_ce_calibration(msms_path, search_dir, config_path, glob_pattern, output_path)
     elif job_type == "Rescoring":
-        run_rescoring(msms_path, search_dir, config_path)
+        run_rescoring(msms_path, search_dir, config_path, output_path)
     else:
         raise ValueError(f"Unknown job_type in config: {job_type}")

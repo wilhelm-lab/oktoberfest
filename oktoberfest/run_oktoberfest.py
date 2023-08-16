@@ -10,13 +10,6 @@ def parse_args():
     apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     apars.add_argument(
-        "--search_dir",
-        default=None,
-        metavar="S",
-        help="""Directory containing the msms.txt and raw files""",
-    )
-
-    apars.add_argument(
         "--config_path",
         default=None,
         metavar="C",
@@ -34,7 +27,7 @@ def main():
     logger.info(f'Issued command: {os.path.basename(__file__)} {" ".join(map(str, sys.argv[1:]))}')
 
     args = parse_args()
-    runner.run_job(args.search_dir, args.config_path)
+    runner.run_job(args.config_path)
 
 
 if __name__ == "__main__":

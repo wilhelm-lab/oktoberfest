@@ -1,10 +1,25 @@
+[![PyPI](https://img.shields.io/pypi/v/oktoberfest.svg)](https://pypi.org/project/oktoberfest/)
+[![Python Version](https://img.shields.io/pypi/pyversions/oktoberfest)](https://pypi.org/project/oktoberfest)
+[![License](https://img.shields.io/github/license/wilhelm-lab/oktoberfest)](https://opensource.org/licenses/MIT)
+[![Read the Docs](https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs)](https://oktoberfest.readthedocs.io/)
+[![Build](https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg)](https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package)
+[![Tests](https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg)](https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests)
+[![Codecov](https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg)](https://codecov.io/gh/wilhelm-lab/oktoberfest)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 # Oktoberfest
 
 ## Installation
 
 ### Prerequisites
 
+Oktoberfest requires python >=3.8,<=3.11. Best practise is to use a clean conda environment (https://docs.conda.io/en/latest/miniconda.html).
+
+If you provide thermo raw files, make sure ThermoRawFileParser(https://github.com/compomics/ThermoRawFileParser) is installed.
+
 If you are on linux or MacOS, make sure mono (https://www.mono-project.com/) is installed.
+
 If you want to use percolator, make sure you install version 3.05 (https://github.com/percolator/percolator/releases/tag/rel-3-05)
 
 ### Using pip (recommended)
@@ -39,7 +54,7 @@ Prosit will:
 1. Select a random subset of high-scoring PSMs
 2. Predict those in for each CE from 18 to 49.
 3. Calculate which CE achieves highest correlations with the experimental spectra
-   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 -   Spectral Library (SpectralLibraryGeneration)
 
@@ -56,10 +71,10 @@ This task rescores an existing search result using features generated from pepti
 Oktoberfest will:
 
 1. Calibrate CE against the provided RAW files.
-2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
-3. Use predicted spectra to generate features for percolator.
-4. Run percolator to rescore the search.
-   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+2. Predict all sequences in the search results file.
+3. Use predicted spectra and retention time to generate features for rescoring.
+4. Run percolator or mokapot to rescore the search and perform FDR estimation.
+   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 ## Run oktoberfest
 
@@ -67,7 +82,7 @@ Oktoberfest will:
 
 Create a `config.json` file which should contain the following flags:
 
--   `jobType` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
+-   `type` = "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"
 
 -   `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 
@@ -75,13 +90,17 @@ Create a `config.json` file which should contain the following flags:
 
 -   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
--   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "spline"
 
--   `fileUploads`
+-   `inputs`
 
-    -   `search_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+    -   `search_results` = path to the file containing the search results
 
-    -   `raw_type` = "thermo" or "mzml"; default = "thermo"
+    -   `search_results_type` = the tool used to produce the search results, can be "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+
+    -   `spectra` = path to a folder or a single file containing mass spectrometry results (raw or mzml files)
+
+    -   `spectra_type` = "raw" or "mzml"; default = "raw"
 
 -   `models`
 
@@ -91,9 +110,17 @@ Create a `config.json` file which should contain the following flags:
 
 -   `prediction_server` = server for obtaining peptide property predictions
 
+-   `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
+
 -   `numThreads` = number of raw files processed in parallel processes; default = 1
 
--   `searchPath` = path to the search file (if the search type is msfragger, then the path to the xlsx file should be provided); default = ""
+-   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
+
+-   `massTolerance` = mass tolerance value defining the allowed tolerance between theoretical and experimentally observered fragment mass during peak filtering and annotation. Default depends on the mass analyzer: 20 (FTMS), 40 (TOF), 0.35 (ITMS)
+
+-   `unitMassTolerance` = unit for the mass tolerance, either "da" or "ppm". Default depends on the mass analyzer: da (ITMS), ppm (FTMS or TOF)
+
+-   `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
 For models, you should choose the models that fit your use case. You can see available models for the prediction server we offer at https://koina.proteomicsdb.org/docs.
@@ -101,11 +128,13 @@ For a list of currently tested models, check the "Supported Models" section belo
 
 The following flags are relevant only for SpectralLibraryGeneration:
 
+-   `inputs`
+
+    -   `library_input` = path to the FASTA or peptides file
+
+    -   `library_input_type` = library input type: "fasta" or "peptides"
+
 -   `outputFormat` = "spectronaut" or "msp"
-
--   `fasta` = path to the FASTA file, if FASTA file is provided
-
--   `peptides.csv` = true if you like to provide the list of peptides
 
 The following flags are relevant only if a FASTA file is provided:
 
@@ -123,7 +152,7 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `enzyme` = type of enzyme used in the search engine; default = "trypsin"
 
-    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+    -   `specialAas` = special amino acids used for decoy generation; default = "KR"
 
     -   `db` = "target", "decoy" or "concat"; default = "concat"
 
@@ -134,10 +163,8 @@ An example of the config file can be found in `/oktoberfest/example_config.json`
 The general command for executing any job is:
 
 ```bash
-python oktoberfest/run_oktoberfest.py —-search_dir path_to_search_dir —-config_path path_to_config_file
+python oktoberfest/run_oktoberfest.py --config_path path_to_config_file
 ```
-
-Note: The `search_dir` should contain both the raw files and the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant.
 
 If you instead want to run oktoberfest using the docker image, run:
 
@@ -145,7 +172,7 @@ If you instead want to run oktoberfest using the docker image, run:
 DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: `DATA` must be the absolute path to your data folder. It should contain the raw files, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and the `config.json`. The results will be written to `<DATA>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator` or `<DATA>/<output>/results/mokapot` depending on the chosen fdr estimation method.
 
 ## Supported Models
 
@@ -171,9 +198,13 @@ We provide a jupyter notebook that you can find at "tutorials/Oktoberfest Tutori
 
 If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
 
+The official Oktoberfest documentation can be found at https://oktoberfest.readthedocs.io.
+
+Information about how to use koina and which models are supported by our public koina instance can be found at https://koina.proteomicsdb.org/docs.
+
 ## License
 
-The project is licensed under the [MIT license](https://github.com/wilhelm-lab/PROSPECT/blob/main/LICENSE).
+The project is licensed under the [MIT license](https://github.com/wilhelm-lab/oktoberfest/blob/main/LICENSE).
 
 ## References
 
