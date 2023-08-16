@@ -196,8 +196,7 @@ Tutorials and Documentation
 We provide a Jupyter notebook that you can find at "tutorials/Oktoberfest Tutorial.ipynb", guiding you through the three different use cases using a public dataset.
 
 If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
-Further information can be found at `https://oktoberfest.readthedocs.io`.
-In addition, we provide a wiki that you can find at `https://github.com/wilhelm-lab/oktoberfest/wiki`.
+The official Oktoberfest documentation can be found at `https://oktoberfest.readthedocs.io`.
 Information about how to use koina and which models are supported by our public koina instance can be found at `https://koina.proteomicsdb.org/docs`.
 
 License
