@@ -68,7 +68,7 @@ Additional parameters required for spectral library generation
    +============================+==================================================================================================================================================================================+
    | inputs                     | Contains information about additional inputs required for spectral library generation and the type of the inputs (see following 2 nested parameters)                             |
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     library_input          | Path to fast file for in-silico digestion (also see the required parameters in the following section) or an existing output file from a digestion                                |
+   |     library_input          | Path to fasta file for in-silico digestion (also see the required parameters in the following section) or an existing output file from a digestion                               |
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     library_input_type     | Library input type description; can be "fasta" if an additional in-silico digestion is required or "`peptides <./peptides_format.html>`_"                                        |
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
