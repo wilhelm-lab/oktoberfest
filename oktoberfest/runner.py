@@ -3,17 +3,25 @@ import os
 from pathlib import Path
 from typing import Union
 
-import spectrum_fundamentals.constants as c
-from spectrum_fundamentals.fragments import compute_peptide_mass
-from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+# import spectrum_fundamentals.constants as c
+# from spectrum_fundamentals.fragments import compute_peptide_mass
+# from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
 from spectrum_io.spectral_library import MSP
 
-from .ce_calibration import CeCalibration, SpectralLibrary
+from oktoberfest import plotting as pl
+from oktoberfest import predict as pr
+from oktoberfest import preprocessing as pp
+from oktoberfest import rescore as re
+
+# from .ce_calibration import CeCalibration, SpectralLibrary
 from .data.spectra import Spectra
-from .re_score import ReScore
+
+# from .re_score import ReScore
 from .utils.config import Config
-from .utils.plotting import plot_all
+
+# from .utils.plotting import plot_all
+from .utils.process_step import ProcessStep
 
 __version__ = "0.1.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
@@ -37,8 +45,15 @@ def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, 
     :param config_path: path to config file
     :raises ValueError: spectral library output format is not supported as spectral library type
     """
-    spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
-    spec_library.gen_lib()
+    # spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
+    config = Config()
+    config.read(config_path)
+    spec_library = Spectra()
+    # spec_library.gen_lib()
+    spec_library = pp.gen_lib(config, spec_library)
+    spec_library_filtered = pp.process_and_filter_spectra_data(config, spec_library)
+
+    r"""
     spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
         "MODIFIED_SEQUENCE"
     ].apply(lambda x: "_" + x + "_")
@@ -92,35 +107,36 @@ def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, 
     spec_library.library.spectra_data["MASS"] = spec_library.library.spectra_data["MODIFIED_SEQUENCE"].apply(
         lambda x: compute_peptide_mass(x)
     )
-    no_of_spectra = len(spec_library.library.spectra_data)
+    """
+    no_of_spectra = len(spec_library_filtered.spectra_data)
     no_of_sections = no_of_spectra // 7000
     for i in range(0, no_of_sections + 1):
         spectra_div = Spectra()
         if i < no_of_sections:
-            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000 : (i + 1) * 7000]
+            spectra_div.spectra_data = spec_library_filtered.spectra_data.iloc[i * 7000 : (i + 1) * 7000]
             logger.info(f"Indices {i * 7000}, {(i + 1) * 7000}")
         elif (i * 7000) < no_of_spectra:
-            spectra_div.spectra_data = spec_library.library.spectra_data.iloc[i * 7000 :]
+            spectra_div.spectra_data = spec_library_filtered.spectra_data.iloc[i * 7000 :]
             logger.info(f"Last Batch from index {i * 7000}")
             logger.info(f"Batch of size {len(spectra_div.spectra_data.index)}")
         else:
             break
 
-        grpc_output_sec = spec_library.grpc_predict(spectra_div)
-        if spec_library.config.output_format == "msp":
-            out_lib_msp = MSP(
-                spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.msp")
-            )
+        grpc_output_sec = pr.grpc_predict(config, spectra_div)
+        results_path = config.output / "results"
+        results_path.mkdir(exist_ok=True)
+        if config.output_format == "msp":
+            out_lib_msp = MSP(spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.msp"))
             out_lib_msp.prepare_spectrum()
             out_lib_msp.write()
-        elif spec_library.config.output_format == "spectronaut":
+        elif config.output_format == "spectronaut":
             out_lib_spectronaut = Spectronaut(
-                spectra_div.spectra_data, grpc_output_sec, os.path.join(spec_library.results_path, "myPrositLib.csv")
+                spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.csv")
             )
             out_lib_spectronaut.prepare_spectrum()
             out_lib_spectronaut.write()
         else:
-            raise ValueError(f"{spec_library.config.output_format} is not supported as spectral library type")
+            raise ValueError(f"{config.output_format} is not supported as spectral library type")
 
 
 def run_ce_calibration(
@@ -142,13 +158,25 @@ def run_ce_calibration(
     if isinstance(search_dir, str):
         search_dir = Path(search_dir)
 
+    config = Config()
+    config.read(config_path)
+    library = Spectra()
+
+    spectra_type = config.spectra_type
+    if spectra_type == "raw":
+        glob_pattern = "*.[rR][aA][wW]"
+    elif spectra_type == "mzml":
+        glob_pattern = "*.[mM][zZ][mM][lL]"
+
     for raw_file in search_dir.glob(glob_pattern):
-        ce_calib = CeCalibration(
-            search_path=msms_path, raw_path=raw_file, out_path=output_path, config_path=config_path
-        )
-        ce_calib.perform_alignment(ce_calib._load_search())
-        with open(ce_calib.results_path / f"{raw_file.stem}_ce.txt", "w") as f:
-            f.write(str(ce_calib.best_ce))
+        # ce_calib = CeCalibration(
+        #    search_path=msms_path, raw_path=raw_file, out_path=output_path, config_path=config_path
+        # )
+        df = pp.load_search(config)
+        # ce_calib.perform_alignment(ce_calib._load_search())
+        best_ce = pr.perform_alignment(config, library, df)
+        with open(config.output / "results" / f"{raw_file.stem}_ce.txt", "w") as f:
+            f.write(str(best_ce))
 
 
 def run_rescoring(
@@ -166,17 +194,50 @@ def run_rescoring(
     :param output_path: path to the output folder if specified in the config file, else search_dir
     """
     logger.info("Starting rescoring run...")
-    re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=output_path, config_path=config_path)
-    re_score.get_raw_files()
-    re_score.split_msms()
-    re_score.calculate_features()
+    # re_score = ReScore(search_path=msms_path, raw_path=search_dir, out_path=output_path, config_path=config_path)
+    config = Config()
+    config.read(config_path)
 
-    re_score.merge_input("rescore")
-    re_score.merge_input("original")
+    # re_score.get_raw_files()
+    raw_files = pp.get_raw_files(config)
+    # re_score.split_msms()
+    pp.split_msms(config, ProcessStep(config.output, "split_msms"))
+    # re_score.calculate_features()
+    re.calculate_features(config, Path(config_path), raw_files)
 
-    re_score.rescore("rescore")
-    re_score.rescore("original")
-    plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    # re_score.merge_input("rescore")
+    re.merge_input(
+        config,
+        ProcessStep(config.output, "merge_input_prosit"),
+        ProcessStep(config.output, "merge_input_andromeda"),
+        raw_files,
+        "rescore",
+    )
+    # re_score.merge_input("original")
+    re.merge_input(
+        config,
+        ProcessStep(config.output, "merge_input_prosit"),
+        ProcessStep(config.output, "merge_input_andromeda"),
+        raw_files,
+        "original",
+    )
+
+    # re_score.rescore("rescore")
+    re.rescore(
+        config,
+        ProcessStep(config.output, "percolator_prosit"),
+        ProcessStep(config.output, "percolator_andromeda"),
+        "rescore",
+    )
+    # re_score.rescore("original")
+    re.rescore(
+        config,
+        ProcessStep(config.output, "percolator_prosit"),
+        ProcessStep(config.output, "percolator_andromeda"),
+        "original",
+    )
+    # plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
+    pl.plot_all(re.get_percolator_folder_path(config), config.fdr_estimation_method)
     logger.info("Finished rescoring.")
 
 

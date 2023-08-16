@@ -9,8 +9,8 @@ import pandas as pd
 
 from ..calculate_features import CalculateFeatures
 from ..utils.config import Config
-from .utils.multiprocessing_pool import JobPool
-from .utils.process_step import ProcessStep
+from ..utils.multiprocessing_pool import JobPool
+from ..utils.process_step import ProcessStep
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +48,9 @@ def calculate_features(config: Config, config_path: Path, raw_files: List[Path])
 
     data_path = config.output / "data"
     data_path.mkdir(exist_ok=True)
+
+    results_path = config.output / "results"
+    results_path.mkdir(exist_ok=True)
 
     perc_path = get_percolator_folder_path(config)
     perc_path.mkdir(exist_ok=True)
