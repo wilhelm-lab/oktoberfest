@@ -68,7 +68,9 @@ class CeCalibration(SpectralLibrary):
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
         tmt_labeled = self.config.tag if any("TMT" in value for value in self.config.models.values()) else ""
-        self.search_path = search_result.generate_internal(tmt_labeled=tmt_labeled)
+        self.search_path = search_result.generate_internal(
+            tmt_labeled=tmt_labeled, out_path=self.get_msms_folder_path() / "msms.prosit"
+        )
 
     def _gen_mzml_from_thermo(self):
         """Generate mzml from thermo raw file."""
@@ -147,6 +149,12 @@ class CeCalibration(SpectralLibrary):
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
         return self._get_data_path() / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+
+    def get_msms_folder_path(self) -> Path:
+        """Get folder path to msms."""
+        msms_path = self.out_path / "msms"
+        msms_path.mkdir(exist_ok=True)
+        return msms_path
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()

@@ -301,10 +301,6 @@ class ReScore(CalculateFeatures):
             self.rescore_step_andromeda.mark_done()
         logger.info(f"Finished rescoring using {fdr_estimation_method}.")
 
-    def get_msms_folder_path(self) -> Path:
-        """Get folder path to msms."""
-        return self.out_path / "msms"
-
     def _get_split_msms_path(self, raw_file: str) -> Path:
         """
         Get path to split search results file.
