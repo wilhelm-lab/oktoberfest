@@ -180,7 +180,6 @@ class CeCalibration(SpectralLibrary):
         # return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity, raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-        self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
