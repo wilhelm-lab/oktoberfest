@@ -12,3 +12,5 @@ The following outlines how to run a job with the high level API, the three types
     predictions
     internal_format
     peptides_format
+    outputs
+    svm_features
