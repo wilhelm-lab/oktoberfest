@@ -54,7 +54,7 @@ Prosit will:
 1. Select a random subset of high-scoring PSMs
 2. Predict those in for each CE from 18 to 49.
 3. Calculate which CE achieves highest correlations with the experimental spectra
-   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 -   Spectral Library (SpectralLibraryGeneration)
 
@@ -71,10 +71,10 @@ This task rescores an existing search result using features generated from pepti
 Oktoberfest will:
 
 1. Calibrate CE against the provided RAW files.
-2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
-3. Use predicted spectra to generate features for percolator.
-4. Run percolator to rescore the search.
-   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+2. Predict all sequences in the search results file.
+3. Use predicted spectra and retention time to generate features for rescoring.
+4. Run percolator or mokapot to rescore the search and perform FDR estimation.
+   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 ## Run oktoberfest
 
@@ -90,15 +90,15 @@ Create a `config.json` file which should contain the following flags:
 
 -   `allFeatures` = True if all features should be used for FDR estimation; default = False
 
--   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
+-   `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "spline"
 
 -   `inputs`
 
-    -   `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
+    -   `search_results` = path to the file containing the search results
 
-    -   `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+    -   `search_results_type` = the tool used to produce the search results, can be "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
 
-    -   `spectra` = path to the search results (raw or mzml files)
+    -   `spectra` = path to a folder or a single file containing mass spectrometry results (raw or mzml files)
 
     -   `spectra_type` = "raw" or "mzml"; default = "raw"
 
@@ -116,6 +116,10 @@ Create a `config.json` file which should contain the following flags:
 
 -   `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
 
+-   `massTolerance` = mass tolerance value defining the allowed tolerance between theoretical and experimentally observered fragment mass during peak filtering and annotation. Default depends on the mass analyzer: 20 (FTMS), 40 (TOF), 0.35 (ITMS)
+
+-   `unitMassTolerance` = unit for the mass tolerance, either "da" or "ppm". Default depends on the mass analyzer: da (ITMS), ppm (FTMS or TOF)
+
 -   `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the koina (https://koina.proteomicsdb.org/) instance we provide at koina.proteomicsdb.org:443.
@@ -128,7 +132,7 @@ The following flags are relevant only for SpectralLibraryGeneration:
 
     -   `library_input` = path to the FASTA or peptides file
 
-    -   `library_input_type` = library input type: "fasta" or "peptides
+    -   `library_input_type` = library input type: "fasta" or "peptides"
 
 -   `outputFormat` = "spectronaut" or "msp"
 
@@ -148,7 +152,7 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `enzyme` = type of enzyme used in the search engine; default = "trypsin"
 
-    -   `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+    -   `specialAas` = special amino acids used for decoy generation; default = "KR"
 
     -   `db` = "target", "decoy" or "concat"; default = "concat"
 
@@ -168,7 +172,7 @@ If you instead want to run oktoberfest using the docker image, run:
 DATA=path/to/data/dir make run_oktoberfest
 ```
 
-Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator` or `<DATA>/<output>/results/mokapot` depending on the chosen fdr estimation method.
 
 ## Supported Models
 
@@ -194,9 +198,7 @@ We provide a jupyter notebook that you can find at "tutorials/Oktoberfest Tutori
 
 If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
 
-Further information can be found at https://oktoberfest.readthedocs.io.
-
-In addition, we provide a wiki that you find at https://github.com/wilhelm-lab/oktoberfest/wiki.
+The official Oktoberfest documentation can be found at https://oktoberfest.readthedocs.io.
 
 Information about how to use koina and which models are supported by our public koina instance can be found at https://koina.proteomicsdb.org/docs.
 

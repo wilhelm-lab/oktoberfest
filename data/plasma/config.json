@@ -14,6 +14,10 @@
     },
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
+    "output": "./out",
     "thermoExe": "ThermoRawFileParser.exe",
-    "output": "./out"
+    "regressionMethod": "spline",
+    "fdr_estimation_method": "mokapot",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm"
 }

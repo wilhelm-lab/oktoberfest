@@ -1,122 +1,16 @@
 Usage Principles
 ================
 
-A. CE Calibration (CollisionEnergyCalibration)
-----------------------------------------------
+Oktoberfest provides a high level API that can be easily executed with a single command by providing a config file.
+The following outlines how to run a job with the high level API, the three types of jobs available and examples for configuration and manual transformation of search results.
 
-This task estimates the optimal collision energy (CE) based on a given search result.
-Prosit will:
+.. toctree::
+    :maxdepth: 1
 
-1. Select a random subset of high-scoring PSMs
-2. Predict those in for each CE from 18 to 49.
-3. Calculate which CE achieves highest correlations with the experimental spectra
-   Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
-
-Example config file:
-
-.. code-block:: python
-
-    task_config_ce_calibration = {
-        "type": "CollisionEnergyCalibration",
-        "tag": "",
-        "output": "./out",
-        "inputs": {
-            "search_results": "./msms.txt",
-            "search_type": "Maxquant",
-            "spectra": "./",
-            "spectra_type": "raw"
-        },
-        "models": {
-            "intensity": "Prosit_2020_intensity_HCD",
-            "irt": "Prosit_2019_irt"
-        },
-        "prediction_server": "koina.proteomicsdb.org:443",
-        "regressionMethod": "lowess",
-        "ssl": True,
-        "thermoExe": "ThermoRawFileParser.exe"
-    }
-
-B. Spectral Library (SpectralLibraryGeneration)
------------------------------------------------
-
-This task generates a spectral library either by digesting a given FASTA file, or by predicting a list of peptides given in a CSV file. You need to provide a collision energy (CE) for prediction. To estimate an optimal CE for prediction, please use "CE Calibration".
-When a FASTA file is provided, Oktoberfest will:
-
-1. Digest the FASTA, for the given parameters (i.e. protease).
-2. Predict all spectra at the given collision energy.
-   When a CSV with peptides is provided, Prosit will directly predict all spectra.
-
-Example config file:
-
-.. code-block:: python
-
-    task_config_spectral_lib = {
-        "type": "SpectralLibraryGeneration",
-        "tag": "",
-        "output": "./out",
-        "inputs": {
-            "search_results": "./msms.txt",
-            "search_type": "Maxquant",
-            "library_input": "./peptides.csv",
-            "library_input_type": "peptides"
-        },
-        "models": {
-            "intensity": "Prosit_2020_intensity_HCD",
-            "irt": "Prosit_2019_irt"
-        },
-        "outputFormat": "spectronaut",
-        "prediction_server": "koina.proteomicsdb.org:443",
-        "numThreads": 1,
-        "ssl": True,
-        "thermoExe": "ThermoRawFileParser.exe"
-        "fastaDigestOptions": {
-            "fragmentation": "",
-            "digestion": "full",
-            "missedCleavages": 2,
-            "minLength": 7,
-            "maxLength": 60,
-            "enzyme", "trypsin",
-            "specialAas": "KR",
-            "db": "concat"
-    }
-
-
-C. Rescoring (Rescoring)
-------------------------
-
-This task rescores an existing search result using features generated from peptide property prediction.
-Oktoberfest will:
-
-1. Calibrate CE against the provided RAW files.
-2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
-3. Use predicted spectra to generate features for percolator.
-4. Run percolator to rescore the search.
-   Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
-
-Example config file:
-
-.. code-block:: python
-
-    task_config_rescoring = {
-        "type": "Rescoring",
-        "tag": "",
-        "output": "./out",
-        "inputs": {
-            "search_results": "./msms.txt",
-            "search_type": "Maxquant",
-            "spectra": "./",
-            "spectra_type": "raw"
-        },
-        "models": {
-            "intensity": "Prosit_2020_intensity_HCD",
-            "irt": "Prosit_2019_irt"
-        },
-        "prediction_server": "koina.proteomicsdb.org:443",
-        "numThreads": 1,
-        "fdr_estimation_method": "mokapot",
-        "allFeatures": False,
-        "regressionMethod": "lowess",
-        "ssl": True,
-        "thermoExe": "ThermoRawFileParser.exe"
-    }
-
+    jobs
+    config
+    predictions
+    internal_format
+    peptides_format
+    outputs
+    svm_features

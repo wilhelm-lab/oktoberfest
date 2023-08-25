@@ -4,7 +4,7 @@
     "allFeatures": false,
     "inputs": {
         "search_results": "./msms.txt",
-        "search_type": "Maxquant",
+        "search_results_type": "Maxquant",
         "spectra": "./",
         "spectra_type": "raw"
     },
@@ -17,5 +17,9 @@
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": true,
     "numThreads": 1,
-    "thermoExe": "ThermoRawFileParser.exe"
+    "fdr_estimation_method": "mokapot",
+    "regressionMethod": "spline",
+    "thermoExe": "ThermoRawFileParser.exe",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm"
 }

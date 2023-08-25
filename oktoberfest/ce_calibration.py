@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ class CeCalibration(SpectralLibrary):
         search_path: Union[str, Path],
         raw_path: Union[str, Path],
         out_path: Union[str, Path],
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: Union[str, Path],
         mzml_reader_package: str = "pyteomics",
     ):
         """
@@ -68,7 +68,9 @@ class CeCalibration(SpectralLibrary):
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
         tmt_labeled = self.config.tag if any("TMT" in value for value in self.config.models.values()) else ""
-        self.search_path = search_result.generate_internal(tmt_labeled=tmt_labeled)
+        self.search_path = search_result.generate_internal(
+            tmt_labeled=tmt_labeled, out_path=self.get_msms_folder_path() / "msms.prosit"
+        )
 
     def _gen_mzml_from_thermo(self):
         """Generate mzml from thermo raw file."""
@@ -117,7 +119,7 @@ class CeCalibration(SpectralLibrary):
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
-        df_annotated_spectra = annotate_spectra(df_join)
+        df_annotated_spectra = annotate_spectra(df_join, self.config.mass_tolerance, self.config.unit_mass_tolerance)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         # return df_annotated_spectra["INTENSITIES"]
         logger.info("Preparing library")
@@ -135,13 +137,24 @@ class CeCalibration(SpectralLibrary):
         spectra_path.mkdir(exist_ok=True)
         return spectra_path / self.raw_path.with_suffix(".mzML").name
 
+    def _get_data_path(self) -> Path:
+        data_path = self.out_path / "data"
+        data_path.mkdir(exist_ok=True)
+        return data_path
+
     def get_hdf5_path(self) -> Path:
         """Get path to hdf5 file."""
-        return self.out_path / "data" / self.raw_path.with_suffix(".mzML.hdf5").name
+        return self._get_data_path() / self.raw_path.with_suffix(".mzML.hdf5").name
 
     def get_pred_path(self) -> Path:
         """Get path to prediction hdf5 file."""
-        return self.out_path / "data" / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+        return self._get_data_path() / self.raw_path.with_suffix(".mzML.pred.hdf5").name
+
+    def get_msms_folder_path(self) -> Path:
+        """Get folder path to msms."""
+        msms_path = self.out_path / "msms"
+        msms_path.mkdir(exist_ok=True)
+        return msms_path
 
     def _prepare_alignment_df(self):
         self.alignment_library = Spectra()
@@ -175,20 +188,17 @@ class CeCalibration(SpectralLibrary):
         # return pred_intensity.toarray(), raw_intensity.toarray()
         sm = SimilarityMetrics(pred_intensity, raw_intensity)
         self.alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-        self.alignment_library.spectra_data.to_csv(self.results_path / "SA.tsv", sep="\t")
         self.ce_alignment = self.alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])[
             "SPECTRAL_ANGLE"
         ].mean()
 
         plot_mean_sa_ce(
-            sa_ce_df=self.ce_alignment,
+            sa_ce_df=self.ce_alignment.to_frame().reset_index(),
             filename=self.results_path / f"{self.raw_path.stem}_mean_spectral_angle_ce.svg",
-            best_ce=self.ce_alignment.idxmax(),
         )
         plot_violin_sa_ce(
-            df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+            sa_ce_df=self.alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
             filename=self.results_path / f"{self.raw_path.stem}_violin_spectral_angle_ce.svg",
-            best_ce=self.ce_alignment.idxmax(),
         )
 
     def perform_alignment(self, df_search: pd.DataFrame):
@@ -211,3 +221,6 @@ class CeCalibration(SpectralLibrary):
             self.best_ce = self.ce_alignment.idxmax()
         else:
             self.best_ce = 35
+
+        with open(self.results_path / f"{self.raw_path.stem}_ce.txt", "w") as f:
+            f.write(str(self.best_ce))

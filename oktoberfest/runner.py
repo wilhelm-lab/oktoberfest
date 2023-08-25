@@ -3,9 +3,6 @@ import os
 from pathlib import Path
 from typing import Union
 
-# import spectrum_fundamentals.constants as c
-# from spectrum_fundamentals.fragments import compute_peptide_mass
-# from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io import Spectronaut
 from spectrum_io.spectral_library import MSP
 
@@ -14,13 +11,8 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-# from .ce_calibration import CeCalibration, SpectralLibrary
 from .data.spectra import Spectra
-
-# from .re_score import ReScore
 from .utils.config import Config
-
-# from .utils.plotting import plot_all
 from .utils.process_step import ProcessStep
 
 __version__ = "0.1.0"
@@ -45,69 +37,12 @@ def generate_spectral_lib(search_dir: Union[str, Path], config_path: Union[str, 
     :param config_path: path to config file
     :raises ValueError: spectral library output format is not supported as spectral library type
     """
-    # spec_library = SpectralLibrary(search_path=search_dir, out_path=search_dir, config_path=config_path)
     config = Config()
     config.read(config_path)
     spec_library = Spectra()
-    # spec_library.gen_lib()
     spec_library = pp.gen_lib(config, spec_library)
     spec_library_filtered = pp.process_and_filter_spectra_data(config, spec_library)
 
-    r"""
-    spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = spec_library.library.spectra_data[
-        "MODIFIED_SEQUENCE"
-    ].apply(lambda x: "_" + x + "_")
-    models_dict = spec_library.config.models
-    spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-        spec_library.library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods={}
-    )
-    spec_library.library.spectra_data["SEQUENCE"] = internal_without_mods(
-        spec_library.library.spectra_data["MODIFIED_SEQUENCE"]
-    )
-    spec_library.library.spectra_data["PEPTIDE_LENGTH"] = spec_library.library.spectra_data["SEQUENCE"].apply(
-        lambda x: len(x)
-    )
-
-    logger.info(f"No of sequences before Filtering is {len(spec_library.library.spectra_data['PEPTIDE_LENGTH'])}")
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        (spec_library.library.spectra_data["PEPTIDE_LENGTH"] <= 30)
-    ]
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        (~spec_library.library.spectra_data["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-    ]
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        (~spec_library.library.spectra_data["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-    ]
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        (~spec_library.library.spectra_data["SEQUENCE"].str.contains("U"))
-    ]
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        spec_library.library.spectra_data["PRECURSOR_CHARGE"] <= 6
-    ]
-    spec_library.library.spectra_data = spec_library.library.spectra_data[
-        spec_library.library.spectra_data["PEPTIDE_LENGTH"] >= 7
-    ]
-    logger.info(f"No of sequences after Filtering is {len(spec_library.library.spectra_data['PEPTIDE_LENGTH'])}")
-
-    tmt_model = False
-    for _, value in models_dict.items():
-        if value:
-            if "TMT" in value:
-                tmt_model = True
-    if tmt_model and spec_library.config.tag != "":
-        unimod_tag = c.TMT_MODS[spec_library.config.tag]
-        spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-            spec_library.library.spectra_data["MODIFIED_SEQUENCE"],
-            fixed_mods={"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}", "K": f"K{unimod_tag}"},
-        )
-    else:
-        spec_library.library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-            spec_library.library.spectra_data["MODIFIED_SEQUENCE"]
-        )
-    spec_library.library.spectra_data["MASS"] = spec_library.library.spectra_data["MODIFIED_SEQUENCE"].apply(
-        lambda x: compute_peptide_mass(x)
-    )
-    """
     no_of_spectra = len(spec_library_filtered.spectra_data)
     no_of_sections = no_of_spectra // 7000
     for i in range(0, no_of_sections + 1):
@@ -169,11 +104,7 @@ def run_ce_calibration(
         glob_pattern = "*.[mM][zZ][mM][lL]"
 
     for raw_file in search_dir.glob(glob_pattern):
-        # ce_calib = CeCalibration(
-        #    search_path=msms_path, raw_path=raw_file, out_path=output_path, config_path=config_path
-        # )
         df = pp.load_search(config)
-        # ce_calib.perform_alignment(ce_calib._load_search())
         best_ce = pr.perform_alignment(config, library, df)
         with open(config.output / "results" / f"{raw_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
@@ -237,7 +168,9 @@ def run_rescoring(
         "original",
     )
     # plot_all(re_score.get_percolator_folder_path(), re_score.config.fdr_estimation_method)
-    pl.plot_all(re.get_percolator_folder_path(config), config.fdr_estimation_method)
+    fdr_output = config.output / "results" / config.fdr_estimation_method
+    pl.plot_all(fdr_output, config.fdr_estimation_method)
+
     logger.info("Finished rescoring.")
 
 

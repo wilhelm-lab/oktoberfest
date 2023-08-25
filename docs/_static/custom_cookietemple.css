@@ -1,6 +1,46 @@
 @import "basic.css";
 
-/*Set max width to none so the theme uses all available width*/
 .wy-nav-content {
-    max-width: none;
+    max-width: 1200px;
+}
+
+.wy-side-nav-search {
+    background-color: inherit;
+}
+
+table.align-default {
+    text-align: left;
+}
+
+.fixed-table th:first-child,
+.fixed-table td:first-child {
+    min-width: 250px;
+}
+
+.fixed-table th:last-child,
+.fixed-table td:last-child {
+    width: 100%;
+}
+
+.fixed-table {
+    margin-left: 0;
+}
+
+.main-config-table tbody tr:nth-child(n + 4):nth-child(-n + 5) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-rescore-config-table
+    tbody
+    tr:nth-child(n + 2):nth-child(-n + 5)
+    td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-config-table tbody tr:nth-child(n + 2):nth-child(-n + 3) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
+    padding-left: 50px;
 }

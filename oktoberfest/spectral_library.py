@@ -1,15 +1,17 @@
 import logging
 import re
+from math import ceil
+from multiprocessing import current_process
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from spectrum_io.file import csv
 from spectrum_io.spectral_library import digest
+from tqdm.auto import tqdm
 from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
 
-from .constants_dir import CONFIG_PATH
 from .data.spectra import FragmentType, Spectra
 from .utils.config import Config
 
@@ -39,24 +41,35 @@ def infer_predictions(
     num_spec = len(input_data[list(input_data)[0]][0])
     predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
-    for i in range(0, num_spec, batch_size):
-        if num_spec < i + batch_size:
-            current_batchsize = num_spec - i
-        else:
-            current_batchsize = batch_size
+    n_batches = ceil(num_spec / batch_size)
+    process_identity = current_process()._identity
+    if len(process_identity) > 0:
+        position = process_identity[0]
+    else:
+        position = 0
 
-        infer_inputs = []
-        for input_key, (data, dtype) in input_data.items():
-            infer_input = InferInput(input_key, [current_batchsize, 1], dtype)
-            infer_input.set_data_from_numpy(data[i : i + current_batchsize])
-            infer_inputs.append(infer_input)
+    with tqdm(
+        total=n_batches,
+        position=position,
+        desc=f"Inferring predictions for {num_spec} spectra with batch site {batch_size}",
+        leave=True,
+    ) as progress:
+        for i in range(0, n_batches):
+            progress.update(1)
+            # logger.info(f"Predicting batch {i+1}/{n_batches}.")
+            infer_inputs = []
+            for input_key, (data, dtype) in input_data.items():
+                batch_data = data[i * batch_size : (i + 1) * batch_size]
+                infer_input = InferInput(input_key, batch_data.shape, dtype)
+                infer_input.set_data_from_numpy(batch_data)
+                infer_inputs.append(infer_input)
 
-        infer_outputs = [InferRequestedOutput(output) for output in outputs]
+            infer_outputs = [InferRequestedOutput(output) for output in outputs]
 
-        prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
+            prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
 
-        for output in outputs:
-            predictions[output].append(prediction.as_numpy(output))
+            for output in outputs:
+                predictions[output].append(prediction.as_numpy(output))
 
     return {key: np.vstack(value) for key, value in predictions.items()}
 
@@ -109,9 +122,7 @@ class SpectralLibrary:
     num_threads: int
     grpc_output: dict
 
-    def __init__(
-        self, search_path: Union[str, Path], out_path: Union[str, Path], config_path: Optional[Union[str, Path]] = None
-    ):
+    def __init__(self, search_path: Union[str, Path], out_path: Union[str, Path], config_path: Union[str, Path]):
         """
         Initialize a SpectralLibrary object.
 
@@ -129,13 +140,12 @@ class SpectralLibrary:
 
         self.library = Spectra()
 
-        if config_path is None:
-            config_path = CONFIG_PATH
         if isinstance(config_path, str):
             config_path = Path(config_path)
         self.config_path = config_path
         self.config = Config()
         self.config.read(config_path)
+
         self.out_path.mkdir(exist_ok=True)
         self.results_path = out_path / "results"
         if out_path.exists():
@@ -147,13 +157,22 @@ class SpectralLibrary:
             logger.info("In Feature Calculation")
 
     def gen_lib(self):
-        """Read input csv file and add it to library."""
+        """
+        Read input csv file and add it to library.
+
+        :raises ValueError: If the value provided for library_input_type in the config file
+            is sth. other than "peptides" or "fasta".
+        """
         library_input_type = self.config.library_input_type
         if library_input_type == "fasta":
             self.read_fasta()
             library_file = self.out_path / "prosit_input.csv"
         elif library_input_type == "peptides":
             library_file = self.config.library_input
+        else:
+            raise ValueError(
+                f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".'
+            )
         library_df = csv.read_file(library_file)
         library_df.columns = library_df.columns.str.upper()
         self.library.add_columns(library_df)

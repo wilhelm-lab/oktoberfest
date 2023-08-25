@@ -1,6 +1,5 @@
 
-.. include:: ../README.rst
-   :end-line: 34
+.. include:: readme.rst
 
 .. include:: _key_contributors.rst
 
@@ -11,14 +10,13 @@
 .. include:: news.rst
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    installation
    usage
    API
    contributing
-   contributors
    reference
 
 .. _github: https://github.com/wilhelm-lab/oktoberfest

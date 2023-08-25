@@ -29,14 +29,6 @@ oktoberfest.ce\_calibration module
    :undoc-members:
    :show-inheritance:
 
-oktoberfest.constants\_dir module
----------------------------------
-
-.. automodule:: oktoberfest.constants_dir
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 oktoberfest.re\_score module
 ----------------------------
 

@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class Config:
 
     @property
     def all_features(self) -> bool:
-        """Get allFeatures flag (decides whether all features should be used by the percolator)."""
+        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
         if "allFeatures" in self.data:
             return self.data["allFeatures"]
         else:
@@ -83,12 +83,16 @@ class Config:
 
     @property
     def curve_fitting_method(self) -> str:
-        """Get regressionMethod flag (regression method for curve fitting: lowess, spline, or logistic). \
-        If not specified, lowess is applied."""
-        if "regressionMethod" in self.data:
-            return self.data["regressionMethod"].lower()
-        else:
-            return "lowess"
+        """
+        Get regressionMethod flag.
+
+        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+        The supported flags are "lowess", "spline", and "logistic".
+        If not provided in the config file, returns "spline" by default.
+
+        :return: a lowercase string representation of the regression method.
+        """
+        return self.data.get("regressionMethod", "spline").lower()
 
     @property
     def job_type(self) -> str:
@@ -104,6 +108,16 @@ class Config:
     def inputs(self) -> dict:
         """Get inputs dictionary from the config file."""
         return self.data.get("inputs", {})
+
+    @property
+    def mass_tolerance(self) -> Optional[float]:
+        """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
+        return self.data.get("massTolerance", None)
+
+    @property
+    def unit_mass_tolerance(self) -> Optional[str]:
+        """Get unit for the mass tolerance from the config file (da or ppm)."""
+        return self.data.get("unitMassTolerance", None)
 
     @property
     def search_results(self) -> Path:

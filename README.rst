@@ -80,7 +80,7 @@ What you can do with oktoberfest:
   2. Predict those in for each CE from 18 to 49.
   3. Calculate which CE achieves highest correlations with the experimental spectra
 
-  Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+  Please note: Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 - Spectral Library (SpectralLibraryGeneration)
 
@@ -96,11 +96,11 @@ What you can do with oktoberfest:
   This task rescores an existing search result using features generated from peptide property prediction.
   Oktoberfest will:
   1. Calibrate CE against the provided RAW files.
-  2. Predict all sequences in the search results file, e.g. msms.txt from MaxQuant
-  3. Use predicted spectra to generate features for percolator.
-  4. Run percolator to rescore the search.
+  2. Predict all sequences in the search results file.
+  3. Use predicted spectra and retention time to generate features for rescoring.
+  4. Run percolator or mokapot to rescore the search and perform FDR estimation.
 
-  Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification in MaxQuant).
+  Please note: You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring. Sequences with amino acid U or O are not supported. Modifications except "M(ox)" are not supported. Each C is treated as Cysteine with carbamidomethylation (fixed modification).
 
 Run oktoberfest
 ---------------
@@ -114,11 +114,11 @@ Create a `config.json` file which should contain the following flags:
 - `tag` = "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""
 - `fdr_estimation_method` = method used for FDR estimation on PSM and peptide level: "percolator" or "mokapot"; default = "mokapot"
 - `allFeatures`` = True if all features should be used for FDR estimation; default = False
-- `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "lowess"
+- `regressionMethod` = regression method for curve fitting (mapping from predicted iRT values to experimental retention times): "lowess", "spline" or "logistic"; default = "spline"
 - `inputs`
-   - `search_results` = path to the msms.txt (if the search type is msfragger, then the path to the xlsx file should be provided)
-   - `search_results_type` = "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
-   - `spectra` = path to the search results (raw or mzml files)
+   - `search_results` = path to the file containing the search results
+   - `search_results_type` = the tool used to produce the search results, can be "Maxquant", "Msfragger", "Mascot" or "Internal"; default = "Maxquant"
+   - `spectra` = path to a folder or a single file containing mass spectrometry results (raw or mzml files)
    - `spectra_type` = "raw" or "mzml"; default = "raw"
 - `models`
    - `intensity` = intensity model
@@ -127,6 +127,8 @@ Create a `config.json` file which should contain the following flags:
 - `ssl` = Use ssl when making requests to the prediction server, can be true or false; default = true
 - `numThreads` = number of raw files processed in parallel processes; default = 1
 - `thermoExe` = path to ThermoRawFileParser executable; default "ThermoRawFileParser.exe"
+- `massTolerance` = mass tolerance value defining the allowed tolerance between theoretical and experimentally observered fragment mass during peak filtering and annotation. Default depends on the mass analyzer: 20 (FTMS), 40 (TOF), 0.35 (ITMS)
+- `unitMassTolerance` = unit for the mass tolerance, either "da" or "ppm". Default is da (mass analyzer is ITMS) and ppm (mass analyzer is FTMS or TOF)
 - `output` = path to the output folder; if not provided the current working directory will be used.
 
 For `prediction_server`, you should use the `koina <https://koina.proteomicsdb.org/>`_ instance we provide at `koina.proteomicsdb.org:443`.
@@ -137,7 +139,7 @@ The following flags are relevant only for SpectralLibraryGeneration:
 
 - `inputs`
    - `library_input` = path to the FASTA or peptides file
-   - `library_input_type` = library input type: "fasta" or "peptides
+   - `library_input_type` = library input type: "fasta" or "peptides"
 - `outputFormat` = "spectronaut" or "msp"
 
 The following flags are relevant only if a FASTA file is provided:
@@ -149,7 +151,7 @@ The following flags are relevant only if a FASTA file is provided:
    - `minLength` = minimum peptide length allowed used in the search engine; default = 7
    - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
    - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
-   - `specialAas` = special amino acids used by MaxQuant for decoy generation; default = "KR"
+   - `specialAas` = special amino acids for decoy generation; default = "KR"
    - `db` = "target", "decoy" or "concat"; default = "concat"
 
 An example of the config file can be found in `/oktoberfest/example_config.json`.
@@ -169,7 +171,7 @@ If you instead want to run oktoberfest using the docker image, run:
 
    DATA=path/to/data/dir make run_oktoberfest
 
-Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_type` in the config, e.g. `msms.txt` for MaxQuant and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator`.
+Note: When using with docker, `DATA` must contain the spectra, the search results that fit the specified `search_results_type` in the config, and a `config.json` file with the configuration. The results will be written to `<DATA>/<output>/results/percolator` or `<DATA>/<output>/results/mokapot` depending on the chosen fdr estimation method.
 
 Supported Models
 ----------------
@@ -194,8 +196,7 @@ Tutorials and Documentation
 We provide a Jupyter notebook that you can find at "tutorials/Oktoberfest Tutorial.ipynb", guiding you through the three different use cases using a public dataset.
 
 If you want to test it inside your docker container, please refer to the README in the data/plasma subfolder.
-Further information can be found at `https://oktoberfest.readthedocs.io`.
-In addition, we provide a wiki that you can find at `https://github.com/wilhelm-lab/oktoberfest/wiki`.
+The official Oktoberfest documentation can be found at `https://oktoberfest.readthedocs.io`.
 Information about how to use koina and which models are supported by our public koina instance can be found at `https://koina.proteomicsdb.org/docs`.
 
 License
