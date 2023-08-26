@@ -1,3 +1,6 @@
+Oktoberfest: Rescoring and Spectral Library Generation for Proteomics
+=====================================================================
+
 |PyPI| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/oktoberfest.svg
@@ -28,9 +31,6 @@
    :target: https://github.com/psf/black
    :alt: Black
 
-Oktoberfest: Rescoring and Spectral Library Generation for Proteomics
-=====================================================================
-
 Oktoberfest is a python tool for rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.
 
 Installation
@@ -58,8 +58,8 @@ Docker image
 ~~~~~~~~~~~~
 
 Prerequisites:
-- `make <https://www.gnu.org/software/make/>`_
-- `docker <https://www.docker.com/>`_
+  - `make <https://www.gnu.org/software/make/>`_
+  - `docker <https://www.docker.com/>`_
 
 After cloning the repository of oktoberfest, checkout the branch you want to build the container from.
 The latest stable version is always on the main branch.
