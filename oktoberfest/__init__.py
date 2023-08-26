@@ -1,4 +1,4 @@
-"""Initialize logger."""
+"""Oktoberfest: Rescoring and Spectral Library Generation for Proteomics."""
 
 __version__ = "0.4.0"
 __copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
@@ -24,6 +24,7 @@ from . import runner
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 if len(logger.handlers) == 0:
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
     converter = time.gmtime
@@ -40,3 +41,5 @@ if len(logger.handlers) == 0:
     logger.addHandler(error_handler)
 else:
     logger.info("Logger already initizalized. Resuming normal operation.")
+
+sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["pl", "pp", "pr", "re"]})
