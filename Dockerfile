@@ -26,10 +26,10 @@ RUN poetry install --no-root
 
 # install percolator
 RUN ZIP=ubuntu.tar.gz && \
-    wget https://github.com/percolator/percolator/releases/download/rel-3-05/$ZIP -O /tmp/$ZIP && \
+    wget https://github.com/percolator/percolator/releases/download/rel-3-06-01/$ZIP -O /tmp/$ZIP && \
     tar xvzf /tmp/$ZIP && \
     chmod -R 755 /tmp/* && \
-    dpkg -i percolator-v3-05-linux-amd64.deb && \
+    dpkg -i percolator-v3-06-linux-amd64.deb && \
     rm /tmp/$ZIP
 
 # install ThermoRawFileParser
