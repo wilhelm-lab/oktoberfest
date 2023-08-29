@@ -45,7 +45,7 @@ If you provide thermo raw files, make sure `ThermoRawFileParser <https://github.
 
 If you are on linux or MacOS, make sure `mono <https://www.mono-project.com/>`_ is installed.
 
-If you want to use percolator, make sure you install version 3.05 (`percolator <https://github.com/percolator/percolator/releases/tag/rel-3-06-01>`_).
+If you want to use percolator, make sure you install version 3.06.01 (`percolator <https://github.com/percolator/percolator/releases/tag/rel-3-06-01>`_).
 
 Using pip (recommended)
 ~~~~~~~~~~~~~~~~~~~~~~~
