@@ -1,15 +1,11 @@
 [flake8]
 select = B,B9,C,D,DAR,E,F,N,RST,S,W
-ignore = E203,E501,RST201,RST203,RST301,W503,D100,D212,S404,S602,B905
+ignore = E203,E501,RST201,RST203,RST301,RST304,W503,D100,D212,S404,S602,B905
 max-line-length = 120
 max-complexity = 10
 docstring-convention = google
 per-file-ignores =
 	tests/*:S101
-	oktoberfest/__init__.py:F401
-        oktoberfest/plotting/__init__.py:F401,F403
-        oktoberfest/preprocessing/__init__.py:F401,F403
-        oktoberfest/predict/__init__.py:F401,F403
-        oktoberfest/rescore/__init__.py:F401,F403
+	**/__init__.py:F401,F403
         docs/conf.py:S404,S607,S603
 docstring_style = sphinx
