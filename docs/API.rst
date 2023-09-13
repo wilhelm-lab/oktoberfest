@@ -108,7 +108,7 @@ General
 .. autosummary::
    :toctree: api/pl
 
-   pl.plot_target_decoy
+   pl.plot_score_distribution
    pl.joint_plot
    pl.plot_gain_loss
    pl.plot_mean_sa_ce
