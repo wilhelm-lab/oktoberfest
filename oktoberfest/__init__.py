@@ -1,15 +1,12 @@
 """Oktoberfest: Rescoring and Spectral Library Generation for Proteomics."""
 
+from datetime import datetime
+
+__author__ = """The Oktoberfest development team (Wilhelmlab at Technical University of Munich)"""
+__copyright__ = f"Copyright {datetime.now():%Y}, Wilhelmlab at Technical University of Munich"
+__license__ = "MIT"
 __version__ = "0.4.0"
-__copyright__ = """Copyright (c) 2020-2021 Oktoberfest dev-team. All rights reserved.
-Written by
-- Wassim Gabriel (wassim.gabriel@tum.de),
-- Ludwig Lautenbacher (ludwig.lautenbacher@tum.de),
-- Matthew The (matthew.the@tum.de),
-- Mario Picciani (mario.picciani@in.tum.de),
-- Firas Hamood (firas.hamood@tum.de),
-- Cecilia Jensen (cecilia.jensen@tum.de)
-at the Technical University of Munich."""
+
 import logging.handlers
 import sys
 import time
