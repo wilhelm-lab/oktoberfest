@@ -1,30 +1,42 @@
 import logging
 import re
-from pathlib import Path
+from math import ceil
+from multiprocessing import current_process
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
+from tqdm.auto import tqdm
 from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
 
 from ..data.spectra import FragmentType, Spectra
-from ..plotting import plot_mean_sa_ce, plot_violin_sa_ce
-from ..preprocessing import merge_mzml_and_msms, prepare_alignment_df
-from ..utils.config import Config
 
 logger = logging.getLogger(__name__)
 
 
-def grpc_predict(config: Config, library: Spectra, alignment: bool = False):
+def grpc_predict(
+    library: Spectra,
+    url: str,
+    intensity_model: str,
+    irt_model: str,
+    ssl: bool = True,
+    alignment: bool = False,
+    job_type: str = "",
+):
     """
     Use grpc to predict library and add predictions to library.
 
     :param library: Spectra object with the library
+    :param url: Url including the port of the prediction server
+    :param intensity_model: the name of the intensity model on the server
+    :param irt_model: the name of the irt model on the server
+    :param ssl: whether or not the server requires an ssl encrypted transportation, default = True
     :param alignment: True if alignment present
+    :param job_type: TODO
     :return: grpc predictions if we are trying to generate spectral library
     """
-    triton_client = InferenceServerClient(url=config.prediction_server, ssl=config.ssl)
+    triton_client = InferenceServerClient(url=url, ssl=ssl)
     batch_size = 1000
 
     intensity_outputs = ["intensities", "mz", "annotation"]
@@ -42,7 +54,6 @@ def grpc_predict(config: Config, library: Spectra, alignment: bool = False):
             "INT32",
         ),
     }
-    intensity_model = config.models["intensity"]
     if "tmt" in intensity_model.lower() or "ptm" in intensity_model.lower():
         library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
             lambda x: 2 if x == "HCD" else 1
@@ -61,7 +72,6 @@ def grpc_predict(config: Config, library: Spectra, alignment: bool = False):
     )
     intensity_predictions["intensities"][np.where(intensity_predictions["intensities"] < 1e-7)] = 0.0
 
-    irt_model = config.models["irt"]
     irt_input_data = {"peptide_sequences": intensity_input_data["peptide_sequences"]}
     irt_outputs = ["irt"]
     irt_predictions = infer_predictions(
@@ -72,7 +82,7 @@ def grpc_predict(config: Config, library: Spectra, alignment: bool = False):
         batch_size=batch_size,
     )
 
-    if config.job_type == "SpectralLibraryGeneration":
+    if job_type == "SpectralLibraryGeneration":
         intensity_prediction_dict = {
             "intensity": intensity_predictions["intensities"],
             "fragmentmz": intensity_predictions["mz"],
@@ -118,24 +128,35 @@ def infer_predictions(
     num_spec = len(input_data[list(input_data)[0]][0])
     predictions: Dict[str, List[np.ndarray]] = {output: [] for output in outputs}
 
-    for i in range(0, num_spec, batch_size):
-        if num_spec < i + batch_size:
-            current_batchsize = num_spec - i
-        else:
-            current_batchsize = batch_size
+    n_batches = ceil(num_spec / batch_size)
+    process_identity = current_process()._identity
+    if len(process_identity) > 0:
+        position = process_identity[0]
+    else:
+        position = 0
 
-        infer_inputs = []
-        for input_key, (data, dtype) in input_data.items():
-            infer_input = InferInput(input_key, [current_batchsize, 1], dtype)
-            infer_input.set_data_from_numpy(data[i : i + current_batchsize])
-            infer_inputs.append(infer_input)
+    with tqdm(
+        total=n_batches,
+        position=position,
+        desc=f"Inferring predictions for {num_spec} spectra with batch site {batch_size}",
+        leave=True,
+    ) as progress:
+        for i in range(0, n_batches):
+            progress.update(1)
+            # logger.info(f"Predicting batch {i+1}/{n_batches}.")
+            infer_inputs = []
+            for input_key, (data, dtype) in input_data.items():
+                batch_data = data[i * batch_size : (i + 1) * batch_size]
+                infer_input = InferInput(input_key, batch_data.shape, dtype)
+                infer_input.set_data_from_numpy(batch_data)
+                infer_inputs.append(infer_input)
 
-        infer_outputs = [InferRequestedOutput(output) for output in outputs]
+            infer_outputs = [InferRequestedOutput(output) for output in outputs]
 
-        prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
+            prediction = triton_client.infer(model, inputs=infer_inputs, outputs=infer_outputs)
 
-        for output in outputs:
-            predictions[output].append(prediction.as_numpy(output))
+            for output in outputs:
+                predictions[output].append(prediction.as_numpy(output))
 
     return {key: np.vstack(value) for key, value in predictions.items()}
 
@@ -174,56 +195,65 @@ def parse_fragment_labels(spectra_labels: np.ndarray, precursor_charges: np.ndar
     return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
-def perform_alignment(config: Config, library: Spectra, df_search: pd.DataFrame) -> int:
+def _prepare_alignment_df(library: Spectra) -> Spectra:
     """
-    Perform alignment and get the best CE.
+    Prepare an alignment DataFrame from the given Spectra library.
 
-    :param df_search: search result as pd.DataFrame
+    This function creates an alignment DataFrame by removing decoy and HCD fragmented spectra
+    from the input library, selecting the top 1000 highest-scoring spectra, and repeating the
+    DataFrame for each collision energy (CE) in the range [18, 50].
+
+    :param library: the library to be propagated
+    :return: a library that is modified according to the description above
     """
-    hdf5_path = get_hdf5_path(config)
-    logger.info(f"Path to hdf5 file with annotations for {config.output}: {hdf5_path}")
-    if hdf5_path.is_file():
-        library.read_from_hdf5(hdf5_path)
-    else:
-        library = merge_mzml_and_msms(config, library, df_search)
-        library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
-    if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
-        alignment_library = prepare_alignment_df(library)
-        grpc_predict(config, alignment_library, alignment=True)  # predict alignment
-        ce_alignment = _alignment(config, alignment_library)
-        best_ce = ce_alignment.idxmax()
-    else:
-        best_ce = 35
-    return best_ce
+    alignment_library = Spectra()
+    alignment_library.spectra_data = library.spectra_data.copy()
+
+    # Remove decoy and HCD fragmented spectra
+    alignment_library.spectra_data = alignment_library.spectra_data[
+        (alignment_library.spectra_data["FRAGMENTATION"] == "HCD") & (~alignment_library.spectra_data["REVERSE"])
+    ]
+    # Select the 1000 highest scoring or all if there are less than 1000
+    alignment_library.spectra_data = alignment_library.spectra_data.sort_values(by="SCORE", ascending=False).iloc[:1000]
+
+    # Repeat dataframe for each CE
+    ce_range = range(18, 50)
+    nrow = len(alignment_library.spectra_data)
+    alignment_library.spectra_data = pd.concat([alignment_library.spectra_data for _ in ce_range], axis=0)
+    alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range, nrow)
+    alignment_library.spectra_data.reset_index(inplace=True)
+    return alignment_library
 
 
-def get_hdf5_path(config: Config) -> Path:
-    """Get path to hdf5 file."""
-    return config.output / "data" / config.spectra.with_suffix(".mzML.hdf5").name
-
-
-def _alignment(config: Config, alignment_library: Spectra):
+def ce_calibration(library: Spectra, **server_kwargs) -> pd.Series:
     """
-    Edit library to try different ranges of ce 15-50. then predict with the new library.
+    Calculate best collision energy for peptide property predictions.
 
-    Check https://gitlab.lrz.de/proteomics/prosit_tools/oktoberfest/-/blob/develop/oktoberfest/ce_calibration/grpc_alignment.py
+    The function propagates the provided library object to test NCEs in th range [18,50], performs
+    intensity prediction for the 1000 highest scoring target PSMs at each NCE and computes the spectral angle
+    between predicted and observed intensities before returning the alignment library.
+
+    :param library: spectral library to perform CE calibration on
+    :param server_kwargs: Additional parameters that are forwarded to grpc_predict
+    :return: pandas series containing the spectral angle for all tested collision energies
+    """
+    alignment_library = _prepare_alignment_df(library)
+    grpc_predict(alignment_library, alignment=True, **server_kwargs)
+    _alignment(alignment_library)
+    return alignment_library
+
+
+def _alignment(alignment_library: Spectra):
+    """
+    Perform the alignment of predicted versus raw intensities.
+
+    The function calculates the spectral angle between predicted and observed fragment intensities and
+    adds it as a column to the alignment library.
+
+    :param alignment_library: the library to perform the alignment on
     """
     pred_intensity = alignment_library.get_matrix(FragmentType.PRED)
     raw_intensity = alignment_library.get_matrix(FragmentType.RAW)
     # return pred_intensity.toarray(), raw_intensity.toarray()
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
-    alignment_library.spectra_data.to_csv(config.output / "results" / "SA.tsv", sep="\t")
-    ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
-
-    plot_mean_sa_ce(
-        sa_ce_df=ce_alignment,
-        filename=config.output / "results" / f"{config.spectra.stem}_mean_spectral_angle_ce.svg",
-        best_ce=ce_alignment.idxmax(),
-    )
-    plot_violin_sa_ce(
-        df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
-        filename=config.output / "results" / f"{config.spectra.stem}_violin_spectral_angle_ce.svg",
-        best_ce=ce_alignment.idxmax(),
-    )
-    return ce_alignment
