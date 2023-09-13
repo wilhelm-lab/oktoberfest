@@ -109,6 +109,8 @@ def rescore_with_percolator(
 
     if output_folder is None:
         output_folder = input_file.parent
+    if isinstance(output_folder, str):
+        output_folder = Path(output_folder)
 
     file_prefix = input_file.stem
     weights_file = output_folder / f"{file_prefix}.percolator.weights.csv"
@@ -159,6 +161,8 @@ def rescore_with_mokapot(
 
     if output_folder is None:
         output_folder = input_file.parent
+    if isinstance(output_folder, str):
+        output_folder = Path(output_folder)
 
     mokapot_logger = logging.getLogger("mokapot")
     mokapot_logger.setLevel(logging.INFO)

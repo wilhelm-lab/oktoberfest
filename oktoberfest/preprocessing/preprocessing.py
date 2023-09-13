@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from sys import platform
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import pandas as pd
 import spectrum_fundamentals.constants as c
@@ -67,6 +67,8 @@ def digest(
     :param min_length: Minimal length of digested peptides
     :param max_length: Maximal length of digested peptides
     """
+    if isinstance(output, str):
+        output = Path(output)
     cmd = [
         "--fasta",
         f"{fasta}",
@@ -217,16 +219,17 @@ def convert_search(
     :raises ValueError: if an unsupported search engine was given
     """
     search_engine = search_engine.lower()
+    search_result: Any
     if search_engine == "maxquant":
-        search_result = MaxQuant(input_path)
+        search_result = MaxQuant
     elif search_engine == "msfragger":
-        search_result = MSFragger(input_path)
+        search_result = MSFragger
     elif search_engine == "mascot":
-        search_result = Mascot(input_path)
+        search_result = Mascot
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    search_result.generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
 
 
 def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:

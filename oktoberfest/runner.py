@@ -92,14 +92,12 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
         ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
         best_ce = ce_alignment.idxmax()
         pl.plot_mean_sa_ce(
-            sa_ce_df=ce_alignment,
+            sa_ce_df=ce_alignment.to_frame().reset_index(),
             filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
-            best_ce=best_ce,
         )
         pl.plot_violin_sa_ce(
-            df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+            sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
             filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
-            best_ce=best_ce,
         )
     else:
         best_ce = 35
@@ -135,7 +133,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
             min_length=config.min_length,
             max_length=config.max_length,
         )
-        library_file = config.out_path / "prosit_input.csv"
+        library_file = config.output / "prosit_input.csv"
     elif library_input_type == "peptides":
         library_file = config.library_input
     else:
@@ -317,20 +315,18 @@ def run_rescoring(config_path: Union[str, Path]):
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
 
     if config.fdr_estimation_method == "percolator":
-        rescore_func = re.rescore_with_percolator
+        if not rescore_original_step.is_done():
+            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
+            rescore_original_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
-        rescore_func = re.rescore_with_mokapot
+        if not rescore_prosit_step.is_done():
+            re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+            rescore_prosit_step.mark_done()
     else:
         raise ValueError(
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
 
-    if not rescore_original_step.is_done():
-        rescore_func(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
-        rescore_original_step.mark_done()
-    if not rescore_prosit_step.is_done():
-        rescore_func(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-        rescore_prosit_step.mark_done()
     # plotting
     pl.plot_all(fdr_dir)
 
