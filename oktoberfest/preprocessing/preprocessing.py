@@ -166,7 +166,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     fixed_mods = {"C": "C[UNIMOD:4]"}
     if tmt_label is not None and tmt_label != "":
         unimod_tag = c.TMT_MODS[tmt_label]
-        fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}", "K": f"K{unimod_tag}"}
+        fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
     library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
         library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
