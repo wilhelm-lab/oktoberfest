@@ -55,12 +55,9 @@ def grpc_predict(
         ),
     }
     if "tmt" in intensity_model.lower() or "ptm" in intensity_model.lower():
-        library.spectra_data["FRAGMENTATION_GRPC"] = library.spectra_data["FRAGMENTATION"].apply(
-            lambda x: 2 if x == "HCD" else 1
-        )
         intensity_input_data["fragmentation_types"] = (
-            library.spectra_data["FRAGMENTATION_GRPC"].to_numpy().reshape(-1, 1).astype(np.float32),
-            "FP32",
+            library.spectra_data["FRAGMENTATION"].to_numpy().reshape(-1, 1).astype(np.object_),
+            "BYTES",
         )
 
     intensity_predictions = infer_predictions(
