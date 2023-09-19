@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from sys import platform
 from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
@@ -29,10 +30,7 @@ class Config:
     @property
     def num_threads(self) -> int:
         """Get the number of threads from the config file; if not specified return 1."""
-        if "numThreads" in self.data:
-            return self.data["numThreads"]
-        else:
-            return 1
+        return self.data.get("numThreads", 1)
 
     @property
     def prediction_server(self) -> str:
@@ -240,7 +238,13 @@ class Config:
     @property
     def thermo_exe(self) -> Path:
         """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
-        return Path(self.data.get("thermoExe", "ThermoRawFileParser.exe"))
+
+        def default_thermo():
+            if "linux" in platform or platform == "darwin":
+                return "/opt/compomics/ThermoRawFileParser.exe"
+            return "ThermoRawFileParser.exe"
+
+        return Path(self.data.get("thermoExe", default_thermo()))
 
     def check(self):
         """Validate the configuration."""
