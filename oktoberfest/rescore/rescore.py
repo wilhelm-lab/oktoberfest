@@ -78,6 +78,12 @@ def merge_input(
     # TODO make this more efficient
     df_prosit = pd.read_csv(output_file, sep="\t")
     df_prosit = df_prosit.fillna(0)
+
+    # We exploit the expmass column here by assigning a unique id per filename+scannr group.
+    # This ensures percolator will not deduplicate scannrs between filenames, as it uses only
+    # filename+ExpMass for TDC.
+    df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
+
     df_prosit.to_csv(output_file, sep="\t", index=False)
 
 
