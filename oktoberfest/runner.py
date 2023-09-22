@@ -3,8 +3,7 @@ import os
 from pathlib import Path
 from typing import List, Union
 
-from spectrum_io import Spectronaut
-from spectrum_io.spectral_library import MSP
+from spectrum_io.spectral_library import MSP, DLib, Spectronaut
 
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
@@ -59,8 +58,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
     if hdf5_path.is_file():
-        library = Spectra()
-        library.read_from_hdf5(hdf5_path)
+        library = Spectra.from_hdf5(hdf5_path)
     else:
         mzml_dir = config.output / "mzML"
         mzml_dir.mkdir(exist_ok=True)
@@ -179,6 +177,12 @@ def generate_spectral_lib(config_path: Union[str, Path]):
             )
             out_lib_spectronaut.prepare_spectrum()
             out_lib_spectronaut.write()
+        elif config.output_format == "dlib":
+            out_lib_dlib = DLib(
+                spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.dlib")
+            )
+            out_lib_dlib.prepare_spectrum()
+            out_lib_dlib.write()
         else:
             raise ValueError(f"{config.output_format} is not supported as spectral library type")
 
@@ -188,8 +192,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     if ce_calib_step.is_done():
         hdf5_path = config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name
         if hdf5_path.is_file():
-            library = Spectra()
-            library.read_from_hdf5(hdf5_path)
+            library = Spectra.from_hdf5(hdf5_path)
             return library
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
@@ -220,6 +223,9 @@ def run_ce_calibration(
     spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
     logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
 
+    proc_dir = config.output / "proc"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+
     _preprocess(spectra_files, config)
 
     processing_pool = JobPool(processes=config.num_threads)
@@ -230,11 +236,11 @@ def run_ce_calibration(
 
 
 def _calculate_features(spectra_file: Path, config: Config):
+    library = _ce_calib(spectra_file, config)
+
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
     if calc_feature_step.is_done():
         return
-
-    library = _ce_calib(spectra_file, config)
 
     server_kwargs = {
         "url": config.prediction_server,
@@ -283,12 +289,16 @@ def run_rescoring(config_path: Union[str, Path]):
     spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
     logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
 
+    proc_dir = config.output / "proc"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+
     _preprocess(spectra_files, config)
 
     processing_pool = JobPool(processes=config.num_threads)
 
     for spectra_file in spectra_files:
-        processing_pool.apply_async(_calculate_features, [spectra_file, config])
+        # processing_pool.apply_async(_calculate_features, [spectra_file, config])
+        _calculate_features(spectra_file, config)
     processing_pool.check_pool()
 
     # rescoring
@@ -318,7 +328,13 @@ def run_rescoring(config_path: Union[str, Path]):
         if not rescore_original_step.is_done():
             re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
             rescore_original_step.mark_done()
+        if not rescore_prosit_step.is_done():
+            re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+            rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
+        if not rescore_original_step.is_done():
+            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
+            rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
             rescore_prosit_step.mark_done()
@@ -342,6 +358,7 @@ def run_job(config_path: Union[str, Path]):
     """
     conf = Config()
     conf.read(config_path)
+    conf.check()
     job_type = conf.job_type
 
     if job_type == "SpectralLibraryGeneration":
