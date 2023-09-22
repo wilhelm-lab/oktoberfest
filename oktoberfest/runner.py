@@ -1,9 +1,8 @@
 import logging
-import os
 from pathlib import Path
-from typing import List, Union
+from typing import List, Type, Union
 
-from spectrum_io.spectral_library import MSP, DLib, Spectronaut
+from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
@@ -152,6 +151,25 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         "job_type": "SpectralLibraryGeneration",
     }
 
+    spectral_library: Type[SpectralLibrary]
+    results_path = config.output / "results"
+    results_path.mkdir(exist_ok=True)
+
+    if config.output_format == "msp":
+        spectral_library = MSP
+        out_file = results_path / "myPrositLib.msp"
+    elif config.output_format == "spectronaut":
+        spectral_library = Spectronaut
+        out_file = results_path / "myPrositLib.csv"
+    elif config.output_format == "dlib":
+        spectral_library = DLib
+        out_file = results_path / "myPrositLib.dlib"
+    else:
+        raise ValueError(f"{config.output_format} is not supported as spectral library type")
+
+    if out_file.is_file():
+        out_file.unlink()
+
     for i in range(0, no_of_sections + 1):
         spectra_div = Spectra()
         if i < no_of_sections:
@@ -165,26 +183,10 @@ def generate_spectral_lib(config_path: Union[str, Path]):
             break
 
         grpc_output_sec = pr.grpc_predict(spectra_div, **server_kwargs)
-        results_path = config.output / "results"
-        results_path.mkdir(exist_ok=True)
-        if config.output_format == "msp":
-            out_lib_msp = MSP(spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.msp"))
-            out_lib_msp.prepare_spectrum()
-            out_lib_msp.write()
-        elif config.output_format == "spectronaut":
-            out_lib_spectronaut = Spectronaut(
-                spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.csv")
-            )
-            out_lib_spectronaut.prepare_spectrum()
-            out_lib_spectronaut.write()
-        elif config.output_format == "dlib":
-            out_lib_dlib = DLib(
-                spectra_div.spectra_data, grpc_output_sec, os.path.join(results_path, "myPrositLib.dlib")
-            )
-            out_lib_dlib.prepare_spectrum()
-            out_lib_dlib.write()
-        else:
-            raise ValueError(f"{config.output_format} is not supported as spectral library type")
+
+        out_lib = spectral_library(spectra_div.spectra_data, grpc_output_sec, out_file)
+        out_lib.prepare_spectrum()
+        out_lib.write()
 
 
 def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
