@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Union
+from typing import List, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,9 @@ from scipy.sparse import coo_matrix
 from spectrum_io.file import hdf5
 
 logger = logging.getLogger(__name__)
+
+
+SpectraT = TypeVar("SpectraT", bound="Spectra")
 
 
 class FragmentType(Enum):
@@ -198,13 +201,19 @@ class Spectra:
 
         hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
-    def read_from_hdf5(self, input_file: Union[str, Path]) -> None:
+    @classmethod
+    def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
         """
         Read from hdf5 file.
 
         :param input_file: path to input file
+        :return: a spectra instance
         """
         input_file = str(input_file)
-        self.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
-        self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
-        self.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+        spectra = cls()
+        spectra.spectra_data
+        spectra.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
+        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
+        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+
+        return spectra
