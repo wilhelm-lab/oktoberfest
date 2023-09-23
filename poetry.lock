@@ -428,35 +428,6 @@ tomli = {version = "*", optional = true, markers = "python_full_version <= \"3.1
 toml = ["tomli"]
 
 [[package]]
-name = "cuda-python"
-version = "12.2.0"
-description = "Python bindings for CUDA"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "cuda_python-12.2.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b5ae64b3402817d0040987136cc72c614a7ab3c215f95ed4e1d2865b3f588344"},
-    {file = "cuda_python-12.2.0-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:63af542a415ed70a413bb9f8bf6a46e4cfcd0812a4436da794108e5e8a7c6db0"},
-    {file = "cuda_python-12.2.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b89e1690268135842ee689531e0bf6d490431201b4bb586d2766d02c0738371b"},
-    {file = "cuda_python-12.2.0-cp310-cp310-win_amd64.whl", hash = "sha256:91d697d3c26ddb1228bc43e9bc7bd60029b922314d061b38043dfa30bd067444"},
-    {file = "cuda_python-12.2.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8129b06313135d3e46b37fda31656fa905c1199237cb14d67cd20300ffcf1b55"},
-    {file = "cuda_python-12.2.0-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:f2af266c03a1799dfa186cf359556f9f072e8c29253a5eeb718dc1f9c4752235"},
-    {file = "cuda_python-12.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d2956a364c90dc3365c0efc96300eacdf4a724b199de1107271aa1e2489ed1ab"},
-    {file = "cuda_python-12.2.0-cp311-cp311-win_amd64.whl", hash = "sha256:a63e4f293438d9ad263290a5df99a3c3f6298f2890c3e20a1232d7e5f8f86594"},
-    {file = "cuda_python-12.2.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8a6c0c02bcc76d10c717cbdd7a275044e74377269f62a0115f9d530c8203c410"},
-    {file = "cuda_python-12.2.0-cp38-cp38-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:37b3bad431c7e0cf1bc4837148d42fcd578080068555ef529cf04ca8dff726fb"},
-    {file = "cuda_python-12.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5168e8b531b79c2bde289f90fa3eaea4c6738c4619a7fe14038a25024aab60d4"},
-    {file = "cuda_python-12.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:bce3151d75dbdf774deb81021f21c0a524e18c8e4ceb7903672e52dec8fd203b"},
-    {file = "cuda_python-12.2.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7288fd8befaf725656b0aecce07868e947100e48b04052dd5daf80618db6c051"},
-    {file = "cuda_python-12.2.0-cp39-cp39-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:5032d6343675ca601bc3cddfb239945b8a22356af644f08097a3e5b7b73a8e2c"},
-    {file = "cuda_python-12.2.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:245f86db37ccd12b740450f8fa847c97b5554303ceace640a76510f601654730"},
-    {file = "cuda_python-12.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:571b6037297ee231f95d86c0b61d4d80ec6b1051358b3c26e6ed9babab5de2b2"},
-]
-
-[package.dependencies]
-cython = "*"
-
-[[package]]
 name = "cycler"
 version = "0.11.0"
 description = "Composable style cycles"
@@ -3204,18 +3175,17 @@ threadpoolctl = ">=3.1.0,<4.0.0"
 
 [[package]]
 name = "tritonclient"
-version = "2.37.0.9383150"
+version = "2.36.0"
 description = "Python client library and utilities for communicating with Triton Inference Server"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "tritonclient-2.37.0.9383150-py3-none-any.whl", hash = "sha256:9b38199e588172cbe8718ad0c059145ecfa7d157ba472eebdf85fbe4dda9d1ba"},
-    {file = "tritonclient-2.37.0.9383150-py3-none-manylinux1_x86_64.whl", hash = "sha256:50811e0b6fe24e47d0d91999566a56b37c79d233da414d566ad2653c87c07d1e"},
+    {file = "tritonclient-2.36.0-py3-none-any.whl", hash = "sha256:583b06d5cc056dc307a6db61bca0a0dd85c1fee8a274fa11d5c4e8fc557be547"},
+    {file = "tritonclient-2.36.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:56a124e3f1901c5d392d00d8daa2de40156a1de1b4d3d3a4296b3e55c77a230d"},
 ]
 
 [package.dependencies]
-cuda-python = "*"
 grpcio = {version = ">=1.41.0", optional = true, markers = "extra == \"grpc\""}
 numpy = ">=1.19.1"
 packaging = {version = ">=14.1", optional = true, markers = "extra == \"grpc\""}
@@ -3397,4 +3367,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.0,<3.11.0"
-content-hash = "f3a13d754f251717de3d52df07cc85de8dc5840b307fe4fcfa1acad5eef9506d"
+content-hash = "36a36f03f9b1465363da124fac5c0a6d8abd78ffeb05380d4ba9b22670a9a927"
