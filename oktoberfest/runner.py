@@ -10,9 +10,7 @@ from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
-from .utils.config import Config
-from .utils.multiprocessing_pool import JobPool
-from .utils.process_step import ProcessStep
+from .utils import Config, JobPool, ProcessStep
 
 logger = logging.getLogger(__name__)
 

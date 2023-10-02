@@ -10,9 +10,6 @@ from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType, Spectra
 
-# from ..utils.multiprocessing_pool import JobPool
-# from ..utils.process_step import ProcessStep
-
 logger = logging.getLogger(__name__)
 
 
