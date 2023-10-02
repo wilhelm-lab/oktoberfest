@@ -15,7 +15,7 @@ class TestTMTProsit(unittest.TestCase):
         library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
         grpc_predict(
             library=library,
-            url="10.157.98.62:8500",
+            url="koina.proteomicsdb.org:8500",
             intensity_model="Prosit_2020_intensity_TMT",
             irt_model="Prosit_2020_irt_TMT",
             ssl=False,
