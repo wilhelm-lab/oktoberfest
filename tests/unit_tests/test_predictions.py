@@ -13,7 +13,6 @@ class TestTMTProsit(unittest.TestCase):
     def test_prosit_tmt(self):
         """Test retrieval of predictions from prosit tmt models via koina."""
         library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
-        print(library.spectra_data["COLLISION_ENERGY"])
         grpc_predict(
             library=library,
             url="10.157.98.62:8500",
