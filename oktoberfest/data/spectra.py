@@ -211,9 +211,22 @@ class Spectra:
         """
         input_file = str(input_file)
         spectra = cls()
-        spectra.spectra_data
         spectra.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
         spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
         spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+
+        return spectra
+
+    @classmethod
+    def from_csv(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
+        """
+        Read from hdf5 file.
+
+        :param input_file: path to input file
+        :return: a spectra instance
+        """
+        input_file = str(input_file)
+        spectra = cls()
+        spectra.spectra_data = pd.read_csv(input_file)
 
         return spectra
