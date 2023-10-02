@@ -52,6 +52,12 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# ignore unit test data folder
+tests/unit_tests/data/mokapot/**
+!tests/unit_tests/data/mokapot/*.tab
+!tests/unit_tests/data/predictions/
+
+
 # Translations
 *.mo
 *.pot
@@ -71,6 +77,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/api/
 
 # PyBuilder
 target/
@@ -139,3 +146,8 @@ dmypy.json
 
 # Used by ProteomicsDB runs to describe the oktoberfest version
 hash.file
+
+
+# output files in tutorials folder
+tutorials/
+!tutorials/Oktoberfest Tutorial.ipynb
