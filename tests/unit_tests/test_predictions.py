@@ -18,7 +18,7 @@ class TestTMTProsit(unittest.TestCase):
             url="koina.proteomicsdb.org:8500",
             intensity_model="Prosit_2020_intensity_TMT",
             irt_model="Prosit_2020_irt_TMT",
-            ssl=False,
+            ssl=True,
             alignment=False,
             job_type="",
         )
