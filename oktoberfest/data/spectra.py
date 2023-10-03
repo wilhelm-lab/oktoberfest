@@ -71,7 +71,7 @@ class Spectra:
             prefix = Spectra.MZ_COLUMN_PREFIX
         return prefix
 
-    def add_column(self, column_data: pd.Series, name: str) -> None:
+    def add_column(self, column_data: np.ndarray, name: str) -> None:
         """
         Add column to spectra data.
 
@@ -115,7 +115,7 @@ class Spectra:
         intensity_data.columns = columns
         self.add_columns(intensity_data)
 
-    def add_matrix(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
+    def add_matrix(self, intensity_data: pd.Series, fragment_type: FragmentType) -> None:
         """
         Concatenate intensity df as a sparse matrix to our data.
 
