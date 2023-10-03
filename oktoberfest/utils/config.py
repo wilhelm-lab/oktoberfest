@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from sys import platform
 from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
@@ -29,10 +30,7 @@ class Config:
     @property
     def num_threads(self) -> int:
         """Get the number of threads from the config file; if not specified return 1."""
-        if "numThreads" in self.data:
-            return self.data["numThreads"]
-        else:
-            return 1
+        return self.data.get("numThreads", 1)
 
     @property
     def prediction_server(self) -> str:
@@ -67,11 +65,11 @@ class Config:
 
     @property
     def tag(self) -> str:
-        """Get tag from the config file; if not specified return "tmt"."""
+        """Get tag from the config file; if not specified return ""."""
         if "tag" in self.data:
             return self.data["tag"].lower()
         else:
-            return "tmt"
+            return ""
 
     @property
     def all_features(self) -> bool:
@@ -240,4 +238,34 @@ class Config:
     @property
     def thermo_exe(self) -> Path:
         """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
-        return Path(self.data.get("thermoExe", "ThermoRawFileParser.exe"))
+
+        def default_thermo():
+            if "linux" in platform or platform == "darwin":
+                return "/opt/compomics/ThermoRawFileParser.exe"
+            return "ThermoRawFileParser.exe"
+
+        return Path(self.data.get("thermoExe", default_thermo()))
+
+    def check(self):
+        """Validate the configuration."""
+        # check tmt tag and models
+        if self.tag == "":
+            if "tmt" in self.models["intensity"].lower():
+                raise AssertionError(
+                    f"You requested the intensity model {self.models['intensity']} but provided no tag. Please check."
+                )
+            if "tmt" in self.models["irt"].lower():
+                raise AssertionError(
+                    f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
+                )
+        else:
+            if "tmt" not in self.models["intensity"].lower():
+                raise AssertionError(
+                    f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible."
+                    " Please check and use a TMT model instead."
+                )
+            if "tmt" not in self.models["irt"].lower():
+                raise AssertionError(
+                    f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
+                    " Please check and use a TMT model instead."
+                )

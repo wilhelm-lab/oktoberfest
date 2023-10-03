@@ -4,7 +4,7 @@ from pathlib import Path
 import mokapot
 import pandas as pd
 
-from oktoberfest.utils.plotting import plot_all
+import oktoberfest.plotting as pl
 
 
 def _run_mokapot(path: Path, search_type: str):
@@ -27,4 +27,4 @@ class TestMokapot(unittest.TestCase):
         _run_mokapot(path, "original")
         _run_mokapot(path, "rescore")
 
-        plot_all(path, "mokapot")
+        pl.plot_all(path)

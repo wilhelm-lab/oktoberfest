@@ -1,6 +1,15 @@
 News
 ====
 
+
+Oktoberfest is published! :small:`2023-09-07`
+-----------------------------------------------------------
+
+| Alongside the new 0.4.0 release, Oktoberfest was published in Proteomics.
+| Check out the publication here: `https://doi.org/10.1002/pmic.202300112 <https://doi.org/10.1002/pmic.202300112>`_.
+| Accordingly, please check `How to cite <./reference.html>`_.
+
+
 The first Oktoberfest release is ready! :small:`2023-06-25`
 -----------------------------------------------------------
 

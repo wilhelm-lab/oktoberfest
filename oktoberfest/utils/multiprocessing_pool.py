@@ -68,8 +68,3 @@ def init_worker(warning_filter):
     # causes child processes to ignore SIGINT signal and lets main process handle
     # interrupts instead (https://noswap.com/blog/python-multiprocessing-keyboardinterrupt)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def add_one(i: int) -> int:
-    """Add 1 to i."""
-    return i + 1
