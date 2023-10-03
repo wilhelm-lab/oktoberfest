@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.4.0"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.5.0"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
 authors = ["Victor Giurcoiu <victor.giurcoiu@tum.de>"]
 license = "MIT"
