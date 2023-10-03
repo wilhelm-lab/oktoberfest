@@ -57,3 +57,7 @@ table.align-default {
 .digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
     padding-left: 50px;
 }
+
+.date {
+    font-size: 50%;
+}
