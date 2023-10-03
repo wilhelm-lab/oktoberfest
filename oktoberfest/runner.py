@@ -297,8 +297,7 @@ def run_rescoring(config_path: Union[str, Path]):
     processing_pool = JobPool(processes=config.num_threads)
 
     for spectra_file in spectra_files:
-        # processing_pool.apply_async(_calculate_features, [spectra_file, config])
-        _calculate_features(spectra_file, config)
+        processing_pool.apply_async(_calculate_features, [spectra_file, config])
     processing_pool.check_pool()
 
     # rescoring
