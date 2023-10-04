@@ -13,17 +13,30 @@ table.align-default {
 }
 
 .fixed-table th:first-child,
-.fixed-table td:first-child {
+.fixed-table td:first-child,
+.autosummary th:first-child,
+.autosummary td:first-child {
     min-width: 250px;
 }
 
+.autosummary th:first-child,
+.autosummary td:first-child {
+    min-width: 400px;
+}
+
 .fixed-table th:last-child,
-.fixed-table td:last-child {
+.fixed-table td:last-child,
+.autosummary th:last-child,
+.autosummary td:last-child {
     width: 100%;
 }
 
 .fixed-table {
     margin-left: 0;
+}
+
+.autosummary {
+    margin-left: 0 !important;
 }
 
 .main-config-table tbody tr:nth-child(n + 4):nth-child(-n + 5) td:nth-child(1) {
@@ -43,4 +56,8 @@ table.align-default {
 
 .digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
     padding-left: 50px;
+}
+
+.date {
+    font-size: 50%;
 }
