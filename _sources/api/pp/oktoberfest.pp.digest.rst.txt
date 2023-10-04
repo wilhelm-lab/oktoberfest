@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L41-L94
+
+oktoberfest.pp.digest
+=====================
+
+.. currentmodule:: oktoberfest.pp
+
+.. autofunction:: digest

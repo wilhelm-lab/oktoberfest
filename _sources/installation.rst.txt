@@ -1,9 +1,8 @@
 .. highlight:: shell
 
-============
 Installation
 ============
 
 .. include:: ../README.rst
-   :start-line: 36
-   :end-line: 69
+   :start-line: 38
+   :end-line: 70

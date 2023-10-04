@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L18-L102
+
+oktoberfest.pr.grpc\_predict
+============================
+
+.. currentmodule:: oktoberfest.pr
+
+.. autofunction:: grpc_predict

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics &mdash; Oktoberfest 0.4.0 documentation</title>
+  <title>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics &mdash; Oktoberfest 0.5.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -12,11 +12,11 @@
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3fadbb4a"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -36,7 +36,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.4.0
+                0.5.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -50,9 +50,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
-<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="API.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">How to cite</a></li>
 </ul>
 
         </div>
@@ -79,9 +79,9 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <p><a class="reference external" href="https://pypi.org/project/oktoberfest/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oktoberfest.svg" /></a> <a class="reference external" href="https://pypi.org/project/oktoberfest"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/oktoberfest" /></a> <a class="reference external" href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/wilhelm-lab/oktoberfest" /></a> <a class="reference external" href="https://oktoberfest.readthedocs.io/"><img alt="Read the documentation at https://oktoberfest.readthedocs.io/" src="https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/wilhelm-lab/oktoberfest"><img alt="Codecov" src="https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
-<section id="oktoberfest-rescoring-and-spectral-library-generation-for-proteomics">
+  <section id="oktoberfest-rescoring-and-spectral-library-generation-for-proteomics">
 <h1>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics<a class="headerlink" href="#oktoberfest-rescoring-and-spectral-library-generation-for-proteomics" title="Permalink to this heading"></a></h1>
+<p><a class="reference external" href="https://pypi.org/project/oktoberfest/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oktoberfest.svg" /></a> <a class="reference external" href="https://pypi.org/project/oktoberfest"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/oktoberfest" /></a> <a class="reference external" href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/wilhelm-lab/oktoberfest" /></a> <a class="reference external" href="https://oktoberfest.readthedocs.io/"><img alt="Read the documentation at https://oktoberfest.readthedocs.io/" src="https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/wilhelm-lab/oktoberfest"><img alt="Codecov" src="https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <p>Oktoberfest is a python tool for rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.</p>
 <aside class="sidebar">
 <p class="sidebar-title">Key Contributors</p>
@@ -103,21 +103,28 @@
 </section>
 <section id="news">
 <h1>News<a class="headerlink" href="#news" title="Permalink to this heading"></a></h1>
+<section id="oktoberfest-now-provides-a-low-level-api-2023-10-03">
+<h2>Oktoberfest now provides a low level API <span class="date">2023-10-03</span><a class="headerlink" href="#oktoberfest-now-provides-a-low-level-api-2023-10-03" title="Permalink to this heading"></a></h2>
+<div class="line-block">
+<div class="line">With our new release 0.5.0, we refactored our code base to provide a low level API to the users. Check the new <a class="reference external" href="./API.html">API</a> section for more details.</div>
+<div class="line">Please note: We dropped support for percolator version 3.05. Please update to version 3.06.1. See <a class="reference external" href="./installation.html">installation</a> for details.</div>
+</div>
+</section>
+<section id="oktoberfest-is-published-2023-09-07">
+<h2>Oktoberfest is published! <span class="date">2023-09-07</span><a class="headerlink" href="#oktoberfest-is-published-2023-09-07" title="Permalink to this heading"></a></h2>
+<div class="line-block">
+<div class="line">Alongside the new 0.4.0 release, Oktoberfest was published in Proteomics.</div>
+<div class="line">Check out the publication here: <a class="reference external" href="https://doi.org/10.1002/pmic.202300112">https://doi.org/10.1002/pmic.202300112</a>.</div>
+<div class="line">Accordingly, please check <a class="reference external" href="./reference.html">How to cite</a>.</div>
+</div>
+</section>
 <section id="the-first-oktoberfest-release-is-ready-2023-06-25">
-<h2>The first Oktoberfest release is ready! <span class="small">2023-06-25</span><a class="headerlink" href="#the-first-oktoberfest-release-is-ready-2023-06-25" title="Permalink to this heading"></a></h2>
+<h2>The first Oktoberfest release is ready! <span class="date">2023-06-25</span><a class="headerlink" href="#the-first-oktoberfest-release-is-ready-2023-06-25" title="Permalink to this heading"></a></h2>
 <p>Version 0.3.0 is available on <a class="reference external" href="https://pypi.org/project/oktoberfest/">PyPI</a>.</p>
 <p>We are happy to announce that our first standalone version of Oktoberfest is finally ready.
 Besides a lot of bugfixes, new features and performance enhancements over the existing online Prosit service at <a class="reference external" href="https://proteomicsdb.org/prosit">ProteomicsDB</a>, the Oktoberfest codebase is now open source and available on <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest">GitHub</a>.
 In addition, we switched to our new online prediction service <a class="reference external" href="https://koina.proteomicsdb.org">koina</a> which allows connecting Oktoberfest to any public or self-hosted koina instance for easy prediction model integration and being independent of ProteomicsDB!</p>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
-<li class="toctree-l1"><a class="reference internal" href="API.html">API (under development)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
-</ul>
 </div>
 </section>
 </section>

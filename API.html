@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API (under development) &mdash; Oktoberfest 0.4.0 documentation</title>
+  <title>API &mdash; Oktoberfest 0.5.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -12,15 +12,15 @@
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3fadbb4a"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="oktoberfest package" href="oktoberfest.html" />
+    <link rel="next" title="oktoberfest.pp.digest" href="api/pp/oktoberfest.pp.digest.html" />
     <link rel="prev" title="Features for target / decoy separation" href="svm_features.html" /> 
 </head>
 
@@ -37,7 +37,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.4.0
+                0.5.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -51,14 +51,58 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">API (under development)</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html">oktoberfest package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.data.html">oktoberfest.data package</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html">oktoberfest.utils package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_spectra.html">oktoberfest.pp.convert_spectra</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#koina-interface">Koina interface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.grpc_predict.html">oktoberfest.pr.grpc_predict</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.infer_predictions.html">oktoberfest.pr.infer_predictions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#postprocessing-koina-response">Postprocessing koina response</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.parse_fragment_labels.html">oktoberfest.pr.parse_fragment_labels</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general">General</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/re/oktoberfest.re.generate_features.html">oktoberfest.re.generate_features</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/re/oktoberfest.re.merge_input.html">oktoberfest.re.merge_input</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/re/oktoberfest.re.rescore_with_mokapot.html">oktoberfest.re.rescore_with_mokapot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/re/oktoberfest.re.rescore_with_percolator.html">oktoberfest.re.rescore_with_percolator</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">General</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_score_distribution.html">oktoberfest.pl.plot_score_distribution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.joint_plot.html">oktoberfest.pl.joint_plot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_gain_loss.html">oktoberfest.pl.plot_gain_loss</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_mean_sa_ce.html">oktoberfest.pl.plot_mean_sa_ce</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_violin_sa_ce.html">oktoberfest.pl.plot_violin_sa_ce</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_pred_rt_vs_irt.html">oktoberfest.pl.plot_pred_rt_vs_irt</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pl/oktoberfest.pl.plot_all.html">oktoberfest.pl.plot_all</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">How to cite</a></li>
 </ul>
 
         </div>
@@ -75,7 +119,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">API (under development)</li>
+      <li class="breadcrumb-item active">API</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/API.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -85,213 +129,138 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="api-under-development">
-<h1>API (under development)<a class="headerlink" href="#api-under-development" title="Permalink to this heading"></a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="oktoberfest.html">oktoberfest package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#subpackages">Subpackages</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.data.html">oktoberfest.data package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#module-oktoberfest.data.spectra">oktoberfest.data.spectra module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#module-oktoberfest.data">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html">oktoberfest.utils package</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#submodules">Submodules</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.config">oktoberfest.utils.config module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.multiprocessing_pool">oktoberfest.utils.multiprocessing_pool module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.plotting">oktoberfest.utils.plotting module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.process_step">oktoberfest.utils.process_step module</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils">Module contents</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.calculate_features">oktoberfest.calculate_features module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.calculate_features.CalculateFeatures"><code class="docutils literal notranslate"><span class="pre">CalculateFeatures</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.calculate_features.CalculateFeatures.best_ce"><code class="docutils literal notranslate"><span class="pre">CalculateFeatures.best_ce</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.calculate_features.CalculateFeatures.gen_perc_metrics"><code class="docutils literal notranslate"><span class="pre">CalculateFeatures.gen_perc_metrics()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.calculate_features.CalculateFeatures.predict_with_aligned_ce"><code class="docutils literal notranslate"><span class="pre">CalculateFeatures.predict_with_aligned_ce()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.ce_calibration">oktoberfest.ce_calibration module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration"><code class="docutils literal notranslate"><span class="pre">CeCalibration</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.best_ce"><code class="docutils literal notranslate"><span class="pre">CeCalibration.best_ce</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.get_hdf5_path"><code class="docutils literal notranslate"><span class="pre">CeCalibration.get_hdf5_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.get_msms_folder_path"><code class="docutils literal notranslate"><span class="pre">CeCalibration.get_msms_folder_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.get_mzml_path"><code class="docutils literal notranslate"><span class="pre">CeCalibration.get_mzml_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.get_pred_path"><code class="docutils literal notranslate"><span class="pre">CeCalibration.get_pred_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.merge_mzml_and_msms"><code class="docutils literal notranslate"><span class="pre">CeCalibration.merge_mzml_and_msms()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.ce_calibration.CeCalibration.perform_alignment"><code class="docutils literal notranslate"><span class="pre">CeCalibration.perform_alignment()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.re_score">oktoberfest.re_score module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore"><code class="docutils literal notranslate"><span class="pre">ReScore</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.calculate_features"><code class="docutils literal notranslate"><span class="pre">ReScore.calculate_features()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.get_fdr_estimation_method_folder_path"><code class="docutils literal notranslate"><span class="pre">ReScore.get_fdr_estimation_method_folder_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.get_mzml_folder_path"><code class="docutils literal notranslate"><span class="pre">ReScore.get_mzml_folder_path()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.get_raw_files"><code class="docutils literal notranslate"><span class="pre">ReScore.get_raw_files()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.merge_input"><code class="docutils literal notranslate"><span class="pre">ReScore.merge_input()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.merge_input_step_andromeda"><code class="docutils literal notranslate"><span class="pre">ReScore.merge_input_step_andromeda</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.merge_input_step_prosit"><code class="docutils literal notranslate"><span class="pre">ReScore.merge_input_step_prosit</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.raw_files"><code class="docutils literal notranslate"><span class="pre">ReScore.raw_files</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.rescore"><code class="docutils literal notranslate"><span class="pre">ReScore.rescore()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.rescore_step_andromeda"><code class="docutils literal notranslate"><span class="pre">ReScore.rescore_step_andromeda</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.rescore_step_prosit"><code class="docutils literal notranslate"><span class="pre">ReScore.rescore_step_prosit</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.split_msms"><code class="docutils literal notranslate"><span class="pre">ReScore.split_msms()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.ReScore.split_msms_step"><code class="docutils literal notranslate"><span class="pre">ReScore.split_msms_step</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.calculate_features_single"><code class="docutils literal notranslate"><span class="pre">calculate_features_single()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.re_score.get_glob_pattern"><code class="docutils literal notranslate"><span class="pre">get_glob_pattern()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.run_oktoberfest">oktoberfest.run_oktoberfest module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.run_oktoberfest.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.run_oktoberfest.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.runner">oktoberfest.runner module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.runner.generate_spectral_lib"><code class="docutils literal notranslate"><span class="pre">generate_spectral_lib()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.runner.run_ce_calibration"><code class="docutils literal notranslate"><span class="pre">run_ce_calibration()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.runner.run_job"><code class="docutils literal notranslate"><span class="pre">run_job()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.runner.run_rescoring"><code class="docutils literal notranslate"><span class="pre">run_rescoring()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest.spectral_library">oktoberfest.spectral_library module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.config"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.config</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.gen_lib"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.gen_lib()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.grpc_output"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.grpc_output</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.grpc_predict"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.grpc_predict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.library"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.library</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.num_threads"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.num_threads</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.SpectralLibrary.read_fasta"><code class="docutils literal notranslate"><span class="pre">SpectralLibrary.read_fasta()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.infer_predictions"><code class="docutils literal notranslate"><span class="pre">infer_predictions()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.html#oktoberfest.spectral_library.parse_fragment_labels"><code class="docutils literal notranslate"><span class="pre">parse_fragment_labels()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.html#module-oktoberfest">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="oktoberfest.data.html">oktoberfest.data package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.data.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.data.html#module-oktoberfest.data.spectra">oktoberfest.data.spectra module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.FragmentType"><code class="docutils literal notranslate"><span class="pre">FragmentType</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.FragmentType.MZ"><code class="docutils literal notranslate"><span class="pre">FragmentType.MZ</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.FragmentType.PRED"><code class="docutils literal notranslate"><span class="pre">FragmentType.PRED</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.FragmentType.RAW"><code class="docutils literal notranslate"><span class="pre">FragmentType.RAW</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra"><code class="docutils literal notranslate"><span class="pre">Spectra</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.COLUMNS_FRAGMENT_ION"><code class="docutils literal notranslate"><span class="pre">Spectra.COLUMNS_FRAGMENT_ION</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.EPSILON"><code class="docutils literal notranslate"><span class="pre">Spectra.EPSILON</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.INTENSITY_COLUMN_PREFIX"><code class="docutils literal notranslate"><span class="pre">Spectra.INTENSITY_COLUMN_PREFIX</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.INTENSITY_PRED_PREFIX"><code class="docutils literal notranslate"><span class="pre">Spectra.INTENSITY_PRED_PREFIX</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.MZ_COLUMN_PREFIX"><code class="docutils literal notranslate"><span class="pre">Spectra.MZ_COLUMN_PREFIX</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.add_column"><code class="docutils literal notranslate"><span class="pre">Spectra.add_column()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.add_columns"><code class="docutils literal notranslate"><span class="pre">Spectra.add_columns()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.add_matrix"><code class="docutils literal notranslate"><span class="pre">Spectra.add_matrix()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.add_matrix_from_hdf5"><code class="docutils literal notranslate"><span class="pre">Spectra.add_matrix_from_hdf5()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.get_columns"><code class="docutils literal notranslate"><span class="pre">Spectra.get_columns()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.get_matrix"><code class="docutils literal notranslate"><span class="pre">Spectra.get_matrix()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.get_meta_data"><code class="docutils literal notranslate"><span class="pre">Spectra.get_meta_data()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.read_from_hdf5"><code class="docutils literal notranslate"><span class="pre">Spectra.read_from_hdf5()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.spectra_data"><code class="docutils literal notranslate"><span class="pre">Spectra.spectra_data</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.write_as_hdf5"><code class="docutils literal notranslate"><span class="pre">Spectra.write_as_hdf5()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.data.html#oktoberfest.data.spectra.Spectra.write_pred_as_hdf5"><code class="docutils literal notranslate"><span class="pre">Spectra.write_pred_as_hdf5()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.data.html#module-oktoberfest.data">Module contents</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="oktoberfest.utils.html">oktoberfest.utils package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.config">oktoberfest.utils.config module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config"><code class="docutils literal notranslate"><span class="pre">Config</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.all_features"><code class="docutils literal notranslate"><span class="pre">Config.all_features</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.cleavages"><code class="docutils literal notranslate"><span class="pre">Config.cleavages</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.curve_fitting_method"><code class="docutils literal notranslate"><span class="pre">Config.curve_fitting_method</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.db"><code class="docutils literal notranslate"><span class="pre">Config.db</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.digestion"><code class="docutils literal notranslate"><span class="pre">Config.digestion</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.enzyme"><code class="docutils literal notranslate"><span class="pre">Config.enzyme</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.fasta_digest_options"><code class="docutils literal notranslate"><span class="pre">Config.fasta_digest_options</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.fdr_estimation_method"><code class="docutils literal notranslate"><span class="pre">Config.fdr_estimation_method</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.fragmentation"><code class="docutils literal notranslate"><span class="pre">Config.fragmentation</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.inputs"><code class="docutils literal notranslate"><span class="pre">Config.inputs</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.job_type"><code class="docutils literal notranslate"><span class="pre">Config.job_type</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.library_input"><code class="docutils literal notranslate"><span class="pre">Config.library_input</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.library_input_type"><code class="docutils literal notranslate"><span class="pre">Config.library_input_type</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.mass_tolerance"><code class="docutils literal notranslate"><span class="pre">Config.mass_tolerance</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.max_length"><code class="docutils literal notranslate"><span class="pre">Config.max_length</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.min_length"><code class="docutils literal notranslate"><span class="pre">Config.min_length</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.models"><code class="docutils literal notranslate"><span class="pre">Config.models</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.num_threads"><code class="docutils literal notranslate"><span class="pre">Config.num_threads</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.output"><code class="docutils literal notranslate"><span class="pre">Config.output</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.output_format"><code class="docutils literal notranslate"><span class="pre">Config.output_format</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.prediction_server"><code class="docutils literal notranslate"><span class="pre">Config.prediction_server</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.read"><code class="docutils literal notranslate"><span class="pre">Config.read()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.search_results"><code class="docutils literal notranslate"><span class="pre">Config.search_results</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.search_results_type"><code class="docutils literal notranslate"><span class="pre">Config.search_results_type</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.special_aas"><code class="docutils literal notranslate"><span class="pre">Config.special_aas</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.spectra"><code class="docutils literal notranslate"><span class="pre">Config.spectra</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.spectra_type"><code class="docutils literal notranslate"><span class="pre">Config.spectra_type</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.ssl"><code class="docutils literal notranslate"><span class="pre">Config.ssl</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.tag"><code class="docutils literal notranslate"><span class="pre">Config.tag</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.thermo_exe"><code class="docutils literal notranslate"><span class="pre">Config.thermo_exe</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.config.Config.unit_mass_tolerance"><code class="docutils literal notranslate"><span class="pre">Config.unit_mass_tolerance</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.multiprocessing_pool">oktoberfest.utils.multiprocessing_pool module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool"><code class="docutils literal notranslate"><span class="pre">JobPool</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.apply_async"><code class="docutils literal notranslate"><span class="pre">JobPool.apply_async()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.check_pool"><code class="docutils literal notranslate"><span class="pre">JobPool.check_pool()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.init_worker"><code class="docutils literal notranslate"><span class="pre">JobPool.init_worker()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.pool"><code class="docutils literal notranslate"><span class="pre">JobPool.pool</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.results"><code class="docutils literal notranslate"><span class="pre">JobPool.results</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.JobPool.warning_filter"><code class="docutils literal notranslate"><span class="pre">JobPool.warning_filter</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.add_one"><code class="docutils literal notranslate"><span class="pre">add_one()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.multiprocessing_pool.init_worker"><code class="docutils literal notranslate"><span class="pre">init_worker()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.plotting">oktoberfest.utils.plotting module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.joint_plot"><code class="docutils literal notranslate"><span class="pre">joint_plot()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_all"><code class="docutils literal notranslate"><span class="pre">plot_all()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_gain_loss"><code class="docutils literal notranslate"><span class="pre">plot_gain_loss()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_mean_sa_ce"><code class="docutils literal notranslate"><span class="pre">plot_mean_sa_ce()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_pred_rt_vs_irt"><code class="docutils literal notranslate"><span class="pre">plot_pred_rt_vs_irt()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_sa_distribution"><code class="docutils literal notranslate"><span class="pre">plot_sa_distribution()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_score_distribution"><code class="docutils literal notranslate"><span class="pre">plot_score_distribution()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.plotting.plot_violin_sa_ce"><code class="docutils literal notranslate"><span class="pre">plot_violin_sa_ce()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils.process_step">oktoberfest.utils.process_step module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.process_step.ProcessStep"><code class="docutils literal notranslate"><span class="pre">ProcessStep</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.process_step.ProcessStep.is_done"><code class="docutils literal notranslate"><span class="pre">ProcessStep.is_done()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.utils.html#oktoberfest.utils.process_step.ProcessStep.mark_done"><code class="docutils literal notranslate"><span class="pre">ProcessStep.mark_done()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="oktoberfest.utils.html#module-oktoberfest.utils">Module contents</a></li>
-</ul>
-</li>
-</ul>
+  <span class="target" id="module-oktoberfest"></span><p>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics.</p>
+<section id="api">
+<h1>API<a class="headerlink" href="#api" title="Permalink to this heading"></a></h1>
+<p>Import Oktoberfest using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">oktoberfest</span> <span class="k">as</span> <span class="nn">ok</span>
+</pre></div>
 </div>
+<section id="module-oktoberfest.pp">
+<span id="preprocessing-pp"></span><h2>Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code><a class="headerlink" href="#module-oktoberfest.pp" title="Permalink to this heading"></a></h2>
+<p>Generating libraries</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html#oktoberfest.pp.digest" title="oktoberfest.pp.digest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.digest</span></code></a>(fasta, output, fragmentation, ...)</p></td>
+<td><p>Perform an in-silico digest of a given fasta file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html#oktoberfest.pp.gen_lib" title="oktoberfest.pp.gen_lib"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.gen_lib</span></code></a>(input_file)</p></td>
+<td><p>Generate a spectral library from a given input.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.merge_spectra_and_peptides.html#oktoberfest.pp.merge_spectra_and_peptides" title="oktoberfest.pp.merge_spectra_and_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.merge_spectra_and_peptides</span></code></a>(spectra, search)</p></td>
+<td><p>Merge peptides with spectra.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Spectra preprocessing</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.list_spectra.html#oktoberfest.pp.list_spectra" title="oktoberfest.pp.list_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.list_spectra</span></code></a>(input_dir, file_format)</p></td>
+<td><p>Return a list of all spectra files of a given format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_spectra.html#oktoberfest.pp.convert_spectra" title="oktoberfest.pp.convert_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_spectra</span></code></a>(raw_file, output_file[, ...])</p></td>
+<td><p>Convert spectra to mzML format.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html#oktoberfest.pp.load_spectra" title="oktoberfest.pp.load_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_spectra</span></code></a>(mzml_file[, parser])</p></td>
+<td><p>Load spectra from mzml file.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Peptide preprocessing</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_search.html#oktoberfest.pp.convert_search" title="oktoberfest.pp.convert_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_search</span></code></a>(input_path, output_file, ...)</p></td>
+<td><p>Convert search results to Oktoberfest format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_search.html#oktoberfest.pp.load_search" title="oktoberfest.pp.load_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_search</span></code></a>(input_file)</p></td>
+<td><p>Load search results.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides.html#oktoberfest.pp.filter_peptides" title="oktoberfest.pp.filter_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.filter_peptides</span></code></a>(peptides, min_length, ...)</p></td>
+<td><p>Filter search results using given constraints.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-oktoberfest.pr">
+<span id="predicting-pr"></span><h2>Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code><a class="headerlink" href="#module-oktoberfest.pr" title="Permalink to this heading"></a></h2>
+<p>All things predictions</p>
+<section id="koina-interface">
+<h3>Koina interface<a class="headerlink" href="#koina-interface" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.grpc_predict.html#oktoberfest.pr.grpc_predict" title="oktoberfest.pr.grpc_predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.grpc_predict</span></code></a>(library, url, ...[, ssl, ...])</p></td>
+<td><p>Use grpc to predict library and add predictions to library.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.infer_predictions.html#oktoberfest.pr.infer_predictions" title="oktoberfest.pr.infer_predictions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.infer_predictions</span></code></a>(triton_client, model, ...)</p></td>
+<td><p>Infer predictions from a triton client.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="postprocessing-koina-response">
+<h3>Postprocessing koina response<a class="headerlink" href="#postprocessing-koina-response" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.parse_fragment_labels.html#oktoberfest.pr.parse_fragment_labels" title="oktoberfest.pr.parse_fragment_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.parse_fragment_labels</span></code></a>(spectra_labels, ...)</p></td>
+<td><p>Uses regex to parse labels.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-oktoberfest.re">
+<span id="rescoring-re"></span><h2>Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code><a class="headerlink" href="#module-oktoberfest.re" title="Permalink to this heading"></a></h2>
+<section id="general">
+<h3>General<a class="headerlink" href="#general" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/re/oktoberfest.re.generate_features.html#oktoberfest.re.generate_features" title="oktoberfest.re.generate_features"><code class="xref py py-obj docutils literal notranslate"><span class="pre">re.generate_features</span></code></a>(library, search_type, ...)</p></td>
+<td><p>Generate features to be used for percolator or mokapot target decoy separation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/re/oktoberfest.re.merge_input.html#oktoberfest.re.merge_input" title="oktoberfest.re.merge_input"><code class="xref py py-obj docutils literal notranslate"><span class="pre">re.merge_input</span></code></a>(tab_files[, output_file])</p></td>
+<td><p>Merge spectra file identifier specific tab files into one large file for combined percolation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/re/oktoberfest.re.rescore_with_mokapot.html#oktoberfest.re.rescore_with_mokapot" title="oktoberfest.re.rescore_with_mokapot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">re.rescore_with_mokapot</span></code></a>(input_file[, ...])</p></td>
+<td><p>Rescore using mokapot.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/re/oktoberfest.re.rescore_with_percolator.html#oktoberfest.re.rescore_with_percolator" title="oktoberfest.re.rescore_with_percolator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">re.rescore_with_percolator</span></code></a>(input_file[, ...])</p></td>
+<td><p>Rescore using percolator.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="module-oktoberfest.pl">
+<span id="plotting-pl"></span><h2>Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code><a class="headerlink" href="#module-oktoberfest.pl" title="Permalink to this heading"></a></h2>
+<section id="id1">
+<h3>General<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_score_distribution.html#oktoberfest.pl.plot_score_distribution" title="oktoberfest.pl.plot_score_distribution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_score_distribution</span></code></a>(target, decoy, ...)</p></td>
+<td><p>Generate histogram of the score distribution for targets and decoys.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.joint_plot.html#oktoberfest.pl.joint_plot" title="oktoberfest.pl.joint_plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.joint_plot</span></code></a>(prosit_target, prosit_decoy, ...)</p></td>
+<td><p>Generate joint plot to compare rescoring with and without peptide property predictions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_gain_loss.html#oktoberfest.pl.plot_gain_loss" title="oktoberfest.pl.plot_gain_loss"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_gain_loss</span></code></a>(prosit_target, ...)</p></td>
+<td><p>Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_mean_sa_ce.html#oktoberfest.pl.plot_mean_sa_ce" title="oktoberfest.pl.plot_mean_sa_ce"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_mean_sa_ce</span></code></a>(sa_ce_df, filename)</p></td>
+<td><p>Generate dotplot for spectral angle distribution over range of collision energies used for fragment intensity prediction.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_violin_sa_ce.html#oktoberfest.pl.plot_violin_sa_ce" title="oktoberfest.pl.plot_violin_sa_ce"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_violin_sa_ce</span></code></a>(sa_ce_df, filename)</p></td>
+<td><p>Generate violinplot for spectral angle distribution over range of collision energies used for fragment intensity prediction.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_pred_rt_vs_irt.html#oktoberfest.pl.plot_pred_rt_vs_irt" title="oktoberfest.pl.plot_pred_rt_vs_irt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_pred_rt_vs_irt</span></code></a>(prosit_df, ...)</p></td>
+<td><p>Generate scatterplot to compare predicted indexed retention time against (aligned) experimentally observed retention time.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_all.html#oktoberfest.pl.plot_all" title="oktoberfest.pl.plot_all"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_all</span></code></a>(data_dir)</p></td>
+<td><p>Generate all plots after a rescoring run.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 </section>
 
 
@@ -299,7 +268,7 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="svm_features.html" class="btn btn-neutral float-left" title="Features for target / decoy separation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.html" class="btn btn-neutral float-right" title="oktoberfest package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="api/pp/oktoberfest.pp.digest.html" class="btn btn-neutral float-right" title="oktoberfest.pp.digest" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

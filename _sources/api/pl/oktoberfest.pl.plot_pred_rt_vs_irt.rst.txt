@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/plotting/plotting.py#L244-L278
+
+oktoberfest.pl.plot\_pred\_rt\_vs\_irt
+======================================
+
+.. currentmodule:: oktoberfest.pl
+
+.. autofunction:: plot_pred_rt_vs_irt

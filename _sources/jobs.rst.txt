@@ -66,6 +66,7 @@ Example config file:
             "irt": "Prosit_2019_irt"
         },
         "prediction_server": "koina.proteomicsdb.org:443",
+        "numThreads": 1,
         "regressionMethod": "spline",
         "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",

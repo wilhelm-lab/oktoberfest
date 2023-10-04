@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L143-L194
+
+oktoberfest.re.rescore\_with\_mokapot
+=====================================
+
+.. currentmodule:: oktoberfest.re
+
+.. autofunction:: rescore_with_mokapot
