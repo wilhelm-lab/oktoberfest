@@ -343,8 +343,8 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     Annotate spectral library with peaks and mass.
 
     This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.  # TODO is this with or without charge
-    The additional information as added to the provided spectral library.
+    as well as the calculated monoisotopic mass of the precursor ion.
+    The additional information is added to the provided spectral library.
 
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks

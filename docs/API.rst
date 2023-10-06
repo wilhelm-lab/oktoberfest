@@ -27,6 +27,7 @@ Generating libraries
    pp.digest
    pp.gen_lib
    pp.merge_spectra_and_peptides
+   pp.annotate_spectral_library
 
 Spectra preprocessing
 
