@@ -157,7 +157,7 @@ The following flags are relevant only if a FASTA file is provided:
    - `specialAas` = special amino acids for decoy generation; default = "KR"
    - `db` = "target", "decoy" or "concat"; default = "concat"
 
-An example of the config file can be found in `/oktoberfest/example_config.json`.
+Examples of minimal configurations can be found in `/oktoberfest/utils/example_configs.py`.
 
 Run a job
 ---------
