@@ -74,12 +74,15 @@ Example config file:
         "unitMassTolerance": "ppm"
     }
 
-The example config can be imported using
+The example config can be loaded and viewed using
 
 .. code-block:: python
 
     import oktoberfest as ok
-    ok.utils.example_configs.CECALIB
+    import json
+    config = ok.utils.example_configs.CECALIB
+    json.dumps(config, indent=4)
+
 
 B. Spectral Library Generation
 ------------------------------
@@ -130,12 +133,14 @@ Example config file:
         },
     }
 
-The example config can be imported using
+The example config can be loaded and viewed using
 
 .. code-block:: python
 
     import oktoberfest as ok
-    ok.utils.example_configs.LIBGEN
+    import json
+    config = ok.utils.example_configs.LIBGEN
+    json.dumps(config, indent=4)
 
 
 C. Rescoring
@@ -186,9 +191,11 @@ Example config file:
         "unitMassTolerance": "ppm"
     }
 
-The example config can be imported using
+The example config can be loaded and viewed using
 
 .. code-block:: python
 
     import oktoberfest as ok
-    ok.utils.example_configs.RESCORING
+    import json
+    config = ok.utils.example_configs.RESCORING
+    json.dumps(config, indent=4)
