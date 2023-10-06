@@ -46,6 +46,7 @@ Peptide preprocessing
    pp.convert_search
    pp.load_search
    pp.filter_peptides
+   pp.filter_peptides_for_model
 
 
 Predicting: :code:`pr`
