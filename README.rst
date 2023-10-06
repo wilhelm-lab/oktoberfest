@@ -65,7 +65,7 @@ Prerequisites:
   - `docker <https://www.docker.com/>`_
 
 After cloning the repository of oktoberfest, checkout the branch you want to build the container from.
-The latest stable version is always on the main branch.
+The latest stable version is always on the main branch. Then build the container.
 
 .. code-block:: bash
 
@@ -150,7 +150,7 @@ The following flags are relevant only if a FASTA file is provided:
 - `fastaDigestOptions`
    - `fragmentation` = fragmentation method: "HCD" or "CID"
    - `digestion` = digestion mode: "full", "semi" or None; default = "full"
-   - `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+   - `missedCleavages` = number of allowed missed cleavages used in the search engine; default = 2
    - `minLength` = minimum peptide length allowed used in the search engine; default = 7
    - `maxLength` = maximum peptide length allowed used in the search engine; default = 60
    - `enzyme` = type of enzyme used in the search engine; default = "trypsin"
@@ -166,7 +166,7 @@ The general command for executing any job is:
 
 .. code-block:: bash
 
-   python oktoberfest/run_oktoberfest.py --config_path path_to_config_file
+   python -m oktoberfest --config_path path_to_config_file
 
 If you instead want to run oktoberfest using the docker image, run:
 

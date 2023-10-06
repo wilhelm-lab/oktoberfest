@@ -90,7 +90,7 @@ Additional parameters required for in-silico digestion
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     digestion              | Digestion mode; can be "full", "semi" or None; default = "full"                                                                                                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     cleavages              | Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2                                            |
+   |     missedCleavages        | Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     minLength              | Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 7                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

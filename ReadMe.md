@@ -39,7 +39,7 @@ Prerequisites:
 -   `docker` (https://www.docker.com/)
 
 After cloning the repository of oktoberfest, checkout the branch you want to build the container from.
-The latest stable version is always on the main branch.
+The latest stable version is always on the main branch. Then build the container.
 
 ```bash
 make build
@@ -147,7 +147,7 @@ The following flags are relevant only if a FASTA file is provided:
 
     -   `digestion` = digestion mode: "full", "semi" or None; default = "full"
 
-    -   `cleavages` = number of allowed missed cleavages used in the search engine; default = 2
+    -   `missedCleavages` = number of allowed missed cleavages used in the search engine; default = 2
 
     -   `minLength` = minimum peptide length allowed used in the search engine; default = 7
 
@@ -166,7 +166,7 @@ An example of the config file can be found in `/oktoberfest/example_config.json`
 The general command for executing any job is:
 
 ```bash
-python oktoberfest/run_oktoberfest.py --config_path path_to_config_file
+python -m oktoberfest --config_path path_to_config_file
 ```
 
 If you instead want to run oktoberfest using the docker image, run:
