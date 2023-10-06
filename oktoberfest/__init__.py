@@ -15,6 +15,7 @@ from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
+from oktoberfest import utils
 
 from . import runner
 
