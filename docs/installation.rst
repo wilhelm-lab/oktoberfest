@@ -5,4 +5,4 @@ Installation
 
 .. include:: ../README.rst
    :start-line: 38
-   :end-line: 70
+   :end-line: 73
