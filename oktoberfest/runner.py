@@ -1,9 +1,12 @@
+import datetime
+import json
 import logging
 from pathlib import Path
 from typing import List, Type, Union
 
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
+from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
@@ -369,11 +372,29 @@ def run_job(config_path: Union[str, Path]):
     conf.check()
     job_type = conf.job_type
 
-    if job_type == "SpectralLibraryGeneration":
-        generate_spectral_lib(config_path)
-    elif job_type == "CollisionEnergyCalibration":
-        run_ce_calibration(config_path)
-    elif job_type == "Rescoring":
-        run_rescoring(config_path)
-    else:
-        raise ValueError(f"Unknown job_type in config: {job_type}")
+    # add file handler to root logger
+    base_logger = logging.getLogger()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
+    suffix = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+    logging_output = conf.output / f"{job_type}_{suffix}.log"
+    file_handler = logging.FileHandler(filename=logging_output)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    base_logger.addHandler(file_handler)
+
+    logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
+    logger.info("Job executed with the following config:")
+    logger.info(json.dumps(conf.data, indent=4))
+
+    try:
+        if job_type == "SpectralLibraryGeneration":
+            generate_spectral_lib(config_path)
+        elif job_type == "CollisionEnergyCalibration":
+            run_ce_calibration(config_path)
+        elif job_type == "Rescoring":
+            run_rescoring(config_path)
+        else:
+            raise ValueError(f"Unknown job_type in config: {job_type}")
+    finally:
+        file_handler.close()
+        base_logger.removeHandler(file_handler)
