@@ -111,7 +111,6 @@ Example config file:
         "prediction_server": "koina.proteomicsdb.org:443",
         "numThreads": 1,
         "ssl": true,
-        "thermoExe": "ThermoRawFileParser.exe"
         "fastaDigestOptions": {
             "fragmentation": "",
             "digestion": "full",
@@ -121,6 +120,7 @@ Example config file:
             "enzyme", "trypsin",
             "specialAas": "KR",
             "db": "concat"
+        },
     }
 
 
