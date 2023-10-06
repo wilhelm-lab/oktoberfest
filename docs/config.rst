@@ -29,8 +29,8 @@ Always required
    | output                     | Path to the output folder (relative to the location of the config file); default = "./"                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
 
-Required for spectral library generation and rescoring
-------------------------------------------------------
+Required for CE calibration and rescoring
+-----------------------------------------
 
 .. table::
    :class: fixed-table lib-rescore-config-table
