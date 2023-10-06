@@ -74,6 +74,13 @@ Example config file:
         "unitMassTolerance": "ppm"
     }
 
+The example config can be imported using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    ok.utils.example_configs.CECALIB
+
 B. Spectral Library Generation
 ------------------------------
 
@@ -100,8 +107,8 @@ Example config file:
         "inputs": {
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
-            "library_input": "./peptides.csv",
-            "library_input_type": "peptides"
+            "library_input": "uniprot.fasta",
+            "library_input_type": "fasta"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -117,11 +124,18 @@ Example config file:
             "missedCleavages": 2,
             "minLength": 7,
             "maxLength": 60,
-            "enzyme", "trypsin",
+            "enzyme": "trypsin",
             "specialAas": "KR",
             "db": "concat"
         },
     }
+
+The example config can be imported using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    ok.utils.example_configs.LIBGEN
 
 
 C. Rescoring
@@ -171,3 +185,10 @@ Example config file:
         "massTolerance": 20,
         "unitMassTolerance": "ppm"
     }
+
+The example config can be imported using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    ok.utils.example_configs.RESCORING
