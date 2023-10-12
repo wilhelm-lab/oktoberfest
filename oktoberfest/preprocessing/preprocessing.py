@@ -394,6 +394,7 @@ def convert_spectra(
             thermo_exe = "/opt/compomics/ThermoRawFileParser.exe"
         else:
             thermo_exe = "ThermoRawFileParser.exe"
-
+    
     raw = ThermoRaw()
     raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
+   
