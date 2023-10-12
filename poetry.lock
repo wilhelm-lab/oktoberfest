@@ -2907,6 +2907,26 @@ sphinx = "*"
 test = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "sphinx-autodoc-typehints"
+version = "1.24.0"
+description = "Type hints (PEP 484) support for the Sphinx autodoc extension"
+category = "dev"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "sphinx_autodoc_typehints-1.24.0-py3-none-any.whl", hash = "sha256:6a73c0c61a9144ce2ed5ef2bed99d615254e5005c1cc32002017d72d69fb70e6"},
+    {file = "sphinx_autodoc_typehints-1.24.0.tar.gz", hash = "sha256:94e440066941bb237704bb880785e2d05e8ae5406c88674feefbb938ad0dc6af"},
+]
+
+[package.dependencies]
+sphinx = ">=7.0.1"
+
+[package.extras]
+docs = ["furo (>=2023.5.20)", "sphinx (>=7.0.1)"]
+numpy = ["nptyping (>=2.5)"]
+testing = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "diff-cover (>=7.5)", "pytest (>=7.3.1)", "pytest-cov (>=4.1)", "sphobjinv (>=2.3.1)", "typing-extensions (>=4.6.3)"]
+
+[[package]]
 name = "sphinx-click"
 version = "5.0.1"
 description = "Sphinx extension that automatically documents click applications"
@@ -3397,4 +3417,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.0,<3.11.0"
-content-hash = "36a36f03f9b1465363da124fac5c0a6d8abd78ffeb05380d4ba9b22670a9a927"
+content-hash = "baa1b8f8c8d677895f28b6c03c4f6aa437304a8079ea05e9fd9e6b39371cd079"

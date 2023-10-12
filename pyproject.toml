@@ -64,6 +64,9 @@ openpyxl = ">=3.0.10"
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 
+[tool.poetry.group.dev.dependencies]
+sphinx-autodoc-typehints = "^1.24.0"
+
 [tool.black]
 line-length = 120
 
