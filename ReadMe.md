@@ -11,9 +11,14 @@
 # Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Generation for Proteomics
 
 Oktoberfest is a python tool for collision energy calibration, rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.
+
+## Documentation
+
 The official Oktoberfest documentation can be found at https://oktoberfest.readthedocs.io.
 
-If you want to cite Oktoberfest in your work, please use the following:
+## How to cite
+
+Please always cite the main publication:
 
 [Oktoberfest] Picciani M, Gabriel W, Giurcoiu VG, Shouman O, Hamood F, Lautenbacher L, Jensen CB, Müller J, Kalhor M, Soleymaniniya A, Kuster B, The M, Wilhelm M (2023), _Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit_, [Proteomics](https://doi.org/10.1002/pmic.202300112)
 
