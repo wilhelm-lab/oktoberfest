@@ -27,6 +27,7 @@ Generating libraries
    pp.digest
    pp.gen_lib
    pp.merge_spectra_and_peptides
+   pp.annotate_spectral_library
 
 Spectra preprocessing
 
@@ -46,6 +47,7 @@ Peptide preprocessing
    pp.convert_search
    pp.load_search
    pp.filter_peptides
+   pp.filter_peptides_for_model
 
 
 Predicting: :code:`pr`

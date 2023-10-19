@@ -74,6 +74,16 @@ Example config file:
         "unitMassTolerance": "ppm"
     }
 
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.CECALIB
+    json.dumps(config, indent=4)
+
+
 B. Spectral Library Generation
 ------------------------------
 
@@ -100,8 +110,8 @@ Example config file:
         "inputs": {
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
-            "library_input": "./peptides.csv",
-            "library_input_type": "peptides"
+            "library_input": "uniprot.fasta",
+            "library_input_type": "fasta"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -111,17 +121,26 @@ Example config file:
         "prediction_server": "koina.proteomicsdb.org:443",
         "numThreads": 1,
         "ssl": true,
-        "thermoExe": "ThermoRawFileParser.exe"
         "fastaDigestOptions": {
             "fragmentation": "",
             "digestion": "full",
             "missedCleavages": 2,
             "minLength": 7,
             "maxLength": 60,
-            "enzyme", "trypsin",
+            "enzyme": "trypsin",
             "specialAas": "KR",
             "db": "concat"
+        },
     }
+
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.LIBGEN
+    json.dumps(config, indent=4)
 
 
 C. Rescoring
@@ -171,3 +190,12 @@ Example config file:
         "massTolerance": 20,
         "unitMassTolerance": "ppm"
     }
+
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.RESCORING
+    json.dumps(config, indent=4)
