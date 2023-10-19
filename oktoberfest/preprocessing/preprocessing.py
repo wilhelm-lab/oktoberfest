@@ -281,23 +281,28 @@ def split_search(
     search_results: pd.DataFrame,
     output_dir: Union[str, Path],
     filenames: Optional[List[str]] = None,
-):
+) -> List[str]:
     """
     Split search results by spectrum file.
 
-    Given a list of spectrum filenames from which search results originate the provided search results are split
-    and filename specific csv files are written to the provided output directory. The provided filenames need to
+    Given a list of spectrum file names from which search results originate the provided search results are split
+    and filename specific csv files are written to the provided output directory. The provided file names need to
     correspond to the spectrum file identifier in the "RAW_FILE" column of the provided search results. The search
     results need to be provided in internal format (see :doc:`../../internal_format`).
-    If the list of filenames is not provided, all spectrum file identifiers are considered, otherwise only the
+    If the list of file names is not provided, all spectrum file identifiers are considered, otherwise only the
     identifiers found in the list are taken into account for writing the individual csv files.
-    The output filenames follow the convention <filename>.rescore.
+    The output file names follow the convention <filename>.rescore.
+    If a file name is not found in the search results, it is ignored and a warning is printed.
+    The function returns a list of file names for which search results are available, removing the ones that were
+    ignored if a list of file names was provided.
 
     :param search_results: search results in internal format
     :param output_dir: directory in which to store individual csv files containing the search results for
         individual filenames
     :param filenames: optional list of spectrum filenames that should be considered. If not provided, all spectrum file
         identifiers in the search results are considered.
+
+    :return: list of file names for which search results could be found
     """
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
@@ -308,10 +313,20 @@ def split_search(
 
     grouped_search_results = search_results.groupby("RAW_FILE")
 
+    filenames_found = []
     for filename in filenames:
         output_file = (output_dir / filename).with_suffix(".rescore")
         logger.info(f"Creating split msms.txt file {output_file}")
-        grouped_search_results.get_group(filename).to_csv(output_file)
+        try:
+            grouped_search_results.get_group(filename).to_csv(output_file)
+            filenames_found.append(filename)
+        except KeyError:
+            logger.warning(
+                f"The search results do not contain search results for the provided file name {filename}. "
+                "If this is not intended, please verify that the file names are written correctly in the "
+                f"search results. {filename} is ignored."
+            )
+    return filenames_found
 
 
 def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> Spectra:
