@@ -45,15 +45,20 @@ def grpc_predict(
             library.spectra_data["MODIFIED_SEQUENCE"].to_numpy().reshape(-1, 1).astype(np.object_),
             "BYTES",
         ),
-        "collision_energies": (
-            library.spectra_data["COLLISION_ENERGY"].to_numpy().reshape(-1, 1).astype(np.float32),
-            "FP32",
-        ),
         "precursor_charges": (
             library.spectra_data["PRECURSOR_CHARGE"].to_numpy().reshape(-1, 1).astype(np.int32),
             "INT32",
         ),
+        "sum_intensities": (    # todo probably has to be removed for tmt??
+            library.spectra_data["SUM_INTENSITIES"].to_numpy().reshape(-1, 1).astype(np.float32),
+            "FP32",
+        )
     }
+    if 'cid' not in intensity_model.lower():
+        intensity_input_data["collision_energies"] = (
+            library.spectra_data["COLLISION_ENERGY"].to_numpy().reshape(-1, 1).astype(np.float32),
+            "FP32",
+        )
     if "tmt" in intensity_model.lower() or "ptm" in intensity_model.lower():
         intensity_input_data["fragmentation_types"] = (
             library.spectra_data["FRAGMENTATION"].to_numpy().reshape(-1, 1).astype(np.object_),
@@ -142,8 +147,9 @@ def infer_predictions(
             progress.update(1)
             # logger.info(f"Predicting batch {i+1}/{n_batches}.")
             infer_inputs = []
+            print(input_data)
             for input_key, (data, dtype) in input_data.items():
-                batch_data = data[i * batch_size : (i + 1) * batch_size]
+                batch_data = data[i * batch_size: (i + 1) * batch_size]
                 infer_input = InferInput(input_key, batch_data.shape, dtype)
                 infer_input.set_data_from_numpy(batch_data)
                 infer_inputs.append(infer_input)
@@ -209,7 +215,7 @@ def _prepare_alignment_df(library: Spectra) -> Spectra:
     # Remove decoy and HCD fragmented spectra
     alignment_library.spectra_data = alignment_library.spectra_data[
         (alignment_library.spectra_data["FRAGMENTATION"] == "HCD") & (~alignment_library.spectra_data["REVERSE"])
-    ]
+        ]
     # Select the 1000 highest scoring or all if there are less than 1000
     alignment_library.spectra_data = alignment_library.spectra_data.sort_values(by="SCORE", ascending=False).iloc[:1000]
 

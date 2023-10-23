@@ -357,6 +357,7 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
     psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
+    psms.add_column(df_annotated_spectra["SUM_INTENSITIES"], "SUM_INTENSITIES")
 
 
 def load_spectra(mzml_file: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
