@@ -1,3 +1,5 @@
+from functools import partial
+
 import logging
 import re
 from math import ceil
@@ -8,7 +10,7 @@ import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from tqdm.auto import tqdm
-from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
+from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput, InferenceServerException
 
 from ..data.spectra import FragmentType, Spectra
 
