@@ -1,9 +1,12 @@
+import datetime
+import json
 import logging
 from pathlib import Path
 from typing import List, Type, Union
 
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
+from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
@@ -15,7 +18,7 @@ from .utils import Config, JobPool, ProcessStep
 logger = logging.getLogger(__name__)
 
 
-def _preprocess(spectra_files: List[Path], config: Config):
+def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
     preprocess_search_step = ProcessStep(config.output, "preprocessing_search")
     if not preprocess_search_step.is_done():
         # load search results
@@ -42,12 +45,21 @@ def _preprocess(spectra_files: List[Path], config: Config):
         search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
 
         # split search results
-        pp.split_search(
+        filenames_found = pp.split_search(
             search_results=search_results,
             output_dir=config.output / "msms",
             filenames=[spectra_file.stem for spectra_file in spectra_files],
         )
         preprocess_search_step.mark_done()
+    else:
+        filenames_found = [msms_file.stem for msms_file in (config.output / "msms").glob("*rescore")]
+
+    spectra_files_to_return = []
+    for spectra_file in spectra_files:
+        if spectra_file.stem in filenames_found:
+            spectra_files_to_return.append(spectra_file)
+
+    return spectra_files_to_return
 
 
 def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
@@ -226,7 +238,7 @@ def run_ce_calibration(
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
 
-    _preprocess(spectra_files, config)
+    spectra_files = _preprocess(spectra_files, config)
 
     processing_pool = JobPool(processes=config.num_threads)
 
@@ -292,7 +304,7 @@ def run_rescoring(config_path: Union[str, Path]):
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
 
-    _preprocess(spectra_files, config)
+    spectra_files = _preprocess(spectra_files, config)
 
     processing_pool = JobPool(processes=config.num_threads)
 
@@ -360,11 +372,29 @@ def run_job(config_path: Union[str, Path]):
     conf.check()
     job_type = conf.job_type
 
-    if job_type == "SpectralLibraryGeneration":
-        generate_spectral_lib(config_path)
-    elif job_type == "CollisionEnergyCalibration":
-        run_ce_calibration(config_path)
-    elif job_type == "Rescoring":
-        run_rescoring(config_path)
-    else:
-        raise ValueError(f"Unknown job_type in config: {job_type}")
+    # add file handler to root logger
+    base_logger = logging.getLogger()
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
+    suffix = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
+    logging_output = conf.output / f"{job_type}_{suffix}.log"
+    file_handler = logging.FileHandler(filename=logging_output)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    base_logger.addHandler(file_handler)
+
+    logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
+    logger.info("Job executed with the following config:")
+    logger.info(json.dumps(conf.data, indent=4))
+
+    try:
+        if job_type == "SpectralLibraryGeneration":
+            generate_spectral_lib(config_path)
+        elif job_type == "CollisionEnergyCalibration":
+            run_ce_calibration(config_path)
+        elif job_type == "Rescoring":
+            run_rescoring(config_path)
+        else:
+            raise ValueError(f"Unknown job_type in config: {job_type}")
+    finally:
+        file_handler.close()
+        base_logger.removeHandler(file_handler)

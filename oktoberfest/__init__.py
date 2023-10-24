@@ -9,14 +9,12 @@ __version__ = "0.5.0"
 
 import logging.handlers
 import sys
-import time
 
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
-
-from . import runner
+from oktoberfest import utils
 
 CONSOLE_LOG_LEVEL = logging.INFO
 logger = logging.getLogger(__name__)
@@ -24,7 +22,6 @@ logger.setLevel(logging.DEBUG)
 
 if len(logger.handlers) == 0:
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
-    converter = time.gmtime
     # add console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(CONSOLE_LOG_LEVEL)
@@ -37,6 +34,6 @@ if len(logger.handlers) == 0:
     error_handler.setFormatter(formatter)
     logger.addHandler(error_handler)
 else:
-    logger.info("Logger already initizalized. Resuming normal operation.")
+    logger.info("Logger already initialized. Resuming normal operation.")
 
 sys.modules.update({f"{__name__}.{m}": globals()[m] for m in ["pl", "pp", "pr", "re"]})
