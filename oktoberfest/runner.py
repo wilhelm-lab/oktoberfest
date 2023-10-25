@@ -76,7 +76,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         format_ = spectra_file.suffix.lower()
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_spectra(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+            pp.convert_spectra_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
         elif format_ in [".mzml", ".pkl"]:
             file_to_load = spectra_file
         elif format_ == ".d":
