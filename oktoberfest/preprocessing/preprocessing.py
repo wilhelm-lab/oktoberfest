@@ -242,15 +242,19 @@ def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
     In case the input directory is a file, the function will check if it matches the format and return it wrapped in a list.
 
     :param input_dir: Path to the directory to scan for spectra files
-    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML" or "RAW".
+    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML", "RAW" or "pkl".
     :raises NotADirectoryError: if the specified input directory does not exist
+    :raises ValueError: if the specified file format is not supported
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
         input_dir = Path(input_dir)
     raw_files = []
 
-    if input_dir.is_file() and input_dir.suffix.lower().endswith(("mzml", "raw")):
+    if not file_format.lower() in ["mzml", "raw", "pkl"]:
+        raise ValueError(f"File format {file_format} unknown. Must be one of mzML, RAW or pkl.")
+
+    if input_dir.is_file() and input_dir.suffix.lower().endswith(file_format.lower()):
         raw_files.append(input_dir)
     elif input_dir.is_dir():
         glob_pattern = _get_glob_pattern(file_format)
@@ -374,22 +378,34 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
 
 
-def load_spectra(mzml_file: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
+def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
     """
-    Load spectra from mzml file.
+    Read spectra from a given file.
 
-    This function reads MS2 spectra from a given mzML file using a specified parser.
+    This function reads MS2 spectra from a given mzML or pkl file using a specified parser. The file ending
+    is used to determine the correct parsing method.
 
-    :param mzml_file: Path to mzML file containing MS2 spectra to be loaded
-    :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml"
+    :param filename: Path to mzML / pkl file containing MS2 spectra to be loaded.
+    :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
+        Only used for parsing of mzML files.
+    :raises ValueError: if the filename does not end in either ".pkl" or ".mzML" (case-insensitive)
     :return: measured spectra with metadata.
     """
-    return ThermoRaw.read_mzml(
-        source=mzml_file, package=parser, search_type=""
-    )  # TODO in spectrum_io, remove unnecessary argument
+    if isinstance(filename, str):
+        filename = Path(filename)
+
+    format_ = filename.suffix.lower()
+    if format_ == ".mzml":
+        return ThermoRaw.read_mzml(
+            source=filename, package=parser, search_type=""
+        )  # TODO in spectrum_io, remove unnecessary argument
+    elif format_ == ".pkl":
+        return pd.read_pickle(filename)
+    else:
+        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
 
 
-def convert_spectra(
+def convert_spectra_to_mzml(
     raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
 ):
     """
