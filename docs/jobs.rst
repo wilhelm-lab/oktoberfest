@@ -71,7 +71,11 @@ Example config file:
         "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",
         "massTolerance": 20,
-        "unitMassTolerance": "ppm"
+        "unitMassTolerance": "ppm",
+        "ce_alignment_options": {
+            "ce_range": [19,50],
+            "use_ransac_model": false,
+        }
     }
 
 The example config can be loaded and viewed using
@@ -188,7 +192,11 @@ Example config file:
         "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",
         "massTolerance": 20,
-        "unitMassTolerance": "ppm"
+        "unitMassTolerance": "ppm",
+        "ce_alignment_options": {
+            "ce_range": [19,50],
+            "use_ransac_model": false,
+        }
     }
 
 The example config can be loaded and viewed using
