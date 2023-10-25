@@ -254,7 +254,8 @@ class Config:
     @property
     def ce_range(self) -> Tuple[int, int]:
         """Get the min and max boundaries for the CE to be used for alignment."""
-        return tuple(self.ce_alignment_options.get("ce_range", (18, 50)))
+        min_ce, max_ce = self.ce_alignment_options.get("ce_range", (18, 50))
+        return int(min_ce), int(max_ce)
 
     @property
     def use_ransac_model(self) -> bool:

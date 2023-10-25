@@ -192,7 +192,7 @@ def parse_fragment_labels(spectra_labels: np.ndarray, precursor_charges: np.ndar
     return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: False) -> Spectra:
+def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
@@ -220,11 +220,11 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     alignment_library.spectra_data = temp_df.head(1000)
 
     # Repeat dataframe for each CE
-    ce_range = range(*ce_range)
+    ce_range_ = range(*ce_range)
     nrow = len(alignment_library.spectra_data)
-    alignment_library.spectra_data = pd.concat([alignment_library.spectra_data for _ in ce_range], axis=0)
+    alignment_library.spectra_data = pd.concat([alignment_library.spectra_data for _ in ce_range_], axis=0)
     alignment_library.spectra_data["ORIG_COLLISION_ENERGY"] = alignment_library.spectra_data["COLLISION_ENERGY"]
-    alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range, nrow)
+    alignment_library.spectra_data["COLLISION_ENERGY"] = np.repeat(ce_range_, nrow)
     alignment_library.spectra_data.reset_index(inplace=True)
     return alignment_library
 
