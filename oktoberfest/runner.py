@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 from typing import List, Type, Union
 
+import numpy as np
+from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
 from oktoberfest import __copyright__, __version__
@@ -69,14 +71,17 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
     if hdf5_path.is_file():
         library = Spectra.from_hdf5(hdf5_path)
     else:
-        mzml_dir = config.output / "mzML"
-        mzml_dir.mkdir(exist_ok=True)
-        if spectra_file.suffix.lower() == ".raw":
-            mzml_file = mzml_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_spectra(spectra_file, mzml_file, thermo_exe=config.thermo_exe)
-        else:
-            mzml_file = spectra_file
-        spectra = pp.load_spectra(mzml_file)
+        spectra_dir = config.output / "spectra"
+        spectra_dir.mkdir(exist_ok=True)
+        format_ = spectra_file.suffix.lower()
+        if format_ == ".raw":
+            file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
+            pp.convert_spectra(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+        elif format_ in [".mzml", ".pkl"]:
+            file_to_load = spectra_file
+        elif format_ == ".d":
+            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.4")
+        spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
@@ -95,17 +100,51 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
             "intensity_model": config.models["intensity"],
             "irt_model": config.models["irt"],
         }
-        alignment_library = pr.ce_calibration(library, **server_kwargs)
-        ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
-        best_ce = ce_alignment.idxmax()
-        pl.plot_mean_sa_ce(
-            sa_ce_df=ce_alignment.to_frame().reset_index(),
-            filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
-        )
-        pl.plot_violin_sa_ce(
-            sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
-            filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
-        )
+        use_ransac_model = config.use_ransac_model
+        alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        if use_ransac_model:
+            calib_group = (
+                alignment_library.spectra_data.df_charge.groupby(
+                    by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
+                )["SPECTRAL_ANGLE"]
+                .mean()
+                .calib_group.groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], as_index=False)
+                .apply(lambda x: x.loc[x["SPECTRAL_ANGLE"].idxmax()])
+            )
+            calib_group["delta_collision_energy"] = (
+                calib_group["COLLISION_ENERGY"] - calib_group["ORIG_COLLISION_ENERGY"]
+            )
+            x = calib_group[["MASS", "PRECURSOR_CHARGE"]]  # input feature
+            y = calib_group["delta_collision_energy"]  # target variable
+            ransac = RANSACRegressor(LinearRegression(), residual_threshold=1.5, random_state=42)
+            ransac.fit(x, y)
+
+            for charge, df in calib_group.groupby("PRECURSOR_CHARGE"):
+                r2_score = ransac.score(df[["MASS", "PRECURSOR_CHARGE"]], df["collision_energy"])
+                title = f"Scatter Plot with RANSAC Model \nSlope: {ransac.estimator_.coef_[0]:.2f}, "
+                title += f"Intercept: {ransac.estimator_.intercept_:.2f}, R2: {r2_score:.2f}"
+                pl.plot_ce_ransac_model(
+                    sa_ce_df=df,
+                    filename=results_dir / f"{spectra_file.stem}_ce_ransac_model_{charge}",
+                    title=title,
+                )
+
+            delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
+            library.spectra_data["COLLISION_ENERGY"] = np.maximum(
+                0, library.spectra_data["COLLISION_ENERGY"] + delta_ce
+            )
+
+        else:
+            ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            best_ce = ce_alignment.idxmax()
+            pl.plot_mean_sa_ce(
+                sa_ce_df=ce_alignment.to_frame().reset_index(),
+                filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
+            )
+            pl.plot_violin_sa_ce(
+                sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
+            )
     else:
         best_ce = 35
 
