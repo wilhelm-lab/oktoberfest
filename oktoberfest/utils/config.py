@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class Config:
 
     @property
     def spectra(self) -> Path:
-        """Get spectra path to raw or mzml files from the config file."""
+        """Get path to spectra files from the config file."""
         # check if spectra is absolute and if not, append with the directory
         # of the config file to resolve paths relative to the config location. This is
         # required to make sure it always works no matter from which working directory
@@ -148,7 +148,7 @@ class Config:
 
     @property
     def spectra_type(self) -> str:
-        """Get spectra type (raw or mzml) from the config file."""
+        """Get spectra type (.raw, .mzml, .pkl) from the config file."""
         return self.inputs.get("spectra_type", "raw").lower()
 
     @property
@@ -245,6 +245,21 @@ class Config:
             return "ThermoRawFileParser.exe"
 
         return Path(self.data.get("thermoExe", default_thermo()))
+
+    @property
+    def ce_alignment_options(self) -> dict:
+        """Get the ce_alignment dictionary from the config."""
+        return self.data.get("ce_alignment", {})
+
+    @property
+    def ce_range(self) -> Tuple[int, int]:
+        """Get the min and max boundaries for the CE to be used for alignment."""
+        return tuple(self.ce_alignment_options.get("ce_range", (18, 50)))
+
+    @property
+    def use_ransac_model(self) -> bool:
+        """Get whether or not to perform ce calibration using a ransac model."""
+        return self.ce_alignment_options.get("use_ransac_model", False)
 
     def check(self):
         """Validate the configuration."""
