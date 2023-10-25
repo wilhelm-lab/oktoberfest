@@ -374,7 +374,14 @@ def plot_all(data_dir: Path):
     plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
 
 
-def plot_ce_ransac_model(sa_ce_df: pd.DataFrame, filename: Path, slope: str, intercept: str, score: str):
+def plot_ce_ransac_model(
+    sa_ce_df: pd.DataFrame,
+    filename: Path,
+    xlabel: str = "MASS",
+    ylabel: str = "delta collision enegery",
+    *args,
+    **kwargs,
+):
     """Generate plot (mass vs ce difference)."""
     df = sa_ce_df.reset_index()
     df = df[["MASS", "delta_collision_energy", "SPECTRAL_ANGLE"]]
@@ -383,9 +390,5 @@ def plot_ce_ransac_model(sa_ce_df: pd.DataFrame, filename: Path, slope: str, int
     sns.regplot(
         data=df, x="MASS", y="delta_collision_energy", scatter=False, ci=None, line_kws={"linestyle": "--"}, ax=ax
     )
-    ax.set(
-        xlabel="MASS",
-        ylabel="delta_collision_energy",
-        title=f"Scatter Plot with RANSAC Model \nSlope: {slope:.2f}, Intercept: {intercept:.2f}, R2: {score:.2f}",
-    )
+    ax.set(xlabel=xlabel, ylabel=ylabel, *args, **kwargs)
     plt.savefig(filename, dpi=300)
