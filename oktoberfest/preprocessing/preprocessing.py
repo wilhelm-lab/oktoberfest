@@ -10,7 +10,7 @@ from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger , Sage
 from spectrum_io.spectral_library import digest as digest_io
 
 from ..data.spectra import FragmentType, Spectra
@@ -227,6 +227,8 @@ def convert_search(
         search_result = MSFragger
     elif search_engine == "mascot":
         search_result = Mascot
+    elif search_engine == "sage":
+        search_result = Sage
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
