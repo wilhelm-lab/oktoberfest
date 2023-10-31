@@ -249,7 +249,7 @@ class Config:
     @property
     def ce_alignment_options(self) -> dict:
         """Get the ce_alignment dictionary from the config."""
-        return self.data.get("ce_alignment", {})
+        return self.data.get("ce_alignment_options", {})
 
     @property
     def ce_range(self) -> Tuple[int, int]:
