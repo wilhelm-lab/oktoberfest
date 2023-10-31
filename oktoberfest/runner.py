@@ -104,11 +104,11 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
         if use_ransac_model:
             calib_group = (
-                alignment_library.spectra_data.df_charge.groupby(
+                alignment_library.spectra_data.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
                 )["SPECTRAL_ANGLE"]
                 .mean()
-                .calib_group.groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], as_index=False)
+                .groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], as_index=False)
                 .apply(lambda x: x.loc[x["SPECTRAL_ANGLE"].idxmax()])
             )
             calib_group["delta_collision_energy"] = (
@@ -120,12 +120,12 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
             ransac.fit(x, y)
 
             for charge, df in calib_group.groupby("PRECURSOR_CHARGE"):
-                r2_score = ransac.score(df[["MASS", "PRECURSOR_CHARGE"]], df["collision_energy"])
+                r2_score = ransac.score(df[["MASS", "PRECURSOR_CHARGE"]], df["COLLISION_ENERGY"])
                 title = f"Scatter Plot with RANSAC Model \nSlope: {ransac.estimator_.coef_[0]:.2f}, "
                 title += f"Intercept: {ransac.estimator_.intercept_:.2f}, R2: {r2_score:.2f}"
                 pl.plot_ce_ransac_model(
                     sa_ce_df=df,
-                    filename=results_dir / f"{spectra_file.stem}_ce_ransac_model_{charge}",
+                    filename=results_dir / f"{spectra_file.stem}_ce_ransac_model_{charge}.svg",
                     title=title,
                 )
 
