@@ -130,7 +130,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     if library_input_type == "fasta":
         pp.digest(
             fasta=config.library_input,
-            output=config.output / "prosit_input.csv",
+            output=config.output,
             fragmentation=config.fragmentation,
             digestion=config.digestion,
             cleavages=config.cleavages,
