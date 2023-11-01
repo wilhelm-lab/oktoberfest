@@ -5,7 +5,7 @@ from datetime import datetime
 __author__ = """The Oktoberfest development team (Wilhelmlab at Technical University of Munich)"""
 __copyright__ = f"Copyright {datetime.now():%Y}, Wilhelmlab at Technical University of Munich"
 __license__ = "MIT"
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 import logging.handlers
 import sys
