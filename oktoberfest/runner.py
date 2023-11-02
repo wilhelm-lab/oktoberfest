@@ -130,7 +130,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     if library_input_type == "fasta":
         pp.digest(
             fasta=config.library_input,
-            output=config.output / "prosit_input.csv",
+            output=config.output,
             fragmentation=config.fragmentation,
             digestion=config.digestion,
             cleavages=config.cleavages,
@@ -344,7 +344,7 @@ def run_rescoring(config_path: Union[str, Path]):
             rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
+            re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
             rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
