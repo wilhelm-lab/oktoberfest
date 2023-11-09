@@ -30,7 +30,6 @@ class Spectra:
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
     INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
     MZ_COLUMN_PREFIX = "MZ_RAW"
-    EPSILON = 1e-7
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
     spectra_data: pd.DataFrame
@@ -129,7 +128,7 @@ class Spectra:
 
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
-        intensity_array[intensity_array == 0] = Spectra.EPSILON
+        intensity_array[intensity_array == 0] = c.EPSILON
         intensity_array[intensity_array == -1] = 0.0
 
         # generate column names and build dataframe from sparse matrix

@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import List, Type, Union
 
+import pandas as pd
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
 from oktoberfest import __copyright__, __version__
@@ -12,7 +13,7 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-from .data.spectra import Spectra
+from .data.spectra import FragmentType, Spectra
 from .utils import Config, JobPool, ProcessStep
 
 logger = logging.getLogger(__name__)
@@ -90,10 +91,9 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
     results_dir.mkdir(exist_ok=True)
     if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
         server_kwargs = {
-            "url": config.prediction_server,
+            "server_url": config.prediction_server,
             "ssl": config.ssl,
-            "intensity_model": config.models["intensity"],
-            "irt_model": config.models["irt"],
+            "model_name": config.models["intensity"],
         }
         alignment_library = pr.ce_calibration(library, **server_kwargs)
         ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
@@ -154,11 +154,8 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     no_of_sections = no_of_spectra // 7000
 
     server_kwargs = {
-        "url": config.prediction_server,
+        "server_url": config.prediction_server,
         "ssl": config.ssl,
-        "intensity_model": config.models["intensity"],
-        "irt_model": config.models["irt"],
-        "job_type": "SpectralLibraryGeneration",
     }
 
     spectral_library: Type[SpectralLibrary]
@@ -192,9 +189,21 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         else:
             break
 
-        grpc_output_sec = pr.grpc_predict(spectra_div, **server_kwargs)
+        pred_intensities = pr.predict(spectra_div.spectra_data, model_name=config.models["intensity"], **server_kwargs)
+        pred_irts = pr.predict(spectra_div.spectra_data, model_name=config.models["irt"], **server_kwargs)
 
-        out_lib = spectral_library(spectra_div.spectra_data, grpc_output_sec, out_file)
+        intensity_prediction_dict = {
+            "intensity": pred_intensities["intensities"],
+            "fragmentmz": pred_intensities["mz"],
+            "annotation": pr.parse_fragment_labels(
+                pred_intensities["annotation"],
+                spectra_div.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
+                spectra_div.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
+            ),
+        }
+        output_dict = {config.models["intensity"]: intensity_prediction_dict, config.models["irt"]: pred_irts["irt"]}
+
+        out_lib = spectral_library(spectra_div.spectra_data, output_dict, out_file)
         out_lib.prepare_spectrum()
         out_lib.write()
 
@@ -255,13 +264,21 @@ def _calculate_features(spectra_file: Path, config: Config):
         return
 
     server_kwargs = {
-        "url": config.prediction_server,
+        "server_url": config.prediction_server,
         "ssl": config.ssl,
-        "intensity_model": config.models["intensity"],
-        "irt_model": config.models["irt"],
     }
 
-    pr.grpc_predict(library, **server_kwargs)
+    pred_intensities = pr.predict(
+        library.spectra_data,
+        model_name=config.models["intensity"],
+        targets=["intensities", "annotation"],
+        **server_kwargs,
+    )
+    pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
+
+    library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+    library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
+
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     # produce percolator tab files
