@@ -1,17 +1,23 @@
 import time
 from functools import partial
-from typing import Dict, List, Optional, Union
+from typing import Dict, Generator, KeysView, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
-from tritonclient.grpc import InferenceServerClient, InferenceServerException, InferInput, InferRequestedOutput
+from tritonclient.grpc import (
+    InferenceServerClient,
+    InferenceServerException,
+    InferInput,
+    InferRequestedOutput,
+    InferResult,
+)
 
 
 class Koina:
     """A class for interacting with Koina models for inference."""
 
-    model_inputs: Dict[str, np.ndarray]
+    model_inputs: Dict[str, str]
     model_outputs: Dict[str, np.ndarray]
     batch_size: int
 
@@ -149,7 +155,7 @@ class Koina:
         self.batchsize = self.client.get_model_config(self.model_name).config.max_batch_size
 
     @staticmethod
-    def __get_batch_outputs(names: List[str]) -> List[InferRequestedOutput]:
+    def __get_batch_outputs(names: KeysView[str]) -> List[InferRequestedOutput]:
         """
         Create InferRequestedOutput objects for the given output names.
 
@@ -181,7 +187,7 @@ class Koina:
             batch_inputs[-1].set_data_from_numpy(data[iname].reshape(-1, 1).astype(self.type_convert[idtype]))
         return batch_inputs
 
-    def __extract_predictions(self, infer_result: InferRequestedOutput) -> Dict[str, np.ndarray]:
+    def __extract_predictions(self, infer_result: InferResult) -> Dict[str, np.ndarray]:
         """
         Extract the predictions from an inference result.
 
@@ -216,7 +222,9 @@ class Koina:
 
         return self.__extract_predictions(infer_result)
 
-    def __predict_sequential(self, data: Dict[str, np.ndarray], disable_progress_bar: bool) -> Dict[str, np.ndarray]:
+    def __predict_sequential(
+        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False
+    ) -> Dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
 
@@ -242,7 +250,7 @@ class Koina:
         return predictions
 
     @staticmethod
-    def __slice_dict(data: Dict[str, np.ndarray], batchsize: int) -> Dict[str, np.ndarray]:
+    def __slice_dict(data: Dict[str, np.ndarray], batchsize: int) -> Generator[Dict[str, np.ndarray], None, None]:
         """
         Slice the input data into batches of a specified batch size.
 
@@ -324,7 +332,7 @@ class Koina:
             out[k] = np.concatenate([x[k] for x in dict_list])
         return out
 
-    def __async_callback(self, infer_results: List[InferRequestedOutput], result: np.ndarray, error):
+    def __async_callback(self, infer_results: List[InferResult], result: InferResult, error):
         """
         Callback function for asynchronous inference.
 
@@ -344,7 +352,7 @@ class Koina:
             infer_results.append(result)
 
     def __async_predict_batch(
-        self, data: Dict[str, np.ndarray], infer_results: List[InferRequestedOutput], request_id: int, timeout: int = 10
+        self, data: Dict[str, np.ndarray], infer_results: List[InferResult], request_id: int, timeout: int = 10
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -426,7 +434,7 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
-        infer_results: List[Dict[str, np.ndarray]] = []
+        infer_results: List[InferResult] = []
         for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
             self.__async_predict_batch(data_batch, infer_results, request_id=i)
 
@@ -439,9 +447,9 @@ class Koina:
             pbar.refresh()
 
         # sort according to request id
-        infer_results = [
+        infer_results_to_return = [
             self.__extract_predictions(infer_results[i])
             for i in np.argsort(np.array([int(y.get_response("id")["id"]) for y in infer_results]))
         ]
 
-        return self.__merge_list_dict_array(infer_results)
+        return self.__merge_list_dict_array(infer_results_to_return)
