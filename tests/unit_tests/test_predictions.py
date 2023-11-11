@@ -4,7 +4,8 @@ from pathlib import Path
 import pandas as pd
 
 from oktoberfest.data import Spectra
-from oktoberfest.pr import grpc_predict
+from oktoberfest.data.spectra import FragmentType
+from oktoberfest.pr import predict
 
 
 class TestTMTProsit(unittest.TestCase):
@@ -13,15 +14,21 @@ class TestTMTProsit(unittest.TestCase):
     def test_prosit_tmt(self):
         """Test retrieval of predictions from prosit tmt models via koina."""
         library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
-        grpc_predict(
-            library=library,
-            url="koina.proteomicsdb.org:443",
-            intensity_model="Prosit_2020_intensity_TMT",
-            irt_model="Prosit_2020_irt_TMT",
+        input_data = library.spectra_data
+
+        pred_intensities = predict(
+            input_data,
+            model_name="Prosit_2020_intensity_TMT",
+            server_url="koina.proteomicsdb.org:443",
             ssl=True,
-            alignment=False,
-            job_type="",
+            targets=["intensities", "annotation"],
         )
+        pred_irt = predict(
+            input_data, model_name="Prosit_2020_irt_TMT", server_url="koina.proteomicsdb.org:443", ssl=True
+        )
+
+        library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+        library.add_column(pred_irt["irt"], name="PREDICTED_IRT")
 
         expected_df = pd.read_csv(Path(__file__).parent / "data" / "predictions" / "library_output.csv")
         sparse_cols = [col for col in library.spectra_data.columns if col.startswith("INTENSITY_PRED")]

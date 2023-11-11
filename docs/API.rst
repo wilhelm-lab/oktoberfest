@@ -65,15 +65,13 @@ Koina interface
 .. autosummary::
    :toctree: api/pr
 
-   pr.grpc_predict
-   pr.infer_predictions
+   pr.predict
 
 Postprocessing koina response
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pr
-
 
    pr.parse_fragment_labels
 
