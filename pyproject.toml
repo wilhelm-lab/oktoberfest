@@ -25,7 +25,7 @@ rich = ">=10.3.0"
 PyYAML = ">=5.4.1"
 
 matplotlib = "^3.6.3"
-seaborn = "^0.12.2"
+seaborn = ">=0.12.2,<0.14.0"
 spectrum-fundamentals = ">=0.4.4,<0.5.0"
 spectrum-io = ">=0.3.4,<0.4.0"
 mokapot = "^0.9.1"
