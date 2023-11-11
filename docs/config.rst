@@ -42,7 +42,7 @@ Required for CE calibration and rescoring
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     search_results         | Path to directory or file containing the search results                                                                                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     search_results_type    | Format description for search results; can be "Maxquant", "Msfragger", "Mascot" or "`Internal <./internal_format.html>`_"; default = "Maxquant"                    |
+   |     search_results_type    | Format description for search results; can be "Maxquant", "Msfragger", "Mascot", "Sage" or "`Internal <./internal_format.html>`_"; default = "Maxquant"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     spectra                | Path to directory or file containing mass spectrometry results                                                                                                     |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
