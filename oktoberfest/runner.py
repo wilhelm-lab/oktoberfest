@@ -342,52 +342,14 @@ def _calculate_features(spectra_file: Path, config: Config):
     calc_feature_step.mark_done()
 
 
-def run_rescoring(config_path: Union[str, Path]):
+def _rescore(fdr_dir: Path, config: Config):
     """
-    Create a ReScore object and run the rescoring.
+    High level rescore function for original and rescore.
 
-    # TODO full description
-    :param config_path: path to config file
+    :param fdr_dir: the output directory
+    :param config: the configuration object
     :raises ValueError: if the provided fdr estimation method in the config is not recognized
     """
-    config = Config()
-    config.read(config_path)
-
-    # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
-
-    proc_dir = config.output / "proc"
-    proc_dir.mkdir(parents=True, exist_ok=True)
-
-    spectra_files = _preprocess(spectra_files, config)
-
-    processing_pool = JobPool(processes=config.num_threads)
-
-    for spectra_file in spectra_files:
-        processing_pool.apply_async(_calculate_features, [spectra_file, config])
-    processing_pool.check_pool()
-
-    # rescoring
-
-    fdr_dir = config.output / "results" / config.fdr_estimation_method
-
-    original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
-    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
-
-    prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
-    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
-
-    if not prepare_tab_original_step.is_done():
-        logger.info("Merging input tab files for rescoring without peptide property prediction")
-        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
-        prepare_tab_original_step.mark_done()
-
-    if not prepare_tab_rescore_step.is_done():
-        logger.info("Merging input tab files for rescoring with peptide property prediction")
-        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
-        prepare_tab_rescore_step.mark_done()
-
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
 
@@ -410,6 +372,58 @@ def run_rescoring(config_path: Union[str, Path]):
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
 
+
+def run_rescoring(config_path: Union[str, Path]):
+    """
+    Create a ReScore object and run the rescoring.
+
+    # TODO full description
+    :param config_path: path to config file
+    """
+    config = Config()
+    config.read(config_path)
+
+    # load spectra file names
+    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
+    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+
+    proc_dir = config.output / "proc"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+
+    spectra_files = _preprocess(spectra_files, config)
+
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            processing_pool.apply_async(_calculate_features, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _calculate_features(spectra_file, config)
+
+    # prepare rescoring
+
+    fdr_dir = config.output / "results" / config.fdr_estimation_method
+
+    original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
+    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+
+    prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
+    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
+
+    if not prepare_tab_original_step.is_done():
+        logger.info("Merging input tab files for rescoring without peptide property prediction")
+        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        prepare_tab_original_step.mark_done()
+
+    if not prepare_tab_rescore_step.is_done():
+        logger.info("Merging input tab files for rescoring with peptide property prediction")
+        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+        prepare_tab_rescore_step.mark_done()
+
+    # rescoring
+    _rescore(fdr_dir, config)
+
     # plotting
     pl.plot_all(fdr_dir)
 
@@ -426,13 +440,17 @@ def run_job(config_path: Union[str, Path]):
     conf = Config()
     conf.read(config_path)
     conf.check()
+
+    output_folder = conf.output
     job_type = conf.job_type
+
+    output_folder.mkdir(exist_ok=True)
 
     # add file handler to root logger
     base_logger = logging.getLogger()
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
     suffix = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    logging_output = conf.output / f"{job_type}_{suffix}.log"
+    logging_output = output_folder / f"{job_type}_{suffix}.log"
     file_handler = logging.FileHandler(filename=logging_output)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
