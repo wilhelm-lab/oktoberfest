@@ -402,7 +402,12 @@ def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.Da
             source=filename, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
     elif format_ == ".pkl":
-        return pd.read_pickle(filename)
+        results = pd.read_pickle(filename)
+        # TODO in spectrum-io in case median_RETENTION_TIME is still passed
+        # TODO also change name for ion mobility
+        results.rename(columns={"median_RETENTION_TIME": "RETENTION_TIME"}, inplace=True)
+        return results
+
     else:
         raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
 
