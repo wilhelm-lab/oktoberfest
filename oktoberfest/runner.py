@@ -81,7 +81,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         elif format_ in [".mzml", ".pkl"]:
             file_to_load = spectra_file
         elif format_ == ".d":
-            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.4")
+            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.5")
         spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
@@ -91,7 +91,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
     return library
 
 
-def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
+def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
     if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
@@ -103,6 +103,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
         use_ransac_model = config.use_ransac_model
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
         if use_ransac_model:
+            logger.info("Performing RANSAC regression")
             calib_group = (
                 alignment_library.spectra_data.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
@@ -145,13 +146,15 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
                 sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
+            library.spectra_data["COLLISION_ENERGY"] = best_ce
+            with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+                f.write(str(best_ce))
     else:
         best_ce = 35
+        library.spectra_data["COLLISION_ENERGY"] = best_ce
 
-    with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-        f.write(str(best_ce))
-
-    return best_ce
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            f.write(str(best_ce))
 
 
 def generate_spectral_lib(config_path: Union[str, Path]):
@@ -257,9 +260,8 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
     library = _annotate_and_get_library(spectra_file, config)
-    best_ce = _get_best_ce(library, spectra_file, config)
+    _get_best_ce(library, spectra_file, config)
 
-    library.spectra_data["COLLISION_ENERGY"] = best_ce
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
