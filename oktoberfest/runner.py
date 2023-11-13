@@ -290,11 +290,14 @@ def run_ce_calibration(
 
     spectra_files = _preprocess(spectra_files, config)
 
-    processing_pool = JobPool(processes=config.num_threads)
-
-    for spectra_file in spectra_files:
-        processing_pool.apply_async(_ce_calib, [spectra_file, config])
-    processing_pool.check_pool()
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            processing_pool.apply_async(_ce_calib, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _ce_calib(spectra_file, config)
 
 
 def _calculate_features(spectra_file: Path, config: Config):
