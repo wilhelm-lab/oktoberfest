@@ -1,3 +1,4 @@
+import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -22,6 +23,6 @@ class TestCECalibration(unittest.TestCase):
         config_path = Path(__file__).parent / "configs" / "ce_calib_ransac.json"
         with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
             main()
-        config = Config(config_path)
-        config.read()
-        config.output.unlink()
+        config = Config()
+        config.read(config_path)
+        shutil.rmtree(config.output)
