@@ -1,4 +1,5 @@
 import shutil
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -25,4 +26,5 @@ class TestCECalibration(unittest.TestCase):
             main()
         config = Config()
         config.read(config_path)
+        time.sleep(5)  # windows problem, doesn't close hdf5 file properly...
         shutil.rmtree(config.output)
