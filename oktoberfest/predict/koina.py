@@ -75,7 +75,8 @@ class Koina:
         accessible. It ensures that the server is properly running and can be used for inference with the Koina
         model. Note: This method is primarily for internal use and typically called during model initialization.
 
-        :raises ValueError: If the server is not live or accessible.
+        :raises ValueError: If the server responds with a not live status
+        :raises InferenceServerException: If an exception occured while querying the server for its status.
         """
         try:
             if not self.client.is_server_live():
@@ -83,13 +84,13 @@ class Koina:
         except InferenceServerException as e:
             if self.url == "koina.proteomicsdb.org:443":
                 if self.ssl:
-                    raise ValueError(
+                    raise InferenceServerException(
                         "The public koina network seems to be inaccessible at the moment. "
                         "Please notify ludwig.lautenbacher@tum.de."
                     ) from e
                 else:
-                    raise ValueError("To use the public koina network you need to set `ssl=True`.") from e
-            raise
+                    raise InferenceServerException("To use the public koina network you need to set `ssl=True`.") from e
+            raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     def _is_model_ready(self):
         """
@@ -100,9 +101,13 @@ class Koina:
         Note: This method is primarily for internal use and typically called during model initialization.
 
         :raises ValueError: If the specified model is not available at the server.
+        :raises InferenceServerException: If an exception occured while querying the server for available models.
         """
-        if not self.client.is_model_ready(self.model_name):
-            raise ValueError(f"The model {self.model_name} is not available at {self.url}")
+        try:
+            if not self.client.is_model_ready(self.model_name):
+                raise ValueError(f"The model {self.model_name} is not available at {self.url}")
+        except InferenceServerException as e:
+            raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     def __get_inputs(self):
         """
@@ -111,9 +116,13 @@ class Koina:
         This method fetches the names and data types of the input tensors for the Koina model and stores them in
         the 'model_inputs' attribute. Note: This method is for internal use and is typically called during model
         initialization.
+
+        :raises InferenceServerException: If an exception occured while querying the server for model inputs.
         """
-        for i in self.client.get_model_metadata(self.model_name).inputs:
-            self.model_inputs[i.name] = i.datatype
+        try:
+            self.model_inputs = {i.name: i.datatype for i in self.client.get_model_metadata(self.model_name).inputs}
+        except InferenceServerException as e:
+            raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     def __get_outputs(self, targets: Optional[List] = None):
         """
@@ -127,22 +136,27 @@ class Koina:
         :param targets: An optional list of target names to filter the predictions for. If this is None, all targets
             are added to list of output tensors to predict.
         :raises ValueError: If a target supplied is not a valid output name of the requested model.
-        """
-        model_outputs = self.client.get_model_metadata(self.model_name).outputs
-        model_targets = [out.name for out in model_outputs]
+        :raises InferenceServerException: If an exception occured while querying the server for model metadata.
 
-        if targets is None:
-            targets = model_targets
-        else:
-            for target in targets:
-                if target not in model_targets:
-                    raise ValueError(
-                        f"The supplied target {target} is not a valid output target of the model. "
-                        f"Valid targets are {model_targets}."
-                    )
-        for i in model_outputs:
-            if i.name in targets:
-                self.model_outputs[i.name] = i.datatype
+        """
+        try:
+            model_outputs = self.client.get_model_metadata(self.model_name).outputs
+            model_targets = [out.name for out in model_outputs]
+
+            if targets is None:
+                targets = model_targets
+            else:
+                for target in targets:
+                    if target not in model_targets:
+                        raise ValueError(
+                            f"The supplied target {target} is not a valid output target of the model. "
+                            f"Valid targets are {model_targets}."
+                        )
+            for i in model_outputs:
+                if i.name in targets:
+                    self.model_outputs[i.name] = i.datatype
+        except InferenceServerException as e:
+            raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     def __get_batchsize(self):
         """
@@ -151,8 +165,12 @@ class Koina:
         This method determines the maximum batch size supported by the Koina model's configuration and stores it
         in the 'batchsize' attribute. Note: This method is for internal use and is typically called during model
         initialization.
+        :raises InferenceServerException: If an exception occured while querying the server for the max batchsize.
         """
-        self.batchsize = self.client.get_model_config(self.model_name).config.max_batch_size
+        try:
+            self.batchsize = self.client.get_model_config(self.model_name).config.max_batch_size
+        except InferenceServerException as e:
+            raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     @staticmethod
     def __get_batch_outputs(names: KeysView[str]) -> List[InferRequestedOutput]:

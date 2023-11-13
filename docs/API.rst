@@ -35,7 +35,7 @@ Spectra preprocessing
    :toctree: api/pp
 
    pp.list_spectra
-   pp.convert_spectra
+   pp.convert_spectra_to_mzml
    pp.load_spectra
 
 

@@ -4,7 +4,9 @@ import logging
 from pathlib import Path
 from typing import List, Type, Union
 
+import numpy as np
 import pandas as pd
+from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 
 from oktoberfest import __copyright__, __version__
@@ -70,14 +72,17 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
     if hdf5_path.is_file():
         library = Spectra.from_hdf5(hdf5_path)
     else:
-        mzml_dir = config.output / "mzML"
-        mzml_dir.mkdir(exist_ok=True)
-        if spectra_file.suffix.lower() == ".raw":
-            mzml_file = mzml_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_spectra(spectra_file, mzml_file, thermo_exe=config.thermo_exe)
-        else:
-            mzml_file = spectra_file
-        spectra = pp.load_spectra(mzml_file)
+        spectra_dir = config.output / "spectra"
+        spectra_dir.mkdir(exist_ok=True)
+        format_ = spectra_file.suffix.lower()
+        if format_ == ".raw":
+            file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
+            pp.convert_spectra_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+        elif format_ in [".mzml", ".pkl"]:
+            file_to_load = spectra_file
+        elif format_ == ".d":
+            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.5")
+        spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
@@ -86,7 +91,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
     return library
 
 
-def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
+def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
     if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
@@ -95,24 +100,61 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config) -> int:
             "ssl": config.ssl,
             "model_name": config.models["intensity"],
         }
-        alignment_library = pr.ce_calibration(library, **server_kwargs)
-        ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
-        best_ce = ce_alignment.idxmax()
-        pl.plot_mean_sa_ce(
-            sa_ce_df=ce_alignment.to_frame().reset_index(),
-            filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
-        )
-        pl.plot_violin_sa_ce(
-            sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
-            filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
-        )
+        use_ransac_model = config.use_ransac_model
+        alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        if use_ransac_model:
+            logger.info("Performing RANSAC regression")
+            calib_group = (
+                alignment_library.spectra_data.groupby(
+                    by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
+                )["SPECTRAL_ANGLE"]
+                .mean()
+                .groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], as_index=False)
+                .apply(lambda x: x.loc[x["SPECTRAL_ANGLE"].idxmax()])
+            )
+            calib_group["delta_collision_energy"] = (
+                calib_group["COLLISION_ENERGY"] - calib_group["ORIG_COLLISION_ENERGY"]
+            )
+            x = calib_group[["MASS", "PRECURSOR_CHARGE"]]  # input feature
+            y = calib_group["delta_collision_energy"]  # target variable
+            ransac = RANSACRegressor(LinearRegression(), residual_threshold=1.5, random_state=42)
+            ransac.fit(x, y)
+
+            for charge, df in calib_group.groupby("PRECURSOR_CHARGE"):
+                r2_score = ransac.score(df[["MASS", "PRECURSOR_CHARGE"]], df["COLLISION_ENERGY"])
+                title = f"Scatter Plot with RANSAC Model \nSlope: {ransac.estimator_.coef_[0]:.2f}, "
+                title += f"Intercept: {ransac.estimator_.intercept_:.2f}, R2: {r2_score:.2f}"
+                pl.plot_ce_ransac_model(
+                    sa_ce_df=df,
+                    filename=results_dir / f"{spectra_file.stem}_ce_ransac_model_{charge}.svg",
+                    title=title,
+                )
+
+            delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
+            library.spectra_data["COLLISION_ENERGY"] = np.maximum(
+                0, library.spectra_data["COLLISION_ENERGY"] + delta_ce
+            )
+
+        else:
+            ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            best_ce = ce_alignment.idxmax()
+            pl.plot_mean_sa_ce(
+                sa_ce_df=ce_alignment.to_frame().reset_index(),
+                filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
+            )
+            pl.plot_violin_sa_ce(
+                sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
+            )
+            library.spectra_data["COLLISION_ENERGY"] = best_ce
+            with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+                f.write(str(best_ce))
     else:
         best_ce = 35
+        library.spectra_data["COLLISION_ENERGY"] = best_ce
 
-    with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-        f.write(str(best_ce))
-
-    return best_ce
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            f.write(str(best_ce))
 
 
 def generate_spectral_lib(config_path: Union[str, Path]):
@@ -218,9 +260,8 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
     library = _annotate_and_get_library(spectra_file, config)
-    best_ce = _get_best_ce(library, spectra_file, config)
+    _get_best_ce(library, spectra_file, config)
 
-    library.spectra_data["COLLISION_ENERGY"] = best_ce
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
@@ -249,11 +290,14 @@ def run_ce_calibration(
 
     spectra_files = _preprocess(spectra_files, config)
 
-    processing_pool = JobPool(processes=config.num_threads)
-
-    for spectra_file in spectra_files:
-        processing_pool.apply_async(_ce_calib, [spectra_file, config])
-    processing_pool.check_pool()
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            processing_pool.apply_async(_ce_calib, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _ce_calib(spectra_file, config)
 
 
 def _calculate_features(spectra_file: Path, config: Config):
@@ -303,52 +347,14 @@ def _calculate_features(spectra_file: Path, config: Config):
     calc_feature_step.mark_done()
 
 
-def run_rescoring(config_path: Union[str, Path]):
+def _rescore(fdr_dir: Path, config: Config):
     """
-    Create a ReScore object and run the rescoring.
+    High level rescore function for original and rescore.
 
-    # TODO full description
-    :param config_path: path to config file
+    :param fdr_dir: the output directory
+    :param config: the configuration object
     :raises ValueError: if the provided fdr estimation method in the config is not recognized
     """
-    config = Config()
-    config.read(config_path)
-
-    # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
-
-    proc_dir = config.output / "proc"
-    proc_dir.mkdir(parents=True, exist_ok=True)
-
-    spectra_files = _preprocess(spectra_files, config)
-
-    processing_pool = JobPool(processes=config.num_threads)
-
-    for spectra_file in spectra_files:
-        processing_pool.apply_async(_calculate_features, [spectra_file, config])
-    processing_pool.check_pool()
-
-    # rescoring
-
-    fdr_dir = config.output / "results" / config.fdr_estimation_method
-
-    original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
-    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
-
-    prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
-    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
-
-    if not prepare_tab_original_step.is_done():
-        logger.info("Merging input tab files for rescoring without peptide property prediction")
-        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
-        prepare_tab_original_step.mark_done()
-
-    if not prepare_tab_rescore_step.is_done():
-        logger.info("Merging input tab files for rescoring with peptide property prediction")
-        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
-        prepare_tab_rescore_step.mark_done()
-
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
 
@@ -371,6 +377,58 @@ def run_rescoring(config_path: Union[str, Path]):
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
 
+
+def run_rescoring(config_path: Union[str, Path]):
+    """
+    Create a ReScore object and run the rescoring.
+
+    # TODO full description
+    :param config_path: path to config file
+    """
+    config = Config()
+    config.read(config_path)
+
+    # load spectra file names
+    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
+    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+
+    proc_dir = config.output / "proc"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+
+    spectra_files = _preprocess(spectra_files, config)
+
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            processing_pool.apply_async(_calculate_features, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _calculate_features(spectra_file, config)
+
+    # prepare rescoring
+
+    fdr_dir = config.output / "results" / config.fdr_estimation_method
+
+    original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
+    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+
+    prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
+    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
+
+    if not prepare_tab_original_step.is_done():
+        logger.info("Merging input tab files for rescoring without peptide property prediction")
+        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        prepare_tab_original_step.mark_done()
+
+    if not prepare_tab_rescore_step.is_done():
+        logger.info("Merging input tab files for rescoring with peptide property prediction")
+        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+        prepare_tab_rescore_step.mark_done()
+
+    # rescoring
+    _rescore(fdr_dir, config)
+
     # plotting
     pl.plot_all(fdr_dir)
 
@@ -387,13 +445,17 @@ def run_job(config_path: Union[str, Path]):
     conf = Config()
     conf.read(config_path)
     conf.check()
+
+    output_folder = conf.output
     job_type = conf.job_type
+
+    output_folder.mkdir(exist_ok=True)
 
     # add file handler to root logger
     base_logger = logging.getLogger()
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s::%(funcName)s %(message)s")
     suffix = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    logging_output = conf.output / f"{job_type}_{suffix}.log"
+    logging_output = output_folder / f"{job_type}_{suffix}.log"
     file_handler = logging.FileHandler(filename=logging_output)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)

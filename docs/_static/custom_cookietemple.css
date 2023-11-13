@@ -50,6 +50,10 @@ table.align-default {
     padding-left: 50px;
 }
 
+.lib-rescore-config-table tbody tr:nth-last-child(-n + 2) td:nth-child(1) {
+    padding-left: 50px;
+}
+
 .lib-config-table tbody tr:nth-child(n + 2):nth-child(-n + 3) td:nth-child(1) {
     padding-left: 50px;
 }
