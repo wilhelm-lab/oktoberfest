@@ -126,7 +126,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     return alignment_library
 
 
-def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, **server_kwargs) -> pd.Series:
+def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, **server_kwargs) -> Spectra:
     """
     Calculate best collision energy for peptide property predictions.
 
@@ -138,7 +138,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :param ce_range: the min and max CE to be tested during calibration
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :param server_kwargs: Additional parameters that are forwarded to the prediction method
-    :return: pandas series containing the spectral angle for all tested collision energies
+    :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
@@ -156,8 +156,8 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)
+    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
+    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
     # return pred_intensity.toarray(), raw_intensity.toarray()
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
