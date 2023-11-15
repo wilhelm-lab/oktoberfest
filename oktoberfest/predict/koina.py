@@ -1,7 +1,7 @@
 import time
+import warnings
 from functools import partial
 from typing import Dict, Generator, KeysView, List, Optional, Union
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -258,7 +258,7 @@ class Koina:
             the model's output.
         """
         if debug:
-            warnings.warn("Debug argument ignored for sequenctial predictions.")
+            warnings.warn("Debug argument ignored for sequenctial predictions.", stacklevel=1)
         predictions: Dict[str, np.ndarray] = {}
         for data_batch in tqdm(
             self.__slice_dict(data, self.batchsize), desc="Getting predictions", disable=disable_progress_bar
@@ -402,7 +402,11 @@ class Koina:
         )
 
     def predict(
-        self, data: Union[Dict[str, np.ndarray], pd.DataFrame], disable_progress_bar: bool = False, _async: bool = True, debug=False
+        self,
+        data: Union[Dict[str, np.ndarray], pd.DataFrame],
+        disable_progress_bar: bool = False,
+        _async: bool = True,
+        debug=False,
     ) -> Dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
@@ -441,7 +445,9 @@ class Koina:
             pred_func = self.__predict_sequential
         return pred_func(data, disable_progress_bar=disable_progress_bar, debug=debug)
 
-    def __predict_async(self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False) -> Dict[str, np.ndarray]:
+    def __predict_async(
+        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
+    ) -> Dict[str, np.ndarray]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -472,7 +478,7 @@ class Koina:
             return infer_results
 
         try:
-            #sort according to request id
+            # sort according to request id
             infer_results_to_return = [
                 self.__extract_predictions(infer_results[i])
                 for i in np.argsort(np.array([int(y.get_response("id")["id"]) for y in infer_results]))
@@ -481,10 +487,11 @@ class Koina:
         except AttributeError:
             for res in infer_results:
                 if type(res) is InferenceServerException:
-                    warnings.warn(res.message())
+                    warnings.warn(res.message(), stacklevel=1)
             else:
                 raise InferenceServerException(
                     """
                     At least one request failed. Check the error message above and try again.
                     To get a list of responses run Koina().predict() with `debug = True`
-                    """)
+                    """
+                ) from None
