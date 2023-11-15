@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,9 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
         inplace=True,
     )
 
-    results = predictor.predict(data)
+    results = predictor.predict(data, debug=False)
+    if isinstance(results, List):
+        raise AssertionError("Debug functionality is not supported by oktoberfest")
 
     data.rename(
         columns={

@@ -374,7 +374,7 @@ class Koina:
             infer_results.append(result)
 
     def __async_predict_batch(
-        self, data: Dict[str, np.ndarray], infer_results: List[InferResult], request_id: int, timeout: int = 10
+        self, data: Dict[str, np.ndarray], infer_results: List[InferResult], request_id: int, timeout: int = 100
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -407,7 +407,7 @@ class Koina:
         disable_progress_bar: bool = False,
         _async: bool = True,
         debug=False,
-    ) -> Dict[str, np.ndarray]:
+    ) -> Union[Dict[str, np.ndarray], List[Union[InferResult, InferenceServerException]]]:
         """
         Perform inference on the given data using the Koina model.
 
@@ -447,7 +447,7 @@ class Koina:
 
     def __predict_async(
         self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
-    ) -> Dict[str, np.ndarray]:
+    ) -> Union[Dict[str, np.ndarray], List[Union[InferResult, InferenceServerException]]]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -486,7 +486,7 @@ class Koina:
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
             for res in infer_results:
-                if type(res) is InferenceServerException:
+                if isinstance(res, InferenceServerException):
                     warnings.warn(res.message(), stacklevel=1)
             else:
                 raise InferenceServerException(
