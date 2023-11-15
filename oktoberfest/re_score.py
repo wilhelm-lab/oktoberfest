@@ -126,7 +126,7 @@ class ReScore(CalculateFeatures):
             if not raw_file_path.with_suffix(".raw").is_file() or raw_file_path.with_suffix(".RAW").is_file():
                 logger.info(f"Did not find {raw_file} in search directory, skipping this file")
                 continue
-            if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+            if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx","xisearch"]):
                 split_msms = self._get_split_msms_path(raw_file + ".rescore")
                 logger.info(f"Creating split msms.txt file {split_msms}")
                 df_search_split = df_search_split[(df_search_split["PEPTIDE_LENGTH_A"] <= 30)]
@@ -240,6 +240,39 @@ class ReScore(CalculateFeatures):
         else:
             self.merge_input_step_andromeda.mark_done()
 
+    def get_columns_tab_xl(self):
+        search_type = "rescore"
+        perc_path = self.get_percolator_folder_path()
+        file_path = perc_path / f"{search_type}.tab"
+        df = pd.read_csv(file_path, sep="\t")
+        target_columns = ("label_pep_a","label_pep_b")
+        spectrum_columns = "SpecId"
+        peptide_columns  = "Peptide"
+        protein_columns  = "Proteins"
+        columns_to_remove = ["SpecId", "ScanNr","label_pep_a","label_pep_b","Peptide", "Proteins"]
+        df_new = df.drop(columns=columns_to_remove).reset_index(drop=True)
+        feature_columns  = tuple(df_new.columns)
+        #print("feature_columns")
+        #print(feature_columns)
+        return target_columns, spectrum_columns, peptide_columns, protein_columns, feature_columns    
+
+    def get_columns_tab_linear(self):
+        search_type = "rescore"
+        perc_path = self.get_percolator_folder_path()
+        file_path = perc_path / f"{search_type}.tab"
+        df = pd.read_csv(file_path, sep="\t")
+        target_column = "Label"
+        spectrum_columns = "SpecId"
+        peptide_column  = "Peptide"
+        protein_column  = "Proteins"
+        columns_to_remove = ["SpecId", "ScanNr","label_pep_a","label_pep_b","Peptide", "Proteins"]
+        df_new = df.drop(columns=columns_to_remove).reset_index(drop=True)
+        feature_columns  = tuple(df_new.columns)
+        #print("feature_columns")
+        #print(feature_columns)
+        return target_column, spectrum_columns, peptide_column, protein_column, feature_columns    
+
+
     def rescore(self, search_type: str = "rescore", test_fdr: float = 0.01, train_fdr: float = 0.01):
         """Use percolator to re-score library."""
         if search_type == "rescore" and self.rescore_step_prosit.is_done():
@@ -276,8 +309,18 @@ class ReScore(CalculateFeatures):
             file_path = perc_path / f"{search_type}.tab"
             df = pd.read_csv(file_path, sep="\t")
             df = df.rename(columns={"Protein": "Proteins"})
+            #df = df.drop(columns="Label")
             df.to_csv(file_path, sep="\t")
+            df = pd.read_csv(file_path, sep="\t")
+            #df['Label'] = df['Label'].apply(lambda x: True if x == 1 else False)
+            #df.to_csv('/cmnfs/home/m.kalhor/wilhelmlab/notebooks/notebooks/df.csv', index=False)
+            #target_columns, spectrum_columns, peptide_columns, protein_columns, feature_columns = self.get_columns_tab_xl()
+            #target_column, spectrum_columns, peptide_column, protein_column, feature_columns = self.get_columns_tab_linear()
             psms = mokapot.read_pin(file_path)
+            #psms = mokapot.dataset.CrossLinkedPsmDataset(psms = df,spectrum_columns = spectrum_columns, target_columns = target_columns,
+            #peptide_columns = peptide_columns, protein_columns = protein_columns, feature_columns = feature_columns )
+            #psms = mokapot.dataset.LinearPsmDataset(psms = df,target_column = target_column, spectrum_columns = spectrum_columns,
+            #peptide_column = peptide_column, protein_column = protein_column, feature_columns = feature_columns ) 
             results, models = mokapot.brew(psms, test_fdr=test_fdr)
             results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
         else:

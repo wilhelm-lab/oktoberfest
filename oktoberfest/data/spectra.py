@@ -62,7 +62,7 @@ class Spectra:
         columns = []
         config = Config()
         config.read(CONFIG_PATH)
-        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]): 
+        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx","xisearch"]): 
             max_range = 59
         else:
             max_range = 30 
@@ -156,7 +156,7 @@ class Spectra:
         # reshape based on the number of fragments
         config = Config()
         config.read(CONFIG_PATH)
-        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+        if any(config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx", "xisearch"]):
             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH_CMS2)
         else:
             intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)

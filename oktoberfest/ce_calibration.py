@@ -8,7 +8,7 @@ from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2, XlinkX
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2, XlinkX, Xisearch
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -68,6 +68,8 @@ class CeCalibration(SpectralLibrary):
             search_result = Plink2(self.search_path)
         elif search_type == "xlinkx":
             search_result = XlinkX(self.search_path)
+        elif search_type == "xisearch":
+            search_result = Xisearch(self.search_path)    
         else:
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
@@ -84,7 +86,7 @@ class CeCalibration(SpectralLibrary):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch in ["maxquant", "msfragger", "mascot", "plink2","xlinkx"]:
+        if switch in ["maxquant", "msfragger", "mascot", "plink2","xlinkx","xisearch"]:
             self._gen_internal_search_result_from_msms()
             switch = "internal"
         if switch == "internal":
@@ -122,7 +124,7 @@ class CeCalibration(SpectralLibrary):
         df_annotated_spectra = annotate_spectra(df_join)
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         logger.info("Preparing library")
-        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx", "xisearch"]):
             self.library.add_columns(df_join)
             self.library.add_matrix(df_annotated_spectra["INTENSITIES_A"], FragmentType.RAW_A)
             self.library.add_matrix(df_annotated_spectra["INTENSITIES_B"], FragmentType.RAW_B)
@@ -130,6 +132,7 @@ class CeCalibration(SpectralLibrary):
             self.library.add_matrix(df_annotated_spectra["MZ_B"], FragmentType.MZ_B)
             self.library.add_column(df_annotated_spectra["CALCULATED_MASS_A"], "CALCULATED_MASS_A")
             self.library.add_column(df_annotated_spectra["CALCULATED_MASS_B"], "CALCULATED_MASS_B")
+
         else:
             self.library.add_columns(df_join)
             self.library.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
@@ -160,11 +163,11 @@ class CeCalibration(SpectralLibrary):
             & (~self.alignment_library.spectra_data["REVERSE"])
         ]
         # Select the 1000 highest scoring or all if there are less than 1000 
-        # Select the 500 highest scoring for crosslinked peptides
-        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+        # Select the 200 highest scoring for crosslinked peptides
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx", "xisearch"]):
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
-        ).iloc[:30]
+        ).iloc[:200]
         else:
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
@@ -182,7 +185,7 @@ class CeCalibration(SpectralLibrary):
 
         Check https://gitlab.lrz.de/proteomics/prosit_tools/oktoberfest/-/blob/develop/oktoberfest/ce_calibration/grpc_alignment.py
         """
-        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx"]):
+        if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx","xisearch"]):
             pred_intensity_a = self.alignment_library.get_matrix(FragmentType.PRED_A)
             
             pred_intensity_b = self.alignment_library.get_matrix(FragmentType.PRED_B)
@@ -240,3 +243,6 @@ class CeCalibration(SpectralLibrary):
             self.best_ce = self.ce_alignment.idxmax()
         else:
             self.best_ce = 35
+
+
+
