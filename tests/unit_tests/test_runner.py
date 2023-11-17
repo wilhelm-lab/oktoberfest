@@ -1,8 +1,10 @@
+import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from oktoberfest.__main__ import main
+from oktoberfest.utils import Config
 
 
 class TestRunner(unittest.TestCase):
@@ -13,3 +15,7 @@ class TestRunner(unittest.TestCase):
         config_path = Path(__file__).parent / "configs" / "spectral_library_with_digest.json"
         with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
             main()
+
+        config = Config()
+        config.read(config_path)
+        shutil.rmtree(config.output)

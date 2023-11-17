@@ -13,6 +13,10 @@ RESCORING = {
     "allFeatures": False,
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": (19, 50),
+        "use_ransac_model": False,
+    },
 }
 
 CECALIB = {
@@ -27,6 +31,10 @@ CECALIB = {
     "numThreads": 1,
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": (19, 50),
+        "use_ransac_model": False,
+    },
 }
 
 LIBGEN = {

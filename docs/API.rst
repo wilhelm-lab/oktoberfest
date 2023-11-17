@@ -35,7 +35,7 @@ Spectra preprocessing
    :toctree: api/pp
 
    pp.list_spectra
-   pp.convert_spectra
+   pp.convert_spectra_to_mzml
    pp.load_spectra
 
 
@@ -65,15 +65,13 @@ Koina interface
 .. autosummary::
    :toctree: api/pr
 
-   pr.grpc_predict
-   pr.infer_predictions
+   pr.predict
 
 Postprocessing koina response
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pr
-
 
    pr.parse_fragment_labels
 
