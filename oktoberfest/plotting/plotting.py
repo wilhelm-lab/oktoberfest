@@ -53,6 +53,7 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312")
     plt.xlabel("Score")
     plt.legend(loc="upper right")
+    plt.title(f"Score Distribution ({level.capitalize()})")  # Add a title
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -119,6 +120,7 @@ def joint_plot(
     )
     jplot.ax_joint.set_ylabel("rescored_score")
     jplot.ax_joint.set_xlabel("original_score")
+    jplot.fig.suptitle(f"Joint Plot ({level.capitalize()})", y=1.02)  # Add a figure title
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
