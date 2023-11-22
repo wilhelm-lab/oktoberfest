@@ -49,8 +49,8 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
 
     plt.figure(figsize=(8, 6))
     bins = np.linspace(-3, 2, 15)
-    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
+    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha= 0.7)
     plt.xlabel("Score")
     plt.legend(loc="upper right")
     plt.title(f"Score Distribution ({level.capitalize()})")  # Add a title
@@ -118,9 +118,9 @@ def joint_plot(
         height=10,
         joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
-    jplot.ax_joint.set_ylabel("rescored_score")
-    jplot.ax_joint.set_xlabel("original_score")
-    jplot.fig.suptitle(f"Joint Plot ({level.capitalize()})", y=1.02)  # Add a figure title
+    jplot.ax_joint.set_ylabel(f"rescored_score for the {level} level")
+    jplot.ax_joint.set_xlabel(f"original_score for the {level} level")
+    jplot.fig.suptitle(f"Joint Plot ({level.capitalize()})", y=0.99)  # Add a figure title
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -293,8 +293,8 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
     bins = np.linspace(0, 1, 15)
-    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00",alpha=1.0)
+    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312",alpha=0.7)
     plt.xlabel("Spectral angle", size=14)
     plt.title("Target vs Decoys Spectral Angle Distribution")
     plt.legend(loc="upper right")
