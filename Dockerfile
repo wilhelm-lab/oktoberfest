@@ -39,5 +39,8 @@ RUN ZIP=ThermoRawFileParser1.4.2.zip && \
 # Copy source folder
 ADD oktoberfest/ /root/oktoberfest
 
+# Copy make files into root folder to allow bootstrapping
+ADD Makefile* /root/
+
 # Used by ProteomicsDB runs to describe the oktoberfest version
 ADD hash.file /root/hash.file
