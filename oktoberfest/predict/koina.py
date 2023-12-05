@@ -1,4 +1,5 @@
 import time
+import warnings
 from functools import partial
 from typing import Dict, Generator, KeysView, List, Optional, Union
 
@@ -241,7 +242,7 @@ class Koina:
         return self.__extract_predictions(infer_result)
 
     def __predict_sequential(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False
+        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
     ) -> Dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
@@ -256,6 +257,8 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays representing
             the model's output.
         """
+        if debug:
+            warnings.warn("Debug argument ignored for sequenctial predictions.", stacklevel=1)
         predictions: Dict[str, np.ndarray] = {}
         for data_batch in tqdm(
             self.__slice_dict(data, self.batchsize), desc="Getting predictions", disable=disable_progress_bar
@@ -365,12 +368,13 @@ class Koina:
         :raises error: if any exception was encountered during asynchronous inference.
         """
         if error:
-            raise error
+            infer_results.append(error)
+            # raise InferenceServerException(error)
         else:
             infer_results.append(result)
 
     def __async_predict_batch(
-        self, data: Dict[str, np.ndarray], infer_results: List[InferResult], request_id: int, timeout: int = 10
+        self, data: Dict[str, np.ndarray], infer_results: List[InferResult], request_id: int, timeout: int = 100
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -398,8 +402,12 @@ class Koina:
         )
 
     def predict(
-        self, data: Union[Dict[str, np.ndarray], pd.DataFrame], disable_progress_bar: bool = False, _async: bool = True
-    ) -> Dict[str, np.ndarray]:
+        self,
+        data: Union[Dict[str, np.ndarray], pd.DataFrame],
+        disable_progress_bar: bool = False,
+        _async: bool = True,
+        debug=False,
+    ) -> Union[Dict[str, np.ndarray], List[Union[InferResult, InferenceServerException]]]:
         """
         Perform inference on the given data using the Koina model.
 
@@ -419,7 +427,7 @@ class Koina:
             representing the model's output.
 
         Example::
-            model = KoinaModel("Prosit_2019_intensity")
+            model = Koina("Prosit_2019_intensity")
             input_data = {
                 "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
                 "precursor_charges": np.array([2 for _ in range(size)]),
@@ -435,9 +443,11 @@ class Koina:
             pred_func = self.__predict_async
         else:
             pred_func = self.__predict_sequential
-        return pred_func(data, disable_progress_bar=disable_progress_bar)
+        return pred_func(data, disable_progress_bar=disable_progress_bar, debug=debug)
 
-    def __predict_async(self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False) -> Dict[str, np.ndarray]:
+    def __predict_async(
+        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
+    ) -> Union[Dict[str, np.ndarray], List[Union[InferResult, InferenceServerException]]]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -464,10 +474,24 @@ class Koina:
             pbar.n = len(infer_results)
             pbar.refresh()
 
-        # sort according to request id
-        infer_results_to_return = [
-            self.__extract_predictions(infer_results[i])
-            for i in np.argsort(np.array([int(y.get_response("id")["id"]) for y in infer_results]))
-        ]
+        if debug:
+            return infer_results
 
-        return self.__merge_list_dict_array(infer_results_to_return)
+        try:
+            # sort according to request id
+            infer_results_to_return = [
+                self.__extract_predictions(infer_results[i])
+                for i in np.argsort(np.array([int(y.get_response("id")["id"]) for y in infer_results]))
+            ]
+            return self.__merge_list_dict_array(infer_results_to_return)
+        except AttributeError:
+            for res in infer_results:
+                if isinstance(res, InferenceServerException):
+                    warnings.warn(res.message(), stacklevel=1)
+            else:
+                raise InferenceServerException(
+                    """
+                    At least one request failed. Check the error message above and try again.
+                    To get a list of responses run Koina().predict() with `debug = True`
+                    """
+                ) from None
