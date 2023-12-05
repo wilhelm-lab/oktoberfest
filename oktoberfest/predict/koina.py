@@ -48,7 +48,6 @@ class Koina:
         self.model_inputs = {}
         self.model_outputs = {}
         self._response_dict = {}
-        # self.batchsize = No
 
         self.model_name = model_name
         self.url = server_url
@@ -410,6 +409,7 @@ class Koina:
         max_requests = 3
 
         for _ in range(max_requests):
+            infer_results[request_id] = None
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -422,8 +422,6 @@ class Koina:
                 time.sleep(0.1)
             if isinstance(infer_results.get(request_id), InferResult):
                 break
-            else:
-                infer_results[request_id] = None
 
     def predict(
         self,
