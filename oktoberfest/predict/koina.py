@@ -21,6 +21,7 @@ class Koina:
     model_inputs: Dict[str, str]
     model_outputs: Dict[str, np.ndarray]
     batch_size: int
+    _response_dict: Dict[int, Union[InferResult, InferenceServerException]]
 
     def __init__(
         self,
@@ -46,6 +47,7 @@ class Koina:
         """
         self.model_inputs = {}
         self.model_outputs = {}
+        self._response_dict = {}
         # self.batchsize = No
 
         self.model_name = model_name
@@ -67,6 +69,11 @@ class Koina:
         self.__get_inputs()
         self.__get_outputs(targets)
         self.__get_batchsize()
+
+    @property
+    def response_dict(self):
+        """The dictionary containing raw InferenceResult/InferenceServerException objects (values) for a given request_id (key)."""
+        return self._response_dict
 
     def _is_server_ready(self):
         """
@@ -242,7 +249,7 @@ class Koina:
         return self.__extract_predictions(infer_result)
 
     def __predict_sequential(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
+        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False
     ) -> Dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
@@ -253,13 +260,10 @@ class Koina:
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
         :param disable_progress_bar: If True, disable the progress bar during inference.
-        :param debug: If True, print / return debug output. Currently no debug output is provided for sequential predictions.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays representing
             the model's output.
         """
-        if debug:
-            warnings.warn("Debug argument ignored for sequential predictions.", stacklevel=1)
         predictions: Dict[str, np.ndarray] = {}
         for data_batch in tqdm(
             self.__slice_dict(data, self.batchsize), desc="Getting predictions", disable=disable_progress_bar
@@ -354,7 +358,13 @@ class Koina:
             out[k] = np.concatenate([x[k] for x in dict_list])
         return out
 
-    def __async_callback(self, infer_results: Dict[int, InferResult], request_id: int, result: InferResult, error):
+    def __async_callback(
+        self,
+        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        request_id: int,
+        result: InferResult,
+        error,
+    ):
         """
         Callback function for asynchronous inference.
 
@@ -375,7 +385,11 @@ class Koina:
             infer_results[request_id] = result
 
     def __async_predict_batch(
-        self, data: Dict[str, np.ndarray], infer_results: Dict[int, InferResult], request_id: int, timeout: int = 60000
+        self,
+        data: Dict[str, np.ndarray],
+        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        request_id: int,
+        timeout: int = 60000,
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -417,7 +431,7 @@ class Koina:
         disable_progress_bar: bool = False,
         _async: bool = True,
         debug=False,
-    ) -> Union[Dict[str, np.ndarray], Dict[int, Union[InferResult, InferenceServerException]]]:
+    ) -> Dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
 
@@ -432,8 +446,7 @@ class Koina:
             in the column names.
         :param disable_progress_bar: If True, disable the progress bar during inference. Defaults to False.
         :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
-        :param debug: If True, print / return debug output. The raw InferResult / InferServerException dictionary will be
-            returned instead of the dictionary containing the parsed predictions. Unsupported for sequential inference.
+        :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
@@ -452,14 +465,13 @@ class Koina:
         if isinstance(data, pd.DataFrame):
             data = {input_field: data[input_field].to_numpy() for input_field in self.model_inputs.keys()}
         if _async:
-            pred_func = self.__predict_async
+            return self.__predict_async(data, disable_progress_bar=disable_progress_bar, debug=debug)
         else:
-            pred_func = self.__predict_sequential
-        return pred_func(data, disable_progress_bar=disable_progress_bar, debug=debug)
+            return self.__predict_sequential(data, disable_progress_bar=disable_progress_bar)
 
     def __predict_async(
         self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
-    ) -> Union[Dict[str, np.ndarray], Dict[int, Union[InferResult, InferenceServerException]]]:
+    ) -> Dict[str, np.ndarray]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -470,15 +482,13 @@ class Koina:
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
         :param disable_progress_bar: If True, disable the progress bar during asynchronous inference. Defaults to False.
-        :param debug: If True, print / return debug output. The raw InferResult / InferServerException dictionary will be
-            returned instead of the dictionary containing the parsed predictions.
-
+        :param debug: If True, store raw InferResult / InferServerException dictionary for later analysis.
         :raises InferenceServerException: If at least one batch of predictions could not be inferred.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
-        infer_results: Dict[int, InferResult] = {}
+        infer_results: Dict[int, Union[InferResult, InferenceServerException]] = {}
         for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
             self.__async_predict_batch(data_batch, infer_results, request_id=i)
 
@@ -491,7 +501,7 @@ class Koina:
             pbar.refresh()
 
         if debug:
-            return infer_results
+            self._response_dict = infer_results
 
         try:
             # sort according to request id
@@ -507,6 +517,6 @@ class Koina:
                 raise InferenceServerException(
                     """
                     At least one request failed. Check the error message above and try again.
-                    To get a list of responses run Koina().predict() with `debug = True`
+                    To get a list of responses run koina.predict(..., debug = True), then call koina.response_dict
                     """
                 ) from None
