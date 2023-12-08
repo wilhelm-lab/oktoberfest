@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.merge_spectra_and_peptides &mdash; Oktoberfest 0.5.1 documentation</title>
+  <title>oktoberfest.pp.annotate_spectral_library &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
@@ -20,8 +20,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.pp.annotate_spectral_library" href="oktoberfest.pp.annotate_spectral_library.html" />
-    <link rel="prev" title="oktoberfest.pp.gen_lib" href="oktoberfest.pp.gen_lib.html" /> 
+    <link rel="next" title="oktoberfest.pp.list_spectra" href="oktoberfest.pp.list_spectra.html" />
+    <link rel="prev" title="oktoberfest.pp.merge_spectra_and_peptides" href="oktoberfest.pp.merge_spectra_and_peptides.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,11 +55,11 @@
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.merge_spectra_and_peptides</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.merge_spectra_and_peptides"><code class="docutils literal notranslate"><span class="pre">merge_spectra_and_peptides()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.annotate_spectral_library</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.annotate_spectral_library"><code class="docutils literal notranslate"><span class="pre">annotate_spectral_library()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_spectra_to_mzml.html">oktoberfest.pp.convert_spectra_to_mzml</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
@@ -93,10 +93,10 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../API.html">API</a></li>
-      <li class="breadcrumb-item active">oktoberfest.pp.merge_spectra_and_peptides</li>
+      <li class="breadcrumb-item active">oktoberfest.pp.annotate_spectral_library</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L338-L359" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L362-L380" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -104,28 +104,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-pp-merge-spectra-and-peptides">
-<h1>oktoberfest.pp.merge_spectra_and_peptides<a class="headerlink" href="#oktoberfest-pp-merge-spectra-and-peptides" title="Permalink to this heading"></a></h1>
+  <section id="oktoberfest-pp-annotate-spectral-library">
+<h1>oktoberfest.pp.annotate_spectral_library<a class="headerlink" href="#oktoberfest-pp-annotate-spectral-library" title="Permalink to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="oktoberfest.pp.merge_spectra_and_peptides">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">merge_spectra_and_peptides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spectra</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.merge_spectra_and_peptides" title="Permalink to this definition"></a></dt>
-<dd><p>Merge peptides with spectra.</p>
-<p>This function takes spectra and and peptides from a search and merges them based on the
-RAW File identifier and the scan number using the “RAW_FILE” and “SCAN_NUMBER” column of
-the two dataframes provided.</p>
+<dt class="sig sig-object py" id="oktoberfest.pp.annotate_spectral_library">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">annotate_spectral_library</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">psms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit_mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.annotate_spectral_library" title="Permalink to this definition"></a></dt>
+<dd><p>Annotate spectral library with peaks and mass.</p>
+<p>This function annotates a given spectral library with peak intensities and mass to charge ratio,
+as well as the calculated monoisotopic mass of the precursor ion.
+The additional information is added to the provided spectral library.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>spectra</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.1.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – MS2 spectra of a mass spectrometry run</p></li>
-<li><p><strong>search</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.1.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Peptides from a search for the given spectra in internal format (see
-<a class="reference internal" href="../../internal_format.html"><span class="doc">Custom search results</span></a>)</p></li>
+<li><p><strong>psms</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></span>) – Spectral library to be annotated.</p></li>
+<li><p><strong>mass_tol</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – The mass tolerance allowed for retaining peaks</p></li>
+<li><p><strong>unit_mass_tol</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The unit in which the mass tolerance is given</p></li>
 </ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></span></p>
-</dd>
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Dataframe containing the matched pairs of peptides and spectra (PSMs)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -136,8 +130,8 @@ the two dataframes provided.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="oktoberfest.pp.gen_lib.html" class="btn btn-neutral float-left" title="oktoberfest.pp.gen_lib" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.pp.annotate_spectral_library.html" class="btn btn-neutral float-right" title="oktoberfest.pp.annotate_spectral_library" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pp.merge_spectra_and_peptides.html" class="btn btn-neutral float-left" title="oktoberfest.pp.merge_spectra_and_peptides" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="oktoberfest.pp.list_spectra.html" class="btn btn-neutral float-right" title="oktoberfest.pp.list_spectra" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

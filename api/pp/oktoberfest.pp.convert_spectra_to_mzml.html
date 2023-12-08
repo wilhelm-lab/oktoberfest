@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.convert_spectra &mdash; Oktoberfest 0.5.0 documentation</title>
+  <title>oktoberfest.pp.convert_spectra_to_mzml &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
@@ -14,7 +14,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=3fadbb4a"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=9bd53f53"></script>
         <script src="../../_static/doctools.js?v=888ff710"></script>
         <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -37,7 +37,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.0
+                0.5.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -56,15 +56,17 @@
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.convert_spectra</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.convert_spectra"><code class="docutils literal notranslate"><span class="pre">convert_spectra()</span></code></a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.convert_spectra_to_mzml</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.convert_spectra_to_mzml"><code class="docutils literal notranslate"><span class="pre">convert_spectra_to_mzml()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
@@ -91,10 +93,10 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../API.html">API</a></li>
-      <li class="breadcrumb-item active">oktoberfest.pp.convert_spectra</li>
+      <li class="breadcrumb-item active">oktoberfest.pp.convert_spectra_to_mzml</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L377-L399" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L415-L437" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -102,20 +104,20 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-pp-convert-spectra">
-<h1>oktoberfest.pp.convert_spectra<a class="headerlink" href="#oktoberfest-pp-convert-spectra" title="Permalink to this heading"></a></h1>
+  <section id="oktoberfest-pp-convert-spectra-to-mzml">
+<h1>oktoberfest.pp.convert_spectra_to_mzml<a class="headerlink" href="#oktoberfest-pp-convert-spectra-to-mzml" title="Permalink to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="oktoberfest.pp.convert_spectra">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">convert_spectra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thermo_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.convert_spectra" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="oktoberfest.pp.convert_spectra_to_mzml">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">convert_spectra_to_mzml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thermo_exe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.convert_spectra_to_mzml" title="Permalink to this definition"></a></dt>
 <dd><p>Convert spectra to mzML format.</p>
 <p>This function converts RAW files containing spectra from a mass spectrometry run into mzML format. The process
 makes use of ThermoRawFileParser and requires mono being installed if it is used on MacOS or linux.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>raw_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – Path to RAW file to be converted to mzML format</p></li>
-<li><p><strong>output_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]) – Path to the location where the converted spectra should be written to.</p></li>
-<li><p><strong>thermo_exe</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]) – Path to the executable of ThermoRawFileParser, default depends on the OS:
+<li><p><strong>raw_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – Path to RAW file to be converted to mzML format</p></li>
+<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – Path to the location where the converted spectra should be written to.</p></li>
+<li><p><strong>thermo_exe</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]</span>) – Path to the executable of ThermoRawFileParser, default depends on the OS:
 for Windows, it is “ThermoRawFileParser.exe”, while for Linux and MacOS, it is
 “/opt/compomics/ThermoRawFileParser.exe”.</p></li>
 </ul>

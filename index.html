@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics &mdash; Oktoberfest 0.5.0 documentation</title>
+  <title>Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Generation for Proteomics &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -14,7 +14,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3fadbb4a"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=9bd53f53"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -36,7 +36,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.0
+                0.5.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -69,7 +69,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Oktoberfest: Rescoring and Spectral Library Generation for Proteomics</li>
+      <li class="breadcrumb-item active">Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Generation for Proteomics</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/wilhelm-lab/oktoberfest/blob/development/docs/index.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -79,10 +79,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-rescoring-and-spectral-library-generation-for-proteomics">
-<h1>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics<a class="headerlink" href="#oktoberfest-rescoring-and-spectral-library-generation-for-proteomics" title="Permalink to this heading"></a></h1>
+  <section id="oktoberfest-rescoring-collision-energy-calibration-and-spectral-library-generation-for-proteomics">
+<h1>Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Generation for Proteomics<a class="headerlink" href="#oktoberfest-rescoring-collision-energy-calibration-and-spectral-library-generation-for-proteomics" title="Permalink to this heading"></a></h1>
 <p><a class="reference external" href="https://pypi.org/project/oktoberfest/"><img alt="PyPI" src="https://img.shields.io/pypi/v/oktoberfest.svg" /></a> <a class="reference external" href="https://pypi.org/project/oktoberfest"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/oktoberfest" /></a> <a class="reference external" href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/wilhelm-lab/oktoberfest" /></a> <a class="reference external" href="https://oktoberfest.readthedocs.io/"><img alt="Read the documentation at https://oktoberfest.readthedocs.io/" src="https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/wilhelm-lab/oktoberfest"><img alt="Codecov" src="https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" /></a> <a class="reference external" href="https://github.com/psf/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
-<p>Oktoberfest is a python tool for rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.</p>
+<p>Oktoberfest is a python tool for collision energy calibration, rescoring search results and generating spectral libraries for proteomics research within the Prosit ecosystem. It offers an end to end pipeline that takes search results, predicts peptide properties using koina, plots summaries and quality control figures and performs FDR estimation with either mokapot or percolator.</p>
 <aside class="sidebar">
 <p class="sidebar-title">Key Contributors</p>
 <ul class="simple">
@@ -100,6 +100,15 @@
 <li><p><a class="reference external" href="https://github.com/mwilhelm42">Mathias Wilhelm</a>: advisor and PI of wilhelmlab</p></li>
 </ul>
 </aside>
+<section id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Discuss usage, development and issues on <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest">GitHub</a>.</p></li>
+<li><p>Check our <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/blob/development/tutorials/Oktoberfest%20Tutorial.ipynb">tutorial notebook</a>, the <a class="reference external" href="./usage.html">usage principles</a> or the <a class="reference external" href="./API.html">API</a>.</p></li>
+<li><p>Check the <a class="reference external" href="./contributing.html">Contributor Guide</a> if you want to participate in developing.</p></li>
+<li><p>Consider citing <a class="reference external" href="https://doi.org/10.1002/pmic.202300112">Oktoberfest</a> along with original <a class="reference external" href="./reference.html">references</a>.</p></li>
+</ul>
+</section>
 </section>
 <section id="news">
 <h1>News<a class="headerlink" href="#news" title="Permalink to this heading"></a></h1>

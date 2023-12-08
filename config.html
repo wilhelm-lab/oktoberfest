@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configuration &mdash; Oktoberfest 0.5.0 documentation</title>
+  <title>Configuration &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -14,7 +14,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3fadbb4a"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=9bd53f53"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +37,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.0
+                0.5.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -54,7 +54,7 @@
 <li class="toctree-l2"><a class="reference internal" href="jobs.html">Running Oktoberfest</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Configuration</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#always-required">Always required</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#required-for-spectral-library-generation-and-rescoring">Required for spectral library generation and rescoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#required-for-ce-calibration-and-rescoring">Required for CE calibration and rescoring</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-spectral-library-generation">Additional parameters required for spectral library generation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-in-silico-digestion">Additional parameters required for in-silico digestion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#additional-parameters-required-for-rescoring">Additional parameters required for rescoring</a></li>
@@ -110,7 +110,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p>type</p></td>
-<td><p>The type of job; can be one of “CollisionEnergyAlignment”, “SpectralLibraryGeneration” or “Rescoring”</p></td>
+<td><p>The type of job; can be one of “CollisionEnergCalibration”, “SpectralLibraryGeneration” or “Rescoring”</p></td>
 </tr>
 <tr class="row-odd"><td><p>tag</p></td>
 <td><p>Optional mass tag Can be “tmt”, “tmtpro”, “itraq4” or “itraq8”; default is “”</p></td>
@@ -136,8 +136,8 @@
 </tbody>
 </table>
 </section>
-<section id="required-for-spectral-library-generation-and-rescoring">
-<h2>Required for spectral library generation and rescoring<a class="headerlink" href="#required-for-spectral-library-generation-and-rescoring" title="Permalink to this heading"></a></h2>
+<section id="required-for-ce-calibration-and-rescoring">
+<h2>Required for CE calibration and rescoring<a class="headerlink" href="#required-for-ce-calibration-and-rescoring" title="Permalink to this heading"></a></h2>
 <table class="fixed-table lib-rescore-config-table docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Parameter</p></th>
@@ -152,13 +152,13 @@
 <td><p>Path to directory or file containing the search results</p></td>
 </tr>
 <tr class="row-even"><td><p>search_results_type</p></td>
-<td><p>Format description for search results; can be “Maxquant”, “Msfragger”, “Mascot” or “<a class="reference external" href="./internal_format.html">Internal</a>”; default = “Maxquant”</p></td>
+<td><p>Format description for search results; can be “Maxquant”, “Msfragger”, “Mascot”, “Sage” or “<a class="reference external" href="./internal_format.html">Internal</a>”; default = “Maxquant”</p></td>
 </tr>
 <tr class="row-odd"><td><p>spectra</p></td>
 <td><p>Path to directory or file containing mass spectrometry results</p></td>
 </tr>
 <tr class="row-even"><td><p>spectra_type</p></td>
-<td><p>Format description for files containing spectra; can be “raw” or “mzml”; default = “raw”; in case of mixed input, select “raw”.</p></td>
+<td><p>Format description for files containing spectra; can be “raw”, “mzml” or “pkl”; default = “raw”; in case of mixed mzML/RAW input, select “raw”.</p></td>
 </tr>
 <tr class="row-odd"><td><p>numThreads</p></td>
 <td><p>Number of raw/mzml files processed in parallel (parallelisation on file level); more processes than files has no effect and should be avoided; default = 1</p></td>
@@ -171,6 +171,15 @@
 </tr>
 <tr class="row-even"><td><p>unitMassTolerance</p></td>
 <td><p>Defines the measure of tolerance, either “da” or “ppm”; default = da (mass analyzer is ITMS), ppm (mass analyzer is FTMS or TOF)</p></td>
+</tr>
+<tr class="row-odd"><td><p>ce_alignment_options</p></td>
+<td><p>Contains settings for collision energy alignment</p></td>
+</tr>
+<tr class="row-even"><td><p>ce_range</p></td>
+<td><p>Min and max collision energy (end-exclusive) used for calibration; i.e. (5,10) tests every CE from 5 to 9. Default is (19,50)</p></td>
+</tr>
+<tr class="row-odd"><td><p>use_ransac_model</p></td>
+<td><p>Boolean that determines whether or not to use a ransac regression model for calibration refinement. Default is false.</p></td>
 </tr>
 </tbody>
 </table>
@@ -217,7 +226,7 @@
 <tr class="row-even"><td><p>digestion</p></td>
 <td><p>Digestion mode; can be “full”, “semi” or None; default = “full”</p></td>
 </tr>
-<tr class="row-odd"><td><p>cleavages</p></td>
+<tr class="row-odd"><td><p>missedCleavages</p></td>
 <td><p>Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2</p></td>
 </tr>
 <tr class="row-even"><td><p>minLength</p></td>

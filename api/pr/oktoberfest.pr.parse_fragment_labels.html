@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pr.parse_fragment_labels &mdash; Oktoberfest 0.5.0 documentation</title>
+  <title>oktoberfest.pr.parse_fragment_labels &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
@@ -14,14 +14,14 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=3fadbb4a"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=9bd53f53"></script>
         <script src="../../_static/doctools.js?v=888ff710"></script>
         <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="oktoberfest.re.generate_features" href="../re/oktoberfest.re.generate_features.html" />
-    <link rel="prev" title="oktoberfest.pr.infer_predictions" href="oktoberfest.pr.infer_predictions.html" /> 
+    <link rel="prev" title="oktoberfest.pr.predict" href="oktoberfest.pr.predict.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -37,7 +37,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.0
+                0.5.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -87,7 +87,7 @@
       <li class="breadcrumb-item active">oktoberfest.pr.parse_fragment_labels</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L161-L192" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L56-L89" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -102,8 +102,11 @@
 <span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">parse_fragment_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spectra_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precursor_charges</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq_lengths</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.parse_fragment_labels" title="Permalink to this definition"></a></dt>
 <dd><p>Uses regex to parse labels.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]</span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
 <li><p><strong>spectra_labels</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><em>ndarray</em></a>) – </p></li>
 <li><p><strong>precursor_charges</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><em>ndarray</em></a>) – </p></li>
 <li><p><strong>seq_lengths</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.26)"><em>ndarray</em></a>) – </p></li>
@@ -118,7 +121,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="oktoberfest.pr.infer_predictions.html" class="btn btn-neutral float-left" title="oktoberfest.pr.infer_predictions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="oktoberfest.pr.predict.html" class="btn btn-neutral float-left" title="oktoberfest.pr.predict" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../re/oktoberfest.re.generate_features.html" class="btn btn-neutral float-right" title="oktoberfest.re.generate_features" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

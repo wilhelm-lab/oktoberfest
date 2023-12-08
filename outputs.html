@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Generated outputs &mdash; Oktoberfest 0.5.0 documentation</title>
+  <title>Generated outputs &mdash; Oktoberfest 0.5.1 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -14,7 +14,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3fadbb4a"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=9bd53f53"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +37,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.0
+                0.5.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -108,13 +108,13 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p>data/</p></td>
-<td><p>Contains hdf5 files that combine search results, annotated spectra, metadata in &lt;raw_file&gt;.mzML.hdf5 and predictions in &lt;raw_file&gt;.mzML.pred.hdf5 where &lt;raw_file&gt; is replaced with the specific name of the RAW file for which information is stored. The files are updated and store the progress of the current job and enable skipping specific steps when rerunning a job.</p></td>
+<td><p>Contains hdf5 files that combine search results, annotated spectra, metadata in &lt;spectra_file&gt;.mzML.hdf5 and predictions in &lt;spectra_file&gt;.mzML.pred.hdf5 where &lt;spectra_file&gt; is replaced with the specific name of the RAW file for which information is stored. The files are updated and store the progress of the current job and enable skipping specific steps when rerunning a job.</p></td>
 </tr>
 <tr class="row-odd"><td><p>msms/</p></td>
-<td><p>Contains combined msms.prosit and separated search results in &lt;raw_file&gt;.prosit where &lt;raw_file&gt; is replaced with the specific name of the RAW file for which search results are stored. The files are stored in the <a class="reference external" href="./internal_format.html">internal format</a>  and are created as part of preprocessing search results from supported search engines. If a file is present, preprocessing is skipped when rerunning a job.</p></td>
+<td><p>Contains combined msms.prosit and separated search results in &lt;spectra_file&gt;.prosit where &lt;spectra_file&gt; is replaced with the spectra file name for which search results are stored. The files are stored in the <a class="reference external" href="./internal_format.html">internal format</a>  and are created as part of preprocessing search results from supported search engines. If a file is present, preprocessing is skipped when rerunning a job.</p></td>
 </tr>
-<tr class="row-even"><td><p>mzML/</p></td>
-<td><p>Contains spectra files in mzML format (&lt;raw_file&gt;.mzML where &lt;raw_file&gt; is replaced with the specific name of the RAW file that was converted. If spectra are provided in mzML format already, they will not show up in this folder. If an mzML is present for a given RAW file, conversion is skipped when rerruning a job.</p></td>
+<tr class="row-even"><td><p>spectra/</p></td>
+<td><p>Contains spectra files in mzML / pkl format (&lt;spectra_file&gt;.mzML where &lt;spectra_file&gt; is replaced with the specific name of the RAW / .d file that was converted). If spectra are provided in mzML / pkl format already, they will not show up in this folder. If an mzML / pkl is present for a given RAW /.d file, conversion is skipped when rerruning a job.</p></td>
 </tr>
 <tr class="row-odd"><td><p>proc/</p></td>
 <td><p>Contains information on successful job steps in &lt;job_step&gt;.done where &lt;job_step&gt; is replaced by the specfic job step completed. If a file is present, the specific step will be skipped when rerunning a job.</p></td>
@@ -138,8 +138,8 @@ results/percolator/</p></td>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>&lt;raw_file&gt;_ce.txt</p></td>
-<td><p>Contains the best collision energy according to the collision energy calibration where &lt;raw_file&gt; is replaced with the name of the RAW file for which the calibration was performed</p></td>
+<tr class="row-even"><td><p>&lt;spectra_file&gt;_ce.txt</p></td>
+<td><p>Contains the best collision energy according to the collision energy calibration where &lt;spectra_file&gt; is replaced with the name of the spectra file for which the calibration was performed</p></td>
 </tr>
 <tr class="row-odd"><td><p>myPrositLib.&lt;csv|msp&gt;</p></td>
 <td><p>Contains the spectral library in either csv or msp format depending on what format was chosen</p></td>
@@ -163,8 +163,8 @@ results/percolator/</p></td>
 <tr class="row-even"><td><p>rescore.tab</p></td>
 <td><p>Input file for percolator / mokapot containing the features from peptide property prediction (see <a class="reference external" href="./svm_features.html">features for target / decoy separation</a>)</p></td>
 </tr>
-<tr class="row-odd"><td><p>&lt;raw_file&gt;.rescore.tab</p></td>
-<td><p>Input file for percolator / mokapot containing the features from peptide property prediction for a RAW file that replaces &lt;raw_file&gt; (files are concatenated into rescore.tab)</p></td>
+<tr class="row-odd"><td><p>&lt;spectra_file&gt;.rescore.tab</p></td>
+<td><p>Input file for percolator / mokapot containing the features from peptide property prediction for a spectra file name that replaces &lt;spectra_file&gt; (files are concatenated into rescore.tab)</p></td>
 </tr>
 <tr class="row-even"><td><p>rescore.&lt;method&gt;.peptides.txt</p></td>
 <td><p>Percolator / mokapot output for target peptides (features from peptide property prediction)</p></td>
@@ -187,8 +187,8 @@ results/percolator/</p></td>
 <tr class="row-even"><td><p>original.tab</p></td>
 <td><p>Input file for percolator / mokapot containing only the original features (see <a class="reference external" href="./svm_features.html">features for target / decoy separation</a>)</p></td>
 </tr>
-<tr class="row-odd"><td><p>&lt;raw_file&gt;.original.tab</p></td>
-<td><p>Input file for percolator / mokapot containing only the original features for a RAW file that replaces &lt;raw_file&gt; (files are concatenated into original.tab)</p></td>
+<tr class="row-odd"><td><p>&lt;spectra_file&gt;.original.tab</p></td>
+<td><p>Input file for percolator / mokapot containing only the original features for a spectra file name that replaces &lt;spectra_file&gt; (files are concatenated into original.tab)</p></td>
 </tr>
 <tr class="row-even"><td><p>original.&lt;method&gt;.peptides.txt</p></td>
 <td><p>Percolator / mokapot output for target peptides (original features)</p></td>

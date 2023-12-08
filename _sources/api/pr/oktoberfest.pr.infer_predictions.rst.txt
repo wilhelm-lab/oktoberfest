@@ -1,8 +1,0 @@
-﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L105-L158
-
-oktoberfest.pr.infer\_predictions
-=================================
-
-.. currentmodule:: oktoberfest.pr
-
-.. autofunction:: infer_predictions
