@@ -1,8 +1,14 @@
 name: Run oktoberfest Tests
 
 on:
-    - push
-    - pull_request
+    push:
+        branches:
+            - development
+            - main
+            - "release/*"
+    pull_request:
+        branches:
+            - "*"
 
 jobs:
     tests:
@@ -63,7 +69,7 @@ jobs:
 
         steps:
             - name: Check out the repository
-              uses: actions/checkout@v2.3.4
+              uses: actions/checkout@v4
 
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v4
@@ -98,7 +104,7 @@ jobs:
                   print("::set-output name=result::{}".format(result))
 
             - name: Restore pre-commit cache
-              uses: actions/cache@v3.3.1
+              uses: actions/cache@v3.3.2
               if: matrix.session == 'pre-commit'
               with:
                   path: ~/.cache/pre-commit
@@ -128,7 +134,7 @@ jobs:
         needs: tests
         steps:
             - name: Check out the repository
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: Set up Python 3.8
               uses: actions/setup-python@v4
@@ -159,4 +165,4 @@ jobs:
               run: nox --force-color --session=coverage -- xml -i
 
             - name: Upload coverage report
-              uses: codecov/codecov-action@v2.1.0
+              uses: codecov/codecov-action@v3.1.4

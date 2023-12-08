@@ -12,7 +12,7 @@ Always required
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                            |
    +============================+====================================================================================================================+
-   | type                       | The type of job; can be one of "CollisionEnergyAlignment", "SpectralLibraryGeneration" or "Rescoring"              |
+   | type                       | The type of job; can be one of "CollisionEnergCalibration", "SpectralLibraryGeneration" or "Rescoring"             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
    | tag                        | Optional mass tag Can be "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""                                      |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
@@ -29,8 +29,8 @@ Always required
    | output                     | Path to the output folder (relative to the location of the config file); default = "./"                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
 
-Required for spectral library generation and rescoring
-------------------------------------------------------
+Required for CE calibration and rescoring
+-----------------------------------------
 
 .. table::
    :class: fixed-table lib-rescore-config-table
@@ -42,11 +42,11 @@ Required for spectral library generation and rescoring
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     search_results         | Path to directory or file containing the search results                                                                                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     search_results_type    | Format description for search results; can be "Maxquant", "Msfragger", "Mascot" or "`Internal <./internal_format.html>`_"; default = "Maxquant"                    |
+   |     search_results_type    | Format description for search results; can be "Maxquant", "Msfragger", "Mascot", "Sage" or "`Internal <./internal_format.html>`_"; default = "Maxquant"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     spectra                | Path to directory or file containing mass spectrometry results                                                                                                     |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     spectra_type           | Format description for files containing spectra; can be "raw" or "mzml"; default = "raw"; in case of mixed input, select "raw".                                    |
+   |     spectra_type           | Format description for files containing spectra; can be "raw", "mzml" or "pkl"; default = "raw"; in case of mixed mzML/RAW input, select "raw".                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | numThreads                 | Number of raw/mzml files processed in parallel (parallelisation on file level); more processes than files has no effect and should be avoided; default = 1         |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -55,6 +55,12 @@ Required for spectral library generation and rescoring
    | massTolerance              | Defines the allowed tolerance between theoretical and experimentally observered fragment mass during peak annotation; default = 20 (FTMS), 40 (TOF), 0.35 (ITMS)   |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | unitMassTolerance          | Defines the measure of tolerance, either "da" or "ppm"; default = da (mass analyzer is ITMS), ppm (mass analyzer is FTMS or TOF)                                   |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | ce_alignment_options       | Contains settings for collision energy alignment                                                                                                                   |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     ce_range               | Min and max collision energy (end-exclusive) used for calibration; i.e. (5,10) tests every CE from 5 to 9. Default is (19,50)                                      |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     use_ransac_model       | Boolean that determines whether or not to use a ransac regression model for calibration refinement. Default is false.                                              |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Additional parameters required for spectral library generation
@@ -90,7 +96,7 @@ Additional parameters required for in-silico digestion
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     digestion              | Digestion mode; can be "full", "semi" or None; default = "full"                                                                                                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     cleavages              | Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2                                            |
+   |     missedCleavages        | Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     minLength              | Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 7                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

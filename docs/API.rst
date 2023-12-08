@@ -27,6 +27,7 @@ Generating libraries
    pp.digest
    pp.gen_lib
    pp.merge_spectra_and_peptides
+   pp.annotate_spectral_library
 
 Spectra preprocessing
 
@@ -34,7 +35,7 @@ Spectra preprocessing
    :toctree: api/pp
 
    pp.list_spectra
-   pp.convert_spectra
+   pp.convert_spectra_to_mzml
    pp.load_spectra
 
 
@@ -46,6 +47,7 @@ Peptide preprocessing
    pp.convert_search
    pp.load_search
    pp.filter_peptides
+   pp.filter_peptides_for_model
 
 
 Predicting: :code:`pr`
@@ -63,15 +65,13 @@ Koina interface
 .. autosummary::
    :toctree: api/pr
 
-   pr.grpc_predict
-   pr.infer_predictions
+   pr.predict
 
 Postprocessing koina response
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pr
-
 
    pr.parse_fragment_labels
 

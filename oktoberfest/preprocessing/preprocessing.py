@@ -10,7 +10,7 @@ from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
 from spectrum_io.spectral_library import digest as digest_io
 
 from ..data.spectra import FragmentType, Spectra
@@ -227,6 +227,8 @@ def convert_search(
         search_result = MSFragger
     elif search_engine == "mascot":
         search_result = Mascot
+    elif search_engine == "sage":
+        search_result = Sage
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
@@ -242,15 +244,19 @@ def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
     In case the input directory is a file, the function will check if it matches the format and return it wrapped in a list.
 
     :param input_dir: Path to the directory to scan for spectra files
-    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML" or "RAW".
+    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML", "RAW" or "pkl".
     :raises NotADirectoryError: if the specified input directory does not exist
+    :raises ValueError: if the specified file format is not supported
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
         input_dir = Path(input_dir)
     raw_files = []
 
-    if input_dir.is_file() and input_dir.suffix.lower().endswith(("mzml", "raw")):
+    if not file_format.lower() in ["mzml", "raw", "pkl"]:
+        raise ValueError(f"File format {file_format} unknown. Must be one of mzML, RAW or pkl.")
+
+    if input_dir.is_file() and input_dir.suffix.lower().endswith(file_format.lower()):
         raw_files.append(input_dir)
     elif input_dir.is_dir():
         glob_pattern = _get_glob_pattern(file_format)
@@ -281,23 +287,28 @@ def split_search(
     search_results: pd.DataFrame,
     output_dir: Union[str, Path],
     filenames: Optional[List[str]] = None,
-):
+) -> List[str]:
     """
     Split search results by spectrum file.
 
-    Given a list of spectrum filenames from which search results originate the provided search results are split
-    and filename specific csv files are written to the provided output directory. The provided filenames need to
+    Given a list of spectrum file names from which search results originate the provided search results are split
+    and filename specific csv files are written to the provided output directory. The provided file names need to
     correspond to the spectrum file identifier in the "RAW_FILE" column of the provided search results. The search
     results need to be provided in internal format (see :doc:`../../internal_format`).
-    If the list of filenames is not provided, all spectrum file identifiers are considered, otherwise only the
+    If the list of file names is not provided, all spectrum file identifiers are considered, otherwise only the
     identifiers found in the list are taken into account for writing the individual csv files.
-    The output filenames follow the convention <filename>.rescore.
+    The output file names follow the convention <filename>.rescore.
+    If a file name is not found in the search results, it is ignored and a warning is printed.
+    The function returns a list of file names for which search results are available, removing the ones that were
+    ignored if a list of file names was provided.
 
     :param search_results: search results in internal format
     :param output_dir: directory in which to store individual csv files containing the search results for
         individual filenames
     :param filenames: optional list of spectrum filenames that should be considered. If not provided, all spectrum file
         identifiers in the search results are considered.
+
+    :return: list of file names for which search results could be found
     """
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
@@ -308,10 +319,20 @@ def split_search(
 
     grouped_search_results = search_results.groupby("RAW_FILE")
 
+    filenames_found = []
     for filename in filenames:
         output_file = (output_dir / filename).with_suffix(".rescore")
         logger.info(f"Creating split msms.txt file {output_file}")
-        grouped_search_results.get_group(filename).to_csv(output_file)
+        try:
+            grouped_search_results.get_group(filename).to_csv(output_file)
+            filenames_found.append(filename)
+        except KeyError:
+            logger.warning(
+                f"The search results do not contain search results for the provided file name {filename}. "
+                "If this is not intended, please verify that the file names are written correctly in the "
+                f"search results. {filename} is ignored."
+            )
+    return filenames_found
 
 
 def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> Spectra:
@@ -343,8 +364,8 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     Annotate spectral library with peaks and mass.
 
     This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.  # TODO is this with or without charge
-    The additional information as added to the provided spectral library.
+    as well as the calculated monoisotopic mass of the precursor ion.
+    The additional information is added to the provided spectral library.
 
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
@@ -356,25 +377,42 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
     psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
     psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
-    psms.add_column(df_annotated_spectra["CALCULATED_MASS"], "CALCULATED_MASS")
+    psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
 
 
-def load_spectra(mzml_file: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
+def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
     """
-    Load spectra from mzml file.
+    Read spectra from a given file.
 
-    This function reads MS2 spectra from a given mzML file using a specified parser.
+    This function reads MS2 spectra from a given mzML or pkl file using a specified parser. The file ending
+    is used to determine the correct parsing method.
 
-    :param mzml_file: Path to mzML file containing MS2 spectra to be loaded
-    :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml"
+    :param filename: Path to mzML / pkl file containing MS2 spectra to be loaded.
+    :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
+        Only used for parsing of mzML files.
+    :raises ValueError: if the filename does not end in either ".pkl" or ".mzML" (case-insensitive)
     :return: measured spectra with metadata.
     """
-    return ThermoRaw.read_mzml(
-        source=mzml_file, package=parser, search_type=""
-    )  # TODO in spectrum_io, remove unnecessary argument
+    if isinstance(filename, str):
+        filename = Path(filename)
+
+    format_ = filename.suffix.lower()
+    if format_ == ".mzml":
+        return ThermoRaw.read_mzml(
+            source=filename, package=parser, search_type=""
+        )  # TODO in spectrum_io, remove unnecessary argument
+    elif format_ == ".pkl":
+        results = pd.read_pickle(filename)
+        # TODO in spectrum-io in case median_RETENTION_TIME is still passed
+        # TODO also change name for ion mobility
+        results.rename(columns={"median_RETENTION_TIME": "RETENTION_TIME"}, inplace=True)
+        return results
+
+    else:
+        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
 
 
-def convert_spectra(
+def convert_spectra_to_mzml(
     raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
 ):
     """
