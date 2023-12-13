@@ -362,7 +362,7 @@ class Koina:
         infer_results: Dict[int, Union[InferResult, InferenceServerException]],
         request_id: int,
         result: InferResult,
-        error,
+        error: Optional[InferenceServerException],
     ):
         """
         Callback function for asynchronous inference.
@@ -379,7 +379,6 @@ class Koina:
         """
         if error:
             infer_results[request_id] = error
-            # raise InferenceServerException(error)
         else:
             infer_results[request_id] = result
 
@@ -409,7 +408,6 @@ class Koina:
         max_requests = 3
 
         for _ in range(max_requests):
-            infer_results[request_id] = None
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -422,6 +420,7 @@ class Koina:
                 time.sleep(0.1)
             if isinstance(infer_results.get(request_id), InferResult):
                 break
+            del infer_results[request_id]
 
     def predict(
         self,
