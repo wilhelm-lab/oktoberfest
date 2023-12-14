@@ -493,7 +493,7 @@ class Koina:
         with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
             unfinished_tasks = [i for i in range(n_tasks)]
             while pbar.n != n_tasks:
-                time.sleep(1)
+                time.sleep(0.2)
                 new_unfinished_tasks = []
                 for j in unfinished_tasks:
                     result = infer_results.get(j)
@@ -533,9 +533,7 @@ class Koina:
             self._response_dict = infer_results
         try:
             # sort according to request id
-            infer_results_to_return = [
-                self.__extract_predictions(infer_results[i]) for i in np.argsort(list(infer_results.keys()))
-            ]
+            infer_results_to_return = [self.__extract_predictions(infer_results[i]) for i in range(len(infer_results))]
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
             for res in infer_results.values():
