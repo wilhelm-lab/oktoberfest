@@ -388,6 +388,7 @@ class Koina:
         infer_results: Dict[int, Union[InferResult, InferenceServerException]],
         request_id: int,
         timeout: int = 60000,
+        retries: int = 3,
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -401,13 +402,13 @@ class Koina:
         :param infer_results: A dictionary to which the results of asynchronous inference will be added.
         :param request_id: An identifier for the inference request, used to track the order of completion.
         :param timeout: The maximum time (in seconds) to wait for the inference to complete. Defaults to 10 seconds.
+        :param retries: The maximum number of requests in case of failure
+        :yield: None, this is to separate async clien infer from checking the result
         """
         batch_outputs = self.__get_batch_outputs(self.model_outputs.keys())
         batch_inputs = self.__get_batch_inputs(data)
 
-        max_requests = 3
-
-        for _ in range(max_requests):
+        for _ in range(retries):
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -416,11 +417,9 @@ class Koina:
                 outputs=batch_outputs,
                 client_timeout=timeout,
             )
-            while infer_results.get(request_id) is None:
-                time.sleep(0.1)
+            yield
             if isinstance(infer_results.get(request_id), InferResult):
                 break
-            del infer_results[request_id]
 
     def predict(
         self,
@@ -480,31 +479,61 @@ class Koina:
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
         :param disable_progress_bar: If True, disable the progress bar during asynchronous inference. Defaults to False.
         :param debug: If True, store raw InferResult / InferServerException dictionary for later analysis.
-        :raises InferenceServerException: If at least one batch of predictions could not be inferred.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
         infer_results: Dict[int, Union[InferResult, InferenceServerException]] = {}
+        tasks = []
         for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
-            self.__async_predict_batch(data_batch, infer_results, request_id=i)
+            tasks.append(self.__async_predict_batch(data_batch, infer_results, request_id=i, retries=3))
+            next(tasks[i])
 
-        with tqdm(total=i + 1, desc="Getting predictions", disable=disable_progress_bar) as pbar:
-            while len(infer_results) != i + 1:
-                pbar.n = len(infer_results)
+        n_tasks = i + 1
+        with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
+            unfinished_tasks = [i for i in range(n_tasks)]
+            while pbar.n != n_tasks:
+                time.sleep(0.2)
+                new_unfinished_tasks = []
+                for j in unfinished_tasks:
+                    result = infer_results.get(j)
+                    if result is None:
+                        new_unfinished_tasks.append(j)
+                        continue
+                    if isinstance(result, InferenceServerException):
+                        try:
+                            new_unfinished_tasks.append(j)
+                            next(tasks[j])
+                        except StopIteration:
+                            pbar.n += 1
+                        continue
+                    if isinstance(result, InferResult):
+                        pbar.n += 1
+
+                unfinished_tasks = new_unfinished_tasks
                 pbar.refresh()
-                time.sleep(1)
-            pbar.n = len(infer_results)
-            pbar.refresh()
 
+        return self.__handle_results(infer_results, debug)
+
+    def __handle_results(
+        self, infer_results: Dict[int, Union[InferResult, InferenceServerException]], debug: bool
+    ) -> Dict[str, np.ndarray]:
+        """
+        Handles the results.
+
+        :param infer_results: The dictionary containing the inferred results
+        :param debug: whether to store the infer_results in the response_dict attribute
+
+        :raises InferenceServerException: If at least one batch of predictions could not be inferred.
+
+        :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
+            representing the model's output.
+        """
         if debug:
             self._response_dict = infer_results
-
         try:
             # sort according to request id
-            infer_results_to_return = [
-                self.__extract_predictions(infer_results[i]) for i in np.argsort(list(infer_results.keys()))
-            ]
+            infer_results_to_return = [self.__extract_predictions(infer_results[i]) for i in range(len(infer_results))]
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
             for res in infer_results.values():
