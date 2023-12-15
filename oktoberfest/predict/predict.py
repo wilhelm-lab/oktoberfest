@@ -4,6 +4,8 @@ from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
+from spectrum_fundamentals.annotation.annotation import generate_annotation_matrix
+from spectrum_fundamentals.constants import ANNOTATION
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
@@ -34,11 +36,16 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "PRECURSOR_CHARGE": "precursor_charges",
             "COLLISION_ENERGY": "collision_energies",
             "FRAGMENTATION": "fragmentation_types",
+            "INSTRUMENT_TYPES": "instrument_types",
         },
         inplace=True,
     )
 
     results = predictor.predict(data)
+    try:
+        results = _generate_prosit_like_prediction_matrix(results, data)
+    except KeyError:
+        pass  # pass when there are not intensity, mz or annotation in the dictiornary, i.e. for irt models
 
     data.rename(
         columns={
@@ -46,11 +53,48 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "precursor_charges": "PRECURSOR_CHARGE",
             "collision_energies": "COLLISION_ENERGY",
             "fragmentation_types": "FRAGMENTATION",
+            "instrument_types": "INSTRUMENT_TYPES",
         },
         inplace=True,
     )
 
     return results
+
+
+def _generate_prosit_like_prediction_matrix(predictions, data):
+    prosit_int_matrix = []
+    prosit_mz_matrix = []
+    for pred_int, pred_mz, sequence, charge, annot in zip(
+        predictions["intensities"],
+        predictions["mz"],
+        data["peptide_sequences"].values,
+        data["precursor_charges"].values,
+        predictions["annotation"],
+    ):
+        pep_length = len(sequence)
+        fragment_labels = parse_fragment_labels(annot[:, None], charge, pep_length)
+        matched_peaks = pd.DataFrame()
+
+        matched_peaks["ion_type"] = fragment_labels["type"].flatten()
+        matched_peaks["no"] = fragment_labels["number"].flatten()
+        matched_peaks["charge"] = fragment_labels["charge"].flatten()
+        matched_peaks["intensity"] = pred_int
+        matched_peaks["exp_mass"] = pred_mz
+
+        matched_peaks = matched_peaks[matched_peaks["intensity"] != -1]
+
+        intensity, fragmentmz = generate_annotation_matrix(matched_peaks, sequence, charge)
+        prosit_int_matrix.append(intensity)
+        prosit_mz_matrix.append(fragmentmz)
+    return {
+        "intensities": np.array(prosit_int_matrix),
+        "mz": np.array(prosit_mz_matrix),
+        "annotation": np.tile(
+            np.array([f"{t}{n}+{c}".encode() for t, c, n in zip(*ANNOTATION)]), len(predictions["intensities"])
+        )
+        .reshape(len(predictions["intensities"]), 174)
+        .astype(np.object_),
+    }
 
 
 def parse_fragment_labels(
@@ -72,6 +116,10 @@ def parse_fragment_labels(
                 types.append(groups[0].decode())
                 numbers.append(int(groups[1]))
                 charges.append(int(groups[2]))
+            elif label == b"":
+                types.append("N")
+                numbers.append(0)
+                charges.append(0)
             else:
                 raise ValueError(f"String {label} does not match the expected fragment label pattern")
         fragment_types.append(types)

@@ -104,19 +104,13 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
     :param peptides: Dataframe containing search results to be filtered
     :param model: Name of a peptide property prediction model to use as filter
 
-    :raises ValueError: if an unsupported model is supplied
-
     :return: The filtered dataframe to be used with the given model.
     """
-    if "prosit" in model.lower():
-        filter_kwargs = {
-            "min_length": 7,
-            "max_length": 30,
-            "max_charge": 6,
-        }
-    else:
-        raise ValueError(f"The model {model} is not known.")
-
+    filter_kwargs = {
+        "min_length": 7,
+        "max_length": 30,
+        "max_charge": 6,
+    }
     return filter_peptides(peptides, **filter_kwargs)
 
 

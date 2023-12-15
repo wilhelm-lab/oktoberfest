@@ -315,9 +315,9 @@ def _calculate_features(spectra_file: Path, config: Config):
     pred_intensities = pr.predict(
         library.spectra_data,
         model_name=config.models["intensity"],
-        targets=["intensities", "annotation"],
         **server_kwargs,
     )
+
     pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
 
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
