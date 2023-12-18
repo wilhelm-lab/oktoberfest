@@ -2,7 +2,7 @@
 name = "oktoberfest"
 version = "0.5.2"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
-authors = ["Victor Giurcoiu <victor.giurcoiu@tum.de>"]
+authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
 readme = "README.rst"
 homepage = "https://github.com/wilhelm-lab/oktoberfest"
