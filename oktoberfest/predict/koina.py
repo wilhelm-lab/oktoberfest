@@ -499,14 +499,14 @@ class Koina:
                     result = infer_results.get(j)
                     if result is None:
                         new_unfinished_tasks.append(j)
-                    elif isinstance(result, InferenceServerException):
+                    elif isinstance(result, InferResult):
+                        pbar.n += 1
+                    else:  # unexpected result / exception -> try again
                         try:
                             next(tasks[j])
                             new_unfinished_tasks.append(j)
                         except StopIteration:
                             pbar.n += 1
-                    elif isinstance(result, InferResult):
-                        pbar.n += 1
 
                 unfinished_tasks = new_unfinished_tasks
                 pbar.refresh()
