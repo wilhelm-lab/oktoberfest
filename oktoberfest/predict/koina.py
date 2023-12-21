@@ -361,7 +361,7 @@ class Koina:
         self,
         infer_results: Dict[int, Union[InferResult, InferenceServerException]],
         request_id: int,
-        result: InferResult,
+        result: Optional[InferResult],
         error: Optional[InferenceServerException],
     ):
         """
@@ -408,7 +408,13 @@ class Koina:
         batch_outputs = self.__get_batch_outputs(self.model_outputs.keys())
         batch_inputs = self.__get_batch_inputs(data)
 
-        for _ in range(retries):
+        for i in range(retries):
+            if i > 0:  # need to yield first, before doing sth, but only after first time
+                yield
+                if isinstance(infer_results.get(request_id), InferResult):
+                    break
+                del infer_results[request_id]  # avoid race condition in case inference is slower than tqdm loop
+
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -417,9 +423,6 @@ class Koina:
                 outputs=batch_outputs,
                 client_timeout=timeout,
             )
-            yield
-            if isinstance(infer_results.get(request_id), InferResult):
-                break
 
     def predict(
         self,
@@ -492,23 +495,21 @@ class Koina:
         n_tasks = i + 1
         with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
             unfinished_tasks = [i for i in range(n_tasks)]
-            while pbar.n != n_tasks:
+            while pbar.n < n_tasks:
                 time.sleep(0.2)
                 new_unfinished_tasks = []
                 for j in unfinished_tasks:
                     result = infer_results.get(j)
                     if result is None:
                         new_unfinished_tasks.append(j)
-                        continue
-                    if isinstance(result, InferenceServerException):
+                    elif isinstance(result, InferResult):
+                        pbar.n += 1
+                    else:  # unexpected result / exception -> try again
                         try:
-                            new_unfinished_tasks.append(j)
                             next(tasks[j])
+                            new_unfinished_tasks.append(j)
                         except StopIteration:
                             pbar.n += 1
-                        continue
-                    if isinstance(result, InferResult):
-                        pbar.n += 1
 
                 unfinished_tasks = new_unfinished_tasks
                 pbar.refresh()
