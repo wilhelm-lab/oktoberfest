@@ -361,7 +361,7 @@ class Koina:
         self,
         infer_results: Dict[int, Union[InferResult, InferenceServerException]],
         request_id: int,
-        result: InferResult,
+        result: Optional[InferResult],
         error: Optional[InferenceServerException],
     ):
         """
@@ -503,6 +503,7 @@ class Koina:
                         pbar.n += 1
                     else:  # unexpected result / exception -> try again
                         try:
+                            del infer_results[j]  # avoid race condition in case inference is slower than loop
                             next(tasks[j])
                             new_unfinished_tasks.append(j)
                         except StopIteration:
