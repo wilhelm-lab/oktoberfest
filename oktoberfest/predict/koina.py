@@ -408,7 +408,13 @@ class Koina:
         batch_outputs = self.__get_batch_outputs(self.model_outputs.keys())
         batch_inputs = self.__get_batch_inputs(data)
 
-        for _ in range(retries):
+        for i in range(retries):
+            if i > 0:  # need to yield first, before doing sth, but only after first time
+                yield
+                if isinstance(infer_results.get(request_id), InferResult):
+                    break
+                del infer_results[request_id]  # avoid race condition in case inference is slower than tqdm loop
+
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -417,9 +423,6 @@ class Koina:
                 outputs=batch_outputs,
                 client_timeout=timeout,
             )
-            yield
-            if isinstance(infer_results.get(request_id), InferResult):
-                break
 
     def predict(
         self,
@@ -503,7 +506,6 @@ class Koina:
                         pbar.n += 1
                     else:  # unexpected result / exception -> try again
                         try:
-                            del infer_results[j]  # avoid race condition in case inference is slower than loop
                             next(tasks[j])
                             new_unfinished_tasks.append(j)
                         except StopIteration:
