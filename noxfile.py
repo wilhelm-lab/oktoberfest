@@ -35,8 +35,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
     session's virtual environment. This allows pre-commit to locate hooks in
     that environment when invoked from git.
 
-    Args:
-        session: The Session object.
+    :param session: The Session object.
     """
     assert session.bin is not None  # noqa: S101
 
@@ -186,8 +185,6 @@ def xdoctest(session: Session) -> None:
 def docs_build(session: Session) -> None:
     """Build the documentation."""
     args = session.posargs or ["docs", "docs/_build"]
-    session.install(".")
-    session.install("sphinx", "sphinx-click", "sphinx-rtd-theme")
     session.install("-r", "./docs/requirements.txt")
 
     build_dir = Path("docs", "_build")

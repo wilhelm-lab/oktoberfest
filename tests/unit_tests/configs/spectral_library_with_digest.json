@@ -1,0 +1,26 @@
+{
+    "type": "SpectralLibraryGeneration",
+    "tag": "",
+    "inputs": {
+        "library_input": "../data/test.fasta",
+        "library_input_type": "fasta"
+    },
+    "output": "../data/digest_out/",
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
+    },
+    "outputFormat": "spectronaut",
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "ssl": true,
+    "fastaDigestOptions": {
+        "fragmentation": "HCD",
+        "digestion": "full",
+        "missedCleavages": 2,
+        "minLength": 7,
+        "maxLength": 60,
+        "enzyme": "trypsin",
+        "specialAas": "KR",
+        "db": "concat"
+    }
+}

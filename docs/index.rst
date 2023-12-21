@@ -7,6 +7,8 @@
 
 .. role:: smaller
 
+.. include:: quickstart.rst
+
 .. include:: news.rst
 
 .. toctree::

@@ -2,7 +2,7 @@ import argparse
 
 from rich import traceback
 
-from oktoberfest import __copyright__, __version__, logger, runner
+from oktoberfest import runner
 
 """triqler.__main__: executed when bootstrap directory is called as script."""
 
@@ -28,8 +28,6 @@ def _parse_args():
 
 def main():
     """Execution of oktoberfest from terminal."""
-    logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
-
     args = _parse_args()
     runner.run_job(args.config_path)
 

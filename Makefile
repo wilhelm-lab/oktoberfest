@@ -19,6 +19,9 @@ build: dependencies
 	git describe --long --dirty --always > hash.file
 	docker build -f Dockerfile -t $(IMAGE) . || (exit 1)
 
+bootstrap: DATA=/root/data
+bootstrap:
+	bash -c "cp /root/Makefile* $(LOCAL_DIR)"
 
 run_oktoberfest: rm_err_file
 	$(DOCKER_CMD) \

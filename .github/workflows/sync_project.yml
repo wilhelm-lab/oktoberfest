@@ -17,7 +17,7 @@ jobs:
             - name: Install cookietemple
               run: pip install cookietemple
 
-            - uses: actions/checkout@v2
+            - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
                   token: "${{ secrets.CT_SYNC_TOKEN }}"
@@ -25,9 +25,9 @@ jobs:
 
             - uses: oleksiyrudenko/gha-git-credentials@v2.1
               with:
-                  name: "victorgiurcoiu"
-                  email: "victor.giurcoiu@tum.de"
-                  actor: "victorgiurcoiu"
+                  name: "Mario Picciani"
+                  email: "mario.picciani@tum.de"
+                  actor: "picciama"
                   token: "${{ secrets.CT_SYNC_TOKEN}}"
 
             - name: Sync project
