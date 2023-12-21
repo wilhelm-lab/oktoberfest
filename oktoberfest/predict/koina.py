@@ -492,22 +492,20 @@ class Koina:
         n_tasks = i + 1
         with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
             unfinished_tasks = [i for i in range(n_tasks)]
-            while pbar.n != n_tasks:
+            while pbar.n < n_tasks:
                 time.sleep(0.2)
                 new_unfinished_tasks = []
                 for j in unfinished_tasks:
                     result = infer_results.get(j)
                     if result is None:
                         new_unfinished_tasks.append(j)
-                        continue
-                    if isinstance(result, InferenceServerException):
+                    elif isinstance(result, InferenceServerException):
                         try:
-                            new_unfinished_tasks.append(j)
                             next(tasks[j])
+                            new_unfinished_tasks.append(j)
                         except StopIteration:
                             pbar.n += 1
-                        continue
-                    if isinstance(result, InferResult):
+                    elif isinstance(result, InferResult):
                         pbar.n += 1
 
                 unfinished_tasks = new_unfinished_tasks
