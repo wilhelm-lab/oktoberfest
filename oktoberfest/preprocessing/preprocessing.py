@@ -384,7 +384,7 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
     psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
     psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
-    psms.add_column(df_annotated_spectra["SUM_INTENSITIES"], "SUM_INTENSITIES")
+    psms.add_column(df_annotated_spectra["LOG_SUM_INTENSITIES"].to_numpy(), "LOG_SUM_INTENSITIES")
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
 
 

@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Dict, Tuple
 
+import math
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
@@ -34,6 +35,7 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "PRECURSOR_CHARGE": "precursor_charges",
             "COLLISION_ENERGY": "collision_energies",
             "FRAGMENTATION": "fragmentation_types",
+            "SUM_INTENSITIES": "sum_intensities",
         },
         inplace=True,
     )
@@ -46,10 +48,21 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "precursor_charges": "PRECURSOR_CHARGE",
             "collision_energies": "COLLISION_ENERGY",
             "fragmentation_types": "FRAGMENTATION",
+            "sum_intensities": "SUM_INTENSITIES",
         },
         inplace=True,
     )
 
+    # todo perform square rooting of intensities here
+    if "model_name" in kwargs:
+        if "sqrt" in kwargs["model_name"]:
+            intensities = []
+            for mod_seq in results:
+                sqrt_intensity = []
+                for intensity in mod_seq:
+                    sqrt_intensity.append(math.sqrt(intensity))
+                intensities.append(sqrt_intensity)
+            results["intensities"] = intensities
     return results
 
 
