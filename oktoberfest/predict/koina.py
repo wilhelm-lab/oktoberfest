@@ -380,15 +380,15 @@ class Koina:
         if error:
             infer_results[request_id] = error
         else:
-            infer_results[request_id] = result
+            infer_results[request_id] = self.__extract_predictions(result)
 
     def __async_predict_batch(
         self,
         data: Dict[str, np.ndarray],
         infer_results: Dict[int, Union[InferResult, InferenceServerException]],
         request_id: int,
-        timeout: int = 60000,
-        retries: int = 3,
+        timeout: int = 10000,
+        retries: int = 10,
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -496,13 +496,13 @@ class Koina:
         with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
             unfinished_tasks = [i for i in range(n_tasks)]
             while pbar.n < n_tasks:
-                time.sleep(0.2)
+                time.sleep(0.5)
                 new_unfinished_tasks = []
                 for j in unfinished_tasks:
                     result = infer_results.get(j)
                     if result is None:
                         new_unfinished_tasks.append(j)
-                    elif isinstance(result, InferResult):
+                    elif isinstance(result, dict):
                         pbar.n += 1
                     else:  # unexpected result / exception -> try again
                         try:
@@ -534,7 +534,7 @@ class Koina:
             self._response_dict = infer_results
         try:
             # sort according to request id
-            infer_results_to_return = [self.__extract_predictions(infer_results[i]) for i in range(len(infer_results))]
+            infer_results_to_return = [infer_results[i] for i in range(len(infer_results))]
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
             for res in infer_results.values():

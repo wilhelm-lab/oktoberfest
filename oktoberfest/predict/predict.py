@@ -12,7 +12,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, disable_progress_bar: bool = False, *args, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -21,6 +21,7 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
     See the koina predict function for details. TODO, link this properly.
 
     :param data: Dataframe containing the data for the prediction.
+    :param disable_progress_bar: If True, do not show progress bars while predicting
     :param args: Additional positional arguments forwarded to Koina::predict
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
@@ -28,28 +29,7 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
     """
     predictor = Koina(*args, **kwargs)
 
-    data.rename(
-        columns={
-            "MODIFIED_SEQUENCE": "peptide_sequences",
-            "PRECURSOR_CHARGE": "precursor_charges",
-            "COLLISION_ENERGY": "collision_energies",
-            "FRAGMENTATION": "fragmentation_types",
-        },
-        inplace=True,
-    )
-
-    results = predictor.predict(data)
-
-    data.rename(
-        columns={
-            "peptide_sequences": "MODIFIED_SEQUENCE",
-            "precursor_charges": "PRECURSOR_CHARGE",
-            "collision_energies": "COLLISION_ENERGY",
-            "fragmentation_types": "FRAGMENTATION",
-        },
-        inplace=True,
-    )
-
+    results = predictor.predict(data, disable_progress_bar)
     return results
 
 
