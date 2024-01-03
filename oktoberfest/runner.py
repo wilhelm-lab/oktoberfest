@@ -1,6 +1,10 @@
 import datetime
 import json
 import logging
+import sys
+import time
+import traceback
+from multiprocessing import Manager, Pool, Process
 from pathlib import Path
 from typing import List, Type, Union
 
@@ -8,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
+from tqdm.auto import tqdm
 
 from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
@@ -19,6 +24,14 @@ from .data.spectra import FragmentType, Spectra
 from .utils import Config, JobPool, ProcessStep
 
 logger = logging.getLogger(__name__)
+
+
+def _make_predictions(batch_df, int_model, irt_model, server_kwargs, queue_out, progress, lock):
+    predictions = pr.predict(batch_df, model_name=int_model, disable_progress_bar=True, **server_kwargs)
+    predictions |= pr.predict(batch_df, model_name=irt_model, disable_progress_bar=True, **server_kwargs)
+    with lock:
+        progress.value += 1
+    queue_out.put((predictions, batch_df))
 
 
 def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
@@ -101,7 +114,26 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             "model_name": config.models["intensity"],
         }
         use_ransac_model = config.use_ransac_model
+        library.spectra_data.rename(
+            columns={
+                "MODIFIED_SEQUENCE": "peptide_sequences",
+                "PRECURSOR_CHARGE": "precursor_charges",
+                "COLLISION_ENERGY": "collision_energies",
+                "FRAGMENTATION": "fragmentation_types",
+            },
+            inplace=True,
+        )
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        library.spectra_data.rename(
+            columns={
+                "peptide_sequences": "MODIFIED_SEQUENCE",
+                "precursor_charges": "PRECURSOR_CHARGE",
+                "collision_energies": "COLLISION_ENERGY",
+                "fragmentation_types": "FRAGMENTATION",
+            },
+            inplace=True,
+        )
+
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
@@ -188,12 +220,21 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     else:
         raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".')
     spec_library = pp.gen_lib(library_file)
-    spec_library = pp.process_and_filter_spectra_data(
-        library=spec_library, model=config.models["intensity"], tmt_label=config.tag
-    )
+
+    pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")
+
+    if not pp_and_filter_step.is_done():
+        spec_library = pp.process_and_filter_spectra_data(
+            library=spec_library, model=config.models["intensity"], tmt_label=config.tag
+        )
+        spec_library.write_as_hdf5(config.output / "data" / f"{library_file.stem}_filtered.hdf5")
+        pp_and_filter_step.mark_done()
+    else:
+        spec_library = Spectra.from_hdf5(config.output / "data" / f"{library_file.stem}_filtered.hdf5")
 
     no_of_spectra = len(spec_library.spectra_data)
-    no_of_sections = no_of_spectra // 7000
+    batchsize = 10000
+    no_of_sections = np.math.ceil(no_of_spectra / batchsize)
 
     server_kwargs = {
         "server_url": config.prediction_server,
@@ -219,35 +260,87 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     if out_file.is_file():
         out_file.unlink()
 
-    for i in range(0, no_of_sections + 1):
-        spectra_div = Spectra()
-        if i < no_of_sections:
-            spectra_div.spectra_data = spec_library.spectra_data.iloc[i * 7000 : (i + 1) * 7000]
-            logger.info(f"Indices {i * 7000}, {(i + 1) * 7000}")
-        elif (i * 7000) < no_of_spectra:
-            spectra_div.spectra_data = spec_library.spectra_data.iloc[i * 7000 :]
-            logger.info(f"Last Batch from index {i * 7000}")
-            logger.info(f"Batch of size {len(spectra_div.spectra_data.index)}")
-        else:
-            break
+    speclib = spectral_library(out_file, mode="w")
 
-        pred_intensities = pr.predict(spectra_div.spectra_data, model_name=config.models["intensity"], **server_kwargs)
-        pred_irts = pr.predict(spectra_div.spectra_data, model_name=config.models["irt"], **server_kwargs)
+    spec_library.spectra_data.rename(
+        columns={
+            "MODIFIED_SEQUENCE": "peptide_sequences",
+            "PRECURSOR_CHARGE": "precursor_charges",
+            "COLLISION_ENERGY": "collision_energies",
+            "FRAGMENTATION": "fragmentation_types",
+        },
+        inplace=True,
+    )
 
-        intensity_prediction_dict = {
-            "intensity": pred_intensities["intensities"],
-            "fragmentmz": pred_intensities["mz"],
-            "annotation": pr.parse_fragment_labels(
-                pred_intensities["annotation"],
-                spectra_div.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
-                spectra_div.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
-            ),
-        }
-        output_dict = {config.models["intensity"]: intensity_prediction_dict, config.models["irt"]: pred_irts["irt"]}
+    with Manager() as manager:
 
-        out_lib = spectral_library(spectra_div.spectra_data, output_dict, out_file)
-        out_lib.prepare_spectrum()
-        out_lib.write()
+        # setup
+        shared_queue = manager.Queue(maxsize=config.num_threads)
+        prediction_progress = manager.Value("i", 0)
+        writing_progress = manager.Value("i", 0)
+
+        lock = manager.Lock()
+
+        # Create a pool for producer processes
+        pool = Pool(config.num_threads)
+
+        try:
+            for i in range(no_of_sections):
+                pool.apply_async(
+                    _make_predictions,
+                    (
+                        spec_library.spectra_data.iloc[i * batchsize : (i + 1) * batchsize],
+                        config.models["intensity"],
+                        config.models["irt"],
+                        server_kwargs,
+                        shared_queue,
+                        prediction_progress,
+                        lock,
+                    ),
+                )
+
+            # Start the consumer process
+            with tqdm(total=no_of_sections, desc="Getting predictions", disable=False) as predictor_pbar:
+                with tqdm(total=no_of_sections, desc="Writing library", disable=False) as writer_pbar:
+                    args = shared_queue, writing_progress
+                    consumer_process = Process(target=speclib.async_write, args=args)
+                    consumer_process.start()
+                    while prediction_progress.value < no_of_sections:
+                        time.sleep(0.5)
+                        predictor_pbar.n = prediction_progress.value
+                        predictor_pbar.refresh()
+                        writer_pbar.n = writing_progress.value
+                        writer_pbar.refresh()
+                while writing_progress.value < no_of_sections:
+                    time.sleep(0.5)
+                    writer_pbar.n = writing_progress.value
+                    writer_pbar.refresh()
+
+            # Wait for all producer processes to finish
+            pool.close()
+            pool.join()
+
+            # Signal the consumer process that producers have finished
+            shared_queue.put(None)
+
+            # Wait for the consumer process to finish
+            consumer_process.join()
+
+        except (KeyboardInterrupt, SystemExit):
+            logger.error("Caught KeyboardInterrupt, terminating workers")
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
+
+        except Exception as e:
+            logger.error("Caught Unknown exception, terminating workers")
+            logger.error(traceback.format_exc())
+            logger.error(e)
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
+
+    logger.info("Finished writing the library to disk")
 
 
 def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
@@ -312,13 +405,33 @@ def _calculate_features(spectra_file: Path, config: Config):
         "ssl": config.ssl,
     }
 
+    library.spectra_data.rename(
+        columns={
+            "MODIFIED_SEQUENCE": "peptide_sequences",
+            "PRECURSOR_CHARGE": "precursor_charges",
+            "COLLISION_ENERGY": "collision_energies",
+            "FRAGMENTATION": "fragmentation_types",
+        },
+        inplace=True,
+    )
+
     pred_intensities = pr.predict(
         library.spectra_data,
         model_name=config.models["intensity"],
-        targets=["intensities", "annotation"],
         **server_kwargs,
     )
+
     pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
+
+    library.spectra_data.rename(
+        columns={
+            "peptide_sequences": "MODIFIED_SEQUENCE",
+            "precursor_charges": "PRECURSOR_CHARGE",
+            "collision_energies": "COLLISION_ENERGY",
+            "fragmentation_types": "FRAGMENTATION",
+        },
+        inplace=True,
+    )
 
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
