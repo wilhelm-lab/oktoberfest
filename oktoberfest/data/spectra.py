@@ -207,8 +207,12 @@ class Spectra:
         input_file = str(input_file)
         spectra = cls()
         spectra.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
-        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
-        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+        sparse_raw_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}")
+        if not sparse_raw_intensities.empty:
+            spectra.add_matrix_from_hdf5(sparse_raw_intensities, FragmentType.RAW)
+        sparse_raw_mzs = hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}")
+        if not sparse_raw_mzs.empty:
+            spectra.add_matrix_from_hdf5(sparse_raw_mzs, FragmentType.MZ)
 
         return spectra
 
