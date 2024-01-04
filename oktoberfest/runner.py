@@ -189,32 +189,33 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             f.write(str(best_ce))
 
 
-def generate_spectral_lib(config_path: Union[str, Path]):
-    """
-    Create a SpectralLibrary object and generate the spectral library.
+def _speclib_from_digestion(config: Config) -> Spectra:
 
-    # TODO full description
-    :param config_path: path to config file
-    :raises ValueError: spectral library output format is not supported as spectral library type
-    """
-    config = Config()
-    config.read(config_path)
     library_input_type = config.library_input_type
-
     if library_input_type == "fasta":
-        pp.digest(
-            fasta=config.library_input,
-            output=config.output,
-            fragmentation=config.fragmentation,
-            digestion=config.digestion,
-            cleavages=config.cleavages,
-            db=config.db,
-            enzyme=config.enzyme,
-            special_aas=config.special_aas,
-            min_length=config.min_length,
-            max_length=config.max_length,
-        )
+        digest_step = ProcessStep(config.output, "speclib_digested")
         library_file = config.output / "prosit_input.csv"
+        if not digest_step.is_done():
+            peptide_dict = pp.digest(
+                fasta=config.library_input,
+                digestion=config.digestion,
+                missed_cleavages=config.missed_cleavages,
+                db=config.db,
+                enzyme=config.enzyme,
+                special_aas=config.special_aas,
+                min_length=config.min_length,
+                max_length=config.max_length,
+            )
+            metadata = pp.generate_metadata(
+                peptides=peptide_dict.keys(),
+                collision_energy=config.collision_energy,
+                precursor_charge=config.precursor_charge,
+                fragmentation=config.fragmentation,
+                proteins=peptide_dict.values(),
+            )
+            library_file = config.output / "prosit_input.csv"
+            metadata.to_csv(library_file, sep=",", index=None)
+            digest_step.mark_done()
     elif library_input_type == "peptides":
         library_file = config.library_input
     else:
@@ -232,8 +233,40 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     else:
         spec_library = Spectra.from_hdf5(config.output / "data" / f"{library_file.stem}_filtered.hdf5")
 
+    return spec_library
+
+
+def _get_writer_and_output(results_path: Path, output_format: str):
+
+    if output_format == "msp":
+        spectral_library = MSP
+        out_file = results_path / "myPrositLib.msp"
+    elif output_format == "spectronaut":
+        spectral_library = Spectronaut
+        out_file = results_path / "myPrositLib.csv"
+    elif output_format == "dlib":
+        spectral_library = DLib
+        out_file = results_path / "myPrositLib.dlib"
+    else:
+        raise ValueError(f"{output_format} is not supported as spectral library type")
+
+    return spectral_library, out_file
+
+
+def generate_spectral_lib(config_path: Union[str, Path]):
+    """
+    Create a SpectralLibrary object and generate the spectral library.
+
+    # TODO full description
+    :param config_path: path to config file
+    """
+    config = Config()
+    config.read(config_path)
+
+    spec_library = _speclib_from_digestion(config)
+
     no_of_spectra = len(spec_library.spectra_data)
-    batchsize = 10000
+    batchsize = config.batch_size
     no_of_sections = np.math.ceil(no_of_spectra / batchsize)
 
     server_kwargs = {
@@ -245,22 +278,12 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     results_path = config.output / "results"
     results_path.mkdir(exist_ok=True)
 
-    if config.output_format == "msp":
-        spectral_library = MSP
-        out_file = results_path / "myPrositLib.msp"
-    elif config.output_format == "spectronaut":
-        spectral_library = Spectronaut
-        out_file = results_path / "myPrositLib.csv"
-    elif config.output_format == "dlib":
-        spectral_library = DLib
-        out_file = results_path / "myPrositLib.dlib"
-    else:
-        raise ValueError(f"{config.output_format} is not supported as spectral library type")
+    writer, out_file = _get_writer_and_output(results_path, config.output_format)
 
     if out_file.is_file():
         out_file.unlink()
 
-    speclib = spectral_library(out_file, mode="w")
+    speclib = writer(out_file, mode="w")
 
     spec_library.spectra_data.rename(
         columns={

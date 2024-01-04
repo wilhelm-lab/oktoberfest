@@ -10,23 +10,6 @@ logger = logging.getLogger(__name__)
 class Config:
     """Read config file and get information from it."""
 
-    def __init__(self):
-        """Initialize config file data."""
-        self.data = {}
-
-    def read(self, config_path: Union[str, Path]):
-        """
-        Read config file.
-
-        :param config_path: path to config file as a string
-        """
-        logger.info(f"Reading configuration from {config_path}")
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
-        with open(config_path) as f:
-            self.data = json.load(f)
-        self.base_path = config_path.parent
-
     @property
     def num_threads(self) -> int:
         """Get the number of threads from the config file; if not specified return 1."""
@@ -103,11 +86,6 @@ class Config:
             raise ValueError("No job type specified in config file.")
 
     @property
-    def inputs(self) -> dict:
-        """Get inputs dictionary from the config file."""
-        return self.data.get("inputs", {})
-
-    @property
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
@@ -116,6 +94,36 @@ class Config:
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
+
+    @property
+    def output(self) -> Path:
+        """Get path to the output directory from the config file."""
+        # check if output is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.data.get("output", "./"))
+
+    @property
+    def thermo_exe(self) -> Path:
+        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
+
+        def default_thermo():
+            if "linux" in platform or platform == "darwin":
+                return "/opt/compomics/ThermoRawFileParser.exe"
+            return "ThermoRawFileParser.exe"
+
+        return Path(self.data.get("thermoExe", default_thermo()))
+
+    ###########################
+    # these are input options #
+    ###########################
+
+    @property
+    def inputs(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("inputs", {})
 
     @property
     def search_results(self) -> Path:
@@ -174,20 +182,9 @@ class Config:
         else:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
-    @property
-    def output_format(self) -> str:
-        """Get output format from the config file."""
-        return self.data.get("outputFormat", "").lower()
-
-    @property
-    def output(self) -> Path:
-        """Get path to the output directory from the config file."""
-        # check if output is absolute and if not, append with the directory
-        # of the config file to resolve paths relative to the config location. This is
-        # required to make sure it always works no matter from which working directory
-        # oktoberfest is executed in case a relative path is provided, which would
-        # otherwise be relative to the working directory.
-        return self.base_path / Path(self.data.get("output", "./"))
+    #####################################
+    # these are fasta digestion options #
+    #####################################
 
     @property
     def fasta_digest_options(self) -> dict:
@@ -195,18 +192,12 @@ class Config:
         return self.data.get("fastaDigestOptions", {})
 
     @property
-    def fragmentation(self) -> str:
-        """Get fragmentation method from the config file (HCD or CID)."""
-        # check default
-        return self.fasta_digest_options.get("fragmentation", "").lower()
-
-    @property
     def digestion(self) -> str:
         """Get digestion mode (full, semi or none)."""
         return self.fasta_digest_options.get("digestion", "full").lower()
 
     @property
-    def cleavages(self) -> int:
+    def missed_cleavages(self) -> int:
         """Get number of allowed missed cleavages used in the search engine."""
         return self.fasta_digest_options.get("missedCleavages", 2)
 
@@ -235,16 +226,9 @@ class Config:
         """Target, decoy or concat (relevant if fasta file provided)."""
         return self.fasta_digest_options.get("db", "concat").lower()
 
-    @property
-    def thermo_exe(self) -> Path:
-        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
-
-        def default_thermo():
-            if "linux" in platform or platform == "darwin":
-                return "/opt/compomics/ThermoRawFileParser.exe"
-            return "ThermoRawFileParser.exe"
-
-        return Path(self.data.get("thermoExe", default_thermo()))
+    ##################################
+    # these are ce alignment options #
+    ##################################
 
     @property
     def ce_alignment_options(self) -> dict:
@@ -261,6 +245,49 @@ class Config:
     def use_ransac_model(self) -> bool:
         """Get whether or not to perform ce calibration using a ransac model."""
         return self.ce_alignment_options.get("use_ransac_model", False)
+
+    ######################################
+    # these are spectral library options #
+    ######################################
+
+    @property
+    def spec_lib_options(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("spectralLibraryOptions", {})
+
+    @property
+    def output_format(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("format", "msp").lower()
+
+    @property
+    def fragmentation(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("fragmentation", "").lower()
+
+    @property
+    def collision_energy(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("collisionEnergy", 30)
+
+    @property
+    def batch_size(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("batchsize", 10000)
+
+    @property
+    def min_intensity(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("minIntensity", 0)
+
+    @property
+    def precursor_charge(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("precursorCharge", [1, 2, 3])
+
+    ########################
+    # functions start here #
+    ########################
 
     def check(self):
         """Validate the configuration."""
@@ -285,3 +312,20 @@ class Config:
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
                 )
+
+    def __init__(self):
+        """Initialize config file data."""
+        self.data = {}
+
+    def read(self, config_path: Union[str, Path]):
+        """
+        Read config file.
+
+        :param config_path: path to config file as a string
+        """
+        logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+        with open(config_path) as f:
+            self.data = json.load(f)
+        self.base_path = config_path.parent

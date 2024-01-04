@@ -1,7 +1,8 @@
 import logging
+from itertools import chain, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import spectrum_fundamentals.constants as c
@@ -11,7 +12,7 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
-from spectrum_io.spectral_library import digest as digest_io
+from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
 
@@ -38,60 +39,97 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     return library
 
 
+def generate_metadata(
+    peptides: List[str],
+    collision_energy: Union[int, List[int]],
+    precursor_charge: Union[int, List[int]],
+    fragmentation: Union[int, List[int]],
+    proteins: Optional[List[List[str]]] = None,
+) -> pd.DataFrame:
+    """
+    Create metadata about peptides for a spectral library.
+
+    This function generates a pandas DataFrame containing metadata for peptides in a spectral library.
+    Each row in the DataFrame represents a unique combination of a peptide, collision energy,
+    precursor charge, and fragmentation. If multiple collision energies, precursor charges, or fragmentations
+    are provided, the function creates all possible combinations for each peptide.
+    An optional protein list can be provided which has to have the same length as the number of peptides.
+
+    :param peptides: A list of peptides for which metadata is generated.
+    :param collision_energy: A list of collision energies corresponding to each peptide.
+    :param precursor_charge: A list of precursor charges corresponding to each peptide.
+    :param fragmentation: A list of fragmentation methods corresponding to each peptide.
+    :param proteins: An optional list of proteins associated with each peptide.
+        If provided, it must have the same length as the number of peptides.
+    :raises AssertionError: If the lengths of peptides and proteins is not the same.
+    :return: A DataFrame containing metadata with the columns "modified_peptide","collision_energy",
+        "precursor_charge","fragmentation" and an optional "proteins" column.
+    """
+    if isinstance(collision_energy, int):
+        collision_energy = [collision_energy]
+    if isinstance(precursor_charge, int):
+        precursor_charge = [precursor_charge]
+    if isinstance(fragmentation, str):
+        fragmentation = [fragmentation]
+
+    if proteins is not None and len(proteins) != len(peptides):
+        raise AssertionError("Number of proteins must match the number of peptides.")
+
+    combinations = product(peptides, collision_energy, precursor_charge, fragmentation)
+    metadata = pd.DataFrame(
+        combinations, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
+    )
+
+    if proteins is not None:
+        n_repeats = len(metadata) // len(proteins)
+        metadata["proteins"] = list(
+            chain.from_iterable([repeat("|".join(prot_list), n_repeats) for prot_list in proteins])
+        )
+
+    return metadata
+
+
 def digest(
     fasta: Union[str, Path],
-    output: Union[str, Path],
-    fragmentation: str,
     digestion: str,
-    cleavages: int,
+    missed_cleavages: int,
     db: str,
     enzyme: str,
     special_aas: str,
     min_length: int,
     max_length: int,
-):
+) -> Dict[str, List[str]]:
     """
-    Perform an in-silico digest of a given fasta file.
+    Digest a given fasta file with specific settings.
 
-    This function takes sequences from a fasta file and performs digestion using a given
-    protease with specific settings before writing the resulting peptides to the given output file.
+    This function performs an in-silico digestion of a fasta file based on the provided settings.
+    It returns a dictionary that maps peptides to the list of associated protein IDs.
+
 
     :param fasta: Path to fasta file containing sequences to digest
-    :param output: Path to the output file containing the peptides
-    :param fragmentation: The fragmentation method to use, can be HCD / CID
-    :param digestion: TODO
-    :param cleavages: The number of allowed miscleaveages
+    :param digestion: The type of digestion, one of "full, "semi", "none"
+    :param missed_cleavages: The number of allowed miscleaveages
     :param db: The desired database to produce, can be target, decoy, or both
     :param enzyme: The protease to use for digestion TODO list available proteases
-    :param special_aas: Special aminoacids used for decoy generation, TODO when relevant
+    :param special_aas: List of aas to be swapped with preceding aa in reverse sequences.
+        This mimics the behaviour of MaxQuant when creating decoys.
     :param min_length: Minimal length of digested peptides
     :param max_length: Maximal length of digested peptides
+
+    :return: A Dictionary that maps peptides (keys) to a list of protein IDs (values).
     """
-    if isinstance(output, str):
-        output = Path(output)
-    cmd = [
-        "--fasta",
-        f"{fasta}",
-        "--prosit_input",
-        f"{output / 'prosit_input.csv'}",
-        "--fragmentation",
-        f"{fragmentation}",
-        "--digestion",
-        f"{digestion}",
-        "--cleavages",
-        f"{cleavages}",
-        "--db",
-        f"{db}",
-        "--enzyme",
-        f"{enzyme}",
-        "--special-aas",
-        f"{special_aas}",
-        "--min-length",
-        f"{min_length}",
-        "--max-length",
-        f"{max_length}",
-    ]
-    digest_io.main(cmd)
+    return get_peptide_to_protein_map(
+        fasta_file=fasta,
+        db=db,
+        min_len=min_length,
+        max_len=max_length,
+        enzyme=enzyme,
+        digestion=digestion,
+        miscleavages=missed_cleavages,
+        methionine_cleavage=True,
+        use_hash_key=False,
+        special_aas=special_aas,
+    )
 
 
 def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFrame:
