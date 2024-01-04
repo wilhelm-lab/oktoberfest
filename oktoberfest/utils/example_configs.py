@@ -48,9 +48,16 @@ LIBGEN = {
     },
     "output": "./out",
     "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-    "outputFormat": "spectronaut",
     "prediction_server": "koina.proteomicsdb.org:443",
     "ssl": True,
+    "spectralLibraryOptions": {
+        "fragmentation": "HCD",
+        "collisionEnergy": 35,
+        "precursorCharge": (1, 2, 3),
+        "minIntensity": 0,
+        "batchsize": 10000,
+        "format": "msp",
+    },
     "fastaDigestOptions": {
         "fragmentation": "HCD",
         "digestion": "full",
