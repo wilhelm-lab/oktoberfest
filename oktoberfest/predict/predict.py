@@ -35,7 +35,7 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "PRECURSOR_CHARGE": "precursor_charges",
             "COLLISION_ENERGY": "collision_energies",
             "FRAGMENTATION": "fragmentation_types",
-            "SUM_INTENSITIES": "sum_intensities",
+            "LOG_SUM_INTENSITIES": "log_sum_intensities",
         },
         inplace=True,
     )
@@ -48,22 +48,25 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
             "precursor_charges": "PRECURSOR_CHARGE",
             "collision_energies": "COLLISION_ENERGY",
             "fragmentation_types": "FRAGMENTATION",
-            "sum_intensities": "SUM_INTENSITIES",
+            "log_sum_intensities": "LOG_SUM_INTENSITIES",
         },
         inplace=True,
     )
 
-    # todo perform square rooting of intensities here
+    # perform square rooting of intensities here for sqrt model
     if "model_name" in kwargs:
-        if "sqrt" in kwargs["model_name"]:
-            intensities = []
-            for mod_seq in results:
-                sqrt_intensity = []
-                for intensity in mod_seq:
-                    sqrt_intensity.append(math.sqrt(intensity))
-                intensities.append(sqrt_intensity)
-            results["intensities"] = intensities
+        if "sqrt" in kwargs["model_name"] and "intensities" in results:
+            for i in np.nditer(results["intensities"], op_flags=['readwrite']):
+                if i != -1.0:
+                    i[...] = math.sqrt(i)
+
     return results
+
+def _square(x):
+    if x != -1.0:
+        return math.sqrt(x)
+    else:
+        return x
 
 
 def parse_fragment_labels(
