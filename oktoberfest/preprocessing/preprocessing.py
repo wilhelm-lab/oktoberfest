@@ -179,7 +179,7 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains("U"))
+        & (~peptides["SEQUENCE"].str.contains("U|X"))
     ]
 
 
@@ -216,9 +216,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    logger.info(f"No of sequences before Filtering is {len(library.spectra_data)}")
+    logger.info(f"No of sequences before filtering is {len(library.spectra_data)}")
     library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
-    logger.info(f"No of sequences after Filtering is {len(library.spectra_data)}")
+    logger.info(f"No of sequences after filtering is {len(library.spectra_data)}")
 
     library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
