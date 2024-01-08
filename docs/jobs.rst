@@ -74,7 +74,7 @@ Example config file:
         "unitMassTolerance": "ppm",
         "ce_alignment_options": {
             "ce_range": [19,50],
-            "use_ransac_model": false,
+            "use_ransac_model": false
         }
     }
 
@@ -134,7 +134,7 @@ Example config file:
             "enzyme": "trypsin",
             "specialAas": "KR",
             "db": "concat"
-        },
+        }
     }
 
 The example config can be loaded and viewed using
@@ -195,7 +195,7 @@ Example config file:
         "unitMassTolerance": "ppm",
         "ce_alignment_options": {
             "ce_range": [19,50],
-            "use_ransac_model": false,
+            "use_ransac_model": false
         }
     }
 

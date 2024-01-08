@@ -249,6 +249,7 @@ def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
     :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML", "RAW" or "pkl".
     :raises NotADirectoryError: if the specified input directory does not exist
     :raises ValueError: if the specified file format is not supported
+    :raises AssertionError: if no files in the provided input directory match the provided file format
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
@@ -265,6 +266,12 @@ def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
         raw_files = list(input_dir.glob(glob_pattern))
     else:
         raise NotADirectoryError(f"{input_dir} does not exist.")
+
+    if not raw_files:
+        raise AssertionError(
+            f"There are no spectra files with the extension {file_format.lower()} in the provided input_dir {input_dir}. "
+            "Please check."
+        )
 
     return raw_files
 

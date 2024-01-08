@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.5.1"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.5.3"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
-authors = ["Victor Giurcoiu <victor.giurcoiu@tum.de>"]
+authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
 readme = "README.rst"
 homepage = "https://github.com/wilhelm-lab/oktoberfest"
