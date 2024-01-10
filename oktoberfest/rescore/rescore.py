@@ -2,12 +2,11 @@ import logging
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Union
-import spectrum_fundamentals.constants
-
 
 import mokapot
 import numpy as np
 import pandas as pd
+import spectrum_fundamentals.constants
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType, Spectra
@@ -81,16 +80,16 @@ def merge_input(
     # We exploit the expmass column here by assigning a unique id per filename+scannr group.
     # This ensures percolator will not deduplicate scannrs between filenames, as it uses only
     # filename+ExpMass for TDC.
-    #df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
-    proton_mass = spectrum_fundamentals.constants.PARTICLE_MASSES['PROTON']
+    # df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
+    proton_mass = spectrum_fundamentals.constants.PARTICLE_MASSES["PROTON"]
     print(proton_mass)
-    df_prosit['ExpMass'] = df_prosit['Mass'] + proton_mass * df_prosit['Precursor_charge'] / df_prosit['Precursor_charge']
+    df_prosit["ExpMass"] = (
+        df_prosit["Mass"] + proton_mass * df_prosit["Precursor_charge"] / df_prosit["Precursor_charge"]
+    )
     print(df_prosit["ExpMass"])
-    df_prosit.insert(column='ExpMass')
+    df_prosit.insert(column="ExpMass")
     df_prosit.head()
     df_prosit.to_csv(output_file, sep="\t", index=False)
-
-    
 
 
 def rescore_with_percolator(
