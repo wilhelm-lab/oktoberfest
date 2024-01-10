@@ -8,6 +8,7 @@ import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+from spectrum_io.d import convert_d_pkl
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
@@ -235,41 +236,58 @@ def convert_search(
     search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
 
 
-def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
+def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
     """
     Return a list of all spectra files of a given format.
 
     Given an input directory, the function searches all files containing spectra and returns a list of paths pointing to the files.
     Files are included if the extension matches the provided format (case-insensitive).
     In case the input directory is a file, the function will check if it matches the format and return it wrapped in a list.
+    If the format is "d" and the input directory ends with ".d", the function will return the input directory wrapped in a list.
 
     :param input_dir: Path to the directory to scan for spectra files
-    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML", "RAW" or "pkl".
+    :param input_format: Format of the input for the provided directory. This must match the file extension (mzml, raw, pkl) or
+        directory extension (d). Matching is case-insensitive.
     :raises NotADirectoryError: if the specified input directory does not exist
     :raises ValueError: if the specified file format is not supported
-    :raises AssertionError: if no files in the provided input directory match the provided file format
+    :raises AssertionError: if the provided input directory (d) does not match the provided format or if none of the
+        files within the provided input directory (mzml, raw, pkl) match the provided format
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
         input_dir = Path(input_dir)
     raw_files = []
 
-    if not file_format.lower() in ["mzml", "raw", "pkl"]:
-        raise ValueError(f"File format {file_format} unknown. Must be one of mzML, RAW or pkl.")
+    input_format = input_format.lower()
 
-    if input_dir.is_file() and input_dir.suffix.lower().endswith(file_format.lower()):
+    if input_format not in ["mzml", "raw", "pkl", "d"]:
+        raise ValueError(f"Input format {input_format} unknown. Must be one of mzML, RAW or pkl.")
+
+    if input_dir.is_file() and input_dir.suffix.lower().endswith(input_format):
         raw_files.append(input_dir)
     elif input_dir.is_dir():
-        glob_pattern = _get_glob_pattern(file_format)
-        raw_files = list(input_dir.glob(glob_pattern))
+        if input_dir.suffix == ".d":
+            if input_format == "d":
+                raw_files = [input_dir]
+            else:
+                raise AssertionError(
+                    f"Provided a '.d' input directory but the provided input format is {format} (Expected 'd'). Please check."
+                )
+        else:
+            glob_pattern = _get_glob_pattern(input_format)
+            raw_files = list(input_dir.glob(glob_pattern))
     else:
         raise NotADirectoryError(f"{input_dir} does not exist.")
 
     if not raw_files:
         raise AssertionError(
-            f"There are no spectra files with the extension {file_format.lower()} in the provided input_dir {input_dir}. "
+            f"There are no files / directories with the extension {input_format} in the provided input directory {input_dir}. "
             "Please check."
         )
+
+    logger.info(
+        f"Found {len(raw_files)} {input_format} {'directories' if input_format == 'd' else 'files'} in the spectra input directory."
+    )
 
     return raw_files
 
@@ -286,6 +304,10 @@ def _get_glob_pattern(spectra_type: str) -> str:
         return "*.[rR][aA][wW]"
     elif spectra_type.lower() == "mzml":
         return "*.[mM][zZ][mM][lL]"
+    elif spectra_type.lower() == "pkl":
+        return "*.[pP][kK][lL]"
+    elif spectra_type.lower() == "d":
+        return "*.[dD]"
     else:
         raise ValueError(f"{spectra_type} is not supported as rawfile-type")
 
@@ -419,11 +441,11 @@ def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.Da
         raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
 
 
-def convert_spectra_to_mzml(
+def convert_raw_to_mzml(
     raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
 ):
     """
-    Convert spectra to mzML format.
+    Convert raw to mzML format.
 
     This function converts RAW files containing spectra from a mass spectrometry run into mzML format. The process
     makes use of ThermoRawFileParser and requires mono being installed if it is used on MacOS or linux.
@@ -442,3 +464,21 @@ def convert_spectra_to_mzml(
 
     raw = ThermoRaw()
     raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
+
+
+def convert_d_to_pkl(d_dir: Union[str, Path], output_file: Union[str, Path], search_results_dir: Union[str, Path]):
+    """
+    Convert d to pkl format.
+
+    This function converts spectra within a d folder from a mass spectrometry run into pkl format.
+
+    :param d_dir: Path to d folder with spectra to be converted to pkl format
+    :param output_file: Path to the location where the converted spectra should be written to.
+    :param search_results_dir: Path to the output folder of the search engine. Additional outputs from the search
+        engine that may be required for correct conversion are automatically retrieved as long as the output folder
+        wasn't manipulated.
+    """
+    d_dir = Path(d_dir)
+    output_file = Path(output_file)
+    search_results_dir = Path(search_results_dir)
+    convert_d_pkl(d_path=d_dir, search_output_path=search_results_dir, output_path=output_file)

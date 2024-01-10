@@ -77,11 +77,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         format_ = spectra_file.suffix.lower()
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_spectra_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
         elif format_ in [".mzml", ".pkl"]:
             file_to_load = spectra_file
         elif format_ == ".d":
-            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.5")
+            file_to_load = spectra_dir / spectra_file.with_suffix(".pkl").name
+            pp.convert_d_to_pkl(spectra_file, file_to_load, config.search_results)
         spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
@@ -282,8 +283,7 @@ def run_ce_calibration(
     config.read(config_path)
 
     # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
 
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
@@ -389,8 +389,7 @@ def run_rescoring(config_path: Union[str, Path]):
     config.read(config_path)
 
     # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
 
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
