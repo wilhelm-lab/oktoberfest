@@ -83,7 +83,7 @@ def generate_metadata(
     if proteins is not None:
         n_repeats = len(metadata) // len(proteins)
         metadata["proteins"] = list(
-            chain.from_iterable([repeat("|".join(prot_list), n_repeats) for prot_list in proteins])
+            chain.from_iterable([repeat(";".join(prot_list), n_repeats) for prot_list in proteins])
         )
 
     return metadata
