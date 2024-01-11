@@ -208,8 +208,8 @@ class Koina:
         """
         batch_inputs = []
         for iname, idtype in self.model_inputs.items():
-            batch_inputs.append(InferInput(iname, (len(data[next(iter(data))]), 1), idtype))
-            batch_inputs[-1].set_data_from_numpy(data[iname].reshape(-1, 1).astype(self.type_convert[idtype]))
+            batch_inputs.append(InferInput(iname, data[iname].shape, idtype))
+            batch_inputs[-1].set_data_from_numpy(data[iname].astype(self.type_convert[idtype]))
         return batch_inputs
 
     def __extract_predictions(self, infer_result: InferResult) -> Dict[str, np.ndarray]:
@@ -459,7 +459,9 @@ class Koina:
             predictions = model.predict(input_data)
         """
         if isinstance(data, pd.DataFrame):
-            data = {input_field: data[input_field].to_numpy() for input_field in self.model_inputs.keys()}
+            data = {
+                input_field: data[input_field].to_numpy().reshape(-1, 1) for input_field in self.model_inputs.keys()
+            }
         if _async:
             return self.__predict_async(data, disable_progress_bar=disable_progress_bar, debug=debug)
         else:
