@@ -201,7 +201,6 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
 
 
 def _speclib_from_digestion(config: Config) -> Spectra:
-
     library_input_type = config.library_input_type
     if library_input_type == "fasta":
         digest_step = ProcessStep(config.output, "speclib_digested")
@@ -250,7 +249,6 @@ def _speclib_from_digestion(config: Config) -> Spectra:
 
 
 def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[SpectralLibrary, Path]:
-
     # spectral_library: Type[SpectralLibrary]
 
     if output_format == "msp":
@@ -335,7 +333,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
     if not speclib_written_step.is_done():
-
         results_path = config.output / "results"
         results_path.mkdir(exist_ok=True)
 
@@ -343,7 +340,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(out_file, failed_batch_file, len(spec_library.spectra_data), batchsize)
-        speclib = writer(out_file, mode=mode)
+        speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
 
         spec_library.spectra_data.rename(
             columns={
@@ -358,7 +355,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         n_batches = len(batches)
 
         with Manager() as manager:
-
             # setup
             shared_queue = manager.Queue(maxsize=config.num_threads)
             prediction_progress = manager.Value("i", 0)
@@ -408,7 +404,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                         total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
                     ) as predictor_pbar:
                         while predictor_pbar.n < n_batches:
-                            print(shared_queue.qsize())
                             pr_fail_val = prediction_failure_progress.value
                             _update(predictor_pbar, {"failed": pr_fail_val, "successful": prediction_progress.value})
                             _update(writer_pbar, {"successful": writing_progress.value, "missing": pr_fail_val})
@@ -431,6 +426,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                 consumer_process.join()
 
         logger.info("Finished writing the library to disk")
+        failed_batch_file.unlink(missing_ok=True)
         speclib_written_step.mark_done()
 
 
