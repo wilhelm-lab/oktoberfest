@@ -124,8 +124,8 @@ Example config file:
         "spectralLibraryOptions": {
             "fragmentation": "HCD",
             "collisionEnergy": 30,
-            "precursorCharge": [1,2,3],
-            "minIntensity": 0,
+            "precursorCharge": [2,3],
+            "minIntensity": 5e-4,
             "batchsize": 10000,
             "format": "msp"
         },

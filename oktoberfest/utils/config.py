@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -266,24 +266,24 @@ class Config:
         return self.spec_lib_options.get("fragmentation", "").lower()
 
     @property
-    def collision_energy(self) -> str:
+    def collision_energy(self) -> int:
         """Get output format from the config file."""
         return self.spec_lib_options.get("collisionEnergy", 30)
 
     @property
-    def batch_size(self) -> str:
+    def batch_size(self) -> int:
         """Get output format from the config file."""
         return self.spec_lib_options.get("batchsize", 10000)
 
     @property
-    def min_intensity(self) -> str:
+    def min_intensity(self) -> float:
         """Get output format from the config file."""
-        return self.spec_lib_options.get("minIntensity", 0)
+        return self.spec_lib_options.get("minIntensity", 5e-4)
 
     @property
-    def precursor_charge(self) -> str:
+    def precursor_charge(self) -> List[int]:
         """Get output format from the config file."""
-        return self.spec_lib_options.get("precursorCharge", [1, 2, 3])
+        return self.spec_lib_options.get("precursorCharge", [2, 3])
 
     ########################
     # functions start here #
@@ -304,13 +304,38 @@ class Config:
         else:
             if "tmt" not in self.models["intensity"].lower():
                 raise AssertionError(
-                    f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible."
-                    " Please check and use a TMT model instead."
+                    f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
+                    "Please check and use a TMT model instead."
                 )
             if "tmt" not in self.models["irt"].lower():
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
+                )
+        if self.job_type == "SpectralLibraryGeneration":
+            self._check_for_speclib()
+
+    def _check_for_speclib(self):
+        if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
+            raise AssertionError(
+                f"You requested the intensity model {self.models['intensity']} but want to create a spectral library for HCD data. "
+                "Please check that the fragmentation method and the chosen model agree."
+            )
+        elif self.fragmentation == "cid" and self.models["intensity"].lower().endswith("hcd"):
+            raise AssertionError(
+                f"You requested the intensity model {self.models['intensity']} but want to create a spectral library for CID data. "
+                "Please check that the fragmentation method and the chosen model agree."
+            )
+        elif self.fragmentation == "":
+            model_end = self.models["intensity"].lower()[-3:]
+            if model_end == "hcd" or model_end == "cid":
+                logger.warning(
+                    f"No fragmentation method was specified. Assuming {model_end} fragmentation based on chosen intensity "
+                    f"model {self.models['intensity']}."
+                )
+            else:
+                raise AssertionError(
+                    f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
                 )
 
     def __init__(self):

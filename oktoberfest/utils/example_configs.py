@@ -52,9 +52,9 @@ LIBGEN = {
     "ssl": True,
     "spectralLibraryOptions": {
         "fragmentation": "HCD",
-        "collisionEnergy": 35,
-        "precursorCharge": (1, 2, 3),
-        "minIntensity": 0,
+        "collisionEnergy": 30,
+        "precursorCharge": (2, 3),
+        "minIntensity": 5e-4,
         "batchsize": 10000,
         "format": "msp",
     },
