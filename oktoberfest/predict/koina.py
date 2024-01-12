@@ -37,6 +37,7 @@ class Koina:
         server_url: str = "koina.proteomicsdb.org:443",
         ssl: bool = True,
         targets: Optional[List[str]] = None,
+        disable_progress_bar: bool = False,
     ):
         """
         Initialize a KoinaModel instance with the specified parameters.
@@ -52,6 +53,7 @@ class Koina:
         :param ssl: Indicates whether to use SSL for communication with the server. Defaults to True.
         :param targets: An optional list of targets to predict. If this is None, all model targets are
             predicted and received.
+        :param disable_progress_bar: Whether to disable the progress bar showing the progress of predictions.
         """
         self.model_inputs = {}
         self.model_outputs = {}
@@ -60,6 +62,7 @@ class Koina:
         self.model_name = model_name
         self.url = server_url
         self.ssl = ssl
+        self.disable_progress_bar = disable_progress_bar
         self.client = InferenceServerClient(url=server_url, ssl=ssl)
 
         self.type_convert = {
@@ -255,26 +258,21 @@ class Koina:
 
         return self.__extract_predictions(infer_result)
 
-    def __predict_sequential(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False
-    ) -> Dict[str, np.ndarray]:
+    def __predict_sequential(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
 
         This method performs sequential inference on the provided input data using the configured Koina model. It processes
-        the input data batch by batch and returns the predictions. You can choose to disable the progress bar during inference
-        using the 'disable_progress_bar' parameter. Note: This method is for internal use and is typically called during inference.
+        the input data batch by batch and returns the predictions.
+        Note: This method is for internal use and is typically called during inference.
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
-        :param disable_progress_bar: If True, disable the progress bar during inference.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays representing
             the model's output.
         """
         predictions: Dict[str, np.ndarray] = {}
-        for data_batch in tqdm(
-            self.__slice_dict(data, self.batchsize), desc="Getting predictions", disable=disable_progress_bar
-        ):
+        for data_batch in tqdm(self.__slice_dict(data, self.batchsize), desc="Getting predictions"):
             pred_batch = self.__predict_batch(data_batch)
             if predictions:
                 predictions = self.__merge_array_dict(predictions, pred_batch)
@@ -435,7 +433,6 @@ class Koina:
     def predict(
         self,
         data: Union[Dict[str, np.ndarray], pd.DataFrame],
-        disable_progress_bar: bool = False,
         _async: bool = True,
         debug=False,
     ) -> Dict[str, np.ndarray]:
@@ -451,7 +448,6 @@ class Koina:
         :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
             and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
             in the column names.
-        :param disable_progress_bar: If True, disable the progress bar during inference. Defaults to False.
         :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
         :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
 
@@ -475,13 +471,11 @@ class Koina:
                 for input_field in self.model_inputs.keys()
             }
         if _async:
-            return self.__predict_async(data, disable_progress_bar=disable_progress_bar, debug=debug)
+            return self.__predict_async(data, debug=debug)
         else:
-            return self.__predict_sequential(data, disable_progress_bar=disable_progress_bar)
+            return self.__predict_sequential(data)
 
-    def __predict_async(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
-    ) -> Dict[str, np.ndarray]:
+    def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -491,7 +485,6 @@ class Koina:
         are properly configured and that the input data matches the model's input requirements.
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
-        :param disable_progress_bar: If True, disable the progress bar during asynchronous inference. Defaults to False.
         :param debug: If True, store raw InferResult / InferServerException dictionary for later analysis.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
@@ -504,7 +497,7 @@ class Koina:
             next(tasks[i])
 
         n_tasks = i + 1
-        with tqdm(total=n_tasks, desc="Getting predictions", disable=disable_progress_bar) as pbar:
+        with tqdm(total=n_tasks, desc="Getting predictions", disable=self.disable_progress_bar) as pbar:
             unfinished_tasks = [i for i in range(n_tasks)]
             while pbar.n < n_tasks:
                 time.sleep(0.5)

@@ -5,9 +5,10 @@ import pickle
 import sys
 import time
 from functools import partial
+from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import Dict, List, Tuple, Union  # Type, Union
+from typing import Dict, List, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -37,9 +38,9 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(int_model, irt_model, server_kwargs, queue_out, progress, lock, batch_df):
-    predictions = pr.predict(batch_df, model_name=int_model, disable_progress_bar=True, **server_kwargs)
-    predictions |= pr.predict(batch_df, model_name=irt_model, disable_progress_bar=True, **server_kwargs)
+def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
+    predictions = pr.predict(batch_df, model_name=int_model, **predict_kwargs)
+    predictions |= pr.predict(batch_df, model_name=irt_model, **predict_kwargs)
     queue_out.put((predictions, batch_df))
     with lock:
         progress.value += 1
@@ -199,11 +200,11 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 max_length=config.max_length,
             )
             metadata = pp.generate_metadata(
-                peptides=peptide_dict.keys(),
+                peptides=list(peptide_dict.keys()),
                 collision_energy=config.collision_energy,
                 precursor_charge=config.precursor_charge,
                 fragmentation=config.fragmentation,
-                proteins=peptide_dict.values(),
+                proteins=list(peptide_dict.values()),
             )
             library_file = config.output / "prosit_input.csv"
             metadata.to_csv(library_file, sep=",", index=None)
@@ -230,9 +231,8 @@ def _speclib_from_digestion(config: Config) -> Spectra:
     return spec_library
 
 
-def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[SpectralLibrary, Path]:
-    # spectral_library: Type[SpectralLibrary]
-
+def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+    spectral_library: Type[SpectralLibrary]
     if output_format == "msp":
         spectral_library = MSP
         out_file = results_path / "myPrositLib.msp"
@@ -266,13 +266,13 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra
             )
             sys.exit(1)
     else:
-        batches = range(np.math.ceil(no_of_spectra / batchsize))
+        batches = range(ceil(no_of_spectra / batchsize))
         mode = "w"
 
     return batches, mode
 
 
-def _update(pbar: str, postfix_values: Dict[str, int]):
+def _update(pbar: tqdm, postfix_values: Dict[str, int]):
     total_val = sum(postfix_values.values())
     if total_val > pbar.n:
         pbar.set_postfix(**postfix_values)
@@ -280,7 +280,7 @@ def _update(pbar: str, postfix_values: Dict[str, int]):
         pbar.refresh()
 
 
-def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]) -> bool:
+def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]):
     if n_failed > 0:
         failed_batches = []
         for i, result in enumerate(results):
@@ -312,6 +312,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     server_kwargs = {
         "server_url": config.prediction_server,
         "ssl": config.ssl,
+        "disable_progress_bar": True,
     }
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
@@ -462,18 +463,18 @@ def _calculate_features(spectra_file: Path, config: Config):
     if calc_feature_step.is_done():
         return
 
-    server_kwargs = {
+    predict_kwargs = {
         "server_url": config.prediction_server,
         "ssl": config.ssl,
     }
 
     pred_intensities = pr.predict(
-        library.spectra_data,
+        data=library.spectra_data,
         model_name=config.models["intensity"],
-        **server_kwargs,
+        **predict_kwargs,
     )
 
-    pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
+    pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
 
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")

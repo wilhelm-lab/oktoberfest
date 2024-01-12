@@ -12,7 +12,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, disable_progress_bar: bool = False, *args, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -21,15 +21,13 @@ def predict(data: pd.DataFrame, disable_progress_bar: bool = False, *args, **kwa
     See the koina predict function for details. TODO, link this properly.
 
     :param data: Dataframe containing the data for the prediction.
-    :param disable_progress_bar: If True, do not show progress bars while predicting
-    :param args: Additional positional arguments forwarded to Koina::predict
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
     :return: a dictionary with targets (keys) and predictions (values)
     """
-    predictor = Koina(*args, **kwargs)
+    predictor = Koina(**kwargs)
 
-    results = predictor.predict(data, disable_progress_bar)
+    results = predictor.predict(data)
     return results
 
 

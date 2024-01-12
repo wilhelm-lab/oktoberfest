@@ -43,7 +43,7 @@ def generate_metadata(
     peptides: List[str],
     collision_energy: Union[int, List[int]],
     precursor_charge: Union[int, List[int]],
-    fragmentation: Union[int, List[int]],
+    fragmentation: Union[str, List[str]],
     proteins: Optional[List[List[str]]] = None,
 ) -> pd.DataFrame:
     """
