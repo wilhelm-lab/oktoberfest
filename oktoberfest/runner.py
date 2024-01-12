@@ -125,25 +125,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             "model_name": config.models["intensity"],
         }
         use_ransac_model = config.use_ransac_model
-        library.spectra_data.rename(
-            columns={
-                "MODIFIED_SEQUENCE": "peptide_sequences",
-                "PRECURSOR_CHARGE": "precursor_charges",
-                "COLLISION_ENERGY": "collision_energies",
-                "FRAGMENTATION": "fragmentation_types",
-            },
-            inplace=True,
-        )
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
-        library.spectra_data.rename(
-            columns={
-                "peptide_sequences": "MODIFIED_SEQUENCE",
-                "precursor_charges": "PRECURSOR_CHARGE",
-                "collision_energies": "COLLISION_ENERGY",
-                "fragmentation_types": "FRAGMENTATION",
-            },
-            inplace=True,
-        )
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
@@ -290,11 +272,12 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra
     return batches, mode
 
 
-def _update(pbar: str, postfix_values: Dict[str, int], delay: float = 0.5):
-    time.sleep(delay)
-    pbar.set_postfix(**postfix_values)
-    pbar.n = sum(postfix_values.values())
-    pbar.refresh()
+def _update(pbar: str, postfix_values: Dict[str, int]):
+    total_val = sum(postfix_values.values())
+    if total_val > pbar.n:
+        pbar.set_postfix(**postfix_values)
+        pbar.n = total_val
+        pbar.refresh()
 
 
 def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]) -> bool:
@@ -341,16 +324,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(out_file, failed_batch_file, len(spec_library.spectra_data), batchsize)
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
-
-        spec_library.spectra_data.rename(
-            columns={
-                "MODIFIED_SEQUENCE": "peptide_sequences",
-                "PRECURSOR_CHARGE": "precursor_charges",
-                "COLLISION_ENERGY": "collision_energies",
-                "FRAGMENTATION": "fragmentation_types",
-            },
-            inplace=True,
-        )
 
         n_batches = len(batches)
 
@@ -404,6 +377,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                         total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
                     ) as predictor_pbar:
                         while predictor_pbar.n < n_batches:
+                            time.sleep(1)
                             pr_fail_val = prediction_failure_progress.value
                             _update(predictor_pbar, {"failed": pr_fail_val, "successful": prediction_progress.value})
                             _update(writer_pbar, {"successful": writing_progress.value, "missing": pr_fail_val})
@@ -411,6 +385,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                         predictor_pool.join()  # properly await and terminate the pool
 
                     while writer_pbar.n < n_batches:  # have to keep updating the writer pbar
+                        time.sleep(1)
                         _update(
                             writer_pbar,
                             {"successful": writing_progress.value, "missing": prediction_failure_progress.value},
@@ -492,16 +467,6 @@ def _calculate_features(spectra_file: Path, config: Config):
         "ssl": config.ssl,
     }
 
-    library.spectra_data.rename(
-        columns={
-            "MODIFIED_SEQUENCE": "peptide_sequences",
-            "PRECURSOR_CHARGE": "precursor_charges",
-            "COLLISION_ENERGY": "collision_energies",
-            "FRAGMENTATION": "fragmentation_types",
-        },
-        inplace=True,
-    )
-
     pred_intensities = pr.predict(
         library.spectra_data,
         model_name=config.models["intensity"],
@@ -509,16 +474,6 @@ def _calculate_features(spectra_file: Path, config: Config):
     )
 
     pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
-
-    library.spectra_data.rename(
-        columns={
-            "peptide_sequences": "MODIFIED_SEQUENCE",
-            "precursor_charges": "PRECURSOR_CHARGE",
-            "collision_energies": "COLLISION_ENERGY",
-            "fragmentation_types": "FRAGMENTATION",
-        },
-        inplace=True,
-    )
 
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
@@ -630,6 +585,7 @@ def run_rescoring(config_path: Union[str, Path]):
     _rescore(fdr_dir, config)
 
     # plotting
+    logger.info("Generating summary plots...")
     pl.plot_all(fdr_dir)
 
     logger.info("Finished rescoring.")
