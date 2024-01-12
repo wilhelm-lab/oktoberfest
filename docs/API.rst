@@ -25,6 +25,7 @@ Generating libraries
    :toctree: api/pp
 
    pp.digest
+   pp.generate_metadata
    pp.gen_lib
    pp.merge_spectra_and_peptides
    pp.annotate_spectral_library

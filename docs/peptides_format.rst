@@ -17,13 +17,15 @@ Oktoberfest expects a csv formatted file where each row represents a peptide fra
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | Column Header     | Explanation                                                                                                                                                                                                                                                                         |
     +===================+=====================================================================================================================================================================================================================================================================================+
-    | modified_sequence | The peptide sequence including modifications in unimod format (only M[UNIMOD:35] supported) and excluding the fixed modification C[UNIMOD:35] (Carbamidomethylation) as this modification will be added automatically. If you add C[UNIMOD:35] manually, you will get wrong results.|
+    | modified_sequence | The peptide sequence including modifications in unimod format (only M[UNIMOD:35] supported) and excluding the fixed modification C[UNIMOD:4] (Carbamidomethylation) as this modification will be added automatically. If you add C[UNIMOD:4] manually, you will get wrong results.  |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | collision_energy  | The collision energy to use in peptide property prediction                                                                                                                                                                                                                          |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | precursor_charge  | Charge state of the precursor ion                                                                                                                                                                                                                                                   |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | fragmentation     | Method used for fragmentation; can be "HCD" or "CID"                                                                                                                                                                                                                                |
+    +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | proteins          | An optional list of protein ids separate by ';'                                                                                                                                                                                                                                     |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
@@ -32,11 +34,12 @@ Example
 
 .. code-block::
 
-    modified_sequence,collision_energy,precursor_charge,fragmentation
-    ASPTQPIQL,35,1,HCD
-    KIIDRAITSL,34,2,HCD
-    KIEKLKVEL,35,2,HCD
-    KINQQKLKL,34,3,HCD
-    MLGNM[UNIMOD:35]NVFMAVLGIILC[UNIMOD:4]SGFLAAYFSHK,30,4,HCD
-    TYC[UNIMOD:4]DATKC[UNIMOD:4]FTVTE,34,2,HCD
-    VIPSIAYTEPEVAWVGLTEKEAKEK,30,2,HCD
+    modified_sequence,collision_energy,precursor_charge,fragmentation,proteins
+    ASPTQPIQL,31,1,HCD,
+    KIEKLKVEL,31,2,HCD,
+    AAAAAWEEPSSGNGTAR,30,3,HCD,Q9P258
+    AAAAAWEEPSSGNGTAR,31,2,HCD,Q9P258
+    KDVDGAYM[UNIMOD:35]TK,30,2,HCD,P04264;CON__P04264
+    VIGRGSYAK,35,2,HCD,P11216;P11217
+    TTENIPGGAEEISEVLDSLENLMR,30,1,hcd,tr|A0A075B6G3|A0A075B6G3_HUMAN;sp|P11532|DMD_HUMAN;tr|A0A5H1ZRP8|A0A5H1ZRP8_HUMAN
+    TYCDATKCFTVTE,34,2,HCD,
