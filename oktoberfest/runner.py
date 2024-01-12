@@ -39,8 +39,10 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
 
 
 def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
-    predictions = pr.predict(batch_df, model_name=int_model, **predict_kwargs)
-    predictions |= pr.predict(batch_df, model_name=irt_model, **predict_kwargs)
+    predictions = {
+        **pr.predict(batch_df, model_name=int_model, **predict_kwargs),
+        **pr.predict(batch_df, model_name=irt_model, **predict_kwargs),
+    }
     queue_out.put((predictions, batch_df))
     with lock:
         progress.value += 1
