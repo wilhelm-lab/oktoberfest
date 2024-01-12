@@ -365,7 +365,7 @@ class Koina:
 
     def __async_callback(
         self,
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
         result: Optional[InferResult],
         error: Optional[InferenceServerException],
@@ -391,7 +391,7 @@ class Koina:
     def __async_predict_batch(
         self,
         data: Dict[str, np.ndarray],
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
         timeout: int = 10000,
         retries: int = 10,
@@ -490,7 +490,7 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]] = {}
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]] = {}
         tasks = []
         for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
             tasks.append(self.__async_predict_batch(data_batch, infer_results, request_id=i, retries=3))
@@ -521,7 +521,7 @@ class Koina:
         return self.__handle_results(infer_results, debug)
 
     def __handle_results(
-        self, infer_results: Dict[int, Union[InferResult, InferenceServerException]], debug: bool
+        self, infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]], debug: bool
     ) -> Dict[str, np.ndarray]:
         """
         Handles the results.

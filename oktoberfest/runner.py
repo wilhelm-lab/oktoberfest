@@ -232,20 +232,14 @@ def _speclib_from_digestion(config: Config) -> Spectra:
 
 
 def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
-    spectral_library: Type[SpectralLibrary]
     if output_format == "msp":
-        spectral_library = MSP
-        out_file = results_path / "myPrositLib.msp"
+        return MSP, results_path / "myPrositLib.msp"
     elif output_format == "spectronaut":
-        spectral_library = Spectronaut
-        out_file = results_path / "myPrositLib.csv"
+        return Spectronaut, results_path / "myPrositLib.csv"
     elif output_format == "dlib":
-        spectral_library = DLib
-        out_file = results_path / "myPrositLib.dlib"
+        return DLib, results_path / "myPrositLib.dlib"
     else:
         raise ValueError(f"{output_format} is not supported as spectral library type")
-
-    return spectral_library, out_file
 
 
 def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra: int, batchsize: int):
