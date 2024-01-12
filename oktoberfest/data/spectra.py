@@ -182,11 +182,13 @@ class Spectra:
 
         return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
-    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> None:
+    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> Thread:
         """
         Write intensity, mz, and pred data as hdf5.
 
         :param output_file: path to output file
+        :return: the thread object from the hdf5 writer for later joining
+
         """
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY, hdf5.INTENSITY_PRED_KEY]
 
@@ -196,7 +198,7 @@ class Spectra:
         data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz, sparse_matrix_pred]
         column_names = [columns_intensity, columns_mz, columns_pred]
 
-        hdf5.write_file(data_sets, output_file, data_set_names, column_names)
+        return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
     @classmethod
     def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
