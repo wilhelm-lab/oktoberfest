@@ -2,7 +2,6 @@ import logging
 import re
 from typing import Dict, Tuple
 
-import math
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
@@ -13,7 +12,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -22,51 +21,14 @@ def predict(data: pd.DataFrame, *args, **kwargs) -> Dict[str, np.ndarray]:
     See the koina predict function for details. TODO, link this properly.
 
     :param data: Dataframe containing the data for the prediction.
-    :param args: Additional positional arguments forwarded to Koina::predict
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
     :return: a dictionary with targets (keys) and predictions (values)
     """
-    predictor = Koina(*args, **kwargs)
-
-    data.rename(
-        columns={
-            "MODIFIED_SEQUENCE": "peptide_sequences",
-            "PRECURSOR_CHARGE": "precursor_charges",
-            "COLLISION_ENERGY": "collision_energies",
-            "FRAGMENTATION": "fragmentation_types",
-            "LOG_SUM_INTENSITIES": "log_sum_intensities",
-        },
-        inplace=True,
-    )
+    predictor = Koina(**kwargs)
 
     results = predictor.predict(data)
-
-    data.rename(
-        columns={
-            "peptide_sequences": "MODIFIED_SEQUENCE",
-            "precursor_charges": "PRECURSOR_CHARGE",
-            "collision_energies": "COLLISION_ENERGY",
-            "fragmentation_types": "FRAGMENTATION",
-            "log_sum_intensities": "LOG_SUM_INTENSITIES",
-        },
-        inplace=True,
-    )
-
-    # perform square rooting of intensities here for sqrt model
-    if "model_name" in kwargs:
-        if "sqrt" in kwargs["model_name"] and "intensities" in results:
-            for i in np.nditer(results["intensities"], op_flags=['readwrite']):
-                if i != -1.0:
-                    i[...] = math.sqrt(i)
-
     return results
-
-def _square(x):
-    if x != -1.0:
-        return math.sqrt(x)
-    else:
-        return x
 
 
 def parse_fragment_labels(
