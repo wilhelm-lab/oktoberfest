@@ -20,6 +20,7 @@ alternative_column_map = {
     "collision_energies": "COLLISION_ENERGY",
     "fragmentation_types": "FRAGMENTATION",
     "instrument_types": "INSTRUMENT_TYPES",
+    "log_sum_intensities": "LOG_SUM_INTENSITIES"
 }
 
 
