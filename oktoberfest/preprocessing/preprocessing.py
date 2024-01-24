@@ -8,7 +8,7 @@ import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
-from spectrum_io.d import convert_d_pkl
+from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
@@ -236,6 +236,30 @@ def convert_search(
     search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
 
 
+def read_timstof_metadata(input_path: Union[str, Path], search_engine: str) -> pd.DataFrame:
+    """
+    Convert metadata for timstof to Oktoberfest format.
+
+    Given a path to a directory containing search results from supported search engines,
+    the function parses, converts metadata relevant for timstof to the internal format used by Oktoberfest
+    and writes them to a specified location.
+
+    :param input_path: Path to the directory or file containing the metadata.
+    :param search_engine: The search engine used to produce the search results,
+        currently supported is "Maxquant"
+    :raises ValueError: if an unsupported search engine was given
+
+    :return: dataframe containing metadata that maps scan numbers to precursors
+    """
+    search_engine = search_engine.lower()
+    if search_engine == "maxquant":
+        metadata_df = MaxQuant(input_path).read_metadata_for_timstof()
+    else:
+        raise ValueError(f"Unsupported search engine provided for reading timstof metadata: {search_engine}")
+
+    return metadata_df
+
+
 def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
     """
     Return a list of all spectra files of a given format.
@@ -260,7 +284,7 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
 
     input_format = input_format.lower()
 
-    if input_format not in ["mzml", "raw", "pkl", "d"]:
+    if input_format not in ["mzml", "raw", "hdf", "d"]:
         raise ValueError(f"Input format {input_format} unknown. Must be one of mzML, RAW or pkl.")
 
     if input_dir.is_file() and input_dir.suffix.lower().endswith(input_format):
@@ -409,17 +433,23 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
 
 
-def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
+def load_spectra(
+    filename: Union[str, Path], parser: str = "pyteomics", scan_to_precursor_map: Optional[pd.DataFrame] = None
+) -> pd.DataFrame:
     """
     Read spectra from a given file.
 
     This function reads MS2 spectra from a given mzML or pkl file using a specified parser. The file ending
     is used to determine the correct parsing method.
 
-    :param filename: Path to mzML / pkl file containing MS2 spectra to be loaded.
+    :param filename: Path to mzML / hdf file containing MS2 spectra to be loaded.
     :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
         Only used for parsing of mzML files.
-    :raises ValueError: if the filename does not end in either ".pkl" or ".mzML" (case-insensitive)
+    :param scan_to_precursor_map: An optional dataframe mapping scan numbers to precursors. This is useful to
+        filter the required spectra when reading and required for timsTOF, as this is used to aggregate all
+        precursors for a given scan number for summation of peak intensities and median values for retention
+        time, collision energy and ion mobility
+    :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
     :return: measured spectra with metadata.
     """
     if isinstance(filename, str):
@@ -430,15 +460,15 @@ def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.Da
         return ThermoRaw.read_mzml(
             source=filename, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
-    elif format_ == ".pkl":
-        results = pd.read_pickle(filename)
+    elif format_ == ".hdf":
+        results = read_and_aggregate_timstof(source=filename, scan_to_precursor_map=scan_to_precursor_map)
         # TODO in spectrum-io in case median_RETENTION_TIME is still passed
         # TODO also change name for ion mobility
         results.rename(columns={"median_RETENTION_TIME": "RETENTION_TIME"}, inplace=True)
         return results
 
     else:
-        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
+        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .hdf files are supported.")
 
 
 def convert_raw_to_mzml(
@@ -466,19 +496,15 @@ def convert_raw_to_mzml(
     raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
 
 
-def convert_d_to_pkl(d_dir: Union[str, Path], output_file: Union[str, Path], search_results_dir: Union[str, Path]):
+def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
     """
-    Convert d to pkl format.
+    Convert d to hdf format.
 
-    This function converts spectra within a d folder from a mass spectrometry run into pkl format.
+    This function converts spectra within a d folder from a mass spectrometry run into hdf format.
 
     :param d_dir: Path to d folder with spectra to be converted to pkl format
-    :param output_file: Path to the location where the converted spectra should be written to.
-    :param search_results_dir: Path to the output folder of the search engine. Additional outputs from the search
-        engine that may be required for correct conversion are automatically retrieved as long as the output folder
-        wasn't manipulated.
+    :param output_file: Path to the location where the converted spectra should be written to
     """
     d_dir = Path(d_dir)
     output_file = Path(output_file)
-    search_results_dir = Path(search_results_dir)
-    convert_d_pkl(d_path=d_dir, search_output_path=search_results_dir, output_path=output_file)
+    convert_d_hdf(input_path=d_dir, output_path=output_file)

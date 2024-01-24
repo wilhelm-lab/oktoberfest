@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 from pathlib import Path
-from typing import List, Type, Union
+from typing import List, Optional, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -65,7 +65,9 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
     return spectra_files_to_return
 
 
-def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
+def _annotate_and_get_library(
+    spectra_file: Path, config: Config, scan_to_precursor_map: Optional[pd.DataFrame] = None
+) -> Spectra:
     data_dir = config.output / "data"
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
@@ -78,12 +80,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
             pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
-        elif format_ in [".mzml", ".pkl"]:
+        elif format_ in [".mzml", ".hdf"]:
             file_to_load = spectra_file
         elif format_ == ".d":
-            file_to_load = spectra_dir / spectra_file.with_suffix(".pkl").name
-            pp.convert_d_to_pkl(spectra_file, file_to_load, config.search_results)
-        spectra = pp.load_spectra(file_to_load)
+            file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
+            pp.convert_d_to_hdf(spectra_file, file_to_load)  # , config.search_results)
+        spectra = pp.load_spectra(file_to_load, scan_to_precursor_map=scan_to_precursor_map)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
@@ -260,7 +262,12 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
             return library
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
-    library = _annotate_and_get_library(spectra_file, config)
+    scan_to_precursor_map = None
+    if config.spectra_type.lower in ["hdf", "d"]:  # if it is timstof
+        scan_to_precursor_map = pp.read_timstof_metadata(
+            input_path=config.search_results, search_engine=config.config.search_results_type
+        )
+    library = _annotate_and_get_library(spectra_file, config, scan_to_precursor_map)
     _get_best_ce(library, spectra_file, config)
 
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
