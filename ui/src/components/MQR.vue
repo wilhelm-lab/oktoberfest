@@ -19,6 +19,31 @@
   </Info>
 
 
+
+  <v-stepper-step :complete="step > 1" step="1">
+    Search Engine
+    <small>select the search engine used for searching your data.</small>
+  </v-stepper-step>
+  <v-stepper-content step="1">
+     <v-card flat>   
+      <div v-if="modelIntensityList.length>0">
+        Intensity prediction model
+        <v-radio-group v-model="modelIntensityName" column>
+          <v-radio color='primary'
+                  v-for="f in modelIntensityList"
+                  :key="f.name"
+                  :label="f.name"
+                  :value="f.name"
+          ></v-radio>
+        </v-radio-group>
+      </div>
+    <v-card-actions>
+    <v-spacer></v-spacer>
+    <v-btn small color="primary" @click="step = 2" :disabled="!doneUploads">next<v-icon>chevron_right</v-icon></v-btn>
+    </v-card-actions>
+    </v-card>
+  </v-stepper-content>
+
   <v-stepper-step :complete="step > 1" step="1">
     Upload Files
     <small>msms.txt and RAW file.</small>
@@ -26,7 +51,7 @@
   <v-stepper-content step="1">
     
     <Upload filetype="msms.txt" filesuffix=".txt" :taskid="taskid" hinttext="MaxQuant's msms.txt from a finished search. Note, amino acid U or O are not supported."></Upload>
-    <Upload filetype="RAW" filesuffix=".RAW,.raw" v-bind:sizelimit=2000 :taskid="taskid" hinttext="RAW file that was searched (restricted to Thermo Fisher HCD Orbitrap). File size is limited to 2GB."></Upload>
+    <MultiUpload filetype="RAW" filesuffix=".RAW,.raw,.zip" v-bind:sizelimit=6000 :taskid="taskid" hinttext="RAW file that was searched."></MultiUpload>
 
     <v-card flat>   
     <v-card-actions>
@@ -131,11 +156,12 @@ import axios from 'axios'
 import Upload from '@/components/Upload.vue'
 import Submit from '@/components/Submit.vue'
 import Info from '@/components/Info.vue'
+import MultiUpload from '@/components/MultiUpload.vue'
 
 
 export default {
   props: ['taskid'],
-  components: { Upload, Submit, Info },
+  components: { Upload, Submit,MultiUpload, Info },
   data () {
     return {
       step: 1,
@@ -171,7 +197,6 @@ export default {
       let modelIntensityLists = response.data.models.intensities;
       let modelIRTLists = response.data.models.iRT;
       this.modelIRTList = [];
-      //modelIRTList = response.data.models.iRT;
       this.modelIntensityList = [];
       for (let i = 0; i < modelIntensityLists.length; i++){
         //if(modelIntensityLists[i].enabled.rescoring)
