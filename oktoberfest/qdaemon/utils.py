@@ -1,6 +1,34 @@
 import sqlite3
-import os
 import pandas as pd
+import shutil
+import os
+import time
+import daemon
+import signal
+from oktoberfest.runner import run_job
+
+wkdir = "oktoberfest/results"
+pidfile_path = os.path.join(wkdir, "oktoberfest.pid")
+
+
+def periodic_job(sqlite_path: str, n_workers: int, pidfile_path: str):  # 1
+    task_list = get_task_list(sqlite_path)
+    pending_tasks = check_pending_jobs(task_list)
+
+    n_running_tasks = check_running_jobs(task_list)
+    available_workers = n_workers - n_running_tasks
+
+    if pending_tasks is None and available_workers > 0:
+        for task in pending_tasks.head(available_workers).iterrows():
+            start_oktoberfest_task(id=task.id, pidfile_path=pidfile_path)
+    time.sleep(30)
+
+
+def get_task_list(sqlite_path: str) -> pd.DataFrame:
+    conn = get_db_connection(sqlite_path)
+    task_list = conn.execute("SELECT * FROM task_list").fetchall()
+    conn.close()
+    return task_list
 
 
 def get_db_connection(sqlite_path: str) -> sqlite3.Connection:
@@ -9,41 +37,69 @@ def get_db_connection(sqlite_path: str) -> sqlite3.Connection:
     return conn
 
 
-def get_job_list(sqlite_path: str) -> pd.DataFrame:
+def check_pending_jobs(task_list: pd.DataFrame) -> pd.DataFrame:  # constant
+    pending_tasks = task_list.loc[task_list.status == "waiting"]
+    if pending_tasks.empty:
+        return None
+    else:
+        return pending_tasks.sort_values(by="id", ascending=True)
+
+
+def check_running_jobs(task_list: pd.DataFrame) -> int:  # constaant
+    return task_list.loc[task_list.status == "running"].dim[0]
+
+
+def update_task_status_in_db(sqlite_path: str, id: int, new_status: str):
     conn = get_db_connection(sqlite_path)
-    job_list = conn.execute("SELECT * FROM job_list").fetchall()
+    conn.execute(
+        "UPDATE task_list SET status = ? WHERE id = ?", (new_status, id)
+    )
+    conn.commit()
     conn.close()
-    return job_list
 
-def update_job_list(job_list:pd.DataFrame) -> pd.DataFrame:
-    for i in job_list.job_id:
-        s = job_list.loc[job_list.job_id == i, 'status']
-        s_update = update_job(job_id = i, status=s)
-        job_list.loc[job_list.job_id == i, 'status'] = s_update
-    return job_list
 
-def update_job(job_id:str, status:str) -> str:
-    match status:
-        case 'waiting':
-            
+# def start_oktoberfest_task(id: int):
+#     p = Process(target=oktoberfest_task, args=(id,))
+#     p.start()
+#     return p
 
+
+def start_oktoberfest_task(id: int, pidfile_path: str):
+    with daemon.DaemonContext(pidfile=pidfile_path):
+        oktoberfest_task(id=id)
+
+
+def oktoberfest_task(id: int) -> str:  # 1a
+    try:
+        update_task_status_in_db(id=id, new_status="running")
+        run_job(
+            config_path=os.path.join(wkdir, "config", str(id) + ".json")
+        )  # TODO: change path
+        zip_file(id=id)
+        update_task_status_in_db(id=id, new_status="done")
+        msg = "Task done"
+    except:
+        update_task_status_in_db(id=id, new_status="failed")
+        msg = "Task failed"  # TODO: catch error message
+
+    return msg
+
+
+def zip_file(id: str):
+    shutil.make_archive(
+        base_name=str(id) + "result",
+        format="zip",
+        base_dir=os.path.join(wkdir, "result"),
+    )
     pass
 
-def start_oktoberfest_job():  # 1a
-    pass
 
+class GracefulKiller:
+    kill_now = False
 
-def check_running_jobs(data_id:str):  # 1b
-    pass
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-
-def zip_done_jobs():  # 1b1
-    pass
-
-
-def handle_failed_jobs():  # 1b2
-    pass
-
-
-def start_queue():
-    pass
+    def exit_gracefully(self):
+        self.kill_now = True
