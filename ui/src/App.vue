@@ -7,6 +7,7 @@
         <v-alert :value='underMaintenance' type="error" color="#D77373">
           Prosit is currently under maintenance. Please excuse the inconvenience.
         </v-alert>
+        
       </v-flex>
 
       <v-flex xs9>
@@ -15,6 +16,9 @@
           and the other is for iRT prediction <b>(Prosit_TMT_irt_2021)</b>. The intensity model works with both <b>CID</b> and <b>HCD</b> fragmentation methods but you need
           to add fragmentation column to the input. We assume all the sequences are fully labeled and you don't need to add the
           tmt modification explicitly in your input files.
+        </v-alert>
+        <v-alert :value="true" type="error" color="#d6983c">
+          {{ testApi }}.
         </v-alert>
       </v-flex>
 
@@ -63,6 +67,7 @@
     <v-card-text>
       <v-text-field label="Task ID" v-model="taskid" clearable @keyup.enter="showTaskStatus"></v-text-field>
     </v-card-text>
+    
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn :disabled="!taskid" small fab color="primary" @click.native="showTaskStatus"><v-icon>done</v-icon></v-btn>
@@ -85,6 +90,7 @@ export default {
     displayTaskDialog: false,
     taskid: null,
     underMaintenance: false,
+    testApi: false,
     runJobs: -1,
   }),
   methods: {
@@ -121,7 +127,14 @@ export default {
   },
   mounted() {
     let statusUrl = '/prosit/api/backend.xsjs';
+    let test_api = process.env.VUE_APP_API_URL +'/hi'
+    
     let self = this;
+
+    axios.get(test_api).then(function (response){   
+        self.testApi = response.data;
+    });
+
     // expects an json object: {"underMaintenance": true} or false.
     axios.get(statusUrl).then(function (response){   
         self.underMaintenance = response.data.underMaintenance == "true";
