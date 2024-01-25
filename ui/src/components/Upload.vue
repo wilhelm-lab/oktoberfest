@@ -54,7 +54,6 @@ export default {
       loading: false,
       progress: 0,
       baseurl: '/prosit/api/upload.xsjs',
-      //baseurl: 'http://localhost:8989/upload',
       file: null,
       filename: this.filetype,
       fileIsTooBig: false,

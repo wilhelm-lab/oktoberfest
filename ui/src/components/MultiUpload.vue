@@ -79,9 +79,10 @@ export default {
   data() {
     return {
       files: [],
-      filename: this.filetype,
       progress: 0,
-      baseurl: process.env.VUE_APP_API_URL + '/prosit/api/upload.xsjs',
+      baseurl: '/prosit/api/upload.xsjs',
+      file: null,
+      filename: this.filetype,
       requesttoken: axios.CancelToken.source()
     }
   },

@@ -26,6 +26,7 @@ export default new Vuex.Store({
       outputFormat: false,
       selectedIntensityModel: false,
       selectedIRTModel: false,
+      searchEngine: false,
     },
   },
   mutations: {
@@ -46,6 +47,9 @@ export default new Vuex.Store({
     },
     changeTag(state, tag){
       state.task.tag = tag;
+    },
+    changeSearchEngine(state, searchEngine){
+      state.task.searchEngine = searchEngine;
     },
     changeOptions(state, options){
       for (const option in options) {

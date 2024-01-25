@@ -148,3 +148,6 @@ tutorials/
 
 # example data
 data/
+
+# npm build files
+ui/node_modules
