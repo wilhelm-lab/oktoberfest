@@ -12,22 +12,22 @@ class OKworker:
         self.base_dir = Path(base_dir)
         self.sqlite_path = Path(sqlite_path)
         self.conn = sqlite3.connect(self.sqlite_path, isolation_level=None)
-        self.conn.execute('PRAGMA journal_mode=wal')
+        self.conn.execute("PRAGMA journal_mode=wal")
         self.cursor = self.conn.cursor()
         self.check_db()
 
-    def startTransaction(self):
-        isDone = False
-        while not isDone:
+    def start_transaction(self):
+        is_done = False
+        while not is_done:
             try:
                 # self.conn.execute("PRAGMA locking_mode = RESERVED")
                 self.cursor.execute("BEGIN EXCLUSIVE TRANSACTION")
-                isDone = True
+                is_done = True
             except sqlite3.OperationalError:
                 print("Lock", self.pid)
                 time.sleep(5)
-    
-    def endTransaction(self):
+
+    def end_transaction(self):
         self.cursor.execute("COMMIT")
         # self.conn.execute("PRAGMA locking_mode = NORMAL")
         # try:
@@ -35,7 +35,7 @@ class OKworker:
         # except sqlite3.OperationalError:
         #     pass
         self.conn.commit()
-        
+
     # def endTransaction(self):
     #     self.cursor.execute("COMMIT")
     #     self.conn.execute("PRAGMA locking_mode = NORMAL")
@@ -43,22 +43,27 @@ class OKworker:
 
     def check_db(self):
         # Execute your command here
-        self.startTransaction()
-        self.cursor.execute("SELECT * FROM JOBS WHERE status='PENDING' ORDER BY ID ASC LIMIT 1;")
+        self.start_transaction()
+        self.cursor.execute(
+            "SELECT * FROM JOBS WHERE status='PENDING' ORDER BY ID ASC"
+            " LIMIT 1;"
+        )
 
         # Fetch the results
         result = self.cursor.fetchone()
-        
+
         if result:
             print(f"Job found: {result}")
-            config_path = Path(self.base_dir, result[1], "config.json").resolve()
+            config_path = Path(
+                self.base_dir, result[1], "config.json"
+            ).resolve()
             if not config_path.exists():
                 self.cursor.execute(
                     f"""
                         UPDATE JOBS SET STATUS='FAILED' WHERE ID={result[0]}
                     """
                 )
-                self.endTransaction()
+                self.end_transaction()
                 self.suicide("ConfigNotFound")
                 return -1
             # Update database
@@ -80,12 +85,10 @@ class OKworker:
 
     def run_ok(self, result, config_path):
         try:
-            run_job(
-                config_path=config_path
-            )
+            run_job(config_path=config_path)
             outFolder = Path("/output")
             zip_folder(outFolder, outFolder)
-            self.startTransaction()
+            self.start_transaction()
             self.cursor.execute(
                 f"""
                     UPDATE JOBS SET STATUS='DONE' WHERE ID={result[0]}
@@ -94,7 +97,7 @@ class OKworker:
             self.cursor.execute("COMMIT")
             self.conn.commit()
         except Exception as e:
-            self.startTransaction()
+            self.start_transaction()
             self.cursor.execute(
                 f"""
                     UPDATE JOBS SET STATUS='FAILED' WHERE ID={result[0]}
@@ -109,7 +112,7 @@ class OKworker:
         # Cleanup, report, remove PID and suicide
         print(f"Suicide triggered because {reason}")
         self.conn.close()
-        
+
     def __del__(self):
         self.conn.close()
 
