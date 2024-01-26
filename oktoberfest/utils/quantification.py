@@ -1,16 +1,12 @@
-"""quantification module, based on picked-group-fdr
+"""quantification module, based on picked-group-fdr.
 
+https://github.com/kusterlab/picked_group_fdr
+requires pip install picked_group_fdr
 """
 
 import logging
-from pathlib import Path
 
-from sklearn.linear_model import LinearRegression, RANSACRegressor
-
-from oktoberfest import __copyright__, __version__
-from oktoberfest import rescore as re
-
-from . import Config, JobPool, ProcessStep
+from . import Config
 
 import picked_group_fdr.pipeline as picked_group_fdr
 from picked_group_fdr.digestion_params import DigestionParams
@@ -20,6 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 def apply_quant(config: Config):
+    """call picked-group-FDR for means of quantification on rescored Oktoberfest output.
+
+    So far only possible for rescored MaxQuant output.
+
+    Args:
+        config (Config): config object containing all Oktoberfest parameters
+    """
+
     fdr_dir = config.output / "results" / config.fdr_estimation_method
 
     # currently only works for: MQ evidence file - TODO integrate MQ msms.txt ? 
