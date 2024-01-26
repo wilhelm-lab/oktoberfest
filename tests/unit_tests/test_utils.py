@@ -34,3 +34,10 @@ class TestProcessStep(unittest.TestCase):
         proc_step_file = proc_step._get_done_file_path()
         self.assertTrue(proc_step_file.is_file())
         proc_step_file.unlink()
+
+
+# class TestQuant(unittest.TestCase):
+#     """Test the quantification done by calling picked-group-fdr"""
+
+#     def test_picked_group_fdr_quant(self):
+#         # requires small output of rescoring & small evidence.txt

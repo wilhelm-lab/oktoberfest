@@ -84,6 +84,11 @@ class Config:
             return self.data["type"]
         else:
             raise ValueError("No job type specified in config file.")
+        
+    @property
+    def quantification(self) -> bool:
+        """Get quantification flag for performing quantification using picked-group-fdr"""
+        return self.data.get("quantification", False)
 
     @property
     def mass_tolerance(self) -> Optional[float]:
@@ -314,6 +319,14 @@ class Config:
                 )
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
+        if self.quantification:
+            path_stem = Path(self.search_results).parent
+            if self.search_results_type == "Maxquant" and not Path(path_stem / "evidence.txt").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} but evidence.txt is not available "\
+                    f"at {path_stem / 'evidence.txt'}."
+                )
+            # TODO implement tests for other than MQ evidence.txt
 
     def _check_for_speclib(self):
         if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
