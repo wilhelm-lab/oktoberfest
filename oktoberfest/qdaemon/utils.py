@@ -1,97 +1,61 @@
 import sqlite3
-import pandas as pd
 import shutil
-import os
-import time
-import daemon
 import signal
-from oktoberfest.runner import run_job
-
-wkdir = "oktoberfest/results"
-pidfile_path = os.path.join(wkdir, "oktoberfest.pid")
 
 
-def periodic_job(sqlite_path: str, n_workers: int, pidfile_path: str):  # 1
-    task_list = get_task_list(sqlite_path)
-    pending_tasks = check_pending_jobs(task_list)
-
-    n_running_tasks = check_running_jobs(task_list)
-    available_workers = n_workers - n_running_tasks
-
-    if pending_tasks is None and available_workers > 0:
-        for task in pending_tasks.head(available_workers).iterrows():
-            start_oktoberfest_task(id=task.id, pidfile_path=pidfile_path)
-    time.sleep(30)
-
-
-def get_task_list(sqlite_path: str) -> pd.DataFrame:
-    conn = get_db_connection(sqlite_path)
-    task_list = conn.execute("SELECT * FROM task_list").fetchall()
-    conn.close()
-    return task_list
-
-
-def get_db_connection(sqlite_path: str) -> sqlite3.Connection:
+def create_database(sqlite_path: str):
     conn = sqlite3.connect(sqlite_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def check_pending_jobs(task_list: pd.DataFrame) -> pd.DataFrame:  # constant
-    pending_tasks = task_list.loc[task_list.status == "waiting"]
-    if pending_tasks.empty:
-        return None
-    else:
-        return pending_tasks.sort_values(by="id", ascending=True)
-
-
-def check_running_jobs(task_list: pd.DataFrame) -> int:  # constaant
-    return task_list.loc[task_list.status == "running"].dim[0]
-
-
-def update_task_status_in_db(sqlite_path: str, id: int, new_status: str):
-    conn = get_db_connection(sqlite_path)
-    conn.execute(
-        "UPDATE task_list SET status = ? WHERE id = ?", (new_status, id)
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+            CREATE TABLE IF NOT EXISTS JOBS
+            (
+                [ID] INTEGER PRIMARY KEY AUTOINCREMENT,
+                [TASK_ID] TEXT UNIQUE,
+                [DATE] DATETIME,
+                [STATUS] TEXT CHECK(status IN ('UPLOADED', 'PENDING', 'RUNNING', 'DONE', 'FAILED')),
+                FOREIGN KEY (ID) REFERENCES CONFIGS(ID)
+            )
+            """
+    )
+    cursor.execute(
+        """
+            CREATE TABLE IF NOT EXISTS CONFIGS
+            (
+                [ID] INTEGER PRIMARY KEY,
+                [CONFIG] BLOB,
+                FOREIGN KEY (ID) REFERENCES JOBS(ID)
+            )
+        """
     )
     conn.commit()
     conn.close()
 
 
-# def start_oktoberfest_task(id: int):
-#     p = Process(target=oktoberfest_task, args=(id,))
-#     p.start()
-#     return p
+def print_db_schema(self, sqlite_path: str):
+    conn = sqlite3.connect(sqlite_path)
+    cursor = conn.cursor()
+
+    # Get the table names
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
+
+    # Print the schema for each table
+    for table in tables:
+        table_name = table[0]
+        print(f"Table: {table_name}")
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        for column in columns:
+            column_name = column[1]
+            column_type = column[2]
+            print(f"  {column_name}: {column_type}")
+
+    conn.close()
 
 
-def start_oktoberfest_task(id: int, pidfile_path: str):
-    with daemon.DaemonContext(pidfile=pidfile_path):
-        oktoberfest_task(id=id)
-
-
-def oktoberfest_task(id: int) -> str:  # 1a
-    try:
-        update_task_status_in_db(id=id, new_status="running")
-        run_job(
-            config_path=os.path.join(wkdir, "config", str(id) + ".json")
-        )  # TODO: change path
-        zip_file(id=id)
-        update_task_status_in_db(id=id, new_status="done")
-        msg = "Task done"
-    except:
-        update_task_status_in_db(id=id, new_status="failed")
-        msg = "Task failed"  # TODO: catch error message
-
-    return msg
-
-
-def zip_file(id: str):
-    shutil.make_archive(
-        base_name=str(id) + "result",
-        format="zip",
-        base_dir=os.path.join(wkdir, "result"),
-    )
-    pass
+def zip_folder(folder_path: str, output_path: str):
+    shutil.make_archive(base_name=output_path, format="zip", root_dir=folder_path)
 
 
 class GracefulKiller:
@@ -101,5 +65,5 @@ class GracefulKiller:
         signal.signal(signal.SIGINT, self.exit_gracefully)
         signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-    def exit_gracefully(self):
+    def exit_gracefully(self, *args, **kwargs):
         self.kill_now = True

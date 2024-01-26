@@ -151,3 +151,4 @@ data/
 
 # npm build files
 ui/node_modules
+oktoberfest/qdaemon/internal.py
