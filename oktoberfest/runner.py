@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import pickle
 from pathlib import Path
 from typing import List, Optional, Type, Union
 
@@ -39,6 +40,12 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
             )
+            if config.spectra_type.lower() in ["d", "hdf"]:
+                timstof_metadata = pp.read_timstof_metadata(
+                    input_path=config.search_results, search_engine=config.search_results_type
+                )
+                with open(msms_output / "tims_meta.pickle", "wb") as tims_meta_file:
+                    pickle.dump(timstof_metadata, tims_meta_file)
         else:
             internal_search_file = config.search_results
         search_results = pp.load_search(internal_search_file)
@@ -56,7 +63,6 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         preprocess_search_step.mark_done()
     else:
         filenames_found = [msms_file.stem for msms_file in (config.output / "msms").glob("*rescore")]
-
     spectra_files_to_return = []
     for spectra_file in spectra_files:
         if spectra_file.stem in filenames_found:
@@ -84,7 +90,7 @@ def _annotate_and_get_library(
             file_to_load = spectra_file
         elif format_ == ".d":
             file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
-            pp.convert_d_to_hdf(spectra_file, file_to_load)  # , config.search_results)
+            pp.convert_d_to_hdf(spectra_file, file_to_load)
         spectra = pp.load_spectra(file_to_load, scan_to_precursor_map=scan_to_precursor_map)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
@@ -263,10 +269,10 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
     scan_to_precursor_map = None
-    if config.spectra_type.lower in ["hdf", "d"]:  # if it is timstof
-        scan_to_precursor_map = pp.read_timstof_metadata(
-            input_path=config.search_results, search_engine=config.config.search_results_type
-        )
+    if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
+        with open(config.output / "msms" / "tims_meta.pickle", "rb") as tims_meta_file:
+            scan_to_precursor_map = pickle.load(tims_meta_file).query("RAW_FILE == @spectra_file.stem")
+
     library = _annotate_and_get_library(spectra_file, config, scan_to_precursor_map)
     _get_best_ce(library, spectra_file, config)
 
