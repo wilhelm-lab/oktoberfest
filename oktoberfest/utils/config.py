@@ -87,7 +87,7 @@ class Config:
         
     @property
     def quantification(self) -> bool:
-        """Get quantification flag for performing quantification using picked-group-fdr"""
+        """Get quantification flag for performing quantification using picked-group-fdr."""
         return self.data.get("quantification", False)
 
     @property

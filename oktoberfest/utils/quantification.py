@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 def apply_quant(config: Config):
-    """call picked-group-FDR for means of quantification on rescored Oktoberfest output.
+    """Call picked-group-FDR for means of quantification on rescored Oktoberfest output.
 
     So far only possible for rescored MaxQuant output.
 
     Args:
         config (Config): config object containing all Oktoberfest parameters
     """
-
     fdr_dir = config.output / "results" / config.fdr_estimation_method
 
     # currently only works for: MQ evidence file - TODO integrate MQ msms.txt ? 
