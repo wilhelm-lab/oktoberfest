@@ -12,16 +12,16 @@ export default {
   data () {
     return {
       submited: false,
-      url: '/prosit/api/submit.xsjs',
+      url: process.env.VUE_APP_API_URL + '/api/v1/submitJob',
     }
   },
   methods: {
     showTask(){
       let self = this;
+      self.submited = true;
       setTimeout(function() {
-        let taskid = self.taskid;
         self.$store.commit('reset');
-        self.$router.push('/prosit/task/' + taskid);
+        self.$router.push('/task/' + self.$store.state.task.taskId);
       }, 2000); 
       
     },
@@ -29,12 +29,10 @@ export default {
 
       let submitObject = this.$store.getters.submitObject;
       let self = this;
-      this.submited = true;
-      submitObject.id = this.taskid;
       axios.post(
         this.url,
         submitObject,
-        { params: { datasetId: this.taskid } }
+        { params: { hashInput: this.$store.state.task.hashId } }
       ).then(
         // success
         self.showTask()

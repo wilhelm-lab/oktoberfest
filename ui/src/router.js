@@ -13,28 +13,28 @@ Vue.use(Router)
 export default new Router({
   routes: [
     {
-      path: '/prosit/',
+      path: '/',
       name: 'home',
       component: TaskSelection
     },
     {
-      path: '/prosit/task/:taskid',
+      path: '/task/:taskid',
       name: 'task',
       props: true,
       component: TaskStatus
     },
     {
-      path: '/prosit/faq/',
+      path: '/faq/',
       name: 'faq',
       component: FAQ
     },
     {
-      path: '/prosit/log/',
+      path: '/log/',
       name: 'log',
       component: Changelog
     },
     {
-      path: '/prosit/libraries/',
+      path: '/libraries/',
       name: 'libraries',
       component: Libraries
     }

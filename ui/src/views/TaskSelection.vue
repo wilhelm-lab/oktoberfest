@@ -48,19 +48,8 @@ export default {
       let taskType = store.state.taskTypes[this.tabid];
       store.commit('changeTask', taskType);
     },
-    setTaskId: function(response){
-      let self = this;
-      let taskIdUrl = '/proteomicsdb/logic/secure/dataset.xsjs'
-      axios.get(taskIdUrl, {
-        params: { uuid: response.data.uuid }
-      }).then(function (response){
-        self.taskid = response.data.datasetId
-      })
-    }
   },
   mounted() {
-    let sessionUrl = '/proteomicsdb/logic/secure/checkSessionId.xsjs';
-    axios.get(sessionUrl).then(this.setTaskId);
   }
 }
 </script>

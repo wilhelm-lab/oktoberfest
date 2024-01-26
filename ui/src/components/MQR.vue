@@ -19,7 +19,6 @@
   </Info>
 
 
-
   <v-stepper-step :complete="step > 1" step="1">
     Search Engine
     <small>select the search engine used for searching your data.</small>
@@ -27,45 +26,44 @@
   <v-stepper-content step="1">
      <v-card flat>   
       <div v-if="searchEngineList.length>0">
-        Intensity prediction model
         <v-radio-group v-model="searchEngine" column>
           <v-radio color='primary'
                   v-for="f in searchEngineList"
-                  :label="f"
-                  :value="f"
+                  :key="f.name"
+                  :label="f.name"
+                  :value="f.name"
           ></v-radio>
         </v-radio-group>
       </div>
     <v-card-actions>
-    <v-spacer></v-spacer>
-    <v-btn small color="primary" @click="toStepTwo" :disabled="!((searchEngine))">next<v-icon>chevron_right</v-icon></v-btn>
+      <v-btn small color="primary" @click="toStepTwo">next<v-icon>chevron_right</v-icon></v-btn>
     </v-card-actions>
     </v-card>
   </v-stepper-content>
 
   <v-stepper-step :complete="step > 2" step="2">
     Upload Files
-    <div v-if="searchEngine='MaxQuant'">
+    <div v-if="searchEngine=='MaxQuant'">
       <small>msms.txt and RAW file.</small>
     </div>
-    <div v-if="searchEngine='MSFragger'">
+    <div v-if="searchEngine=='MSFragger'">
       <small>pepXML files and RAW file.</small>
     </div>
-    <div v-if="searchEngine='Sage'">
+    <div v-if="searchEngine=='Sage'">
       <small>psm.tsv and RAW file.</small>
     </div>
   </v-stepper-step>
   <v-stepper-content step="2">
-    <div v-if="searchEngine='MaxQuant'">
-      <Upload filetype="msms.txt" filesuffix=".txt" :taskid="taskid" hinttext="MaxQuant's msms.txt from a finished search. Note, amino acid U or O are not supported."></Upload>
+    <div v-if="searchEngine=='MaxQuant'">
+      <Upload filetype="msms.txt" filesuffix=".txt" v-bind:sizelimit=10000 hinttext="MaxQuant's msms.txt from a finished search. Note, amino acid U or O are not supported."></Upload>
     </div>
-    <div v-if="searchEngine='MSFragger'">
-      <MultiUpload filetype="pepXML" filesuffix=".pepXML" :taskid="taskid" hinttext="MSFragger .pepXML files generated during the search"></MultiUpload>
+    <div v-if="searchEngine=='MSFragger'">
+      <MultiUpload filetype="pepXML" filesuffix=".pepXML" v-bind:sizelimit=10000 hinttext="MSFragger .pepXML files generated during the search"></MultiUpload>
     </div>
-    <div v-if="searchEngine='Sage'">
-      <Upload filetype="results.sage.tsv" filesuffix=".tsv" :taskid="taskid" hinttext="Sage search results."></Upload>
+    <div v-if="searchEngine=='Sage'">
+      <Upload filetype="results.sage.tsv" filesuffix=".tsv" v-bind:sizelimit=10000 hinttext="Sage search results."></Upload>
     </div>
-    <MultiUpload filetype="RAW" filesuffix=".RAW,.raw,.zip" v-bind:sizelimit=6000 :taskid="taskid" hinttext="RAW file that was searched."></MultiUpload>
+    <Upload filetype="RAW" filesuffix=".RAW,.raw,.zip" v-bind:sizelimit=10000 hinttext="RAW file that was searched."></Upload>
 
     <v-card flat>   
     <v-card-actions>
@@ -79,7 +77,7 @@
     Model
     <small>Select intensity and iRT model for prediction</small>
   </v-stepper-step>  
-  <v-stepper-content step="2">
+  <v-stepper-content step="3">
   <v-card flat>
     <div v-if="modelIntensityList.length>0">
       Intensity prediction model
@@ -106,7 +104,7 @@
 
   <v-card-actions>
   <v-spacer></v-spacer>
-  <v-btn small color="accent" @click="step = 2"><v-icon>chevron_left</v-icon>back</v-btn>
+  <v-btn small color="accent" @click="step = 3"><v-icon>chevron_left</v-icon>back</v-btn>
   <v-btn small color="primary" @click="toStepFour" :disabled="!((modelIRTName||modelIRTList.length==0)&&(modelIntensityName||modelIntensityList.length==0))">next<v-icon>chevron_right</v-icon></v-btn>
   </v-card-actions>
   </v-card> 
@@ -171,6 +169,8 @@ import Upload from '@/components/Upload.vue'
 import Submit from '@/components/Submit.vue'
 import Info from '@/components/Info.vue'
 import MultiUpload from '@/components/MultiUpload.vue'
+import Cookies from 'universal-cookie';
+
 
 
 export default {
@@ -181,22 +181,24 @@ export default {
       step: 1,
       modelIntensityName: false,
       modelIntensityList: false,
-      searchEngineList: false,
+      searchEngineList: [{'name':'MaxQuant'},{'name':'MSFragger'},{'name':'Sage'}],
       modelIRTName: false,
       modelIRTList: false,
       tag: false,
-      searchEngine: false,
+      searchEngine: "MaxQuant",
+      testApiC: false,
     }
   },
   computed: {
     doneUploads: function () {
       let uploads = this.$store.state.task.uploads;
       return uploads['msms.txt'] && uploads.RAW;
-    }
+    },
   },
   methods: {
     toStepTwo: function (){
       this.$store.commit('changeSearchEngine', this.searchEngine);
+      console.log(this.searchEngine)
       this.step = 2;
     },
     toStepFour: function (){
@@ -214,34 +216,14 @@ export default {
       this.step = 5;
     },
     setModels: function(response){
-      let modelIntensityLists = response.data.models.intensities;
-      let modelIRTLists = response.data.models.iRT;
-      this.modelIRTList = [];
-      this.modelIntensityList = [];
-      this.searchEngineList = ['MaxQuant','MSFragger','Sage'];
-      for (let i = 0; i < modelIntensityLists.length; i++){
-        //if(modelIntensityLists[i].enabled.rescoring)
-        this.modelIntensityList.push(modelIntensityLists[i]);
-      }
-      for (let i = 0; i < modelIRTLists.length; i++){
-        //if(modelIRTLists[i].enabled.rescoring)
-        this.modelIRTList.push(modelIRTLists[i]);
-      }
-      let that = this;
-      if(this.modelIntensityList.length>0) {
-        this.modelIntensityList.forEach(function (item) {
-          if (item.default) that.modelIntensityName = item.name;
-        });
-      }
-      if(this.modelIRTList.length>0) {
-        this.modelIRTList.forEach(function (item) {
-          if (item.default) that.modelIRTName = item.name;
-        });
-      }
+      this.modelIntensityList = response.data.intensity;
+      this.modelIRTList = response.data.irt;
+      this.modelIntensityName = this.modelIntensityList[0].name
+      this.modelIRTName = this.modelIRTList[0].name
     }
   },
   mounted() {
-    let modelsUrl = '/prosit/api/models.xsjs';
+    let modelsUrl = process.env.VUE_APP_API_URL +'/api/v1/getModels';
     axios.get(modelsUrl).then(this.setModels);
   }
 }

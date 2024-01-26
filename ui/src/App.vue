@@ -17,9 +17,6 @@
           to add fragmentation column to the input. We assume all the sequences are fully labeled and you don't need to add the
           tmt modification explicitly in your input files.
         </v-alert>
-        <v-alert :value="true" type="error" color="#d6983c">
-          {{ testApi }}.
-        </v-alert>
       </v-flex>
 
       <v-flex xs9>
@@ -81,8 +78,7 @@
 <script>
 import router from '@/router'
 import axios from 'axios'
-
-
+import Cookies from 'universal-cookie';
 
 export default {
   name: 'app',
@@ -91,6 +87,7 @@ export default {
     taskid: null,
     underMaintenance: false,
     testApi: false,
+    cookies:false,
     runJobs: -1,
   }),
   methods: {
@@ -98,20 +95,20 @@ export default {
       this.displayTaskDialog = ! this.displayTaskDialog;
     },
     showHome: function(){
-      router.push('/prosit/')
+      router.push('/')
     },
     showLOG: function(){
-      router.push('/prosit/log/')
+      router.push('/log/')
     },
     showFAQ: function(){
-      router.push('/prosit/faq/')
+      router.push('/faq/')
     },
     showLibraries: function(){
-      router.push('/prosit/libraries/')
+      router.push('/libraries/')
     },
     showTaskStatus: function(){
       this.toggleTaskDialog();
-      router.push('/prosit/task/' + this.taskid)
+      router.push('/task/' + this.taskid)
     },
   },
   computed: {
@@ -123,24 +120,43 @@ export default {
         return this.$route.name != 'faq'
       }
       return false;
-    }
+    },
+    setCookieTime: function() {
+      var today = new Date();
+      var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+      var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+      var dateTime = date+' '+time;
+      console.log(dateTime)
+      return dateTime;
+    },
+    
   },
   mounted() {
-    let statusUrl = '/prosit/api/backend.xsjs';
-    let test_api = process.env.VUE_APP_API_URL +'/hi'
-    
-    let self = this;
+    let statusUrl = process.env.VUE_APP_API_URL +'/api/v1/status';
 
-    axios.get(test_api).then(function (response){   
-        self.testApi = response.data;
+    let self = this;
+    self.cookies = new Cookies(null, { path: '/' });
+
+    axios.get('https://api.ipify.org?format=json').then(response => {
+      let ipAddress = response.data.ip;
+      self.cookies.set("ipAddress",ipAddress);
+      self.cookies.set("timeStamp",self.setCookieTime);
+      let hashId =  self.cookies.get('timeStamp') + self.cookies.get('ipAddress')
+      console.log(hashId)
+      self.$store.commit('sethashId',hashId)
+      console.log(self.$store.state.task.hashId)
     });
+    
+    //axios.get(test_api,{"Access-Control-Allow-Credentials": true}).then(function (response){   
+      //  self.testApi = response.data.message;
+    //});
 
     // expects an json object: {"underMaintenance": true} or false.
     axios.get(statusUrl).then(function (response){   
         self.underMaintenance = response.data.underMaintenance == "true";
     });
 
-    let runJobsUrl = '/prosit/api/get_running_jobs.xsjs';
+    let runJobsUrl = process.env.VUE_APP_API_URL +'/api/v1/runningJobs';
     axios.get(runJobsUrl).then(function (response){
       self.runJobs = response.data.number_of_jobs;
     });

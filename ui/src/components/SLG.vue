@@ -291,32 +291,10 @@ export default {
       }
     },
     setModels: function(response){
-      //let modelIRTList;
-      //this.modelIntensityList = response.data.models.intensities;
-      let modelIntensityLists = response.data.models.intensities;
-      let modelIRTLists = response.data.models.iRT;
-      this.modelIRTList = [];
-      //modelIRTList = response.data.models.iRT;
-      this.modelIntensityList = [];
-      for (let i = 0; i < modelIntensityLists.length; i++){
-        //if(modelIntensityLists[i].enabled.spectral_library)
-        this.modelIntensityList.push(modelIntensityLists[i]);
-      }
-      for (let i = 0; i < modelIRTLists.length; i++){
-        //if(modelIRTLists[i].enabled.spectral_library)
-        this.modelIRTList.push(modelIRTLists[i]);
-      }
-      let that = this;
-      if(this.modelIntensityList.length>0) {
-        this.modelIntensityList.forEach(function (item) {
-          if (item.default) that.modelIntensityName = item.name;
-        });
-      }
-      if(this.modelIRTList.length>0) {
-        this.modelIRTList.forEach(function (item) {
-          if (item.default) that.modelIRTName = item.name;
-        });
-      }
+      this.modelIntensityList = response.data.intensity;
+      this.modelIRTList = response.data.irt;
+      this.modelIntensityName = this.modelIntensityList[0].name
+      this.modelIRTName = this.modelIRTList[0].name
     }
   },
   computed: {
@@ -330,7 +308,7 @@ export default {
   },
   mounted() {
     this.$store.commit('changeFormat', this.outputFormat);
-    let modelsUrl = '/prosit/api/models.xsjs';
+    let modelsUrl = process.env.VUE_APP_API_URL +'/api/v1/getModels';
     axios.get(modelsUrl).then(this.setModels);
   }
 

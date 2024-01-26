@@ -80,7 +80,7 @@ export default {
     return {
       files: [],
       progress: 0,
-      baseurl: '/prosit/api/upload.xsjs',
+      baseurl: process.env.VUE_APP_API_URL +'/api/v1/uploadFile',
       file: null,
       filename: this.filetype,
       requesttoken: axios.CancelToken.source()
@@ -168,15 +168,15 @@ export default {
       formData.append('file', this.file.file);
       this.requesttoken = axios.CancelToken.source();
 
-      await axios.post(
+      axios.post(
         this.baseurl,
         formData,
         {
-          params: { datasetId: this.$store.state.taskID },
+          params: {'hashInput': self.$store.getters.getTask.hashId},
           headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: ( progressEvent ) => {
-            file.progress = parseInt( Math.round( ( progressEvent.loaded * 100 ) / progressEvent.total ) );
-          },
+          onUploadProgress: function( progressEvent ) {
+            this.progress = parseInt( Math.round( ( progressEvent.loaded * 100 ) / progressEvent.total ) );
+          }.bind(this),
           cancelToken: this.requesttoken.token
         }
       ).then(() => {

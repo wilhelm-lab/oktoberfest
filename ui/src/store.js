@@ -5,10 +5,11 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    
     taskTypes: ['CollisionEnergyAlignment', 'SpectralLibraryGeneration','MaxQuantRescoring'],//,'predictProperties',
     task: {
       type: "MaxQuantRescoring",
+      hashId: false,
+      taskId: false,
       tag: 'tmt',
       allFeatures: false,
       uploads: { 
@@ -51,6 +52,12 @@ export default new Vuex.Store({
     changeSearchEngine(state, searchEngine){
       state.task.searchEngine = searchEngine;
     },
+    sethashId(state, hashId){
+      state.task.hashId = hashId;
+    },
+    setTaskId(state, taskId){
+      state.task.taskId = taskId;
+    },
     changeOptions(state, options){
       for (const option in options) {
         if (state.task.options.hasOwnProperty(option)) {
@@ -76,6 +83,10 @@ export default new Vuex.Store({
     submitObject: state => {
       let task = JSON.parse(JSON.stringify(state.task))
       return task
-    }
+    },
+    getTask: state => {
+      let task = state.task
+      return task
+    },
   }
 })

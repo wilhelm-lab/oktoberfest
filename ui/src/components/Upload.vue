@@ -45,15 +45,19 @@ import store from '@/store'
 export default {
   props: {
     'filetype': String, 
-    'taskid': String, 
     'hinttext': String, 
     'filesuffix': String,
+    'sizelimit': {
+      type: Number,
+      default: -1
+    }
+
   },
   data () {
     return {
       loading: false,
       progress: 0,
-      baseurl: '/prosit/api/upload.xsjs',
+      baseurl: process.env.VUE_APP_API_URL +'/api/v1/uploadFile',
       file: null,
       filename: this.filetype,
       fileIsTooBig: false,
@@ -98,21 +102,24 @@ export default {
       formData.append('file', this.file);
       this.requesttoken = axios.CancelToken.source();
       let self = this;
-
+      console.log(self.$store.state.task.hashId)
       axios.post(
         this.baseurl,
         formData,
         {
-          params: { datasetId: this.taskid },
+          params: {'hashInput': self.$store.state.task.hashId, 
+          'taskId': self.$store.getters.getTask.taskId},
           headers: { 'Content-Type': 'multipart/form-data' },
           onUploadProgress: function( progressEvent ) {
             this.progress = parseInt( Math.round( ( progressEvent.loaded * 100 ) / progressEvent.total ) );
           }.bind(this),
           cancelToken: this.requesttoken.token
         }
-      ).then(function(){ 
+      ).then(function(response){ 
         // sucess
+        console.log(response.data)
         store.commit('reportUpload', {fileType: self.filetype, isSuccessful: true});
+        store.commit('setTaskId', response.data.taskId);
       }).catch(
         // error
         self.resetUpload 

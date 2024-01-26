@@ -164,34 +164,14 @@ export default {
       this.step = 4;
     },
     setModels: function(response){
-      let modelIntensityLists = response.data.models.intensities;
-      let modelIRTLists = response.data.models.iRT;
-      this.modelIRTList = [];
-      //modelIRTList = response.data.models.iRT;
-      this.modelIntensityList = [];
-      for (let i = 0; i < modelIntensityLists.length; i++){
-        //if(modelIntensityLists[i].enabled.ce_calibration)
-        this.modelIntensityList.push(modelIntensityLists[i]);
-      }
-      for (let i = 0; i < modelIRTLists.length; i++){
-        //if(modelIRTLists[i].enabled.ce_calibration)
-        this.modelIRTList.push(modelIRTLists[i]);
-      }
-      let that = this;
-      if(this.modelIntensityList.length>0) {
-        this.modelIntensityList.forEach(function (item) {
-          if (item.default) that.modelIntensityName = item.name;
-        });
-      }
-      if(this.modelIRTList.length>0) {
-        this.modelIRTList.forEach(function (item) {
-          if (item.default) that.modelIRTName = item.name;
-        });
-      }
+      this.modelIntensityList = response.data.intensity;
+      this.modelIRTList = response.data.irt;
+      this.modelIntensityName = this.modelIntensityList[0].name
+      this.modelIRTName = this.modelIRTList[0].name
     }
   },
   mounted() {
-    let modelsUrl = '/prosit/api/models.xsjs';
+    let modelsUrl = process.env.VUE_APP_API_URL +'/api/v1/getModels';
     axios.get(modelsUrl).then(this.setModels);
   }
   
