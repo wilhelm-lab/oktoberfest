@@ -103,7 +103,7 @@ def status():
     """
     Endpoint to check if the server is running.
     """
-    return {"status": 200}
+    return "Running", 200
 
 @v1_blueprint.route("/runningJobs")
 def runningJobs():
@@ -133,7 +133,7 @@ def submitJob():
     try:
         dbSubmitJob(taskId, json.dumps(jobConfig))
     except TypeError:
-        return {"message": "You got a hash collision. You should increase hashsize."}
+        return "Hash collision detected. Reload and submit again.", 409
     filePath = os.path.join(WORKDIR, taskId, "config.json")
     with open(filePath, "w") as f:
         f.write(json.dumps(jobConfig))
@@ -169,7 +169,7 @@ def uploadFile():
             os.mkdir(folderPath)
             dbFilesUploaded(taskId)
         except FileExistsError:
-            return {"message": "You got a hash collision. You should increase hashsize."}
+            return "Hash collision detected. Reload and submit again.", 409
 
     file = request.files["file"]
     filePath = os.path.join(folderPath, secure_filename(file.filename))
@@ -220,7 +220,7 @@ def downloadResults():
     if os.path.isfile(os.path.join(folder, "results.zip")):
         return send_from_directory(folder, "results.zip", as_attachment=True)
     else:
-        return {"message": "Results not yet ready"}
+        return "Result files not found", 404
 
 
 @v1_blueprint.route("/getModels")
@@ -230,8 +230,7 @@ def getModels():
             {"name": "Prosit_2019_intensity"},
             {"name": "Prosit_2020_intensity_CID"},
             {"name": "Prosit_2020_intensity_HCD"},
-            {"name": "Prosit_2020_intensity_TMT"},
-            {"name": "Prosit_2020_intensity_CID"},
+            {"name": "Prosit_2020_intensity_TMT"}
         ],
         "irt": [
             {"name": "Prosit_2019_irt"}, 
