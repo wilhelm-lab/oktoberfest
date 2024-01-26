@@ -127,17 +127,21 @@ def submitJob():
     :return: A dictionary containing a success or error message.
     :rtype: dict
     """
-    taskId = calculate_hash(request.args.get("hashInput"))
-    jobConfig = request.json
-    jobConfig["taskId"] = taskId
-    try:
-        dbSubmitJob(taskId, json.dumps(jobConfig))
-    except TypeError:
-        return "Hash collision detected. Reload and submit again.", 409
-    filePath = os.path.join(WORKDIR, taskId, "config.json")
-    with open(filePath, "w") as f:
-        f.write(json.dumps(jobConfig))
-    return jobConfig
+    hashInput = request.args.get("hashInput")
+    if hashInput:
+        taskId = calculate_hash(hashInput)
+        jobConfig = request.json
+        jobConfig["taskId"] = taskId
+        try:
+            dbSubmitJob(taskId, json.dumps(jobConfig))
+        except TypeError:
+            return "Hash collision detected. Reload and submit again.", 409
+        filePath = os.path.join(WORKDIR, taskId, "config.json")
+        with open(filePath, "w") as f:
+            f.write(json.dumps(jobConfig))
+        return jobConfig
+    else:
+        return "No hashInput provided", 400
 
 
 @v1_blueprint.route("/uploadFile", methods=["POST"])
@@ -192,13 +196,16 @@ def jobStatus():
     :return: A dictionary containing the taskId and the status of the job.
     :rtype: dict
     """
-    taskId = calculate_hash(request.args.get("hashInput"))
-    resp = {"id": taskId}
-    try:
-        resp["status"] = dbGetStatus(taskId)[0]
-    except TypeError:
-        resp["status"] = "UNKOWN"
-    return resp
+    taskId = request.args.get("taskId")
+    if taskId:
+        resp = {"id": taskId}
+        try:
+            resp["status"] = dbGetStatus(taskId)[0]
+        except TypeError:
+            resp["status"] = "UNKOWN"
+        return resp
+    else:
+        return "No taskId provided", 400
 
 
 @v1_blueprint.route("/downloadResults")
@@ -215,12 +222,15 @@ def downloadResults():
     :return: A file containing the results of the job.
     :rtype: werkzeug.datastructures.FileStorage
     """
-    taskId = calculate_hash(request.args.get("hashInput"))
-    folder = os.path.abspath(os.path.join(WORKDIR, taskId))
-    if os.path.isfile(os.path.join(folder, "results.zip")):
-        return send_from_directory(folder, "results.zip", as_attachment=True)
+    taskId = request.args.get("taskId")
+    if taskId:
+        folder = os.path.abspath(os.path.join(WORKDIR, taskId))
+        if os.path.isfile(os.path.join(folder, "results.zip")):
+            return send_from_directory(folder, "results.zip", as_attachment=True)
+        else:
+            return "Result files not found", 404
     else:
-        return "Result files not found", 404
+        return "No taskId provided", 400
 
 
 @v1_blueprint.route("/getModels")
