@@ -205,6 +205,45 @@ Example config file:
         }
     }
 
+For rescoring tasks including quantification via picked-group-FDR, create a config file like this (so far only MaxQuant case):
+
+{
+    "type": "Rescoring",
+    "quantification": True,
+    "tag": "",
+    "inputs":{
+        "search_results": "./txt/msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",,
+        "spectra_type": "raw",
+        "library_input": "./*.fasta",
+    },
+    "output": "./out",
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
+    },
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "ssl": True,
+    "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
+    "numThreads": 4,
+    "fdr_estimation_method": "percolator",
+    "regressionMethod": "spline",
+    "allFeatures": False,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "fastaDigestOptions": {
+        "digestion": "full",
+        "missedCleavages": 2,
+        "minLength": 7,
+        "maxLength": 60,
+        "enzyme": "asp-n",
+        "specialAas": "D",
+        "db": "target",
+    },
+}
+
+
 The example config can be loaded and viewed using
 
 .. code-block:: python
