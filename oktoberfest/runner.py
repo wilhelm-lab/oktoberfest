@@ -25,6 +25,8 @@ from oktoberfest import rescore as re
 from .data.spectra import FragmentType, Spectra
 from .utils import Config, JobPool, ProcessStep
 
+from oktoberfest.joels_code.match import match, ppm
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,8 +114,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path).join()  # write_metadata_annotation
+        #MYCODE
+        #pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
+        #library.write_as_hdf5(hdf5_path).join()  # write_metadata_annotation
+        library.spectra_data['CALCULATED_MASS'] = library.spectra_data['MASS']
 
     return library
 
@@ -129,7 +133,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         }
         use_ransac_model = config.use_ransac_model
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
-
+        
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
@@ -404,6 +408,8 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
 def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     ce_calib_step = ProcessStep(config.output, "ce_calib." + spectra_file.stem)
+    #MYCODE
+    """
     if ce_calib_step.is_done():
         hdf5_path = config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name
         if hdf5_path.is_file():
@@ -411,10 +417,12 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
             return library
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
+    """
     library = _annotate_and_get_library(spectra_file, config)
     _get_best_ce(library, spectra_file, config)
 
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
+    #MYCODE
+    #library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
 
     ce_calib_step.mark_done()
 
@@ -471,7 +479,33 @@ def _calculate_features(spectra_file: Path, config: Config):
     )
 
     pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
-
+    
+    #MYCODE
+    # Match experimental spectra to predictions to get annotations
+    raw_intensities = -1*np.ones_like(pred_intensities['intensities'])
+    pred = pred_intensities['mz']
+    raw = library.spectra_data['MZ']
+    for I, (P, R) in enumerate(zip(pred, raw)):
+        P = P.squeeze()
+        # Only non-negative ones -> speeds things up
+        nn = P != -1
+        P_ = P[nn]
+        # Find the matches on mz arrays
+        (TP1, TPR), FP, FN = match(P_, R)
+        # Convert back to original pred inds, before filtering out -1s
+        OI = np.where(nn)[0]
+        TPP = OI[TP1] # back to orginal pred inds
+        # Sanity check
+        mzp = P[TPP]
+        mzr = R[TPR]
+        assert sum(abs(ppm(mzp, mzr).diagonal())<50) == len(mzp)
+        anns = pred_intensities['annotation'][I, TPP]
+        # Every 1000 spectra are the exact same experimental spectrum
+        raw_intensities[I, TPP] = library.spectra_data['INTENSITIES'][I][TPR]
+    library.spectra_data.drop(columns=['MZ', 'INTENSITIES'], inplace=True)
+    library.add_matrix(pd.Series(raw_intensities.tolist(), name="intensities"), FragmentType.RAW)
+    library.add_matrix(pd.Series(pred_intensities['mz'].tolist(), name="mz"), FragmentType.MZ)
+    
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
 

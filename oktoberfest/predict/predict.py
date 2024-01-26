@@ -9,8 +9,9 @@ from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from ..data.spectra import FragmentType, Spectra
 from .koina import Koina
 
-logger = logging.getLogger(__name__)
+from oktoberfest.joels_code.match import match, ppm
 
+logger = logging.getLogger(__name__)
 
 def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
@@ -120,7 +121,33 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
+    raw_intensities = -1*np.ones_like(intensities['intensities'])
+    
+    # Match experimental spectra to predictions to get annotations
+    pred = np.split(intensities['mz'][:1000], 1000)
+    raw = alignment_library.spectra_data['MZ'][:1000]
+    for I, (P, R) in enumerate(zip(pred, raw)):
+        P = P.squeeze()
+        # Only non-negative ones -> speeds things up
+        nn = P != -1
+        P_ = P[nn]
+        # Find the matches on mz arrays
+        (TP1, TPR), FP, FN = match(P_, R)
+        # Convert back to original pred inds, before filtering out -1s
+        OI = np.where(nn)[0]
+        TPP = OI[TP1] # back to orginal pred inds
+        # Sanity check
+        mzp = P[TPP]
+        mzr = R[TPR]
+        assert sum(abs(ppm(mzp, mzr).diagonal())<50) == len(mzp)
+        anns = intensities['annotation'][I, TPP]
+        # Every 1000 spectra are the exact same experimental spectrum
+        raw_intensities[I::1000, TPP] = alignment_library.spectra_data['INTENSITIES'][I][TPR]
+    alignment_library.spectra_data.drop(columns=['MZ', 'INTENSITIES'], inplace=True)
+    alignment_library.add_matrix(pd.Series(raw_intensities.tolist(), name="intensities"), FragmentType.RAW)
+    alignment_library.add_matrix(pd.Series(intensities['mz'].tolist(), name="mz"), FragmentType.MZ)
     alignment_library.add_matrix(pd.Series(intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+    
     _alignment(alignment_library)
     return alignment_library
 
