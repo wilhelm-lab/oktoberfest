@@ -282,12 +282,12 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
     If the format is "d" and the input directory ends with ".d", the function will return the input directory wrapped in a list.
 
     :param input_dir: Path to the directory to scan for spectra files
-    :param input_format: Format of the input for the provided directory. This must match the file extension (mzml, raw, pkl) or
+    :param input_format: Format of the input for the provided directory. This must match the file extension (mzml, raw, hdf) or
         directory extension (d). Matching is case-insensitive.
     :raises NotADirectoryError: if the specified input directory does not exist
     :raises ValueError: if the specified file format is not supported
     :raises AssertionError: if the provided input directory (d) does not match the provided format or if none of the
-        files within the provided input directory (mzml, raw, pkl) match the provided format
+        files within the provided input directory (mzml, raw, hdf) match the provided format
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
@@ -297,7 +297,7 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
     input_format = input_format.lower()
 
     if input_format not in ["mzml", "raw", "hdf", "d"]:
-        raise ValueError(f"Input format {input_format} unknown. Must be one of mzML, RAW or pkl.")
+        raise ValueError(f"Input format {input_format} unknown. Must be one of mzml, raw, d, hdf.")
 
     if input_dir.is_file() and input_dir.suffix.lower().endswith(input_format):
         raw_files.append(input_dir)
@@ -307,7 +307,7 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
                 raw_files = [input_dir]
             else:
                 raise AssertionError(
-                    f"Provided a '.d' input directory but the provided input format is {format} (Expected 'd'). Please check."
+                    f"Provided a '.d' input directory but the provided input format is {input_format}. Please check."
                 )
         else:
             glob_pattern = _get_glob_pattern(input_format)
@@ -321,9 +321,11 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
             "Please check."
         )
 
-    logger.info(
-        f"Found {len(raw_files)} {input_format} {'directories' if input_format == 'd' else 'files'} in the spectra input directory."
-    )
+    if len(raw_files) > 1:
+        input_type_str = "directories" if input_format == "d" else "files"
+    else:
+        input_type_str = "directory" if input_format == "d" else "file"
+    logger.info(f"Found {len(raw_files)} {input_format} {input_type_str} in the spectra input directory.")
 
     return raw_files
 
@@ -340,8 +342,8 @@ def _get_glob_pattern(spectra_type: str) -> str:
         return "*.[rR][aA][wW]"
     elif spectra_type.lower() == "mzml":
         return "*.[mM][zZ][mM][lL]"
-    elif spectra_type.lower() == "pkl":
-        return "*.[pP][kK][lL]"
+    elif spectra_type.lower() == "hdf":
+        return "*.[hH][dD][fF]"
     elif spectra_type.lower() == "d":
         return "*.[dD]"
     else:
@@ -499,7 +501,7 @@ def load_spectra(
     """
     Read spectra from a given file.
 
-    This function reads MS2 spectra from a given mzML or pkl file using a specified parser. The file ending
+    This function reads MS2 spectra from a given mzML or hdf file using a specified parser. The file ending
     is used to determine the correct parsing method.
 
     :param filename: Path to mzML / hdf file containing MS2 spectra to be loaded.
@@ -557,7 +559,7 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
 
     This function converts spectra within a d folder from a mass spectrometry run into hdf format.
 
-    :param d_dir: Path to d folder with spectra to be converted to pkl format
+    :param d_dir: Path to d folder with spectra to be converted to hdf format
     :param output_file: Path to the location where the converted spectra should be written to
     """
     d_dir = Path(d_dir)

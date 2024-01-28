@@ -148,7 +148,7 @@ class Config:
 
     @property
     def spectra_type(self) -> str:
-        """Get spectra type (.raw, .mzml, .pkl) from the config file."""
+        """Get spectra type (.raw, .mzml, .d, .hdf) from the config file."""
         return self.inputs.get("spectra_type", "raw").lower()
 
     @property
