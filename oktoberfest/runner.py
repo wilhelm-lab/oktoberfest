@@ -40,7 +40,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 output_file=internal_search_file,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
-                timstof_metadata = pp.read_timstof_metadata(
+                timstof_metadata = pp.convert_timstof_metadata(
                     input_path=config.search_results,
                     search_engine=config.search_results_type,
                     output_file=msms_output / "tims_meta.csv",
