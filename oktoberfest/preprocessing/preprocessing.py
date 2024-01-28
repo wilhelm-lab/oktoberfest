@@ -203,22 +203,29 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
 
 
 def convert_search(
-    input_path: Union[str, Path], output_file: Union[str, Path], search_engine: str, tmt_label: str = ""
-):
+    input_path: Union[str, Path],
+    search_engine: str,
+    tmt_label: str = "",
+    output_file: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
     """
     Convert search results to Oktoberfest format.
 
     Given a path to a file or directory containing search results from supported search engines,
-    the function parses, converts them to the internal format used by Oktoberfest and writes them
-    to a specified location. The specification of the internal file format can be found at :doc:`../../internal_format`.
+    the function parses, converts them to the internal format used by Oktoberfest and returns it as a dataframe.
+    If a path to an output file is provided, the converted results are also stored to the specified location.
+    The specification of the internal file format can be found at :doc:`../../internal_format`.
 
     :param input_path: Path to the directory or file containing the search results.
-    :param output_file: Path to the location where the converted search results should be written to.
     :param search_engine: The search engine used to produce the search results,
         currently supported are "Maxquant", "Mascot" and "MSFragger"
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
+    :param output_file: Optional path to the location where the converted search results should be written to.
+        If this is omitted, the results are not stored.
+
     :raises ValueError: if an unsupported search engine was given
+    :return: A dataframe containing the converted results.
     """
     search_engine = search_engine.lower()
     search_result: Any
@@ -233,27 +240,32 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
 
 
-def read_timstof_metadata(input_path: Union[str, Path], search_engine: str) -> pd.DataFrame:
+def convert_timstof_metadata(
+    input_path: Union[str, Path], search_engine: str, output_file: Optional[Union[str, Path]] = None
+) -> pd.DataFrame:
     """
     Convert metadata for timstof to Oktoberfest format.
 
     Given a path to a directory containing search results from supported search engines,
-    the function parses, converts metadata relevant for timstof to the internal format used by Oktoberfest
-    and writes them to a specified location.
+    the function parses, converts metadata relevant for timstof to the internal format used by Oktoberfest and
+    returns it as a dataframe.
+    If a path to an output file is provided, the converted results are also stored to the specified location.
 
     :param input_path: Path to the directory or file containing the metadata.
     :param search_engine: The search engine used to produce the search results,
         currently supported is "Maxquant"
+    :param output_file: Optional path to the location where the converted metadata should be written to.
+        If this is omitted, the metadata are not stored.
     :raises ValueError: if an unsupported search engine was given
 
     :return: dataframe containing metadata that maps scan numbers to precursors
     """
     search_engine = search_engine.lower()
     if search_engine == "maxquant":
-        metadata_df = MaxQuant(input_path).read_metadata_for_timstof()
+        metadata_df = MaxQuant(input_path).generate_internal_timstof_metadata()
     else:
         raise ValueError(f"Unsupported search engine provided for reading timstof metadata: {search_engine}")
 
@@ -337,9 +349,7 @@ def _get_glob_pattern(spectra_type: str) -> str:
 
 
 def split_search(
-    search_results: pd.DataFrame,
-    output_dir: Union[str, Path],
-    filenames: Optional[List[str]] = None,
+    search_results: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
 ) -> List[str]:
     """
     Split search results by spectrum file.
@@ -375,7 +385,7 @@ def split_search(
     filenames_found = []
     for filename in filenames:
         output_file = (output_dir / filename).with_suffix(".rescore")
-        logger.info(f"Creating split msms.txt file {output_file}")
+        logger.info(f"Creating split search results file {output_file}")
         try:
             grouped_search_results.get_group(filename).to_csv(output_file)
             filenames_found.append(filename)
@@ -384,6 +394,56 @@ def split_search(
                 f"The search results do not contain search results for the provided file name {filename}. "
                 "If this is not intended, please verify that the file names are written correctly in the "
                 f"search results. {filename} is ignored."
+            )
+    return filenames_found
+
+
+def split_timstof_metadata(
+    timstof_metadata: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
+) -> List[str]:
+    """
+    Split timstof metadata by spectrum file.
+
+    Given a list of spectrum file names from which timstof metadata originate the provided timstof metadata are split
+    and filename specific csv files are written to the provided output directory. The provided file names need to
+    correspond to the spectrum file identifier in the "RAW_FILE" column of the provided timstof_metadata. The timstof
+    metadata need to be provided in internal format  #TODO provided documentation.
+    If the list of file names is not provided, all spectrum file identifiers are considered, otherwise only the
+    identifiers found in the list are taken into account for writing the individual csv files.
+    The output file names follow the convention <filename>.timsmeta.
+    If a file name is not found in the timstof metadata, it is ignored and a warning is printed.
+    The function returns a list of file names for which timstof metadata are available, removing the ones that were
+    ignored if a list of file names was provided.
+
+    :param timstof_metadata: timstof metadata in internal format
+    :param output_dir: directory in which to store individual csv files containing the timstof metadata for
+        individual filenames
+    :param filenames: optional list of spectrum filenames that should be considered. If not provided, all spectrum file
+        identifiers in the timstof metadata are considered.
+
+    :return: list of file names for which timstof metadata could be found
+    """
+    if isinstance(output_dir, str):
+        output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    if filenames is None:
+        filenames = timstof_metadata["RAW_FILE"].unique()
+
+    grouped_timstof_metadata = timstof_metadata.groupby("RAW_FILE")
+
+    filenames_found = []
+    for filename in filenames:
+        output_file = (output_dir / filename).with_suffix(".timsmeta")
+        logger.info(f"Creating split timstof metadata file {output_file}")
+        try:
+            grouped_timstof_metadata.get_group(filename).to_csv(output_file)
+            filenames_found.append(filename)
+        except KeyError:
+            logger.warning(
+                f"No timstof metadata could be found for the provided file name {filename}. "
+                "If this is not intended, please verify that the file names are written correctly in the "
+                f"timstof. {filename} is ignored."
             )
     return filenames_found
 
@@ -434,7 +494,7 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
 
 
 def load_spectra(
-    filename: Union[str, Path], parser: str = "pyteomics", scan_to_precursor_map: Optional[pd.DataFrame] = None
+    filename: Union[str, Path], parser: str = "pyteomics", tims_meta_file: Optional[Union[str, Path]] = None
 ) -> pd.DataFrame:
     """
     Read spectra from a given file.
@@ -445,10 +505,8 @@ def load_spectra(
     :param filename: Path to mzML / hdf file containing MS2 spectra to be loaded.
     :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
         Only used for parsing of mzML files.
-    :param scan_to_precursor_map: An optional dataframe mapping scan numbers to precursors. This is useful to
-        filter the required spectra when reading and required for timsTOF, as this is used to aggregate all
-        precursors for a given scan number for summation of peak intensities and median values for retention
-        time, collision energy and ion mobility
+    :param tims_meta_file: Optional path to timstof metadata file in internal format. This is only required
+        when loading timstof spectra and used for summation of spectra.
     :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
     :return: measured spectra with metadata.
     """
@@ -461,10 +519,7 @@ def load_spectra(
             source=filename, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
     elif format_ == ".hdf":
-        results = read_and_aggregate_timstof(source=filename, scan_to_precursor_map=scan_to_precursor_map)
-        # TODO in spectrum-io in case median_RETENTION_TIME is still passed
-        # TODO also change name for ion mobility
-        results.rename(columns={"median_RETENTION_TIME": "RETENTION_TIME"}, inplace=True)
+        results = read_and_aggregate_timstof(source=filename, tims_meta_file=tims_meta_file)
         return results
 
     else:
