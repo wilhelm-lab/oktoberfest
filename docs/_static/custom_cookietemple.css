@@ -58,6 +58,10 @@ table.align-default {
     padding-left: 50px;
 }
 
+.lib-config-table tbody tr:nth-last-child(-n + 6) td:nth-child(1) {
+    padding-left: 50px;
+}
+
 .digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
     padding-left: 50px;
 }

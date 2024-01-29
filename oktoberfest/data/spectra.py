@@ -1,6 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
+from threading import Thread
 from typing import List, Tuple, Type, TypeVar, Union
 
 import numpy as np
@@ -165,11 +166,12 @@ class Spectra:
         columns_to_select = list(filter(lambda c: c.startswith(prefix), self.spectra_data.columns))
         return scipy.sparse.csr_matrix(self.spectra_data[columns_to_select].values), columns_to_select
 
-    def write_as_hdf5(self, output_file: Union[str, Path]) -> None:
+    def write_as_hdf5(self, output_file: Union[str, Path]) -> Thread:
         """
         Write intensity and mz data as hdf5.
 
         :param output_file: path to output file
+        :return: the thread object from the hdf5 writer for later joining
         """
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
 
@@ -178,13 +180,15 @@ class Spectra:
         data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz]
         column_names = [columns_intensity, columns_mz]
 
-        hdf5.write_file(data_sets, output_file, data_set_names, column_names)
+        return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
-    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> None:
+    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> Thread:
         """
         Write intensity, mz, and pred data as hdf5.
 
         :param output_file: path to output file
+        :return: the thread object from the hdf5 writer for later joining
+
         """
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY, hdf5.INTENSITY_PRED_KEY]
 
@@ -194,7 +198,7 @@ class Spectra:
         data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz, sparse_matrix_pred]
         column_names = [columns_intensity, columns_mz, columns_pred]
 
-        hdf5.write_file(data_sets, output_file, data_set_names, column_names)
+        return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
 
     @classmethod
     def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
@@ -207,8 +211,12 @@ class Spectra:
         input_file = str(input_file)
         spectra = cls()
         spectra.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
-        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}"), FragmentType.RAW)
-        spectra.add_matrix_from_hdf5(hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}"), FragmentType.MZ)
+        sparse_raw_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}")
+        if not sparse_raw_intensities.empty:
+            spectra.add_matrix_from_hdf5(sparse_raw_intensities, FragmentType.RAW)
+        sparse_raw_mzs = hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}")
+        if not sparse_raw_mzs.empty:
+            spectra.add_matrix_from_hdf5(sparse_raw_mzs, FragmentType.MZ)
 
         return spectra
 
