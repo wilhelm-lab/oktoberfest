@@ -548,6 +548,7 @@ def load_spectra(
     :param tims_meta_file: Optional path to timstof metadata file in internal format. This is only required
         when loading timstof spectra and used for summation of spectra.
     :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
+    :raises AssertionError: if no tims_meta_file was provided when loading timsTOF hdf data
     :return: measured spectra with metadata.
     """
     if isinstance(filename, str):
@@ -559,7 +560,11 @@ def load_spectra(
             source=filename, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
     elif format_ == ".hdf":
-        results = read_and_aggregate_timstof(source=filename, tims_meta_file=tims_meta_file)
+        if tims_meta_file is None:
+            raise AssertionError(
+                "Loading spectra from a timsTOF hdf file requires metadata provided by tims_meta_file."
+            )
+        results = read_and_aggregate_timstof(source=filename, tims_meta_file=Path(tims_meta_file))
         return results
 
     else:
