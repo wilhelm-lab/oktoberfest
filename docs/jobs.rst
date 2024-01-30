@@ -74,7 +74,7 @@ Example config file:
         "unitMassTolerance": "ppm",
         "ce_alignment_options": {
             "ce_range": [19,50],
-            "use_ransac_model": false,
+            "use_ransac_model": false
         }
     }
 
@@ -121,12 +121,15 @@ Example config file:
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "outputFormat": "spectronaut",
-        "prediction_server": "koina.proteomicsdb.org:443",
-        "numThreads": 1,
-        "ssl": true,
+        "spectralLibraryOptions": {
+            "fragmentation": "HCD",
+            "collisionEnergy": 30,
+            "precursorCharge": [2,3],
+            "minIntensity": 5e-4,
+            "batchsize": 10000,
+            "format": "msp"
+        },
         "fastaDigestOptions": {
-            "fragmentation": "",
             "digestion": "full",
             "missedCleavages": 2,
             "minLength": 7,
@@ -135,6 +138,9 @@ Example config file:
             "specialAas": "KR",
             "db": "concat"
         },
+        "prediction_server": "koina.proteomicsdb.org:443",
+        "numThreads": 1,
+        "ssl": true
     }
 
 The example config can be loaded and viewed using
@@ -195,7 +201,7 @@ Example config file:
         "unitMassTolerance": "ppm",
         "ce_alignment_options": {
             "ce_range": [19,50],
-            "use_ransac_model": false,
+            "use_ransac_model": false
         }
     }
 

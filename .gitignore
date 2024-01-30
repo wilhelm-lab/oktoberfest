@@ -145,3 +145,6 @@ hash.file
 # output files in tutorials folder
 tutorials/
 !tutorials/Oktoberfest Tutorial.ipynb
+
+# example data
+data/

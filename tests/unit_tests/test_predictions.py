@@ -37,3 +37,18 @@ class TestTMTProsit(unittest.TestCase):
         expected_df["PREDICTED_IRT"] = expected_df["PREDICTED_IRT"].astype(library.spectra_data["PREDICTED_IRT"].dtype)
 
         pd.testing.assert_frame_equal(library.spectra_data, expected_df)
+
+    def test_failing_koina(self):
+        """Test koina with input data that does not fit to the model to trigger exception handling."""
+        library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
+        input_data = library.spectra_data
+
+        self.assertRaises(
+            Exception,
+            predict,
+            input_data,
+            model_name="Prosit_2020_intensity_HCD",
+            server_url="koina.proteomicsdb.org:443",
+            ssl=True,
+            targets=["intensities", "annotation"],
+        )

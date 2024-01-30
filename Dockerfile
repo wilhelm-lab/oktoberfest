@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 ENV HOME /root
 WORKDIR /root
 
-RUN pip install poetry==1.3.2
+RUN pip install poetry==1.6.1
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
 ADD pyproject.toml /root/pyproject.toml
@@ -38,6 +38,9 @@ RUN ZIP=ThermoRawFileParser1.4.2.zip && \
 
 # Copy source folder
 ADD oktoberfest/ /root/oktoberfest
+
+# Copy make files into root folder to allow bootstrapping
+ADD Makefile* /root/
 
 # Used by ProteomicsDB runs to describe the oktoberfest version
 ADD hash.file /root/hash.file
