@@ -23,7 +23,7 @@ def _check_columns(df: pd.DataFrame):
     mokapot_mapping = {
         "mokapot score": "score",
         "mokapot q-value": "q-value",
-        "Proteins": "proteinIds",
+        "Peptide": "peptide",
         "SpecId": "PSMId",
     }
     if set(mokapot_mapping.keys()).issubset(df.columns):
@@ -49,10 +49,11 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
 
     plt.figure(figsize=(8, 6))
     bins = np.linspace(-3, 2, 15)
-    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
+    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Score")
     plt.legend(loc="upper right")
+    plt.title(f"Score Distribution ({level.capitalize()})")
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -78,9 +79,9 @@ def joint_plot(
 
     :raises ValueError: if a wrong level is provided
     """
-    score_col, _, protein_col, psm_col = _check_columns(prosit_target)
+    score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
@@ -117,8 +118,9 @@ def joint_plot(
         height=10,
         joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
-    jplot.ax_joint.set_ylabel("rescored_score")
-    jplot.ax_joint.set_xlabel("original_score")
+    jplot.ax_joint.set_ylabel("Score\n(peptide property prediction)")
+    jplot.ax_joint.set_xlabel("Score\n(search engine)")
+    jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -135,10 +137,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
     :raises ValueError: if a wrong level is provided
     """
-    _, qval_col, protein_col, psm_col = _check_columns(prosit_target)
+    _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
@@ -291,8 +293,8 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
     bins = np.linspace(0, 1, 15)
-    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
+    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Spectral angle", size=14)
     plt.title("Target vs Decoys Spectral Angle Distribution")
     plt.legend(loc="upper right")
