@@ -14,6 +14,14 @@ from tritonclient.grpc import (
     InferResult,
 )
 
+alternative_column_map = {
+    "peptide_sequences": "MODIFIED_SEQUENCE",
+    "precursor_charges": "PRECURSOR_CHARGE",
+    "collision_energies": "COLLISION_ENERGY",
+    "fragmentation_types": "FRAGMENTATION",
+    "instrument_types": "INSTRUMENT_TYPES",
+}
+
 
 class Koina:
     """A class for interacting with Koina models for inference."""
@@ -29,6 +37,7 @@ class Koina:
         server_url: str = "koina.proteomicsdb.org:443",
         ssl: bool = True,
         targets: Optional[List[str]] = None,
+        disable_progress_bar: bool = False,
     ):
         """
         Initialize a KoinaModel instance with the specified parameters.
@@ -44,6 +53,7 @@ class Koina:
         :param ssl: Indicates whether to use SSL for communication with the server. Defaults to True.
         :param targets: An optional list of targets to predict. If this is None, all model targets are
             predicted and received.
+        :param disable_progress_bar: Whether to disable the progress bar showing the progress of predictions.
         """
         self.model_inputs = {}
         self.model_outputs = {}
@@ -52,6 +62,7 @@ class Koina:
         self.model_name = model_name
         self.url = server_url
         self.ssl = ssl
+        self.disable_progress_bar = disable_progress_bar
         self.client = InferenceServerClient(url=server_url, ssl=ssl)
 
         self.type_convert = {
@@ -247,26 +258,21 @@ class Koina:
 
         return self.__extract_predictions(infer_result)
 
-    def __predict_sequential(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False
-    ) -> Dict[str, np.ndarray]:
+    def __predict_sequential(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
 
         This method performs sequential inference on the provided input data using the configured Koina model. It processes
-        the input data batch by batch and returns the predictions. You can choose to disable the progress bar during inference
-        using the 'disable_progress_bar' parameter. Note: This method is for internal use and is typically called during inference.
+        the input data batch by batch and returns the predictions.
+        Note: This method is for internal use and is typically called during inference.
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
-        :param disable_progress_bar: If True, disable the progress bar during inference.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays representing
             the model's output.
         """
         predictions: Dict[str, np.ndarray] = {}
-        for data_batch in tqdm(
-            self.__slice_dict(data, self.batchsize), desc="Getting predictions", disable=disable_progress_bar
-        ):
+        for data_batch in tqdm(self.__slice_dict(data, self.batchsize), desc="Getting predictions"):
             pred_batch = self.__predict_batch(data_batch)
             if predictions:
                 predictions = self.__merge_array_dict(predictions, pred_batch)
@@ -359,9 +365,9 @@ class Koina:
 
     def __async_callback(
         self,
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
-        result: InferResult,
+        result: Optional[InferResult],
         error: Optional[InferenceServerException],
     ):
         """
@@ -380,14 +386,15 @@ class Koina:
         if error:
             infer_results[request_id] = error
         else:
-            infer_results[request_id] = result
+            infer_results[request_id] = self.__extract_predictions(result)
 
     def __async_predict_batch(
         self,
         data: Dict[str, np.ndarray],
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]],
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
-        timeout: int = 60000,
+        timeout: int = 10000,
+        retries: int = 10,
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -401,13 +408,19 @@ class Koina:
         :param infer_results: A dictionary to which the results of asynchronous inference will be added.
         :param request_id: An identifier for the inference request, used to track the order of completion.
         :param timeout: The maximum time (in seconds) to wait for the inference to complete. Defaults to 10 seconds.
+        :param retries: The maximum number of requests in case of failure
+        :yield: None, this is to separate async clien infer from checking the result
         """
         batch_outputs = self.__get_batch_outputs(self.model_outputs.keys())
         batch_inputs = self.__get_batch_inputs(data)
 
-        max_requests = 3
+        for i in range(retries):
+            if i > 0:  # need to yield first, before doing sth, but only after first time
+                yield
+                if isinstance(infer_results.get(request_id), InferResult):
+                    break
+                del infer_results[request_id]  # avoid race condition in case inference is slower than tqdm loop
 
-        for _ in range(max_requests):
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -416,16 +429,10 @@ class Koina:
                 outputs=batch_outputs,
                 client_timeout=timeout,
             )
-            while infer_results.get(request_id) is None:
-                time.sleep(0.1)
-            if isinstance(infer_results.get(request_id), InferResult):
-                break
-            del infer_results[request_id]
 
     def predict(
         self,
         data: Union[Dict[str, np.ndarray], pd.DataFrame],
-        disable_progress_bar: bool = False,
         _async: bool = True,
         debug=False,
     ) -> Dict[str, np.ndarray]:
@@ -441,7 +448,6 @@ class Koina:
         :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
             and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
             in the column names.
-        :param disable_progress_bar: If True, disable the progress bar during inference. Defaults to False.
         :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
         :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
 
@@ -460,15 +466,16 @@ class Koina:
             predictions = model.predict(input_data)
         """
         if isinstance(data, pd.DataFrame):
-            data = {input_field: data[input_field].to_numpy() for input_field in self.model_inputs.keys()}
+            data = {
+                input_field: data[alternative_column_map[input_field]].to_numpy()
+                for input_field in self.model_inputs.keys()
+            }
         if _async:
-            return self.__predict_async(data, disable_progress_bar=disable_progress_bar, debug=debug)
+            return self.__predict_async(data, debug=debug)
         else:
-            return self.__predict_sequential(data, disable_progress_bar=disable_progress_bar)
+            return self.__predict_sequential(data)
 
-    def __predict_async(
-        self, data: Dict[str, np.ndarray], disable_progress_bar: bool = False, debug=False
-    ) -> Dict[str, np.ndarray]:
+    def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -478,33 +485,60 @@ class Koina:
         are properly configured and that the input data matches the model's input requirements.
 
         :param data: A dictionary containing input data for inference. Keys are input names, and values are numpy arrays.
-        :param disable_progress_bar: If True, disable the progress bar during asynchronous inference. Defaults to False.
         :param debug: If True, store raw InferResult / InferServerException dictionary for later analysis.
+
+        :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
+            representing the model's output.
+        """
+        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]] = {}
+        tasks = []
+        for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
+            tasks.append(self.__async_predict_batch(data_batch, infer_results, request_id=i, retries=3))
+            next(tasks[i])
+
+        n_tasks = i + 1
+        with tqdm(total=n_tasks, desc="Getting predictions", disable=self.disable_progress_bar) as pbar:
+            unfinished_tasks = [i for i in range(n_tasks)]
+            while pbar.n < n_tasks:
+                time.sleep(0.5)
+                new_unfinished_tasks = []
+                for j in unfinished_tasks:
+                    result = infer_results.get(j)
+                    if result is None:
+                        new_unfinished_tasks.append(j)
+                    elif isinstance(result, dict):
+                        pbar.n += 1
+                    else:  # unexpected result / exception -> try again
+                        try:
+                            next(tasks[j])
+                            new_unfinished_tasks.append(j)
+                        except StopIteration:
+                            pbar.n += 1
+
+                unfinished_tasks = new_unfinished_tasks
+                pbar.refresh()
+
+        return self.__handle_results(infer_results, debug)
+
+    def __handle_results(
+        self, infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]], debug: bool
+    ) -> Dict[str, np.ndarray]:
+        """
+        Handles the results.
+
+        :param infer_results: The dictionary containing the inferred results
+        :param debug: whether to store the infer_results in the response_dict attribute
+
         :raises InferenceServerException: If at least one batch of predictions could not be inferred.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
-        infer_results: Dict[int, Union[InferResult, InferenceServerException]] = {}
-        for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
-            self.__async_predict_batch(data_batch, infer_results, request_id=i)
-
-        with tqdm(total=i + 1, desc="Getting predictions", disable=disable_progress_bar) as pbar:
-            while len(infer_results) != i + 1:
-                pbar.n = len(infer_results)
-                pbar.refresh()
-                time.sleep(1)
-            pbar.n = len(infer_results)
-            pbar.refresh()
-
         if debug:
             self._response_dict = infer_results
-
         try:
             # sort according to request id
-            infer_results_to_return = [
-                self.__extract_predictions(infer_results[i]) for i in np.argsort(list(infer_results.keys()))
-            ]
+            infer_results_to_return = [infer_results[i] for i in range(len(infer_results))]
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
             for res in infer_results.values():

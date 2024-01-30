@@ -23,7 +23,7 @@ def _check_columns(df: pd.DataFrame):
     mokapot_mapping = {
         "mokapot score": "score",
         "mokapot q-value": "q-value",
-        "Proteins": "proteinIds",
+        "Peptide": "peptide",
         "SpecId": "PSMId",
     }
     if set(mokapot_mapping.keys()).issubset(df.columns):
@@ -53,7 +53,7 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Score")
     plt.legend(loc="upper right")
-    plt.title(f"Score Distribution ({level.capitalize()})")  # Add a title
+    plt.title(f"Score Distribution ({level.capitalize()})")
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -79,9 +79,9 @@ def joint_plot(
 
     :raises ValueError: if a wrong level is provided
     """
-    score_col, _, protein_col, psm_col = _check_columns(prosit_target)
+    score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
@@ -118,9 +118,9 @@ def joint_plot(
         height=10,
         joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
-    jplot.ax_joint.set_ylabel(f"rescored_score for the {level} level")
-    jplot.ax_joint.set_xlabel(f"original_score for the {level} level")
-    jplot.fig.suptitle(f"Joint Plot ({level.capitalize()})", y=0.99)  # Add a figure title
+    jplot.ax_joint.set_ylabel("Score\n(peptide property prediction)")
+    jplot.ax_joint.set_xlabel("Score\n(search engine)")
+    jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -137,10 +137,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
     :raises ValueError: if a wrong level is provided
     """
-    _, qval_col, protein_col, psm_col = _check_columns(prosit_target)
+    _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
