@@ -179,7 +179,7 @@ def rescore_with_mokapot(
 
     np.random.seed(123)
 
-    df = pd.read_csv(input_file, sep="\t")
+    df = pd.read_csv(input_file, sep="\t", index=False)
 
     # TODO remove this if not necessary
     df = df.rename(columns={"Protein": "Proteins"})
