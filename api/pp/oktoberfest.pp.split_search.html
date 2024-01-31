@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.digest &mdash; Oktoberfest 0.6.0 documentation</title>
+  <title>oktoberfest.pp.split_search &mdash; Oktoberfest 0.6.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=5b6b3916" />
@@ -22,8 +22,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.pp.generate_metadata" href="oktoberfest.pp.generate_metadata.html" />
-    <link rel="prev" title="API" href="../../API.html" /> 
+    <link rel="next" title="oktoberfest.pp.convert_timstof_metadata" href="oktoberfest.pp.convert_timstof_metadata.html" />
+    <link rel="prev" title="oktoberfest.pp.load_search" href="oktoberfest.pp.load_search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,10 +55,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.digest</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.digest"><code class="docutils literal notranslate"><span class="pre">digest()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.generate_metadata.html">oktoberfest.pp.generate_metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
@@ -69,7 +66,10 @@
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.split_search</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.split_search"><code class="docutils literal notranslate"><span class="pre">split_search()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
@@ -100,10 +100,10 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../API.html">API</a></li>
-      <li class="breadcrumb-item active">oktoberfest.pp.digest</li>
+      <li class="breadcrumb-item active">oktoberfest.pp.split_search</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L93-L133" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L391-L438" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -111,33 +111,37 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-pp-digest">
-<h1>oktoberfest.pp.digest<a class="headerlink" href="#oktoberfest-pp-digest" title="Permalink to this heading"></a></h1>
+  <section id="oktoberfest-pp-split-search">
+<h1>oktoberfest.pp.split_search<a class="headerlink" href="#oktoberfest-pp-split-search" title="Permalink to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="oktoberfest.pp.digest">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">digest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">digestion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">missed_cleavages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enzyme</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">special_aas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_length</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_length</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.digest" title="Permalink to this definition"></a></dt>
-<dd><p>Digest a given fasta file with specific settings.</p>
-<p>This function performs an in-silico digestion of a fasta file based on the provided settings.
-It returns a dictionary that maps peptides to the list of associated protein IDs.</p>
+<dt class="sig sig-object py" id="oktoberfest.pp.split_search">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">split_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">search_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filenames</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.split_search" title="Permalink to this definition"></a></dt>
+<dd><p>Split search results by spectrum file.</p>
+<p>Given a list of spectrum file names from which search results originate the provided search results are split
+and filename specific csv files are written to the provided output directory. The provided file names need to
+correspond to the spectrum file identifier in the “RAW_FILE” column of the provided search results. The search
+results need to be provided in internal format (see <a class="reference internal" href="../../internal_format.html"><span class="doc">Custom search results</span></a>).
+If the list of file names is not provided, all spectrum file identifiers are considered, otherwise only the
+identifiers found in the list are taken into account for writing the individual csv files.
+The output file names follow the convention &lt;filename&gt;.rescore.
+If a file name is not found in the search results, it is ignored and a warning is printed.
+The function returns a list of file names for which search results are available, removing the ones that were
+ignored if a list of file names was provided.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fasta</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – Path to fasta file containing sequences to digest</p></li>
-<li><p><strong>digestion</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The type of digestion, one of “full, “semi”, “none”</p></li>
-<li><p><strong>missed_cleavages</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The number of allowed miscleaveages</p></li>
-<li><p><strong>db</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The desired database to produce, can be target, decoy, or both</p></li>
-<li><p><strong>enzyme</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The protease to use for digestion TODO list available proteases</p></li>
-<li><p><strong>special_aas</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – List of aas to be swapped with preceding aa in reverse sequences.
-This mimics the behaviour of MaxQuant when creating decoys.</p></li>
-<li><p><strong>min_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Minimal length of digested peptides</p></li>
-<li><p><strong>max_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Maximal length of digested peptides</p></li>
+<li><p><strong>search_results</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – search results in internal format</p></li>
+<li><p><strong>output_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – directory in which to store individual csv files containing the search results for
+individual filenames</p></li>
+<li><p><strong>filenames</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span>) – optional list of spectrum filenames that should be considered. If not provided, all spectrum file
+identifiers in the search results are considered.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A Dictionary that maps peptides (keys) to a list of protein IDs (values).</p>
+<dd class="field-odd"><p>list of file names for which search results could be found</p>
 </dd>
 </dl>
 </dd></dl>
@@ -148,8 +152,8 @@ This mimics the behaviour of MaxQuant when creating decoys.</p></li>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../../API.html" class="btn btn-neutral float-left" title="API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.pp.generate_metadata.html" class="btn btn-neutral float-right" title="oktoberfest.pp.generate_metadata" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pp.load_search.html" class="btn btn-neutral float-left" title="oktoberfest.pp.load_search" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="oktoberfest.pp.convert_timstof_metadata.html" class="btn btn-neutral float-right" title="oktoberfest.pp.convert_timstof_metadata" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

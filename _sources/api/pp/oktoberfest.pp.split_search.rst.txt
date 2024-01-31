@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L391-L438
+
+oktoberfest.pp.split\_search
+============================
+
+.. currentmodule:: oktoberfest.pp
+
+.. autofunction:: split_search

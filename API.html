@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API &mdash; Oktoberfest 0.5.3 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <title>API &mdash; Oktoberfest 0.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=08553120"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=add265a1"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.3
+                0.6.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -54,14 +56,19 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.generate_metadata.html">oktoberfest.pp.generate_metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_spectra_to_mzml.html">oktoberfest.pp.convert_spectra_to_mzml</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_raw_to_mzml.html">oktoberfest.pp.convert_raw_to_mzml</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_d_to_hdf.html">oktoberfest.pp.convert_d_to_hdf</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
 <li class="toctree-l3"><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
@@ -142,16 +149,19 @@
 <p>Generating libraries</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html#oktoberfest.pp.digest" title="oktoberfest.pp.digest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.digest</span></code></a>(fasta, output, fragmentation, ...)</p></td>
-<td><p>Perform an in-silico digest of a given fasta file.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html#oktoberfest.pp.digest" title="oktoberfest.pp.digest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.digest</span></code></a>(fasta, digestion, ...)</p></td>
+<td><p>Digest a given fasta file with specific settings.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html#oktoberfest.pp.gen_lib" title="oktoberfest.pp.gen_lib"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.gen_lib</span></code></a>(input_file)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.generate_metadata.html#oktoberfest.pp.generate_metadata" title="oktoberfest.pp.generate_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.generate_metadata</span></code></a>(peptides, ...[, proteins])</p></td>
+<td><p>Create metadata about peptides for a spectral library.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html#oktoberfest.pp.gen_lib" title="oktoberfest.pp.gen_lib"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.gen_lib</span></code></a>(input_file)</p></td>
 <td><p>Generate a spectral library from a given input.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.merge_spectra_and_peptides.html#oktoberfest.pp.merge_spectra_and_peptides" title="oktoberfest.pp.merge_spectra_and_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.merge_spectra_and_peptides</span></code></a>(spectra, search)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.merge_spectra_and_peptides.html#oktoberfest.pp.merge_spectra_and_peptides" title="oktoberfest.pp.merge_spectra_and_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.merge_spectra_and_peptides</span></code></a>(spectra, search)</p></td>
 <td><p>Merge peptides with spectra.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.annotate_spectral_library.html#oktoberfest.pp.annotate_spectral_library" title="oktoberfest.pp.annotate_spectral_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.annotate_spectral_library</span></code></a>(psms[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.annotate_spectral_library.html#oktoberfest.pp.annotate_spectral_library" title="oktoberfest.pp.annotate_spectral_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.annotate_spectral_library</span></code></a>(psms[, ...])</p></td>
 <td><p>Annotate spectral library with peaks and mass.</p></td>
 </tr>
 </tbody>
@@ -159,13 +169,16 @@
 <p>Spectra preprocessing</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.list_spectra.html#oktoberfest.pp.list_spectra" title="oktoberfest.pp.list_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.list_spectra</span></code></a>(input_dir, file_format)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.list_spectra.html#oktoberfest.pp.list_spectra" title="oktoberfest.pp.list_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.list_spectra</span></code></a>(input_dir, input_format)</p></td>
 <td><p>Return a list of all spectra files of a given format.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_spectra_to_mzml.html#oktoberfest.pp.convert_spectra_to_mzml" title="oktoberfest.pp.convert_spectra_to_mzml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_spectra_to_mzml</span></code></a>(raw_file, output_file)</p></td>
-<td><p>Convert spectra to mzML format.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_raw_to_mzml.html#oktoberfest.pp.convert_raw_to_mzml" title="oktoberfest.pp.convert_raw_to_mzml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_raw_to_mzml</span></code></a>(raw_file, output_file)</p></td>
+<td><p>Convert raw to mzML format.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html#oktoberfest.pp.load_spectra" title="oktoberfest.pp.load_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_spectra</span></code></a>(filename[, parser])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_d_to_hdf.html#oktoberfest.pp.convert_d_to_hdf" title="oktoberfest.pp.convert_d_to_hdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_d_to_hdf</span></code></a>(d_dir, output_file)</p></td>
+<td><p>Convert d to hdf format.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html#oktoberfest.pp.load_spectra" title="oktoberfest.pp.load_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_spectra</span></code></a>(filename[, parser, ...])</p></td>
 <td><p>Read spectra from a given file.</p></td>
 </tr>
 </tbody>
@@ -173,16 +186,25 @@
 <p>Peptide preprocessing</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_search.html#oktoberfest.pp.convert_search" title="oktoberfest.pp.convert_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_search</span></code></a>(input_path, output_file, ...)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_search.html#oktoberfest.pp.convert_search" title="oktoberfest.pp.convert_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_search</span></code></a>(input_path, search_engine)</p></td>
 <td><p>Convert search results to Oktoberfest format.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_search.html#oktoberfest.pp.load_search" title="oktoberfest.pp.load_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_search</span></code></a>(input_file)</p></td>
 <td><p>Load search results.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides.html#oktoberfest.pp.filter_peptides" title="oktoberfest.pp.filter_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.filter_peptides</span></code></a>(peptides, min_length, ...)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.split_search.html#oktoberfest.pp.split_search" title="oktoberfest.pp.split_search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.split_search</span></code></a>(search_results, output_dir)</p></td>
+<td><p>Split search results by spectrum file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_timstof_metadata.html#oktoberfest.pp.convert_timstof_metadata" title="oktoberfest.pp.convert_timstof_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_timstof_metadata</span></code></a>(input_path, ...)</p></td>
+<td><p>Convert metadata for timstof to Oktoberfest format.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.split_timstof_metadata.html#oktoberfest.pp.split_timstof_metadata" title="oktoberfest.pp.split_timstof_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.split_timstof_metadata</span></code></a>(timstof_metadata, ...)</p></td>
+<td><p>Split timstof metadata by spectrum file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides.html#oktoberfest.pp.filter_peptides" title="oktoberfest.pp.filter_peptides"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.filter_peptides</span></code></a>(peptides, min_length, ...)</p></td>
 <td><p>Filter search results using given constraints.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides_for_model.html#oktoberfest.pp.filter_peptides_for_model" title="oktoberfest.pp.filter_peptides_for_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.filter_peptides_for_model</span></code></a>(peptides, model)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.filter_peptides_for_model.html#oktoberfest.pp.filter_peptides_for_model" title="oktoberfest.pp.filter_peptides_for_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.filter_peptides_for_model</span></code></a>(peptides, model)</p></td>
 <td><p>Filter search results to support a given peptide prediction model.</p></td>
 </tr>
 </tbody>
@@ -195,7 +217,7 @@
 <h3>Koina interface<a class="headerlink" href="#koina-interface" title="Permalink to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html#oktoberfest.pr.predict" title="oktoberfest.pr.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict</span></code></a>(data, *args, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html#oktoberfest.pr.predict" title="oktoberfest.pr.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict</span></code></a>(data, **kwargs)</p></td>
 <td><p>Retrieve predictions from koina.</p></td>
 </tr>
 </tbody>
@@ -278,7 +300,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

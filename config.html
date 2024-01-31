@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configuration &mdash; Oktoberfest 0.5.3 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <title>Configuration &mdash; Oktoberfest 0.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=08553120"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=add265a1"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.3
+                0.6.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -158,10 +160,10 @@
 <td><p>Path to directory or file containing mass spectrometry results</p></td>
 </tr>
 <tr class="row-even"><td><p>spectra_type</p></td>
-<td><p>Format description for files containing spectra; can be “raw”, “mzml” or “pkl”; default = “raw”; in case of mixed mzML/RAW input, select “raw”.</p></td>
+<td><p>Format description for files containing spectra; can be “raw”, “mzml”, “d” or “hdf”; default = “raw”; in case of mixed mzML/RAW input, select “raw”; in case of mixed d/hdf input select “d”</p></td>
 </tr>
 <tr class="row-odd"><td><p>numThreads</p></td>
-<td><p>Number of raw/mzml files processed in parallel (parallelisation on file level); more processes than files has no effect and should be avoided; default = 1</p></td>
+<td><p>Number of raw/mzml files processed in parallel (parallelisation on file level); more processes than files has no effect and should be avoided; for spectral library generation, the number of parallel prediction processes, needs to be balanced with batchsize in this case; default = 1</p></td>
 </tr>
 <tr class="row-even"><td><p>thermoExe</p></td>
 <td><p>Path to ThermoRawFileParser executable; needed if spectra are provided in RAW format; default “ThermoRawFileParser.exe”</p></td>
@@ -179,7 +181,7 @@
 <td><p>Min and max collision energy (end-exclusive) used for calibration; i.e. (5,10) tests every CE from 5 to 9. Default is (19,50)</p></td>
 </tr>
 <tr class="row-odd"><td><p>use_ransac_model</p></td>
-<td><p>Boolean that determines whether or not to use a ransac regression model for calibration refinement. Default is false.</p></td>
+<td><p>Boolean that determines whether or not to use a ransac regression model for calibration refinement. This is recommended for timsTOF data. Default is false.</p></td>
 </tr>
 </tbody>
 </table>
@@ -202,8 +204,26 @@
 <tr class="row-even"><td><p>library_input_type</p></td>
 <td><p>Library input type description; can be “fasta” if an additional in-silico digestion is required or “<a class="reference external" href="./peptides_format.html">peptides</a>”</p></td>
 </tr>
-<tr class="row-odd"><td><p>outputFormat</p></td>
-<td><p>Output format of the generated spectral library; can be “spectronaut” or “msp”</p></td>
+<tr class="row-odd"><td><p>spectralLibraryOptions</p></td>
+<td><p>Contains information about additional settings required for spectral library generation and what to save to disk (see following 7 nested parameters)</p></td>
+</tr>
+<tr class="row-even"><td><p>fragmentation</p></td>
+<td><p>Method used for fragmentation; can be “HCD” or “CID”; default = “”</p></td>
+</tr>
+<tr class="row-odd"><td><p>collisionEnergy</p></td>
+<td><p>The collision energy for which the library should be created; default = 30</p></td>
+</tr>
+<tr class="row-even"><td><p>precursorCharge</p></td>
+<td><p>The precursor charges for which the library should be created, can be a list or single number; default = [2,3]</p></td>
+</tr>
+<tr class="row-odd"><td><p>minIntensity</p></td>
+<td><p>The minimal relative intensity threshold for peaks, everything below is not saved, this can help reducing the library size; default = 5e-4</p></td>
+</tr>
+<tr class="row-even"><td><p>batchSize</p></td>
+<td><p>Number of peptides for which predictions are retrieved at once before writing, larger batches result in higher memory peaks, needs to be balanced with n_threads, default = 10000</p></td>
+</tr>
+<tr class="row-odd"><td><p>format</p></td>
+<td><p>Output format of the generated spectral library; can be “spectronaut” or “msp”; default = “msp”</p></td>
 </tr>
 </tbody>
 </table>
@@ -220,28 +240,25 @@
 <tr class="row-even"><td><p>fastaDigestOptions</p></td>
 <td><p>Contains specific settings for the in-silico digestion of a provided fasta file (see following 8 nested parameters)</p></td>
 </tr>
-<tr class="row-odd"><td><p>fragmentation</p></td>
-<td><p>Method used for fragmentation; can be “HCD” or “CID”</p></td>
-</tr>
-<tr class="row-even"><td><p>digestion</p></td>
+<tr class="row-odd"><td><p>digestion</p></td>
 <td><p>Digestion mode; can be “full”, “semi” or None; default = “full”</p></td>
 </tr>
-<tr class="row-odd"><td><p>missedCleavages</p></td>
+<tr class="row-even"><td><p>missedCleavages</p></td>
 <td><p>Number of allowed missed cleavages used in the search engine for generation of the provided search results; default = 2</p></td>
 </tr>
-<tr class="row-even"><td><p>minLength</p></td>
+<tr class="row-odd"><td><p>minLength</p></td>
 <td><p>Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 7</p></td>
 </tr>
-<tr class="row-odd"><td><p>maxLength</p></td>
+<tr class="row-even"><td><p>maxLength</p></td>
 <td><p>Minimum peptide length allowed used in the search engine for generation of the provided search results; default = 60</p></td>
 </tr>
-<tr class="row-even"><td><p>enzyme</p></td>
+<tr class="row-odd"><td><p>enzyme</p></td>
 <td><p>Name of the enzyme used in the search engine; default = “trypsin”</p></td>
 </tr>
-<tr class="row-odd"><td><p>specialAas</p></td>
+<tr class="row-even"><td><p>specialAas</p></td>
 <td><p>Special amino acids for decoy generation; default = “KR”</p></td>
 </tr>
-<tr class="row-even"><td><p>db</p></td>
+<tr class="row-odd"><td><p>db</p></td>
 <td><p>Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be “target”, “decoy” or “concat”; default = “concat”</p></td>
 </tr>
 </tbody>
@@ -281,7 +298,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

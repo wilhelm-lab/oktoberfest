@@ -1,4 +1,4 @@
-﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L15-L53
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L15-L31
 
 oktoberfest.pr.predict
 ======================

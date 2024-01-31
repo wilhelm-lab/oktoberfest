@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L574-L596
+
+oktoberfest.pp.convert\_raw\_to\_mzml
+=====================================
+
+.. currentmodule:: oktoberfest.pp
+
+.. autofunction:: convert_raw_to_mzml

@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Custom in-silico digestion &mdash; Oktoberfest 0.5.3 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <title>Custom in-silico digestion &mdash; Oktoberfest 0.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=08553120"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=add265a1"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.3
+                0.6.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -111,7 +113,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p>modified_sequence</p></td>
-<td><p>The peptide sequence including modifications in unimod format (only M[UNIMOD:35] supported) and excluding the fixed modification C[UNIMOD:35] (Carbamidomethylation) as this modification will be added automatically. If you add C[UNIMOD:35] manually, you will get wrong results.</p></td>
+<td><p>The peptide sequence including modifications in unimod format (only M[UNIMOD:35] supported) and excluding the fixed modification C[UNIMOD:4] (Carbamidomethylation) as this modification will be added automatically. If you add C[UNIMOD:4] manually, you will get wrong results.</p></td>
 </tr>
 <tr class="row-odd"><td><p>collision_energy</p></td>
 <td><p>The collision energy to use in peptide property prediction</p></td>
@@ -122,19 +124,23 @@
 <tr class="row-odd"><td><p>fragmentation</p></td>
 <td><p>Method used for fragmentation; can be “HCD” or “CID”</p></td>
 </tr>
+<tr class="row-even"><td><p>proteins</p></td>
+<td><p>An optional list of protein ids separate by ‘;’</p></td>
+</tr>
 </tbody>
 </table>
 </section>
 <section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">modified_sequence</span><span class="p">,</span><span class="n">collision_energy</span><span class="p">,</span><span class="n">precursor_charge</span><span class="p">,</span><span class="n">fragmentation</span>
-<span class="n">ASPTQPIQL</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">KIIDRAITSL</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">KIEKLKVEL</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">KINQQKLKL</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">MLGNM</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span><span class="n">NVFMAVLGIILC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">SGFLAAYFSHK</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">TYC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">DATKC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">FTVTE</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
-<span class="n">VIPSIAYTEPEVAWVGLTEKEAKEK</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">modified_sequence</span><span class="p">,</span><span class="n">collision_energy</span><span class="p">,</span><span class="n">precursor_charge</span><span class="p">,</span><span class="n">fragmentation</span><span class="p">,</span><span class="n">proteins</span>
+<span class="n">ASPTQPIQL</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span>
+<span class="n">KIEKLKVEL</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span>
+<span class="n">AAAAAWEEPSSGNGTAR</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span><span class="n">Q9P258</span>
+<span class="n">AAAAAWEEPSSGNGTAR</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span><span class="n">Q9P258</span>
+<span class="n">KDVDGAYM</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span><span class="n">TK</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span><span class="n">P04264</span><span class="p">;</span><span class="n">CON__P04264</span>
+<span class="n">VIGRGSYAK</span><span class="p">,</span><span class="mi">35</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span><span class="n">P11216</span><span class="p">;</span><span class="n">P11217</span>
+<span class="n">TTENIPGGAEEISEVLDSLENLMR</span><span class="p">,</span><span class="mi">30</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">hcd</span><span class="p">,</span><span class="n">tr</span><span class="o">|</span><span class="n">A0A075B6G3</span><span class="o">|</span><span class="n">A0A075B6G3_HUMAN</span><span class="p">;</span><span class="n">sp</span><span class="o">|</span><span class="n">P11532</span><span class="o">|</span><span class="n">DMD_HUMAN</span><span class="p">;</span><span class="n">tr</span><span class="o">|</span><span class="n">A0A5H1ZRP8</span><span class="o">|</span><span class="n">A0A5H1ZRP8_HUMAN</span>
+<span class="n">TYCDATKCFTVTE</span><span class="p">,</span><span class="mi">34</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span>
 </pre></div>
 </div>
 </section>
@@ -151,7 +157,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

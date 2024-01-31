@@ -1,0 +1,8 @@
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L441-L488
+
+oktoberfest.pp.split\_timstof\_metadata
+=======================================
+
+.. currentmodule:: oktoberfest.pp
+
+.. autofunction:: split_timstof_metadata

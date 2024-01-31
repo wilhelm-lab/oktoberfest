@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Running Oktoberfest &mdash; Oktoberfest 0.5.3 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
+  <title>Running Oktoberfest &mdash; Oktoberfest 0.6.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=08553120"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=add265a1"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.5.3
+                0.6.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -198,12 +200,15 @@ Oktoberfest will:
 <span class="w">        </span><span class="nt">&quot;intensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prosit_2020_intensity_HCD&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;irt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prosit_2019_irt&quot;</span>
 <span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;outputFormat&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;spectronaut&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.proteomicsdb.org:443&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;numThreads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;ssl&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;spectralLibraryOptions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;fragmentation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HCD&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;collisionEnergy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;precursorCharge&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;minIntensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5e-4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;batchsize&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msp&quot;</span>
+<span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;fastaDigestOptions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;fragmentation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;digestion&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;full&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;missedCleavages&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;minLength&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
@@ -211,7 +216,10 @@ Oktoberfest will:
 <span class="w">        </span><span class="nt">&quot;enzyme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;trypsin&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;specialAas&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;KR&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;db&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;concat&quot;</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.proteomicsdb.org:443&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;numThreads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;ssl&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -292,7 +300,7 @@ Oktoberfest will:</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

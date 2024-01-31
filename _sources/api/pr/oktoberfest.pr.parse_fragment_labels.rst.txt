@@ -1,4 +1,4 @@
-﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L56-L89
+﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L34-L67
 
 oktoberfest.pr.parse\_fragment\_labels
 ======================================
