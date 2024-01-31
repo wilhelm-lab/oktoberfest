@@ -35,6 +35,11 @@ table.align-default {
     margin-left: 0;
 }
 
+.wy-table-responsive table th p,
+.wy-table-responsive table td p {
+    white-space: normal;
+}
+
 .autosummary {
     margin-left: 0 !important;
 }

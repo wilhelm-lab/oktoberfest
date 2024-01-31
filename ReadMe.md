@@ -20,10 +20,20 @@ The official Oktoberfest documentation can be found at https://oktoberfest.readt
 
 Please always cite the main publication:
 
-[Oktoberfest] Picciani M, Gabriel W, Giurcoiu VG, Shouman O, Hamood F, Lautenbacher L, Jensen CB, Müller J, Kalhor M, Soleymaniniya A, Kuster B, The M, Wilhelm M (2023), _Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit_, [Proteomics](https://doi.org/10.1002/pmic.202300112)
+[Oktoberfest] Picciani M, Gabriel W, Giurcoiu VG et al. (2023), _Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit_, [Proteomics](https://doi.org/10.1002/pmic.202300112)
 
-Should you make use of peptide property predictions through Oktoberfest using one of the supported Prosit models, please also cite one of the following:
+Should you make use of peptide property predictions through Oktoberfest using one of the supported Prosit models, please also cite the following:
 
-[Prosit] Gessulat S, Schmidt T, Zolg DP, Samaras P, Schnatbaum K, Zerweck J, Knaute T, Rechenberger J, Delanghe B, Huhmer A, Reimer U, Ehrlich HC, Aiche S, Kuster B, Wilhelm M (2019), _TriMap: PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning_, [Nature Methods](https://doi.org/10.1038/s41592-019-0426-7)
+When using Prosit
 
-[Prosit-TMT] Gabriel W, The M, Zolg D, Bayer FP, Shouman O, Lautenbacher L, Schnatbaum K, Zerweck J, Knaute T, Delanghe B, Huhmer A, Wenschuh H, Reimer U, Médard G, Kuster B, Wilhelm M (2022), _TriMap: Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides_, [Analytical Chemistry](https://doi.org/10.1021/acs.analchem.1c05435)
+[Prosit] Gessulat S, Schmidt T, Zolg DP et al. (2019), _PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning_, [Nature Methods](https://doi.org/10.1038/s41592-019-0426-7)
+
+[Prosit-HLA] Wilhelm M, Zolg DP, Graber M et al. (2021), _Deep learning boosts sensitivity of mass spectrometry-based immunopeptidomics_, [Nature Communications](https://doi.org/10.1038/s41467-021-23713-9)
+
+When using Prosit-TMT
+
+[Prosit-TMT] Gabriel W, The M, Zolg D et al. (2022), _TriMap: Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides_, [Analytical Chemistry](https://doi.org/10.1021/acs.analchem.1c05435)
+
+When using Prosit-timsTOF
+
+[Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2023), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [BioRxiv](https://doi.org/10.1101/2023.07.17.549401)
