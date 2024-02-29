@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
@@ -335,7 +334,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(out_file, failed_batch_file, len(spec_library.spectra_data), batchsize)
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
-
         n_batches = len(batches)
 
         with Manager() as manager:
@@ -351,6 +349,14 @@ def generate_spectral_lib(config_path: Union[str, Path]):
             # Create a pool for producer processes
             predictor_pool = pool.Pool(config.num_threads)
 
+            consumer_process = Process(
+                target=speclib.async_write,
+                args=(
+                    shared_queue,
+                    writing_progress,
+                ),
+            )
+
             try:
                 results = []
                 for i in batches:
@@ -363,7 +369,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.spectra_data.iloc[i * batchsize : (i + 1) * batchsize],
+                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize,:],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
@@ -375,15 +381,8 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                 with tqdm(
                     total=n_batches, desc="Writing library", postfix={"successful": 0, "missing": 0}
                 ) as writer_pbar:
-                    # Start the consumer process
-                    consumer_process = Process(
-                        target=speclib.async_write,
-                        args=(
-                            shared_queue,
-                            writing_progress,
-                        ),
-                    )
                     consumer_process.start()
+
                     with tqdm(
                         total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
                     ) as predictor_pbar:
@@ -488,7 +487,7 @@ def _calculate_features(spectra_file: Path, config: Config):
 
     pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
 
-    library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+    library.add_matrix(pred_intensities["intensities"].tolist(), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
 
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
