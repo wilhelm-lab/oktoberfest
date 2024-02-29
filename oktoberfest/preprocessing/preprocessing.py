@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import spectrum_fundamentals.constants as c
+from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
@@ -35,7 +36,7 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    library = Spectra()
+    library = Spectra((len(library_df), 174))
     library.add_columns(library_df)
     return library
 
@@ -133,7 +134,7 @@ def digest(
     )
 
 
-def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFrame:
+def filter_peptides_for_model(peptides: AnnData, model: str) -> AnnData:
     """
     Filter search results to support a given peptide prediction model.
 
@@ -159,7 +160,7 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
     return filter_peptides(peptides, **filter_kwargs)
 
 
-def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int) -> pd.DataFrame:
+def filter_peptides(peptides: AnnData, min_length: int, max_length: int, max_charge: int) -> AnnData:
     """
     Filter search results using given constraints.
 
@@ -173,15 +174,17 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
 
     :return: The filtered dataframe given the provided constraints.
     """
-    return peptides[
-        (peptides["PEPTIDE_LENGTH"] <= max_length)
-        & (peptides["PEPTIDE_LENGTH"] >= min_length)
-        & (peptides["PRECURSOR_CHARGE"] <= max_charge)
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains("U|X"))
-    ]
+    selection = peptides.obs[
+        (peptides.obs["PEPTIDE_LENGTH"] <= max_length)
+        & (peptides.obs["PEPTIDE_LENGTH"] >= min_length)
+        & (peptides.obs["PRECURSOR_CHARGE"] <= max_charge)
+        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
+        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
+        & (~peptides.obs["SEQUENCE"].str.contains("U|X"))
+    ].index.tolist()
+    spectra = AnnData(var=peptides.var.copy(), obs=peptides.obs.iloc[selection].copy())
+    return spectra
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
@@ -201,27 +204,29 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     :return: The processed and filtered Spectra object
     """
     # add fixed mods and translate to internal format
-    library.spectra_data["MODIFIED_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
+    library.spectra_data.obs["MODIFIED_SEQUENCE"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
+        lambda x: "_" + x + "_"
+    )
 
     fixed_mods = {"C": "C[UNIMOD:4]"}
     if tmt_label is not None and tmt_label != "":
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-        library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
+    library.spectra_data.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(
+        library.spectra_data.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
     )
 
     # get sequence and its length
-    library.spectra_data["SEQUENCE"] = internal_without_mods(library.spectra_data["MODIFIED_SEQUENCE"])
-    library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
+    library.spectra_data.obs["SEQUENCE"] = internal_without_mods(library.spectra_data.obs["MODIFIED_SEQUENCE"])
+    library.spectra_data.obs["PEPTIDE_LENGTH"] = library.spectra_data.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    logger.info(f"No of sequences before filtering is {len(library.spectra_data)}")
     library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
-    logger.info(f"No of sequences after filtering is {len(library.spectra_data)}")
 
-    library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
+    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
+        lambda x: compute_peptide_mass(x)
+    )
 
     return library
 
@@ -506,7 +511,7 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
     logger.info(f"There are {len(psms)} matched identifications")
 
-    library = Spectra()
+    library = Spectra((len(psms), 174))
     library.add_columns(psms)
 
     return library
