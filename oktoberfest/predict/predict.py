@@ -121,7 +121,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
-    alignment_library.add_matrix(pd.Series(intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+    alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
     _alignment(alignment_library)
     return alignment_library
 

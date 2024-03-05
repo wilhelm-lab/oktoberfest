@@ -42,7 +42,7 @@ def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress,
         **pr.predict(batch_df, model_name=int_model, **predict_kwargs),
         **pr.predict(batch_df, model_name=irt_model, **predict_kwargs),
     }
-    queue_out.put((predictions, batch_df))
+    queue_out.put((predictions, batch_df.obs))
     with lock:
         progress.value += 1
 
@@ -487,7 +487,7 @@ def _calculate_features(spectra_file: Path, config: Config):
 
     pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
 
-    library.add_matrix(pred_intensities["intensities"].tolist(), FragmentType.PRED)
+    library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
 
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()

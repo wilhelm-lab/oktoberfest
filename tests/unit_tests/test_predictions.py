@@ -27,7 +27,7 @@ class TestTMTProsit(unittest.TestCase):
             input_data, model_name="Prosit_2020_irt_TMT", server_url="koina.proteomicsdb.org:443", ssl=True
         )
 
-        library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
+        library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
         library.add_column(pred_irt["irt"], name="PREDICTED_IRT")
 
         expected_df = pd.read_csv(Path(__file__).parent / "data" / "predictions" / "library_output.csv")
