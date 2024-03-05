@@ -144,27 +144,30 @@ class Spectra:
         else:
             self.spectra_data.X = scipy.sparse.csr_matrix(intensity_data)
 
-    def add_matrix(self, intensity_data: pd.Series, fragment_type: FragmentType) -> None:
+    def add_matrix(self, intensity_data, fragment_type: FragmentType, annotation=None) -> None:
         """
         Concatenate intensity df as a sparse matrix to our data.
 
         :param intensity_data: intensity numpy array to add
         :param fragment_type: choose predicted, raw, or mz
         """
-        intensity_df = intensity_data.explode()
-        # reshape based on the number of fragments
-        intensity_array = intensity_df.values.astype(np.float32).reshape(-1, c.VEC_LENGTH)
-
+        intensity_array = np.array(intensity_data)
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
+        logger.info(type(intensity_array))
         intensity_array[intensity_array == 0] = c.EPSILON
         intensity_array[intensity_array == -1] = 0.0
 
-        # generate column names and build dataframe from sparse matrix
-        intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
-        columns = self._gen_column_names(fragment_type)
-        intensity_df.columns = columns
-        self.add_columns(intensity_df)
+        if annotation:
+            self.spectra_data.layers["pred_int"] = csr_matrix(intensity_array.shape)
+            index = index = [list(self.spectra_data.var_names).index(i) for i in annotation]
+            self.spectra_data.layers["pred_int"][:, index] = intensity_array
+        else:
+            # generate column names and build dataframe from sparse matrix
+            intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
+            columns = self._gen_column_names(fragment_type)
+            intensity_df.columns = columns
+            self.add_columns(intensity_df)
 
     def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> coo_matrix:
         """
