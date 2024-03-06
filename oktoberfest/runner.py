@@ -126,7 +126,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path).join()  # write_metadata_annotation
+        library.write_as_hdf5(hdf5_path, True).join()  # write_metadata_annotation
 
     return library
 
@@ -134,7 +134,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
+    if (library.spectra_data.obs["FRAGMENTATION"] == "HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -146,7 +146,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
-                alignment_library.spectra_data.groupby(
+                alignment_library.spectra_data.obs.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
                 )["SPECTRAL_ANGLE"]
                 .mean()
@@ -172,27 +172,28 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                 )
 
             delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
-            library.spectra_data["COLLISION_ENERGY"] = np.maximum(
-                0, library.spectra_data["COLLISION_ENERGY"] + delta_ce
+            library.spectra_data.obs["COLLISION_ENERGY"] = np.maximum(
+                0, library.spectra_data.obs["COLLISION_ENERGY"] + delta_ce
             )
 
         else:
-            ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            ce_alignment = alignment_library.spectra_data.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+
             best_ce = ce_alignment.idxmax()
             pl.plot_mean_sa_ce(
                 sa_ce_df=ce_alignment.to_frame().reset_index(),
                 filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
             )
             pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                sa_ce_df=alignment_library.spectra_data.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
-            library.spectra_data["COLLISION_ENERGY"] = best_ce
+            library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
     else:
         best_ce = 35
-        library.spectra_data["COLLISION_ENERGY"] = best_ce
+        library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
@@ -369,7 +370,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize,:],
+                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize, :],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
@@ -430,7 +431,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     library = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
     _get_best_ce(library, spectra_file, config)
 
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
+    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
 
     ce_calib_step.mark_done()
 
