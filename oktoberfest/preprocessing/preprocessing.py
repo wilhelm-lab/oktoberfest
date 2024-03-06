@@ -4,6 +4,7 @@ from pathlib import Path
 from sys import platform
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
@@ -134,7 +135,9 @@ def digest(
     )
 
 
-def filter_peptides_for_model(peptides: AnnData, model: str) -> AnnData:
+def filter_peptides_for_model(
+    peptides: Optional[Union[pd.DataFrame, AnnData]], model: str
+) -> Optional[Union[pd.DataFrame, AnnData]]:
     """
     Filter search results to support a given peptide prediction model.
 
@@ -160,7 +163,9 @@ def filter_peptides_for_model(peptides: AnnData, model: str) -> AnnData:
     return filter_peptides(peptides, **filter_kwargs)
 
 
-def filter_peptides(peptides: AnnData, min_length: int, max_length: int, max_charge: int) -> AnnData:
+def filter_peptides(
+    peptides: Optional[Union[pd.DataFrame, AnnData]], min_length: int, max_length: int, max_charge: int
+) -> Optional[Union[pd.DataFrame, AnnData]]:
     """
     Filter search results using given constraints.
 
@@ -174,17 +179,29 @@ def filter_peptides(peptides: AnnData, min_length: int, max_length: int, max_cha
 
     :return: The filtered dataframe given the provided constraints.
     """
-    selection = peptides.obs[
-        (peptides.obs["PEPTIDE_LENGTH"] <= max_length)
-        & (peptides.obs["PEPTIDE_LENGTH"] >= min_length)
-        & (peptides.obs["PRECURSOR_CHARGE"] <= max_charge)
-        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides.obs["SEQUENCE"].str.contains("U|X"))
-    ].index.tolist()
-    spectra = AnnData(var=peptides.var.copy(), obs=peptides.obs.iloc[selection].copy())
-    return spectra
+    if isinstance(peptides, pd.DataFrame):
+        return peptides[
+            (peptides["PEPTIDE_LENGTH"] <= max_length)
+            & (peptides["PEPTIDE_LENGTH"] >= min_length)
+            & (peptides["PRECURSOR_CHARGE"] <= max_charge)
+            & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
+            & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+            & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
+            & (~peptides["SEQUENCE"].str.contains("U|X"))
+        ]
+    elif isinstance(peptides, AnnData):
+        selection = peptides.obs[
+            (peptides.obs["PEPTIDE_LENGTH"] <= max_length)
+            & (peptides.obs["PEPTIDE_LENGTH"] >= min_length)
+            & (peptides.obs["PRECURSOR_CHARGE"] <= max_charge)
+            & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
+            & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+            & (~peptides.obs["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
+            & (~peptides.obs["SEQUENCE"].str.contains("U|X"))
+        ].index.tolist()
+        spectra = AnnData(var=peptides.var.copy(), obs=peptides.obs.iloc[selection].copy())
+        return spectra
+    return peptides
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
@@ -224,9 +241,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     # filter
     library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
 
-    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
-        lambda x: compute_peptide_mass(x)
-    )
+    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
 
@@ -509,7 +524,6 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
-    logger.info(f"There are {len(psms)} matched identifications")
 
     library = Spectra((len(psms), 174))
     library.add_columns(psms)
@@ -530,11 +544,11 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     :param unit_mass_tol: The unit in which the mass tolerance is given
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms.spectra_data, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms.spectra_data.obs, mass_tol, unit_mass_tol)
     logger.info("Finished annotating.")
-    psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
-    psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
-    psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
+
+    psms.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
+    psms.add_matrix(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
 
 
