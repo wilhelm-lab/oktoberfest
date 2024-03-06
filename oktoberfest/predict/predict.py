@@ -80,28 +80,29 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :return: a library that is modified according to the description above
     """
-    alignment_library = Spectra(library.get_matrix(FragmentType.MZ)[0].shape)
-    alignment_library.spectra_data = library.spectra_data.copy()
-
+    alignment_df = library.convert_to_df()
     # Remove decoy and HCD fragmented spectra
-    alignment_library.spectra_data = alignment_library.spectra_data[
-        (alignment_library.spectra_data.obs["FRAGMENTATION"] == "HCD")
-        & (~alignment_library.spectra_data.obs["REVERSE"])
-    ]
+    alignment_df = alignment_df[(alignment_df["FRAGMENTATION"] == "HCD") & (~alignment_df["REVERSE"])]
     # Select the 1000 highest scoring or all if there are less than 1000
-    temp_df = alignment_library.spectra_data.obs.sort_values(by="SCORE", ascending=False)
+    temp_df = alignment_df.sort_values(by="SCORE", ascending=False)
     if group_by_charge:
         temp_df = temp_df.groupby("PRECURSOR_CHARGE")
 
-    alignment_library.spectra_data.obs = temp_df.head(1000)
+    alignment_df = temp_df.head(1000)
 
     # Repeat dataframe for each CE
     ce_range_ = range(*ce_range)
-    nrow = len(alignment_library.spectra_data)
-    alignment_library.spectra_data.obs = pd.concat([alignment_library.spectra_data.obs for _ in ce_range_], axis=0)
-    alignment_library.spectra_data.obs["ORIG_COLLISION_ENERGY"] = alignment_library.spectra_data.obs["COLLISION_ENERGY"]
-    alignment_library.spectra_data.obs["COLLISION_ENERGY"] = np.repeat(ce_range_, nrow)
-    alignment_library.spectra_data.obs.reset_index(inplace=True)
+    nrow = len(alignment_df)
+    alignment_df = pd.concat([alignment_df for _ in ce_range_], axis=0)
+    alignment_df["ORIG_COLLISION_ENERGY"] = alignment_df["COLLISION_ENERGY"]
+    alignment_df["COLLISION_ENERGY"] = np.repeat(ce_range_, nrow)
+    selection = alignment_df["Unnamed: 0"].values.astype(int).tolist()
+    alignment_library = Spectra((len(selection), 174))
+    library.spectra_data.obs.index = library.spectra_data.obs.index.astype(str)
+    alignment_library.spectra_data = library.spectra_data[
+        library.spectra_data.obs["Unnamed: 0"].isin(selection), :
+    ].copy()
+
     return alignment_library
 
 
@@ -120,6 +121,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
+    logger.info(alignment_library.spectra_data)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
     alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
     _alignment(alignment_library)
@@ -135,11 +137,10 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
-    # return pred_intensity.toarray(), raw_intensity.toarray()
+    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0].toarray()
+    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0].toarray()
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
-    alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
+    alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
     alignment_library.spectra_data = alignment_library.spectra_data[
-        alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] != 0
+        alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] != 0, :
     ]
