@@ -100,7 +100,7 @@ class Spectra:
         :param name: name of the column
         """
         column_df = pd.DataFrame({name: list(column_data)})
-        self.spectra_data.obs = pd.concat([self.spectra_data.obs, column_df], axis=1)
+        self.spectra_data.obs = pd.concat([self.spectra_data.obs.reset_index(drop=True), column_df], axis=1)
 
     def add_columns(self, columns_data: pd.DataFrame) -> None:
         """
@@ -154,7 +154,6 @@ class Spectra:
         intensity_array = np.array(intensity_data)
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
-        logger.info(type(intensity_array))
         intensity_array[intensity_array == 0] = c.EPSILON
         intensity_array[intensity_array == -1] = 0.0
 
@@ -283,3 +282,17 @@ class Spectra:
         spectra.add_columns(all_columns)
 
         return spectra
+
+    def convert_to_df(self) -> pd.DataFrame:
+        """
+        Gives back spectra_data instance as a pandas Dataframe.
+
+        :return: a pandas DataFrame
+        """
+        df = self.spectra_data.obs
+        mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
+        mz_cols.columns = self._gen_column_names(FragmentType.MZ)
+        raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
+        raw_cols.columns = self._gen_column_names(FragmentType.RAW)
+        df_merged = pd.concat([df, pd.concat([mz_cols, raw_cols], axis=1)], axis=1)
+        return df_merged
