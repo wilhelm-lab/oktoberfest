@@ -19,12 +19,12 @@ class TestTMTProsit(unittest.TestCase):
         pred_intensities = predict(
             input_data,
             model_name="Prosit_2020_intensity_TMT",
-            server_url="koina.proteomicsdb.org:443",
+            server_url="koina.wilhelmlab.org:443",
             ssl=True,
             targets=["intensities", "annotation"],
         )
         pred_irt = predict(
-            input_data, model_name="Prosit_2020_irt_TMT", server_url="koina.proteomicsdb.org:443", ssl=True
+            input_data, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True
         )
 
         library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
@@ -48,7 +48,7 @@ class TestTMTProsit(unittest.TestCase):
             predict,
             input_data,
             model_name="Prosit_2020_intensity_HCD",
-            server_url="koina.proteomicsdb.org:443",
+            server_url="koina.wilhelmlab.org:443",
             ssl=True,
             targets=["intensities", "annotation"],
         )

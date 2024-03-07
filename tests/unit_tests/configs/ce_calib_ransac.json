@@ -12,7 +12,7 @@
         "intensity": "Prosit_2023_intensity_timsTOF",
         "irt": "Prosit_2019_irt"
     },
-    "prediction_server": "koina.proteomicsdb.org:443",
+    "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": true,
     "numThreads": 1,
     "massTolerance": 20,
