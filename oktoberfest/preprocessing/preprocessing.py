@@ -241,7 +241,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     # filter
     library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
 
-    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
+    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
+        lambda x: compute_peptide_mass(x)
+    )
 
     return library
 
