@@ -117,11 +117,11 @@ class Spectra:
 
         # replaces X and layers (their shape can't be changed)
         if mz_cols:
-            self.spectra_data.X = columns_data[mz_cols]
+            self.spectra_data.X = scipy.sparse.csr_matrix(columns_data[mz_cols])
         if pred_int_cols:
-            self.spectra_data.layers["pred_int"] = columns_data[pred_int_cols]
+            self.spectra_data.layers["pred_int"] = scipy.sparse.csr_matrix(columns_data[pred_int_cols])
         if raw_int_cols:
-            self.spectra_data.layers["raw_int"] = columns_data[raw_int_cols]
+            self.spectra_data.layers["raw_int"] = scipy.sparse.csr_matrix(columns_data[raw_int_cols])
         if meta_cols:
             self.spectra_data.obs = columns_data[meta_cols]
 
