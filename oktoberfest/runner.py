@@ -431,7 +431,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     library = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
     _get_best_ce(library, spectra_file, config)
 
-    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
+    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name, True).join()
 
     ce_calib_step.mark_done()
 
@@ -489,8 +489,7 @@ def _calculate_features(spectra_file: Path, config: Config):
     pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
 
     library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
-    library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
-
+    library.add_column(sum(pred_irts["irt"].tolist(), []), name="PREDICTED_IRT")
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
 
     # produce percolator tab files
