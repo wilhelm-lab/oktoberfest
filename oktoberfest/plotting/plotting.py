@@ -356,7 +356,7 @@ def plot_all(data_dir: Path):
         prosit_psms_decoy,
         data_dir / "target_vs_decoys_sa_distribution.svg",
     )
-    """
+
     joint_plot(
         prosit_pep_target,
         prosit_pep_decoy,
@@ -365,6 +365,7 @@ def plot_all(data_dir: Path):
         "peptide",
         data_dir / "rescore_original_joint_plot_peptide.svg",
     )
+
     joint_plot(
         prosit_psms_target,
         prosit_psms_decoy,
@@ -373,7 +374,7 @@ def plot_all(data_dir: Path):
         "psm",
         data_dir / "rescore_original_joint_plot_psm.svg",
     )
-    """
+
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
 
