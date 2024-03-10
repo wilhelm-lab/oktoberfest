@@ -214,6 +214,12 @@ class Spectra:
         sparse_raw_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}")
         if not sparse_raw_intensities.empty:
             spectra.add_matrix_from_hdf5(sparse_raw_intensities, FragmentType.RAW)
+        try:
+            sparse_pred_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_PRED_KEY}")
+            if not sparse_pred_intensities.empty:
+                spectra.add_matrix_from_hdf5(sparse_pred_intensities, FragmentType.PRED)
+        except Exception as e:
+            logger.warning(e)
         sparse_raw_mzs = hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}")
         if not sparse_raw_mzs.empty:
             spectra.add_matrix_from_hdf5(sparse_raw_mzs, FragmentType.MZ)

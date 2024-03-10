@@ -180,7 +180,7 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
         & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains("U|X"))
+        & (~peptides["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
     ]
 
 

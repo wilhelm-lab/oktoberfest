@@ -11,7 +11,7 @@
         "irt": "Prosit_2019_irt"
     },
     "outputFormat": "spectronaut",
-    "prediction_server": "koina.proteomicsdb.org:443",
+    "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": true,
     "spectralLibraryOptions": {
         "fragmentation": "HCD",
