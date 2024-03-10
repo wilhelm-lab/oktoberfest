@@ -22,7 +22,7 @@ Always required
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
    |     irt                    | Name of the model used for indexed retention time prediction                                                       |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
-   | prediction_server          | Server and port for obtaining peptide property predictions; default: "koina.proteomicsdb.org:443"                  |
+   | prediction_server          | Server and port for obtaining peptide property predictions; default: "koina.wilhelmlab.org:443"                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+
    | ssl                        | Use ssl when making requests to the prediction server, can be true or false; default = true                        |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------+

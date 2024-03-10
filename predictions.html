@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retrieving predictions &mdash; Oktoberfest 0.6.0 documentation</title>
+  <title>Retrieving predictions &mdash; Oktoberfest 0.6.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=add265a1"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=09aae1b8"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.0
+                0.6.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -99,13 +99,13 @@
              
   <section id="retrieving-predictions">
 <h1>Retrieving predictions<a class="headerlink" href="#retrieving-predictions" title="Permalink to this heading"></a></h1>
-<p>Oktoberfest relies on retrieving predictions from a <a class="reference external" href="https://koina.proteomicsdb.org/">Koina</a> server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.</p>
+<p>Oktoberfest relies on retrieving predictions from a <a class="reference external" href="https://koina.wilhelmlab.org/">Koina</a> server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.</p>
 <section id="connecting-to-a-community-server">
 <h2>Connecting to a community server<a class="headerlink" href="#connecting-to-a-community-server" title="Permalink to this heading"></a></h2>
-<p>Our publicly available community server is available at <cite>koina.proteomicsdb.org:443</cite>.
+<p>Our publicly available community server is available at <cite>koina.wilhelmlab.org:443</cite>.
 If you want to connect to it, you need to have the following flags in your config file (default settings):</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">   </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.proteomicsdb.org:443&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.wilhelmlab.org:443&quot;</span><span class="p">,</span>
 <span class="w">   </span><span class="nt">&quot;ssl&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="p">}</span>
 </pre></div>
@@ -125,16 +125,16 @@ If you want to connect to it, you need to have the following flags in your confi
 <tr class="row-even"><td><p>Prosit_2019_intensity</p></td>
 <td><p>Developed for HCD tryptic peptides only. We recommend using the Prosit_2020_intensity_HCD model instead, since it showed slightly superior performance on tryptic peptides as well.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_HCD/infer">Prosit_2020_intensity_HCD</a></p></td>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_HCD/infer">Prosit_2020_intensity_HCD</a></p></td>
 <td><p>Developed for HCD tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for HCD.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_CID/infer">Prosit_2020_intensity_CID</a></p></td>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_CID/infer">Prosit_2020_intensity_CID</a></p></td>
 <td><p>Developed for CID tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for CID.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2020_intensity_TMT/infer">Prosit_2020_intensity_TMT</a></p></td>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_TMT/infer">Prosit_2020_intensity_TMT</a></p></td>
 <td><p>Developed for HCD and CID, tryptic and non-tryptic peptides. Latest version we commend for TMT labeled peptides in general.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2023_intensity_timsTOF/infer">Prosit_2023_intensity_timsTOF</a></p></td>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer">Prosit_2023_intensity_timsTOF</a></p></td>
 <td><p>Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.</p></td>
 </tr>
 </tbody>
@@ -146,10 +146,10 @@ If you want to connect to it, you need to have the following flags in your confi
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs#post-/Prosit_2019_irt/infer">Prosit_2019_irt</a></p></td>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2019_irt/infer">Prosit_2019_irt</a></p></td>
 <td><p>While developed for tryptic peptides only, we did not observe a drop in prediction performance for non-tryptic peptides.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference external" href="https://koina.proteomicsdb.org/docs/#post-/Prosit_2020_irt_TMT/infer">Prosit_2020_irt_TMT</a></p></td>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs/#post-/Prosit_2020_irt_TMT/infer">Prosit_2020_irt_TMT</a></p></td>
 <td><p>Developed for TMT labeled peptides.</p></td>
 </tr>
 </tbody>
@@ -158,7 +158,7 @@ If you want to connect to it, you need to have the following flags in your confi
 </section>
 <section id="hosting-and-adding-your-own-models">
 <h2>Hosting and adding your own models<a class="headerlink" href="#hosting-and-adding-your-own-models" title="Permalink to this heading"></a></h2>
-<p>In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official <a class="reference external" href="https://koina.proteomicsdb.org/docs#overview">Koina documentation</a>.</p>
+<p>In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official <a class="reference external" href="https://koina.wilhelmlab.org/docs#overview">Koina documentation</a>.</p>
 </section>
 </section>
 
