@@ -118,11 +118,16 @@ def joint_plot(
         height=10,
         joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
+    jplot.ax_joint.axhline(y=0, c="red")
+    jplot.ax_joint.axvline(x=0, c="red")
+    jplot.ax_marg_y.axhline(y=0, c="red")
+    jplot.ax_marg_x.axvline(x=0, c="red")
+
     jplot.ax_joint.set_ylabel("Score\n(peptide property prediction)")
     jplot.ax_joint.set_xlabel("Score\n(search engine)")
     jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
-    plt.plot()
+    plt.show()
     plt.close()
 
 
@@ -196,7 +201,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel("number of lost-common-shared targets below 1% FDR")
+    ax.set_ylabel(f"number of target {level.lower()}s below 1% FDR")
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="black")
     ax.tick_params(axis="y", which="major")
@@ -207,7 +212,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
     plt.savefig(filename, dpi=300, bbox_inches="tight")
-    plt.plot()
+    plt.show()
     plt.close()
 
 
@@ -236,7 +241,11 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
-    ax.axvline(x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()], color="red")
+    ax.axvline(
+        x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()] - sa_ce_df["COLLISION_ENERGY"].min(),
+        color="red",
+    )
+    plt.xticks(rotation=90)
     plt.grid()
     plt.savefig(filename, dpi=300)
     plt.plot()
