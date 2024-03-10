@@ -34,7 +34,7 @@ class Koina:
     def __init__(
         self,
         model_name: str,
-        server_url: str = "koina.proteomicsdb.org:443",
+        server_url: str = "koina.wilhelmlab.org:443",
         ssl: bool = True,
         targets: Optional[List[str]] = None,
         disable_progress_bar: bool = False,
@@ -49,7 +49,7 @@ class Koina:
         and that the specified model is available on the server.
 
         :param model_name: The name of the Koina model to be used for inference.
-        :param server_url: The URL of the inference server. Defaults to "koina.proteomicsdb.org:443".
+        :param server_url: The URL of the inference server. Defaults to "koina.wilhelmlab.org:443".
         :param ssl: Indicates whether to use SSL for communication with the server. Defaults to True.
         :param targets: An optional list of targets to predict. If this is None, all model targets are
             predicted and received.
@@ -100,7 +100,7 @@ class Koina:
             if not self.client.is_server_live():
                 raise ValueError("Server not yet started.")
         except InferenceServerException as e:
-            if self.url == "koina.proteomicsdb.org:443":
+            if self.url in ["koina.wilhelmlab.org:443", "koina.proteomicsdb.org:443"]:
                 if self.ssl:
                     raise InferenceServerException(
                         "The public koina network seems to be inaccessible at the moment. "

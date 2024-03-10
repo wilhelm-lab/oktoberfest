@@ -65,7 +65,7 @@ Example config file:
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "regressionMethod": "spline",
         "ssl": true,
@@ -138,7 +138,7 @@ Example config file:
             "specialAas": "KR",
             "db": "concat"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "ssl": true
     }
@@ -190,7 +190,7 @@ Example config file:
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "fdr_estimation_method": "mokapot",
         "allFeatures": false,
