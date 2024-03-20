@@ -179,12 +179,6 @@ def rescore_with_mokapot(
 
     np.random.seed(123)
 
-    df = pd.read_csv(input_file, sep="\t", index=False)
-
-    # TODO remove this if not necessary
-    df = df.rename(columns={"Protein": "Proteins"})
-    df.to_csv(input_file, sep="\t")
-
     psms = mokapot.read_pin(input_file)
     logger.info(f"Number of PSMs used for training: {len(psms)}")
 
