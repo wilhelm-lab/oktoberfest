@@ -191,12 +191,14 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
+                f.close()
     else:
         best_ce = 35
         library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
+            f.close()
 
 
 def _speclib_from_digestion(config: Config) -> Spectra:
@@ -370,7 +372,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize, :],
+                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
