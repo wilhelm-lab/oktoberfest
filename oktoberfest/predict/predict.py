@@ -121,7 +121,6 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
-    logger.info(alignment_library.spectra_data)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
     alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
     _alignment(alignment_library)
@@ -137,10 +136,10 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0].toarray()
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0].toarray()
+    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
+    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
     alignment_library.spectra_data = alignment_library.spectra_data[
-        alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] != 0, :
+        alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] != 0
     ]
