@@ -40,7 +40,7 @@ class TestTMTProsit(unittest.TestCase):
             library.spectra_data.obs["PREDICTED_IRT"].dtype
         )
 
-        # pd.testing.assert_frame_equal(library.spectra_daa, expected_df)
+        pd.testing.assert_frame_equal(library.convert_to_df(), expected_df)
 
     def test_failing_koina(self):
         """Test koina with input data that does not fit to the model to trigger exception handling."""
