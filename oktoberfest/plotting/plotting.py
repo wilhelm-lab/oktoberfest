@@ -289,9 +289,6 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     :param filename: the path to the location used for storing the plot
     """
     _, _, _, psm_col = _check_columns(target_df)
-
-    prosit_df["SpecId"] = prosit_df["SpecId"].astype("string")
-    target_df[psm_col] = target_df[psm_col].astype("string")
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
@@ -349,14 +346,12 @@ def plot_all(data_dir: Path):
         "psm",
         data_dir / "original_target_vs_decoys_psm_bins.svg",
     )
-
     plot_sa_distribution(
         prosit_df,
         prosit_psms_target,
         prosit_psms_decoy,
         data_dir / "target_vs_decoys_sa_distribution.svg",
     )
-
     joint_plot(
         prosit_pep_target,
         prosit_pep_decoy,
@@ -365,7 +360,6 @@ def plot_all(data_dir: Path):
         "peptide",
         data_dir / "rescore_original_joint_plot_peptide.svg",
     )
-
     joint_plot(
         prosit_psms_target,
         prosit_psms_decoy,
