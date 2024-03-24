@@ -9,7 +9,7 @@ import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 from spectrum_io.file import hdf5
 
 logger = logging.getLogger(__name__)
@@ -32,17 +32,20 @@ class Spectra:
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
     INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
     MZ_COLUMN_PREFIX = "MZ_RAW"
+    INTENSITY_PRED_LAYER_NAME = "pred_int"
+    INTENSITY_LAYER_NAME = "raw_int"
+    MZ_LAYER_NAME = "mz"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
     spectra_data: AnnData
 
     def __init__(self, size):
         """Initialize spectra data as an AnnData object."""
-        vars_df = self.gen_vars_df()
+        vars_df = self._gen_vars_df()
         self.spectra_data = AnnData(shape=size, var=vars_df)
 
     @staticmethod
-    def gen_vars_df() -> pd.DataFrame:
+    def _gen_vars_df() -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
@@ -88,9 +91,25 @@ class Spectra:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
             prefix = Spectra.INTENSITY_COLUMN_PREFIX
-        else:
+        elif fragment_type.value == 3:
             prefix = Spectra.MZ_COLUMN_PREFIX
         return prefix
+
+    @staticmethod
+    def _resolve_layer_name(fragment_type: FragmentType) -> str:
+        """
+        Resolve layer name given fragment type (1 for pred, 2 for raw, 3 for mz).
+
+        :param fragment_type: choose predicted, raw, or mz
+        :return: layer name as string
+        """
+        if fragment_type.value == 1:
+            layer = Spectra.INTENSITY_PRED_LAYER_NAME
+        elif fragment_type.value == 2:
+            layer = Spectra.INTENSITY_LAYER_NAME
+        elif fragment_type.value == 3:
+            layer = Spectra.MZ_LAYER_NAME
+        return layer
 
     def add_column(self, column_data: np.ndarray, name: str) -> None:
         """
@@ -117,7 +136,7 @@ class Spectra:
 
         # replaces X and layers (their shape can't be changed)
         if mz_cols:
-            self.spectra_data.X = scipy.sparse.csr_matrix(columns_data[mz_cols])
+            self.spectra_data.layers["mz"] = scipy.sparse.csr_matrix(columns_data[mz_cols])
         if pred_int_cols:
             self.spectra_data.layers["pred_int"] = scipy.sparse.csr_matrix(columns_data[pred_int_cols])
         if raw_int_cols:
@@ -137,12 +156,8 @@ class Spectra:
         :param fragment_type: choose predicted, raw, or mz
         """
         # add sparse matrix of intensities to corresponding layer
-        if fragment_type.value == 1:
-            self.spectra_data.layers["pred_int"] = scipy.sparse.csr_matrix(intensity_data)
-        elif fragment_type.value == 2:
-            self.spectra_data.layers["raw_int"] = scipy.sparse.csr_matrix(intensity_data)
-        else:
-            self.spectra_data.X = scipy.sparse.csr_matrix(intensity_data)
+        layer = self._resolve_layer_name(fragment_type)
+        self.spectra_data.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
     def add_matrix(self, intensity_data, fragment_type: FragmentType, annotation=None) -> None:
         """
@@ -151,43 +166,22 @@ class Spectra:
         :param intensity_data: intensity numpy array to add
         :param fragment_type: choose predicted, raw, or mz
         """
-        intensity_array = np.array(intensity_data)
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
-        intensity_array[intensity_array == 0] = c.EPSILON
-        intensity_array[intensity_array == -1] = 0.0
+        intensity_data[intensity_data == 0] = c.EPSILON
+        intensity_data[intensity_data == -1] = 0.0
+
+        intensity_data = csr_matrix(intensity_data)
+
+        layer = self._resolve_layer_name(fragment_type)
 
         if annotation:
-            self.spectra_data.layers["pred_int"] = csr_matrix(intensity_array.shape)
-            index = index = [list(self.spectra_data.var_names).index(i) for i in annotation]
-            self.spectra_data.layers["pred_int"][:, index] = intensity_array
+            if self.spectra_data.layers[layer] is None:
+                self.spectra_data.layers[layer] = csr_matrix(intensity_data.shape)
+            index = [list(self.spectra_data.var_names).index(i) for i in annotation]
+            self.spectra_data.layers[layer][:, index] = intensity_data
         else:
-            # generate column names and build dataframe from sparse matrix
-            intensity_df = pd.DataFrame.sparse.from_spmatrix(coo_matrix(intensity_array, dtype=np.float32))
-            columns = self._gen_column_names(fragment_type)
-            intensity_df.columns = columns
-            self.add_columns(intensity_df)
-
-    def get_columns(self, fragment_type: FragmentType, return_column_names: bool = False) -> coo_matrix:
-        """
-        Get intensities sparse matrix from dataframe.
-
-        :param fragment_type: choose predicted, raw, or mz
-        :param return_column_names: whether column names should be returned
-        :return: sparse matrix with the required data
-        """
-        prefix = Spectra._resolve_prefix(fragment_type)
-        logger.debug(prefix)
-
-        if fragment_type.value == 1:
-            matrix = scipy.sparse.csr_matrix(self.spectra_data.layers["pred_int"].toarray())
-        elif fragment_type.value == 2:
-            matrix = scipy.sparse.csr_matrix(self.spectra_data.layers["raw_int"].toarray())
-        else:
-            matrix = scipy.sparse.csr_matrix(self.spectra_data.X.toarray())
-
-        # Check if conversion is low change to coo then csr from coo
-        return matrix, self._gen_column_names(fragment_type) if return_column_names else matrix
+            self.spectra_data.layers[layer] = intensity_data
 
     def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
         """
@@ -196,15 +190,12 @@ class Spectra:
         :param fragment_type: choose predicted, raw, or mz
         :return: sparse matrix with the required data
         """
-        prefix = Spectra._resolve_prefix(fragment_type)
+        prefix = self._resolve_prefix(fragment_type)
         logger.debug(prefix)
-        if fragment_type.value == 1:
-            matrix = self.spectra_data.layers["pred_int"]
-        elif fragment_type.value == 2:
-            matrix = self.spectra_data.layers["raw_int"]
-        else:
-            matrix = self.spectra_data.X
-        # Check if conversion is low change to coo then csr from coo
+
+        layer = self._resolve_layer_name(fragment_type)
+        matrix = self.spectra_data.layers[layer]
+
         return matrix, self._gen_column_names(fragment_type)
 
     def write_as_hdf5(self, output_file: Union[str, Path], include_intensities: bool = False) -> Thread:
@@ -214,6 +205,10 @@ class Spectra:
         :param output_file: path to output file
         :return: the thread object from the hdf5 writer for later joining
         """
+        logger.info(self.spectra_data.layers)
+        logger.info(self.spectra_data.obs.dtypes)
+        # self.spectra_data.write(output_file, compression='gzip')
+
         data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
         meta_data = self.get_meta_data()
         if include_intensities:
@@ -256,6 +251,12 @@ class Spectra:
         :param input_file: path to input file
         :return: a spectra instance
         """
+        """
+        input_file = str(input_file)
+        data = anndata.read_hdf(input_file,key="raw_mz")
+        spectra = cls(data.shape)
+        spectra.spectra_data = data
+        """
         input_file = str(input_file)
         sparse_raw_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}")
         sparse_raw_mzs = hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}")
@@ -289,10 +290,19 @@ class Spectra:
 
         :return: a pandas DataFrame
         """
-        df = self.spectra_data.obs
-        mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
-        mz_cols.columns = self._gen_column_names(FragmentType.MZ)
-        raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
-        raw_cols.columns = self._gen_column_names(FragmentType.RAW)
-        df_merged = pd.concat([df, pd.concat([mz_cols, raw_cols], axis=1)], axis=1)
+        df_merged = self.spectra_data.obs
+        logger.debug(self.spectra_data.obs.columns)
+
+        if "mz" in list(self.spectra_data.layers):
+            mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
+            mz_cols.columns = self._gen_column_names(FragmentType.MZ)
+            df_merged = pd.concat([df_merged,mz_cols], axis=1)
+        if "raw_int" in list(self.spectra_data.layers):
+            raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
+            raw_cols.columns = self._gen_column_names(FragmentType.RAW)
+            df_merged = pd.concat([df_merged, raw_cols], axis=1)
+        if "pred_int" in list(self.spectra_data.layers):
+            pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED)[0].toarray())
+            pred_cols.columns = self._gen_column_names(FragmentType.PRED)
+            df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
