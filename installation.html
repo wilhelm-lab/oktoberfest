@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; Oktoberfest 0.6.1 documentation</title>
+  <title>Installation &mdash; Oktoberfest 0.6.2 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=09aae1b8"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.1
+                0.6.2
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -52,9 +52,14 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#using-pip-recommended">Using pip (recommended)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#docker-image">Docker image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installer-script-debian-ubuntu-only">Installer script (Debian / Ubuntu only)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#docker-image">Docker Image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#manual-installation">Manual installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#install-python">Install Python</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optional-dependencies">Optional dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installing-oktoberfest">Installing Oktoberfest</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Principles</a></li>
@@ -89,24 +94,20 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
-<section id="prerequisites">
-<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading"></a></h2>
-<p>Oktoberfest requires python &gt;=3.8,&lt;=3.11. Best practise is to use a clean conda environment (<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>).</p>
-<p>If you provide RAW files, you need ThermoRawFileParser for conversion to mzML.
-Please download the latest release from the <a class="reference external" href="https://github.com/compomics/ThermoRawFileParser">github repository</a> using the provided zip file and unpack it in the desired location.
-On linux and MacOS, the default location is “/opt/compomics/”. On Windows, the default location is the directory from which Oktoberfest is executed.
-You can provide the location of the executable in the config file when starting an Oktoberfest run.</p>
-<p>To make ThermoRawFileParser work on linux or MacOS, make sure mono <a class="reference external" href="https://www.mono-project.com/">mono</a> is installed.</p>
-<p>If you want to use percolator for rescoring, make sure you install version 3.06.1 (<a class="reference external" href="https://github.com/percolator/percolator/releases/tag/rel-3-06-01">percolator</a>).</p>
-</section>
-<section id="using-pip-recommended">
-<h2>Using pip (recommended)<a class="headerlink" href="#using-pip-recommended" title="Permalink to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>oktoberfest
+<p>Oktoberfest can be installed on all three major platforms (Linux, MacOS, Windows).</p>
+<p>An installer script is provided for Linux (installers for MacOS and Windows are currently prepared), which takes care of all dependencies. For MacOS and Windows, the Docker container or manual installation can be used.</p>
+<section id="installer-script-debian-ubuntu-only">
+<h2>Installer script (Debian / Ubuntu only)<a class="headerlink" href="#installer-script-debian-ubuntu-only" title="Permalink to this heading"></a></h2>
+<p>The installer script automatically installs dependencies and creates a new conda environment for oktoberfest. The installation takes roughly 5 minutes and follows the steps outlined in the manual installation below. Get the installer and execute the script using</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://raw.githubusercontent.com/wilhelm-lab/oktoberfest/main/installer.sh<span class="w"> </span>-O<span class="w"> </span>install_oktoberfest.sh
+bash<span class="w"> </span>install_oktoberfest.sh
 </pre></div>
 </div>
+<p>The installer searches for existing anaconda / miniconda installation. If none was found, it will download and install miniconda.</p>
 </section>
 <section id="docker-image">
-<h2>Docker image<a class="headerlink" href="#docker-image" title="Permalink to this heading"></a></h2>
+<h2>Docker Image<a class="headerlink" href="#docker-image" title="Permalink to this heading"></a></h2>
+<p>This is only recommended for experienced users and can take up to 30 minutes to install, depending on experience.</p>
 <dl class="simple">
 <dt>Prerequisites:</dt><dd><ul class="simple">
 <li><p><a class="reference external" href="https://www.gnu.org/software/make/">make</a></p></li>
@@ -119,6 +120,41 @@ The latest stable version is always on the main branch. Then build the container
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>build
 </pre></div>
 </div>
+</section>
+<section id="manual-installation">
+<h2>Manual installation<a class="headerlink" href="#manual-installation" title="Permalink to this heading"></a></h2>
+<p>This is a step-by-step guide for the manual installation of all mandatory and optional dependencies which should roughly take up to 20 minutes if all dependencies are installed.</p>
+<section id="install-python">
+<h3>Install Python<a class="headerlink" href="#install-python" title="Permalink to this heading"></a></h3>
+<p>Oktoberfest requires python &gt;=3.8 and &lt;=3.11. Best practise is to use a clean conda environment (<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>).
+Follow the installation guide for your operating system, then create a new environment using</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>oktoberfest<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.10
+</pre></div>
+</div>
+</section>
+<section id="optional-dependencies">
+<h3>Optional dependencies<a class="headerlink" href="#optional-dependencies" title="Permalink to this heading"></a></h3>
+<p>There are three dependencies that are required for specific tasks:</p>
+<p><a class="reference external" href="https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3">ThermoRawFileParser v1.4.3</a>:
+For conversion of RAW to mzML format. Download and unpack the zip or tar.gz file. The default locations Oktoberfest expects the executable to be at “/opt/compomics/” (Linux/MacOS) or the folder from which you want to execute Oktoberfest (Windows).
+You do not need this package if you only ever provide mzML file. However, it is recommended let Oktoberfest convert RAW files for you, to ensure the mzML files are formatted in the way Oktoberfest expects it.
+For ThermoRawFileParser to work on Linux, you also need to ensure mono is installed using</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>apt<span class="w"> </span>-y<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>-y<span class="w"> </span>install<span class="w"> </span>mono-devel<span class="w">  </span><span class="c1"># Debian / Ubuntu</span>
+</pre></div>
+</div>
+<p>For MacOS, follow the instructions provided by <a class="reference external" href="https://www.mono-project.com/docs/getting-started/install/mac/">Mono</a>.</p>
+<p><a class="reference external" href="https://github.com/percolator/percolator/releases/tag/rel-3-06-01">Percolator v3.06.1</a>:
+This is the tool Mokapot is based on. As it has more options and is generally more stable wrt. to FDR cutoffs and deduplication, it is recommended to use this tool instead of Mokapot.
+Installable packages are provided for Linux/MacOS/Windows.</p>
+</section>
+<section id="installing-oktoberfest">
+<h3>Installing Oktoberfest<a class="headerlink" href="#installing-oktoberfest" title="Permalink to this heading"></a></h3>
+<p>Oktoberfest is listed on the Python Package Index (PyPI) and can be installed with pip. Activate your conda environment (or skip this if you use a system wide python installation) and install the package (and optionally jupyterlab) using</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>oktoberfest
+pip<span class="w"> </span>install<span class="w"> </span>oktoberfest<span class="w"> </span>jupyterlab
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
