@@ -1,16 +1,14 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from threading import Thread
 from typing import List, Tuple, Type, TypeVar, Union
 
+import anndata
 import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from anndata import AnnData
 from scipy.sparse import csr_matrix
-from spectrum_io.file import hdf5
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +35,12 @@ class Spectra:
     MZ_LAYER_NAME = "mz"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
-    spectra_data: AnnData
+    spectra_data: anndata.AnnData
 
     def __init__(self, size):
         """Initialize spectra data as an AnnData object."""
         vars_df = self._gen_vars_df()
-        self.spectra_data = AnnData(shape=size, var=vars_df)
+        self.spectra_data = anndata.AnnData(shape=size, var=vars_df)
 
     @staticmethod
     def _gen_vars_df() -> pd.DataFrame:
@@ -198,50 +196,13 @@ class Spectra:
 
         return matrix, self._gen_column_names(fragment_type)
 
-    def write_as_hdf5(self, output_file: Union[str, Path], include_intensities: bool = False) -> Thread:
+    def write_as_hdf5(self, output_file: Union[str, Path]):
         """
-        Write intensity and mz data as hdf5.
+        Write spectra_data to hdf5 file.
 
         :param output_file: path to output file
-        :return: the thread object from the hdf5 writer for later joining
         """
-        logger.info(self.spectra_data.layers)
-        logger.info(self.spectra_data.obs.dtypes)
-        # self.spectra_data.write(output_file, compression='gzip')
-
-        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY]
-        meta_data = self.get_meta_data()
-        if include_intensities:
-            sparse_matrix_mz, columns_mz = self.get_matrix(FragmentType.MZ)
-            sparse_matrix_intensity_raw, columns_intensity = self.get_matrix(FragmentType.RAW)
-        else:
-            columns_mz = self._gen_column_names(FragmentType.MZ)
-            columns_intensity = self._gen_column_names(FragmentType.RAW)
-            sparse_matrix_mz = scipy.sparse.csr_matrix(np.zeros((len(meta_data), 174)))
-            sparse_matrix_intensity_raw = scipy.sparse.csr_matrix(np.zeros((len(meta_data), 174)))
-
-        data_sets = [meta_data, sparse_matrix_intensity_raw, sparse_matrix_mz]
-        column_names = [columns_intensity, columns_mz]
-
-        return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
-
-    def write_pred_as_hdf5(self, output_file: Union[str, Path]) -> Thread:
-        """
-        Write intensity, mz, and pred data as hdf5.
-
-        :param output_file: path to output file
-        :return: the thread object from the hdf5 writer for later joining
-
-        """
-        data_set_names = [hdf5.META_DATA_KEY, hdf5.INTENSITY_RAW_KEY, hdf5.MZ_RAW_KEY, hdf5.INTENSITY_PRED_KEY]
-
-        sparse_matrix_intensity_raw, columns_intensity = self.get_matrix(FragmentType.RAW)
-        sparse_matrix_mz, columns_mz = self.get_matrix(FragmentType.MZ)
-        sparse_matrix_pred, columns_pred = self.get_matrix(FragmentType.PRED)
-        data_sets = [self.get_meta_data(), sparse_matrix_intensity_raw, sparse_matrix_mz, sparse_matrix_pred]
-        column_names = [columns_intensity, columns_mz, columns_pred]
-
-        return hdf5.write_file(data_sets, output_file, data_set_names, column_names)
+        self.spectra_data.write(output_file, compression="gzip")
 
     @classmethod
     def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]):
@@ -251,21 +212,12 @@ class Spectra:
         :param input_file: path to input file
         :return: a spectra instance
         """
-        """
         input_file = str(input_file)
-        data = anndata.read_hdf(input_file,key="raw_mz")
-        spectra = cls(data.shape)
-        spectra.spectra_data = data
-        """
-        input_file = str(input_file)
-        sparse_raw_intensities = hdf5.read_file(input_file, f"sparse_{hdf5.INTENSITY_RAW_KEY}")
-        sparse_raw_mzs = hdf5.read_file(input_file, f"sparse_{hdf5.MZ_RAW_KEY}")
-        spectra = cls(sparse_raw_intensities.shape)
-        if not sparse_raw_intensities.empty:
-            spectra.add_matrix_from_hdf5(sparse_raw_intensities, FragmentType.RAW)
-        if not sparse_raw_mzs.empty:
-            spectra.add_matrix_from_hdf5(sparse_raw_mzs, FragmentType.MZ)
-        spectra.add_columns(hdf5.read_file(input_file, hdf5.META_DATA_KEY))
+        ann = anndata.read_h5ad(input_file)
+
+        spectra = cls(ann.shape)
+        spectra.spectra_data = ann
+
         return spectra
 
     @classmethod
@@ -296,7 +248,7 @@ class Spectra:
         if "mz" in list(self.spectra_data.layers):
             mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
             mz_cols.columns = self._gen_column_names(FragmentType.MZ)
-            df_merged = pd.concat([df_merged,mz_cols], axis=1)
+            df_merged = pd.concat([df_merged, mz_cols], axis=1)
         if "raw_int" in list(self.spectra_data.layers):
             raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
             raw_cols.columns = self._gen_column_names(FragmentType.RAW)
