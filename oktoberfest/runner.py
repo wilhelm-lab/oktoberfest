@@ -78,7 +78,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
         # filter search results
-        search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
+        pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -126,7 +126,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path, True).join()  # write_metadata_annotation
+        library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
     return library
 
@@ -241,7 +241,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
         spec_library = pp.process_and_filter_spectra_data(
             library=spec_library, model=config.models["intensity"], tmt_label=config.tag
         )
-        spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5").join()
+        spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
         pp_and_filter_step.mark_done()
     else:
         spec_library = Spectra.from_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
@@ -433,7 +433,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     library = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
     _get_best_ce(library, spectra_file, config)
 
-    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name, True).join()
+    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
 
@@ -492,7 +492,7 @@ def _calculate_features(spectra_file: Path, config: Config):
 
     library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
     library.add_column(sum(pred_irts["irt"].tolist(), []), name="PREDICTED_IRT")
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
+    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
