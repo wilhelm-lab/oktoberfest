@@ -135,7 +135,7 @@ def digest(
     )
 
 
-def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str) -> pd.DataFrame:
+def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results to support a given peptide prediction model.
 
@@ -147,7 +147,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
 
     :raises ValueError: if an unsupported model is supplied
 
-    :return: The filtered dataframe to be used with the given model.
+    :return: The filtered dataframe or AnnData object to be used with the given model.
     """
     if "prosit" in model.lower():
         filter_kwargs = {
@@ -158,10 +158,12 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
     else:
         raise ValueError(f"The model {model} is not known.")
 
-    filter_peptides(peptides, **filter_kwargs)
+    return filter_peptides(peptides, **filter_kwargs)
 
 
-def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int):
+def filter_peptides(
+    peptides: Union[pd.DataFrame, AnnData], min_length: int, max_length: int, max_charge: int
+) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results using given constraints.
 
@@ -173,19 +175,23 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
     :param max_length: The maximal length of a peptide to be retained
     :param max_charge: The maximal precursor charge of a peptide to be retained
 
-    :return: The filtered dataframe given the provided constraints.
+    :return: The filtered dataframe or AnnData object given the provided constraints.
     """
     if isinstance(peptides, AnnData):
-        peptides = peptides.obs
-    peptides[
-        (peptides["PEPTIDE_LENGTH"] <= max_length)
-        & (peptides["PEPTIDE_LENGTH"] >= min_length)
-        & (peptides["PRECURSOR_CHARGE"] <= max_charge)
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains("U|X"))
-    ]
+        df = peptides.obs
+    else:
+        df = peptides
+    peptide_filter = (
+        (df["PEPTIDE_LENGTH"] <= max_length)
+        & (df["PEPTIDE_LENGTH"] >= min_length)
+        & (df["PRECURSOR_CHARGE"] <= max_charge)
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
+        & (~df["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
+    )
+
+    return peptides[peptide_filter]
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:

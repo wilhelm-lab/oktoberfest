@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple, Type, TypeVar, Union
+from typing import List, Optional, Tuple, Type, TypeVar, Union
 
 import anndata
 import numpy as np
@@ -157,12 +157,15 @@ class Spectra:
         layer = self._resolve_layer_name(fragment_type)
         self.spectra_data.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
-    def add_matrix(self, intensity_data, fragment_type: FragmentType, annotation=None) -> None:
+    def add_matrix(
+        self, intensity_data: np.ndarray, fragment_type: FragmentType, annotation: Optional[np.ndarray] = None
+    ) -> None:
         """
         Concatenate intensity df as a sparse matrix to our data.
 
-        :param intensity_data: intensity numpy array to add
+        :param intensity_data: intensity numpy array to add with shape (n x m)
         :param fragment_type: choose predicted, raw, or mz
+        :param annotation: Optional fragment ion annotations in ProForma notation with shape (n x m)
         """
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)

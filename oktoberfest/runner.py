@@ -78,7 +78,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
         # filter search results
-        pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
+        search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -385,7 +385,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                     total=n_batches, desc="Writing library", postfix={"successful": 0, "missing": 0}
                 ) as writer_pbar:
                     consumer_process.start()
-
                     with tqdm(
                         total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
                     ) as predictor_pbar:
@@ -477,22 +476,25 @@ def _calculate_features(spectra_file: Path, config: Config):
     if calc_feature_step.is_done():
         return
 
-    predict_kwargs = {
-        "server_url": config.prediction_server,
-        "ssl": config.ssl,
-    }
+    predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
+    if not predict_step.is_done():
 
-    pred_intensities = pr.predict(
-        data=library.spectra_data,
-        model_name=config.models["intensity"],
-        **predict_kwargs,
-    )
+        predict_kwargs = {
+            "server_url": config.prediction_server,
+            "ssl": config.ssl,
+        }
 
-    pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
+        pred_intensities = pr.predict(
+            data=library.spectra_data,
+            model_name=config.models["intensity"],
+            **predict_kwargs,
+        )
 
-    library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
-    library.add_column(sum(pred_irts["irt"].tolist(), []), name="PREDICTED_IRT")
-    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+        pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
+        library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
+        library.add_column(sum(pred_irts["irt"].tolist(), []), name="PREDICTED_IRT")
+        library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+        predict_step.mark_done()
 
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
