@@ -37,9 +37,8 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    library = Spectra((len(library_df), 174))
-    library.add_columns(library_df)
-    return library
+    var_df = Spectra._gen_vars_df()
+    return Spectra(obs=library_df, var=var_df)
 
 
 def generate_metadata(
@@ -198,7 +197,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     """
     Process and filter the spectra data in the given SpectralLibrary object.
 
-    This function applies various modifications and filters to the 'spectra_data' DataFrame
+    This function applies various modifications and filters to the obs DataFrame
     in the provided SpectralLibrary object. It modifies the 'MODIFIED_SEQUENCE' column,
     converts the 'MODIFIED_SEQUENCE' to internal format, extracts 'SEQUENCE', and filters
     out certain entries based on specific criteria. The specification of the internal file format can be found at
@@ -211,29 +210,23 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     :return: The processed and filtered Spectra object
     """
     # add fixed mods and translate to internal format
-    library.spectra_data.obs["MODIFIED_SEQUENCE"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
-        lambda x: "_" + x + "_"
-    )
+    library.obs["MODIFIED_SEQUENCE"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
 
     fixed_mods = {"C": "C[UNIMOD:4]"}
     if tmt_label is not None and tmt_label != "":
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.spectra_data.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-        library.spectra_data.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
-    )
+    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods)
 
     # get sequence and its length
-    library.spectra_data.obs["SEQUENCE"] = internal_without_mods(library.spectra_data.obs["MODIFIED_SEQUENCE"])
-    library.spectra_data.obs["PEPTIDE_LENGTH"] = library.spectra_data.obs["SEQUENCE"].apply(lambda x: len(x))
+    library.obs["SEQUENCE"] = internal_without_mods(library.obs["MODIFIED_SEQUENCE"])
+    library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    filter_peptides_for_model(library.spectra_data, model)
+    filter_peptides_for_model(library, model)
 
-    library.spectra_data.obs["MASS"] = library.spectra_data.obs["MODIFIED_SEQUENCE"].apply(
-        lambda x: compute_peptide_mass(x)
-    )
+    library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
 
@@ -516,9 +509,10 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
+    # psms.set_index(TODO)
+    var_df = Spectra._gen_vars_df()
 
-    library = Spectra((len(psms), 174))
-    library.add_columns(psms)
+    library = Spectra(obs=psms, var=var_df)
 
     return library
 
@@ -542,7 +536,7 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     psms.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
     psms.add_matrix(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     psms.spectra_data.obs = psms.spectra_data.obs.drop(["INTENSITIES", "MZ"], axis=1)
-    psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
+    psms.add_column(df_annotated_spectra["CALCULATED_MASS"])
 
 
 def load_spectra(

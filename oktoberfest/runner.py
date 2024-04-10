@@ -134,7 +134,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.spectra_data.obs["FRAGMENTATION"] == "HCD").any():
+    if (library.obs["FRAGMENTATION"] == "HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -146,7 +146,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
-                alignment_library.spectra_data.obs.groupby(
+                alignment_library.obs.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
                 )["SPECTRAL_ANGLE"]
                 .mean()
@@ -171,13 +171,11 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     title=title,
                 )
 
-            delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
-            library.spectra_data.obs["COLLISION_ENERGY"] = np.maximum(
-                0, library.spectra_data.obs["COLLISION_ENERGY"] + delta_ce
-            )
+            delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
+            library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
 
         else:
-            ce_alignment = alignment_library.spectra_data.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
 
             best_ce = ce_alignment.idxmax()
             pl.plot_mean_sa_ce(
@@ -185,16 +183,16 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                 filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
             )
             pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.spectra_data.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
-            library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
+            library.obs["COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
                 f.close()
     else:
         best_ce = 35
-        library.spectra_data.obs["COLLISION_ENERGY"] = best_ce
+        library.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
@@ -335,7 +333,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         batchsize = config.batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
-        batches, mode = _get_batches_and_mode(out_file, failed_batch_file, len(spec_library.spectra_data), batchsize)
+        batches, mode = _get_batches_and_mode(out_file, failed_batch_file, spec_library.n_obs, batchsize)
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
 
@@ -372,7 +370,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.spectra_data[i * batchsize : (i + 1) * batchsize],
+                            spec_library.obs[i * batchsize : (i + 1) * batchsize],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
@@ -485,14 +483,14 @@ def _calculate_features(spectra_file: Path, config: Config):
         }
 
         pred_intensities = pr.predict(
-            data=library.spectra_data,
+            data=library,
             model_name=config.models["intensity"],
             **predict_kwargs,
         )
 
-        pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
+        pred_irts = pr.predict(data=library, model_name=config.models["irt"], **predict_kwargs)
         library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
-        library.add_column(sum(pred_irts["irt"].tolist(), []), name="PREDICTED_IRT")
+        library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()
 

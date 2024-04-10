@@ -24,7 +24,7 @@ class FragmentType(Enum):
     MZ = 3
 
 
-class Spectra:
+class Spectra(anndata.AnnData):
     """Main to init spectra data."""
 
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
@@ -34,13 +34,6 @@ class Spectra:
     INTENSITY_LAYER_NAME = "raw_int"
     MZ_LAYER_NAME = "mz"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
-
-    spectra_data: anndata.AnnData
-
-    def __init__(self, size):
-        """Initialize spectra data as an AnnData object."""
-        vars_df = self._gen_vars_df()
-        self.spectra_data = anndata.AnnData(shape=size, var=vars_df)
 
     @staticmethod
     def _gen_vars_df() -> pd.DataFrame:
@@ -109,42 +102,32 @@ class Spectra:
             layer = Spectra.MZ_LAYER_NAME
         return layer
 
-    def add_column(self, column_data: np.ndarray, name: str) -> None:
+    def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
         """
         Add column to spectra data.
 
-        :param column_data: data for a column as np
-        :param name: name of the column
-        """
-        column_df = pd.DataFrame({name: list(column_data)})
-        self.spectra_data.obs = pd.concat([self.spectra_data.obs.reset_index(drop=True), column_df], axis=1)
+        :param data: data for a column as np
+        :param name: Optional name of the column, required if providing data as a numpy array.
+            In case of a pd.Series, providing a name replaces the series' name.
 
-    def add_columns(self, columns_data: pd.DataFrame) -> None:
+        :raises AssertionError: if data is not 1-dimensional or a column name is missing when
+            providing a numpy array.
+        :raises TypeError: if the data type is not understood
         """
-        Assigns columns to the datastructures in AnnData based on what type they are.
-
-        :param columns_data: a pandas data frame to add can be metrics or metadata
-        """
-        mz_cols = list(filter(lambda c: c.startswith("MZ_RAW"), columns_data.columns))
-        raw_int_cols = list(filter(lambda c: c.startswith("INTENSITY_RAW"), columns_data.columns))
-        pred_int_cols = list(filter(lambda c: c.startswith("INTENSITY_PRED"), columns_data.columns))
-        meta_cols = list(
-            filter(lambda c: not (c.startswith("INTENSITY") or c.startswith("MZ_RAW")), columns_data.columns)
-        )
-
-        # replaces X and layers (their shape can't be changed)
-        if mz_cols:
-            self.spectra_data.layers["mz"] = scipy.sparse.csr_matrix(columns_data[mz_cols])
-        if pred_int_cols:
-            self.spectra_data.layers["pred_int"] = scipy.sparse.csr_matrix(columns_data[pred_int_cols])
-        if raw_int_cols:
-            self.spectra_data.layers["raw_int"] = scipy.sparse.csr_matrix(columns_data[raw_int_cols])
-        if meta_cols:
-            self.spectra_data.obs = columns_data[meta_cols]
+        if isinstance(data, np.ndarray):
+            if name is None:
+                raise AssertionError("Missing column name.")
+            if data.ndim != 1:
+                raise AssertionError("Column data must be supplied as a 1D numpy array.")
+            self.obs[name] = data
+        elif isinstance(data, pd.Series):
+            self.obs[name or data.name] = data
+        else:
+            raise TypeError(f"Unsupported data type provided: {type(data)}")
 
     def get_meta_data(self) -> pd.DataFrame:
         """Get meta data with intensity, mz and intensity predictions as pd.DataFrame."""
-        return self.spectra_data.obs
+        return self.obs
 
     def add_matrix_from_hdf5(self, intensity_data: pd.DataFrame, fragment_type: FragmentType) -> None:
         """
@@ -155,7 +138,7 @@ class Spectra:
         """
         # add sparse matrix of intensities to corresponding layer
         layer = self._resolve_layer_name(fragment_type)
-        self.spectra_data.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
+        self.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
     def add_matrix(
         self, intensity_data: np.ndarray, fragment_type: FragmentType, annotation: Optional[np.ndarray] = None
@@ -177,12 +160,12 @@ class Spectra:
         layer = self._resolve_layer_name(fragment_type)
 
         if annotation:
-            if self.spectra_data.layers[layer] is None:
-                self.spectra_data.layers[layer] = csr_matrix(intensity_data.shape)
-            index = [list(self.spectra_data.var_names).index(i) for i in annotation]
-            self.spectra_data.layers[layer][:, index] = intensity_data
+            if self.layers[layer] is None:
+                self.layers[layer] = csr_matrix(intensity_data.shape)
+            index = [list(self.var_names).index(i) for i in annotation]
+            self.layers[layer][:, index] = intensity_data
         else:
-            self.spectra_data.layers[layer] = intensity_data
+            self.layers[layer] = intensity_data
 
     def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
         """
@@ -195,7 +178,7 @@ class Spectra:
         logger.debug(prefix)
 
         layer = self._resolve_layer_name(fragment_type)
-        matrix = self.spectra_data.layers[layer]
+        matrix = self.layers[layer]
 
         return matrix, self._gen_column_names(fragment_type)
 
@@ -205,7 +188,7 @@ class Spectra:
 
         :param output_file: path to output file
         """
-        self.spectra_data.write(output_file, compression="gzip")
+        self.write(output_file, compression="gzip")
 
     @classmethod
     def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]):
@@ -215,29 +198,7 @@ class Spectra:
         :param input_file: path to input file
         :return: a spectra instance
         """
-        input_file = str(input_file)
-        ann = anndata.read_h5ad(input_file)
-
-        spectra = cls(ann.shape)
-        spectra.spectra_data = ann
-
-        return spectra
-
-    @classmethod
-    def from_csv(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
-        """
-        Read from hdf5 file.
-
-        :param input_file: path to input file
-        :return: a spectra instance
-        """
-        input_file = str(input_file)
-        all_columns = pd.read_csv(input_file)
-        size = (all_columns.shape[0], 174)
-        spectra = cls(size)
-        spectra.add_columns(all_columns)
-
-        return spectra
+        return cls(anndata.read_h5ad(str(input_file)))
 
     def convert_to_df(self) -> pd.DataFrame:
         """
@@ -245,18 +206,18 @@ class Spectra:
 
         :return: a pandas DataFrame
         """
-        df_merged = self.spectra_data.obs
-        logger.debug(self.spectra_data.obs.columns)
+        df_merged = self.obs
+        logger.debug(self.obs.columns)
 
-        if "mz" in list(self.spectra_data.layers):
+        if "mz" in list(self.layers):
             mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
             mz_cols.columns = self._gen_column_names(FragmentType.MZ)
             df_merged = pd.concat([df_merged, mz_cols], axis=1)
-        if "raw_int" in list(self.spectra_data.layers):
+        if "raw_int" in list(self.layers):
             raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
             raw_cols.columns = self._gen_column_names(FragmentType.RAW)
             df_merged = pd.concat([df_merged, raw_cols], axis=1)
-        if "pred_int" in list(self.spectra_data.layers):
+        if "pred_int" in list(self.layers):
             pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED)[0].toarray())
             pred_cols.columns = self._gen_column_names(FragmentType.PRED)
             df_merged = pd.concat([df_merged, pred_cols], axis=1)

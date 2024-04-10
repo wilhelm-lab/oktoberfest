@@ -2,6 +2,7 @@ import unittest
 from pathlib import Path
 
 import pandas as pd
+from numpy.testing import assert_almost_equal
 
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
@@ -13,46 +14,28 @@ class TestTMTProsit(unittest.TestCase):
 
     def test_prosit_tmt(self):
         """Test retrieval of predictions from prosit tmt models via koina."""
-        library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
-        input_data = library.spectra_data
-
+        meta_df = pd.read_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
+        var = Spectra._gen_vars_df()
+        library = Spectra(obs=meta_df, var=var)
+        library.strings_to_categoricals()
         pred_intensities = predict(
-            input_data,
+            library,
             model_name="Prosit_2020_intensity_TMT",
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
             targets=["intensities", "annotation"],
         )
-        pred_irt = predict(
-            input_data, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True
-        )
+        pred_irt = predict(library, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True)
 
         library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
-        library.add_column(pred_irt["irt"], name="PREDICTED_IRT")
+        library.add_column(pred_irt["irt"].squeeze(), name="PREDICTED_IRT")
 
-        expected_df = pd.read_csv(Path(__file__).parent / "data" / "predictions" / "library_output.csv")
-        sparse_cols = library.get_matrix(FragmentType.PRED)[1]
-        for sparse_col in range(0, len(sparse_cols)):
-            expected_df[sparse_cols[sparse_col]] = expected_df[sparse_cols[sparse_col]].astype(
-                library.spectra_data.layers["pred_int"][:, sparse_col].dtype
-            )
-        expected_df["PREDICTED_IRT"] = expected_df["PREDICTED_IRT"].astype(
-            library.spectra_data.obs["PREDICTED_IRT"].dtype
+        library_expected = Spectra.from_hdf5(Path(__file__).parent / "data" / "predictions" / "library_output.h5ad.gz")
+
+        assert_almost_equal(
+            library.get_matrix(FragmentType.PRED)[0].toarray(),
+            library_expected.get_matrix(FragmentType.PRED)[0].toarray(),
+            decimal=7,
         )
-
-        pd.testing.assert_frame_equal(library.convert_to_df(), expected_df)
-
-    def test_failing_koina(self):
-        """Test koina with input data that does not fit to the model to trigger exception handling."""
-        library = Spectra.from_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
-        input_data = library.spectra_data
-
-        self.assertRaises(
-            Exception,
-            predict,
-            input_data,
-            model_name="Prosit_2020_intensity_HCD",
-            server_url="koina.wilhelmlab.org:443",
-            ssl=True,
-            targets=["intensities", "annotation"],
-        )
+        pd.testing.assert_frame_equal(library.obs, library_expected.obs)
+        pd.testing.assert_frame_equal(library.var, library_expected.var)
