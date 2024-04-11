@@ -493,7 +493,7 @@ def split_timstof_metadata(
     return filenames_found
 
 
-def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> Spectra:
+def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> pd.DataFrame:
     """
     Merge peptides with spectra.
 
@@ -509,34 +509,39 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
-    # psms.set_index(TODO)
-    var_df = Spectra._gen_vars_df()
-
-    library = Spectra(obs=psms, var=var_df)
-
-    return library
+    return psms
 
 
-def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+def annotate_spectral_library(
+    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+) -> Spectra:
     """
-    Annotate spectral library with peaks and mass.
+    Annotate all b and y ion peaks of given PSMs.
 
-    This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.
-    The additional information is added to the provided spectral library.
+    This function annotates the b any ion peaks of given psms by matching the mzs
+    of all peaks to the theoretical mzs and discards all other peaks. It also calculates
+    the theoretical monoisotopic mass of each b and y ion fragment.
+    The function thenr returns a Spectra object containing the mzs and intensities of
+    all b and y ions in charge states 1-3 and the additional metadata.
 
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
+
+    :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms.spectra_data.obs, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df())
+    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
+    aspec.add_matrix(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
+    aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
+    aspec.strings_to_categoricals()
+
     logger.info("Finished annotating.")
 
-    psms.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
-    psms.add_matrix(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
-    psms.spectra_data.obs = psms.spectra_data.obs.drop(["INTENSITIES", "MZ"], axis=1)
-    psms.add_column(df_annotated_spectra["CALCULATED_MASS"])
+    return aspec
 
 
 def load_spectra(

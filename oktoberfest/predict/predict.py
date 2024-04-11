@@ -2,9 +2,9 @@ import logging
 import re
 from typing import Dict, Tuple
 
+import anndata
 import numpy as np
 import pandas as pd
-from anndata import AnnData
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
@@ -13,7 +13,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: AnnData, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -27,7 +27,7 @@ def predict(data: AnnData, **kwargs) -> Dict[str, np.ndarray]:
     :return: a dictionary with targets (keys) and predictions (values)
     """
     predictor = Koina(**kwargs)
-    results = predictor.predict(data.obs)
+    results = predictor.predict(data)
     return results
 
 
@@ -80,28 +80,19 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :return: a library that is modified according to the description above
     """
-    alignment_df = library.convert_to_df()
-    # Remove decoy and HCD fragmented spectra
-    alignment_df = alignment_df[(alignment_df["FRAGMENTATION"] == "HCD") & (~alignment_df["REVERSE"])]
-    # Select the 1000 highest scoring or all if there are less than 1000
-    temp_df = alignment_df.sort_values(by="SCORE", ascending=False)
+    top_n = 1000
+    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
+    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False)
     if group_by_charge:
-        temp_df = temp_df.groupby("PRECURSOR_CHARGE")
+        hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
+    top_hcd_targets = hcd_targets.head(top_n)
 
-    alignment_df = temp_df.head(1000)
+    alignment_library = library[top_hcd_targets.index]
+    alignment_library = Spectra(anndata.concat([alignment_library for _ in range(*ce_range)]))
+    alignment_library.obs.reset_index(inplace=True)
 
-    # Repeat dataframe for each CE
-    ce_range_ = range(*ce_range)
-    nrow = len(alignment_df)
-    alignment_df = pd.concat([alignment_df for _ in ce_range_], axis=0)
-    alignment_df["ORIG_COLLISION_ENERGY"] = alignment_df["COLLISION_ENERGY"]
-    alignment_df["COLLISION_ENERGY"] = np.repeat(ce_range_, nrow)
-    selection = alignment_df["Unnamed: 0"].values.astype(int).tolist()
-    alignment_library = Spectra((len(selection), 174))
-    library.spectra_data.obs.index = library.spectra_data.obs.index.astype(str)
-    alignment_library.spectra_data = library.spectra_data[
-        library.spectra_data.obs["Unnamed: 0"].isin(selection), :
-    ].copy()
+    alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
+    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), top_n)
 
     return alignment_library
 
@@ -121,7 +112,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
-    intensities = predict(alignment_library.spectra_data, **server_kwargs)
+    intensities = predict(alignment_library.obs, **server_kwargs)
     alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
     _alignment(alignment_library)
     return alignment_library
@@ -140,6 +131,3 @@ def _alignment(alignment_library: Spectra):
     raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
-    alignment_library.spectra_data = alignment_library.spectra_data[
-        alignment_library.spectra_data.obs["SPECTRAL_ANGLE"] != 0
-    ]

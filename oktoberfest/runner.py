@@ -42,7 +42,7 @@ def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress,
         **pr.predict(batch_df, model_name=int_model, **predict_kwargs),
         **pr.predict(batch_df, model_name=irt_model, **predict_kwargs),
     }
-    queue_out.put((predictions, batch_df.obs))
+    queue_out.put((predictions, batch_df))
     with lock:
         progress.value += 1
 
@@ -109,7 +109,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
     if hdf5_path.is_file():
-        library = Spectra.from_hdf5(hdf5_path)
+        aspec = Spectra.from_hdf5(hdf5_path)
     else:
         spectra_dir = config.output / "spectra"
         spectra_dir.mkdir(exist_ok=True)
@@ -125,10 +125,13 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
+        print(library.columns)
+        aspec = pp.annotate_spectral_library(
+            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+        )
+        aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
-    return library
+    return aspec
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
@@ -427,14 +430,14 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     tims_meta_file = None
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
-    library = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
-    _get_best_ce(library, spectra_file, config)
+    aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
+    _get_best_ce(aspec, spectra_file, config)
 
-    library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+    aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
 
-    return library
+    return aspec
 
 
 def run_ce_calibration(
@@ -483,12 +486,12 @@ def _calculate_features(spectra_file: Path, config: Config):
         }
 
         pred_intensities = pr.predict(
-            data=library,
+            data=library.obs,
             model_name=config.models["intensity"],
             **predict_kwargs,
         )
 
-        pred_irts = pr.predict(data=library, model_name=config.models["irt"], **predict_kwargs)
+        pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
         library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
         library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)

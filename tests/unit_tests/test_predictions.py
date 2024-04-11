@@ -19,13 +19,15 @@ class TestTMTProsit(unittest.TestCase):
         library = Spectra(obs=meta_df, var=var)
         library.strings_to_categoricals()
         pred_intensities = predict(
-            library,
+            library.obs,
             model_name="Prosit_2020_intensity_TMT",
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
             targets=["intensities", "annotation"],
         )
-        pred_irt = predict(library, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True)
+        pred_irt = predict(
+            library.obs, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True
+        )
 
         library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
         library.add_column(pred_irt["irt"].squeeze(), name="PREDICTED_IRT")
