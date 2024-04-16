@@ -27,7 +27,6 @@ def calculate_features_single(
     """Create CalculateFeatures object and calculate features for a given raw file."""
     logger.info(f"Calculating features for {raw_file_path}")
     features = CalculateFeatures(search_path="", raw_path=raw_file_path, out_path=mzml_path, config_path=config_path)
-
     df_search = pd.read_csv(split_msms_path, delimiter="\t")
     features.predict_with_aligned_ce(df_search)
     features.gen_perc_metrics("rescore", percolator_rescore_path)
@@ -249,11 +248,9 @@ class ReScore(CalculateFeatures):
         spectrum_columns = "SpecId"
         peptide_columns  = "Peptide"
         protein_columns  = "Proteins"
-        columns_to_remove = ["SpecId", "ScanNr","label_pep_a","label_pep_b","Peptide", "Proteins"]
+        columns_to_remove = ["SpecId", "ScanNr","Label","Peptide", "Proteins"]
         df_new = df.drop(columns=columns_to_remove).reset_index(drop=True)
         feature_columns  = tuple(df_new.columns)
-        #print("feature_columns")
-        #print(feature_columns)
         return target_columns, spectrum_columns, peptide_columns, protein_columns, feature_columns    
 
     def get_columns_tab_linear(self):
@@ -268,8 +265,6 @@ class ReScore(CalculateFeatures):
         columns_to_remove = ["SpecId", "ScanNr","label_pep_a","label_pep_b","Peptide", "Proteins"]
         df_new = df.drop(columns=columns_to_remove).reset_index(drop=True)
         feature_columns  = tuple(df_new.columns)
-        #print("feature_columns")
-        #print(feature_columns)
         return target_column, spectrum_columns, peptide_column, protein_column, feature_columns    
 
 
@@ -313,14 +308,8 @@ class ReScore(CalculateFeatures):
             df.to_csv(file_path, sep="\t")
             df = pd.read_csv(file_path, sep="\t")
             #df['Label'] = df['Label'].apply(lambda x: True if x == 1 else False)
-            #df.to_csv('/cmnfs/home/m.kalhor/wilhelmlab/notebooks/notebooks/df.csv', index=False)
-            #target_columns, spectrum_columns, peptide_columns, protein_columns, feature_columns = self.get_columns_tab_xl()
-            #target_column, spectrum_columns, peptide_column, protein_column, feature_columns = self.get_columns_tab_linear()
+            target_columns, spectrum_columns, peptide_columns, protein_columns, feature_columns = self.get_columns_tab_xl()
             psms = mokapot.read_pin(file_path)
-            #psms = mokapot.dataset.CrossLinkedPsmDataset(psms = df,spectrum_columns = spectrum_columns, target_columns = target_columns,
-            #peptide_columns = peptide_columns, protein_columns = protein_columns, feature_columns = feature_columns )
-            #psms = mokapot.dataset.LinearPsmDataset(psms = df,target_column = target_column, spectrum_columns = spectrum_columns,
-            #peptide_column = peptide_column, protein_column = protein_column, feature_columns = feature_columns ) 
             results, models = mokapot.brew(psms, test_fdr=test_fdr)
             results.to_txt(dest_dir=perc_path, file_root=f"{search_type}", decoys=True)
         else:

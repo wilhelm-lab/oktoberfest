@@ -166,7 +166,7 @@ class SpectralLibrary:
         :param alignment: True if alignment present
         :return: grpc predictions if we are trying to generate spectral library
         """
-        triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=False)
+        triton_client = grpcclient.InferenceServerClient(url=self.config.prediction_server, ssl=True)
         batch_size = 1000
         
         intensity_model = self.config.models["intensity"]

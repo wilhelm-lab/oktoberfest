@@ -8,7 +8,7 @@ from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Plink2, XlinkX, Xisearch
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Xisearch
 
 from .data.spectra import FragmentType, Spectra
 from .spectral_library import SpectralLibrary
@@ -56,7 +56,7 @@ class CeCalibration(SpectralLibrary):
     def _gen_internal_search_result_from_msms(self):
         """Generate internal search result from msms.txt."""
         logger.info(f"Converting msms data at {self.search_path} to internal search result.")
-
+        
         search_type = self.config.search_type
         if search_type == "maxquant":
             search_result = MaxQuant(self.search_path)
@@ -69,30 +69,43 @@ class CeCalibration(SpectralLibrary):
         elif search_type == "xlinkx":
             search_result = XlinkX(self.search_path)
         elif search_type == "xisearch":
-            search_result = Xisearch(self.search_path)    
+            search_result = Xisearch(self.search_path)   
         else:
             raise ValueError(f"Unknown search_type provided in config: {search_type}")
 
         tmt_labeled = self.config.tag if any("TMT" in value for value in self.config.models.values()) else ""
-        self.search_path = search_result.generate_internal(tmt_labeled=tmt_labeled)
+        self.search_result = search_result.generate_internal(tmt_labeled=tmt_labeled)
+        
 
     def _gen_mzml_from_thermo(self):
         """Generate mzml from thermo raw file."""
         logger.info("Converting thermo rawfile to mzml.")
         raw = ThermoRaw()
-        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.get_mzml_path())
+        thermo_exe = "/cmnfs/data/cluster/software/ThermoRawFileParser/1.4.3/ThermoRawFileParser.exe"
+        self.raw_path = raw.convert_raw_mzml(input_path=self.raw_path, output_path=self.get_mzml_path(), thermo_exe = thermo_exe)
 
     def _load_search(self):
         """Load search type."""
         switch = self.config.search_type
         logger.info(f"search_type is {switch}")
-        if switch in ["maxquant", "msfragger", "mascot", "plink2","xlinkx","xisearch"]:
-            self._gen_internal_search_result_from_msms()
+        if switch == "xisearch":
             switch = "internal"
-        if switch == "internal":
-            return csv.read_file(self.search_path)
+            if switch == "internal":
+                self.search_path = str(self.search_path)
+                self.search_path = self.search_path[:-4] + ".tsv"
+                print(self.search_path)  # Instantiate Xisearch object
+                xisearch_instance = Xisearch(self.search_path)
+                return xisearch_instance.read_result()
+            else:
+                raise ValueError(f"{switch} is not a supported search type. Convert to internal format manually.")
         else:
-            raise ValueError(f"{switch} is not a supported search type. Convert to internal format manually.")
+            if switch in ["maxquant", "msfragger", "mascot"]:
+                self._gen_internal_search_result_from_msms()
+                switch = "internal"
+            if switch == "internal":
+                return csv.read_file_tsv(self.search_path)
+            else:
+                raise ValueError(f"{switch} is not a supported search type. Convert to internal format manually.")
 
     def _load_rawfile(self):
         """Load raw file."""
@@ -121,7 +134,9 @@ class CeCalibration(SpectralLibrary):
         df_join = df_search.merge(df_raw, on=["RAW_FILE", "SCAN_NUMBER"])
         logger.info(f"There are {len(df_join)} matched identifications")
         logger.info("Annotating raw spectra")
+        df_join.to_json('/cmnfs/home/m.kalhor/wilhelmlab/spectrum_fundamentals/tests/unit_tests/data/annotation_xl_cl_input.json', orient='records')
         df_annotated_spectra = annotate_spectra(df_join)
+        df_annotated_spectra.to_json('/cmnfs/home/m.kalhor/wilhelmlab/spectrum_fundamentals/tests/unit_tests/data/annotation_xl_cl_output.json', orient='records')
         df_join.drop(columns=["INTENSITIES", "MZ"], inplace=True)
         logger.info("Preparing library")
         if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx", "xisearch"]):
@@ -167,7 +182,7 @@ class CeCalibration(SpectralLibrary):
         if any(self.config.search_type.lower() == s.lower() for s in ["plink2", "xlinkx", "xisearch"]):
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False
-        ).iloc[:200]
+        ).iloc[:50]
         else:
             self.alignment_library.spectra_data = self.alignment_library.spectra_data.sort_values(
             by="SCORE", ascending=False

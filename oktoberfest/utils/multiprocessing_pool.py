@@ -36,7 +36,7 @@ class JobPool:
         try:
             outputs = [pool.AsyncResult]
             for res in self.results:
-                outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
+                outputs.append(res.get(timeout=100000))  # 10000 seconds = ~30 hours
                 if print_progress_every > 0 and len(outputs) % print_progress_every == 0:
                     logger.info(
                         f' {len(outputs)} / {len(self.results)} {"%.2f" % (float(len(outputs)) / len(self.results) * 100)}%'

@@ -1,1 +1,1 @@
-CONFIG_PATH = "/cmnfs/home/m.kalhor/wilhelmlab/notebooks/notebooks/xiserach_fdr/config.json"
+CONFIG_PATH = "/cmnfs/data/proteomics/XL/juri_lab/MycoEcoliRaw/config.json"
