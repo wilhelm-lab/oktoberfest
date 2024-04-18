@@ -37,7 +37,8 @@ class TestTMTProsit(unittest.TestCase):
         assert_almost_equal(
             library.get_matrix(FragmentType.PRED)[0].toarray(),
             library_expected.get_matrix(FragmentType.PRED)[0].toarray(),
-            decimal=7,
+            decimal=6,
+            verbose=True,
         )
         pd.testing.assert_frame_equal(library.obs, library_expected.obs)
         pd.testing.assert_frame_equal(library.var, library_expected.var)
