@@ -19,33 +19,55 @@ SpectraT = TypeVar("SpectraT", bound="Spectra")
 class FragmentType(Enum):
     """FragmentType class to enumerate pred, raw, and mz."""
 
-    PRED = 1
-    RAW = 2
-    MZ = 3
+    PRED   = 1
+    PRED_A = 2
+    PRED_B = 3
+    RAW    = 4
+    RAW_A  = 5
+    RAW_B  = 6
+    MZ     = 7
+    MZ_A   = 8
+    MZ_B   = 9
 
 
 class Spectra(anndata.AnnData):
     """Main to init spectra data."""
 
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
+    INTENSITY_COLUMN_PREFIX_A = "INTENSITY_RAW_A"
+    INTENSITY_COLUMN_PREFIX_B = "INTENSITY_RAW_B"
     INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
+    INTENSITY_PRED_PREFIX_A = "INTENSITY_PRED_A"
+    INTENSITY_PRED_PREFIX_B = "INTENSITY_PRED_B"
     MZ_COLUMN_PREFIX = "MZ_RAW"
+    MZ_COLUMN_PREFIX_A = "MZ_RAW_A"
+    MZ_COLUMN_PREFIX_B = "MZ_RAW_B"
     INTENSITY_PRED_LAYER_NAME = "pred_int"
+    INTENSITY_PRED_LAYER_NAME_A = "pred_int_A"
+    INTENSITY_PRED_LAYER_NAME_B = "pred_int_B"
     INTENSITY_LAYER_NAME = "raw_int"
+    INTENSITY_LAYER_NAME_A = "raw_int_A"
+    INTENSITY_LAYER_NAME_B = "raw_int_B"
     MZ_LAYER_NAME = "mz"
+    MZ_LAYER_NAME_A = "mz_A"
+    MZ_LAYER_NAME_B = "mz_B"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
     @staticmethod
-    def _gen_vars_df() -> pd.DataFrame:
+    def _gen_vars_df(xl: bool = False) -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
         :return: pd.Dataframe of Frgment Annotation
         """
-        ion_nums = np.repeat(np.arange(1, 30), 6)
-        ion_charge = np.tile([1, 2, 3], 29 * 2)
+        if xl:
+            max_range = 59
+        else:
+            max_range = 30
+        ion_nums = np.repeat(np.arange(1, max_range), 6)
+        ion_charge = np.tile([1, 2, 3], (max_range-1) * 2)
         temp_cols = []
-        for size in range(1, 30):
+        for size in range(1, max_range):
             for typ in ["Y", "B"]:
                 for charge in ["+", "++", "+++"]:
                     temp_cols.append(f"{typ}{size}{charge}")
@@ -55,7 +77,7 @@ class Spectra(anndata.AnnData):
         return var_df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType) -> List[str]:
+    def _gen_column_names(fragment_type: FragmentType, xl: bool = False) -> List[str]:
         """
         Get column names of the spectra data.
 
@@ -64,7 +86,11 @@ class Spectra(anndata.AnnData):
         """
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
-        for i in range(1, 30):
+        if xl:
+            max_range = 59
+        else:
+            max_range = 30 
+        for i in range(1, max_range):
             for column in Spectra.COLUMNS_FRAGMENT_ION:
                 columns.append(prefix + "_" + column.replace("1", str(i)))
         return columns
@@ -72,7 +98,7 @@ class Spectra(anndata.AnnData):
     @staticmethod
     def _resolve_prefix(fragment_type: FragmentType) -> str:
         """
-        Resolve prefix given fragment type (1 for pred, 2 for raw, 3 for mz).
+        Resolve prefix given fragment type (1 for pred, 2 for xl_pred_a, 3 for xl_pred_a, 4 for raw, 5 for xl_raw_a, 6 for xl_raw_b, 7 for mz, 8 for xl_mz_a, 9 for xl_mz_b).
 
         :param fragment_type: choose predicted, raw, or mz
         :return: prefix as string
@@ -81,9 +107,21 @@ class Spectra(anndata.AnnData):
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
-            prefix = Spectra.INTENSITY_COLUMN_PREFIX
+            prefix = Spectra.INTENSITY_PRED_PREFIX_A    
         elif fragment_type.value == 3:
+            prefix = Spectra.INTENSITY_PRED_PREFIX_B
+        elif fragment_type.value == 4:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX   
+        elif fragment_type.value == 5:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_A
+        elif fragment_type.value == 6:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_B
+        elif fragment_type.value == 7:
             prefix = Spectra.MZ_COLUMN_PREFIX
+        elif fragment_type.value == 8:
+            prefix = Spectra.MZ_COLUMN_PREFIX_A       
+        else:
+            prefix = Spectra.MZ_COLUMN_PREFIX_B
         return prefix
 
     @staticmethod
@@ -97,9 +135,21 @@ class Spectra(anndata.AnnData):
         if fragment_type.value == 1:
             layer = Spectra.INTENSITY_PRED_LAYER_NAME
         elif fragment_type.value == 2:
-            layer = Spectra.INTENSITY_LAYER_NAME
+            layer = Spectra.INTENSITY_PRED_LAYER_NAME_A
         elif fragment_type.value == 3:
-            layer = Spectra.MZ_LAYER_NAME
+            layer = Spectra.INTENSITY_PRED_LAYER_NAME_B
+        elif fragment_type.value == 4:
+            layer = Spectra.INTENSITY_COLUMN_PREFIX
+        elif fragment_type.value == 5:
+            layer = Spectra.INTENSITY_COLUMN_PREFIX_A
+        elif fragment_type.value == 6:
+            layer = Spectra.INTENSITY_COLUMN_PREFIX_B
+        elif fragment_type.value == 7:
+            layer = Spectra.MZ_COLUMN_PREFIX
+        elif fragment_type.value == 8:
+            layer = Spectra.MZ_COLUMN_PREFIX_A
+        elif fragment_type.value == 9:
+            layer = Spectra.MZ_COLUMN_PREFIX_B
         return layer
 
     def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
@@ -156,7 +206,6 @@ class Spectra(anndata.AnnData):
         intensity_data[intensity_data == -1] = 0.0
 
         intensity_data = csr_matrix(intensity_data)
-
         layer = self._resolve_layer_name(fragment_type)
 
         if annotation:

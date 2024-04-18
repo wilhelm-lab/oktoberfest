@@ -14,7 +14,7 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage, Xisearch
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -148,16 +148,22 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
 
     :return: The filtered dataframe or AnnData object to be used with the given model.
     """
-    if "prosit" in model.lower():
+    if "prosit" in model.lower() and "xl" in model.lower():
+        filter_kwargs = {
+            "min_length": 6,
+            "max_length": 30,
+            "max_charge": 6,
+        }
+        return filter_xl_peptides(peptides, **filter_kwargs)
+    elif "prosit" in model.lower() and "xl" not in model.lower():
         filter_kwargs = {
             "min_length": 7,
             "max_length": 30,
             "max_charge": 6,
         }
+        return filter_peptides(peptides, **filter_kwargs)
     else:
         raise ValueError(f"The model {model} is not known.")
-
-    return filter_peptides(peptides, **filter_kwargs)
 
 
 def filter_peptides(
@@ -192,6 +198,36 @@ def filter_peptides(
 
     return peptides[peptide_filter]
 
+def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int) -> pd.DataFrame:
+    """
+    Filter xl search results using given constraints.
+
+    This function filters provided search results by peptide length, precursor charge,
+    unsupported special aminoacids, and unsupported modifications.
+
+    :param peptides: Dataframe containing search results to be filtered
+    :param min_length: The minimal length of a peptide to be retained
+    :param max_length: The maximal length of a peptide to be retained
+    :param max_charge: The maximal precursor charge of a peptide to be retained
+
+    :return: The filtered dataframe or AnnData object given the provided constraints.
+    """
+    if isinstance(peptides, AnnData):
+        df = peptides.obs
+    else:
+        df = peptides
+
+    peptide_filter = (
+    (df["PEPTIDE_LENGTH_A"] <= max_length)
+    & (df["PEPTIDE_LENGTH_B"] <= max_length)
+    & (df["PEPTIDE_LENGTH_A"] >= min_length)
+    & (df["PEPTIDE_LENGTH_B"] >= min_length)
+    & (df["PRECURSOR_CHARGE"] <= max_charge)
+    & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+    & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+    )
+
+    return peptides[peptide_filter]
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
     """
@@ -280,6 +316,8 @@ def convert_search(
         search_result = Mascot
     elif search_engine == "sage":
         search_result = Sage
+    elif search_engine == "xisearch":
+        search_result = Xisearch
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
@@ -541,6 +579,31 @@ def annotate_spectral_library(
 
     logger.info("Finished annotating.")
 
+    return aspec
+
+def annotate_spectral_library_xl(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+    """
+    Annotate spectral library with peaks and mass for cross-linked peptides.
+
+    This function annotates a given spectral library with peak intensities and mass to charge ratio,
+    as well as the calculated monoisotopic mass of the precursor ion.
+    The additional information is added to the provided spectral library.
+
+    :param psms: Spectral library to be annotated.
+    :param mass_tol: The mass tolerance allowed for retaining peaks
+    :param unit_mass_tol: The unit in which the mass tolerance is given
+    """
+    logger.info("Annotating spectra...")
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(xl=True))
+    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES_A"]), FragmentType.RAW_A)
+    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES_B"]), FragmentType.RAW_B)
+    aspec.add_matrix(np.stack(df_annotated_spectra["MZ_A"]), FragmentType.MZ_A)
+    aspec.add_matrix(np.stack(df_annotated_spectra["MZ_B"]), FragmentType.MZ_B)
+    aspec.add_column(df_annotated_spectra["CALCULATED_MASS_A"].values, "CALCULATED_MASS_A")
+    aspec.add_column(df_annotated_spectra["CALCULATED_MASS_B"].values, "CALCULATED_MASS_B")
+
+    logger.info("Finished annotating.")
     return aspec
 
 

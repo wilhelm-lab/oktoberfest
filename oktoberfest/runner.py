@@ -125,10 +125,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        print(library.columns)
-        aspec = pp.annotate_spectral_library(
-            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
-        )
+        if "xl" in config.models["intensity"].lower():
+            aspec = pp.annotate_spectral_library_xl(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
+        else:
+            paspecp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
     return aspec
