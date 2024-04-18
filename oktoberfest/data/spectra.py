@@ -46,8 +46,8 @@ class Spectra(anndata.AnnData):
         ion_charge = np.tile([1, 2, 3], 29 * 2)
         temp_cols = []
         for size in range(1, 30):
-            for typ in ["Y", "B"]:
-                for charge in ["+", "++", "+++"]:
+            for typ in ["y", "b"]:
+                for charge in ["+1", "+2", "+3"]:
                     temp_cols.append(f"{typ}{size}{charge}")
         ion_types = [frag[0] for frag in temp_cols]
         var_df = pd.DataFrame({"ion": temp_cols, "num": ion_nums, "type": ion_types, "charge": ion_charge})
@@ -141,7 +141,11 @@ class Spectra(anndata.AnnData):
         self.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
     def add_matrix(
-        self, intensity_data: np.ndarray, fragment_type: FragmentType, annotation: Optional[np.ndarray] = None
+        self,
+        intensity_data: np.ndarray,
+        fragment_type: FragmentType,
+        annotation: Optional[np.ndarray] = None,
+        index: Optional[np.ndarray] = None,
     ) -> None:
         """
         Concatenate intensity df as a sparse matrix to our data.
@@ -149,6 +153,7 @@ class Spectra(anndata.AnnData):
         :param intensity_data: intensity numpy array to add with shape (n x m)
         :param fragment_type: choose predicted, raw, or mz
         :param annotation: Optional fragment ion annotations in ProForma notation with shape (n x m)
+        :param index: Optional index of intensity predictions with length n
         """
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
@@ -159,11 +164,17 @@ class Spectra(anndata.AnnData):
 
         layer = self._resolve_layer_name(fragment_type)
 
-        if annotation:
-            if self.layers[layer] is None:
-                self.layers[layer] = csr_matrix(intensity_data.shape)
-            index = [list(self.var_names).index(i) for i in annotation]
-            self.layers[layer][:, index] = intensity_data
+        if annotation is not None:
+            if layer not in list(self.layers):
+                self.layers[layer] = csr_matrix(self.shape)
+            if index is not None:
+                for r in index:
+                    idx = [list(self.var_names).index(i.decode("utf8")) for i in annotation[r]]
+                    self.layers[layer][r, idx] = intensity_data[r]
+                if "done" not in self.obs.columns:
+                    self.obs["done"] = False
+                self.obs["done"].iloc[index] = True
+
         else:
             self.layers[layer] = intensity_data
 
