@@ -13,7 +13,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, xl : bool = False, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -27,7 +27,13 @@ def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     :return: a dictionary with targets (keys) and predictions (values)
     """
     predictor = Koina(**kwargs)
-    results = predictor.predict(data)
+    if xl:
+        results = predictor.predict_xl(data)
+    else:
+        results = predictor.predict(data)
+
+    
+    
     return results
 
 
@@ -67,20 +73,21 @@ def parse_fragment_labels(
     return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False) -> Spectra:
+def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False, xl : bool = False) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
     This function creates an alignment DataFrame by removing decoy and HCD fragmented spectra
-    from the input library, selecting the top 1000 highest-scoring spectra, and repeating the
-    DataFrame for each collision energy (CE) in the given range.
+    from the input library, selecting the top 1000 highest-scoring spectra for linear and top 50s for cross-linked peptides
+    and repeating the DataFrame for each collision energy (CE) in the given range.
 
     :param library: the library to be propagated
     :param ce_range: the min and max CE to be propagated for alignment in the dataframe
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
+    :param xl: if true, select the top 50 spectra for cross-linked peptide
     :return: a library that is modified according to the description above
     """
-    top_n = 1000
+    top_n = 1000 if not xl else 50
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False)
     if group_by_charge:
@@ -97,7 +104,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     return alignment_library
 
 
-def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, **server_kwargs) -> Spectra:
+def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, xl : bool = False, **server_kwargs ) -> Spectra:
     """
     Calculate best collision energy for peptide property predictions.
 
@@ -109,16 +116,23 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :param ce_range: the min and max CE to be tested during calibration
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :param server_kwargs: Additional parameters that are forwarded to the prediction method
+    :param xl: if true, do ce_calibration on cross-linked peptide
     :return: a spectra object containing the spectral angle for each tested CE
     """
-    alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
-    intensities = predict(alignment_library.obs, **server_kwargs)
-    alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
-    _alignment(alignment_library)
+    alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
+    if xl:
+        intensities = predict(alignment_library.obs, xl = True, **server_kwargs)
+        alignment_library.add_matrix(intensities["intensities_a"], FragmentType.PRED_A)
+        alignment_library.add_matrix(intensities["intensities_b"], FragmentType.PRED_B)
+    else:
+        intensities = predict(alignment_library.obs, **server_kwargs)
+        alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
+    
+    _alignment(alignment_library, xl=xl)
     return alignment_library
 
 
-def _alignment(alignment_library: Spectra):
+def _alignment(alignment_library: Spectra, xl: bool = False):
     """
     Perform the alignment of predicted versus raw intensities.
 
@@ -127,7 +141,22 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
-    sm = SimilarityMetrics(pred_intensity, raw_intensity)
-    alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
+    if xl:
+        pred_intensity_a = self.alignment_library.get_matrix(FragmentType.PRED_A)
+        pred_intensity_b = self.alignment_library.get_matrix(FragmentType.PRED_B)
+        raw_intensity_a = self.alignment_library.get_matrix(FragmentType.RAW_A)
+        raw_intensity_b = self.alignment_library.get_matrix(FragmentType.RAW_B)
+        sm_a = SimilarityMetrics(pred_intensity_a, raw_intensity_a)
+        sm_b = SimilarityMetrics(pred_intensity_b, raw_intensity_b)
+        alignment_library.add_column(sm.spectral_angle(raw_intensity_a, pred_intensity_a, 0), "SPECTRAL_ANGLE_A")
+        alignment_library.add_column(sm.spectral_angle(raw_intensity_b, pred_intensity_b, 0), "SPECTRAL_ANGLE_B")
+        alignment_library.add_column((alignment_library["SPECTRAL_ANGLE_A"] + alignment_library["SPECTRAL_ANGLE_B"]) / 2, "SPECTRAL_ANGLE")
+    else:
+        pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
+        raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
+        sm = SimilarityMetrics(pred_intensity, raw_intensity)
+        alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
+
+
+    
+    

@@ -144,7 +144,10 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             "model_name": config.models["intensity"],
         }
         use_ransac_model = config.use_ransac_model
-        alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        if "xl" in config.models["intensity"].lower():
+            alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, xl =True, **server_kwargs )
+        else:
+            alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")

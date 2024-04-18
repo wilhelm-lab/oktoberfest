@@ -22,6 +22,21 @@ alternative_column_map = {
     "instrument_types": "INSTRUMENT_TYPES",
 }
 
+alternative_column_map_xl = {
+    "peptide_sequences_1": "MODIFIED_SEQUENCE_A",
+    "peptide_sequences_2": "MODIFIED_SEQUENCE_B",
+    "precursor_charges": "PRECURSOR_CHARGE",
+    "collision_energies": "COLLISION_ENERGY",
+    "fragmentation_types": "FRAGMENTATION",
+    "instrument_types": "INSTRUMENT_TYPES",
+}
+
+# Create a new mapping with switched keys and values for peptide_sequences_1 and peptide_sequences_2
+alternative_column_map_xl_switched = {
+    "peptide_sequences_1": "MODIFIED_SEQUENCE_B",
+    "peptide_sequences_2": "MODIFIED_SEQUENCE_A",
+    **{key: value for key, value in alternative_column_map_xl.items() if key not in ["peptide_sequences_1", "peptide_sequences_2"]}
+}
 
 class Koina:
     """A class for interacting with Koina models for inference."""
@@ -474,6 +489,56 @@ class Koina:
             return self.__predict_async(data, debug=debug)
         else:
             return self.__predict_sequential(data)
+
+    def predict_xl(
+        self,
+        data: Union[Dict[str, np.ndarray], pd.DataFrame],
+        _async: bool = True,
+        debug=False,
+    ) -> Dict[str, np.ndarray]:
+        """
+        Perform inference on the xl data using the Koina model.
+
+        This method allows you to perform inference on the provided input data using the configured Koina model. You can
+        choose to perform inference asynchronously (in parallel) or sequentially, depending on the value of the '_async'
+        parameter. If asynchronous inference is selected, the method will return when all inference tasks are complete.
+        Note: Ensure that the model and server are properly configured and that the input data matches the model's
+        nput requirements.
+
+        :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
+            and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
+            in the column names.
+        :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
+        :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
+
+        :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
+            representing the model's output.
+
+        Example::
+            model = Koina("Prosit_2019_intensity")
+            input_data = {
+                "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
+                "precursor_charges": np.array([2 for _ in range(size)]),
+                "collision_energies": np.array([20 for _ in range(size)]),
+                "fragmentation_types": np.array(["HCD" for _ in range(size)]),
+                "instrument_types": np.array(["QE" for _ in range(size)])
+            }
+            predictions = model.predict(input_data)
+        """
+        if isinstance(data, pd.DataFrame):
+            data_1 = {
+                input_field: data[alternative_column_map_xl[input_field]].to_numpy()
+                for input_field in self.model_inputs.keys()
+            }
+            data_2 = {
+                input_field: data[alternative_column_map_xl_switched[input_field]].to_numpy()
+                for input_field in self.model_inputs.keys()
+            }
+        if _async:
+            return self.__predict_async(data_1, debug=debug), self.__predict_async(data_2, debug=debug)
+        else:
+            return self.__predict_sequential(data)
+
 
     def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
         """
