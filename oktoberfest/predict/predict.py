@@ -28,13 +28,11 @@ def predict(data: pd.DataFrame, xl : bool = False, **kwargs) -> Dict[str, np.nda
     """
     predictor = Koina(**kwargs)
     if xl:
-        results = predictor.predict_xl(data)
+        results_a, results_b = predictor.predict_xl(data)
+        return results_a, results_b 
     else:
         results = predictor.predict(data)
-
-    
-    
-    return results
+        return results 
 
 
 def parse_fragment_labels(
@@ -121,9 +119,9 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
     if xl:
-        intensities = predict(alignment_library.obs, xl = True, **server_kwargs)
-        alignment_library.add_matrix(intensities["intensities_a"], FragmentType.PRED_A)
-        alignment_library.add_matrix(intensities["intensities_b"], FragmentType.PRED_B)
+        intensities_a, intensities_b = predict(alignment_library.obs, xl = True, **server_kwargs)
+        alignment_library.add_matrix(intensities_a["intensities"], FragmentType.PRED_A)
+        alignment_library.add_matrix(intensities_b["intensities"], FragmentType.PRED_B)
     else:
         intensities = predict(alignment_library.obs, **server_kwargs)
         alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
@@ -142,15 +140,15 @@ def _alignment(alignment_library: Spectra, xl: bool = False):
     :param alignment_library: the library to perform the alignment on
     """
     if xl:
-        pred_intensity_a = self.alignment_library.get_matrix(FragmentType.PRED_A)
-        pred_intensity_b = self.alignment_library.get_matrix(FragmentType.PRED_B)
-        raw_intensity_a = self.alignment_library.get_matrix(FragmentType.RAW_A)
-        raw_intensity_b = self.alignment_library.get_matrix(FragmentType.RAW_B)
+        pred_intensity_a = alignment_library.get_matrix(FragmentType.PRED_A)[0]
+        pred_intensity_b = alignment_library.get_matrix(FragmentType.PRED_B)[0]
+        raw_intensity_a = alignment_library.get_matrix(FragmentType.RAW_A)[0]
+        raw_intensity_b = alignment_library.get_matrix(FragmentType.RAW_B)[0]
         sm_a = SimilarityMetrics(pred_intensity_a, raw_intensity_a)
         sm_b = SimilarityMetrics(pred_intensity_b, raw_intensity_b)
-        alignment_library.add_column(sm.spectral_angle(raw_intensity_a, pred_intensity_a, 0), "SPECTRAL_ANGLE_A")
-        alignment_library.add_column(sm.spectral_angle(raw_intensity_b, pred_intensity_b, 0), "SPECTRAL_ANGLE_B")
-        alignment_library.add_column((alignment_library["SPECTRAL_ANGLE_A"] + alignment_library["SPECTRAL_ANGLE_B"]) / 2, "SPECTRAL_ANGLE")
+        alignment_library.add_column(sm_a.spectral_angle(raw_intensity_a, pred_intensity_a, 0), "SPECTRAL_ANGLE_A")
+        alignment_library.add_column(sm_b.spectral_angle(raw_intensity_b, pred_intensity_b, 0), "SPECTRAL_ANGLE_B")
+        alignment_library.add_column((alignment_library.obs["SPECTRAL_ANGLE_A"] + alignment_library.obs["SPECTRAL_ANGLE_B"]) / 2, "SPECTRAL_ANGLE")
     else:
         pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
         raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]

@@ -537,7 +537,7 @@ class Koina:
         if _async:
             return self.__predict_async(data_1, debug=debug), self.__predict_async(data_2, debug=debug)
         else:
-            return self.__predict_sequential(data)
+            return self.__predict_sequential(data_1), self.__predict_sequential(data_2)
 
 
     def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
