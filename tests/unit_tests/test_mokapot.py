@@ -1,6 +1,8 @@
 import unittest
+import warnings
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import mokapot
 
 import oktoberfest.plotting as pl
@@ -22,6 +24,11 @@ class TestMokapot(unittest.TestCase):
 
         _run_mokapot(path, "original")
         _run_mokapot(path, "rescore")
+
+        # switch to non-Gui, preventing plots being displayed
+        plt.switch_backend("Agg")
+        # suppress UserWarning that agg cannot show plots
+        warnings.filterwarnings("ignore", "Matplotlib is currently using agg")
 
         pl.plot_all(path)
 

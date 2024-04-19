@@ -25,6 +25,7 @@ Generating libraries
    :toctree: api/pp
 
    pp.digest
+   pp.generate_metadata
    pp.gen_lib
    pp.merge_spectra_and_peptides
    pp.annotate_spectral_library
@@ -35,7 +36,8 @@ Spectra preprocessing
    :toctree: api/pp
 
    pp.list_spectra
-   pp.convert_spectra_to_mzml
+   pp.convert_raw_to_mzml
+   pp.convert_d_to_hdf
    pp.load_spectra
 
 
@@ -46,6 +48,9 @@ Peptide preprocessing
 
    pp.convert_search
    pp.load_search
+   pp.split_search
+   pp.convert_timstof_metadata
+   pp.split_timstof_metadata
    pp.filter_peptides
    pp.filter_peptides_for_model
 

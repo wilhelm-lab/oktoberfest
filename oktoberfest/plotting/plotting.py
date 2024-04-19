@@ -23,7 +23,7 @@ def _check_columns(df: pd.DataFrame):
     mokapot_mapping = {
         "mokapot score": "score",
         "mokapot q-value": "q-value",
-        "Proteins": "proteinIds",
+        "Peptide": "peptide",
         "SpecId": "PSMId",
     }
     if set(mokapot_mapping.keys()).issubset(df.columns):
@@ -49,10 +49,11 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
 
     plt.figure(figsize=(8, 6))
     bins = np.linspace(-3, 2, 15)
-    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
+    plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Score")
     plt.legend(loc="upper right")
+    plt.title(f"Score Distribution ({level.capitalize()})")
     plt.savefig(filename, dpi=300)
     plt.plot()
     plt.close()
@@ -78,9 +79,9 @@ def joint_plot(
 
     :raises ValueError: if a wrong level is provided
     """
-    score_col, _, protein_col, psm_col = _check_columns(prosit_target)
+    score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
@@ -117,10 +118,16 @@ def joint_plot(
         height=10,
         joint_kws={"rasterized": True, "edgecolor": "none", "s": 10},
     )
-    jplot.ax_joint.set_ylabel("rescored_score")
-    jplot.ax_joint.set_xlabel("original_score")
+    jplot.ax_joint.axhline(y=0, c="red")
+    jplot.ax_joint.axvline(x=0, c="red")
+    jplot.ax_marg_y.axhline(y=0, c="red")
+    jplot.ax_marg_x.axvline(x=0, c="red")
+
+    jplot.ax_joint.set_ylabel("Score\n(peptide property prediction)")
+    jplot.ax_joint.set_xlabel("Score\n(search engine)")
+    jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
-    plt.plot()
+    plt.show()
     plt.close()
 
 
@@ -135,10 +142,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
 
     :raises ValueError: if a wrong level is provided
     """
-    _, qval_col, protein_col, psm_col = _check_columns(prosit_target)
+    _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
     if level.lower() == "peptide":
-        join_col = protein_col
+        join_col = peptide_col
     elif level.lower() == "psm":
         join_col = psm_col
     else:
@@ -194,7 +201,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel("number of lost-common-shared targets below 1% FDR")
+    ax.set_ylabel(f"number of target {level.lower()}s below 1% FDR")
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="black")
     ax.tick_params(axis="y", which="major")
@@ -205,7 +212,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
     plt.savefig(filename, dpi=300, bbox_inches="tight")
-    plt.plot()
+    plt.show()
     plt.close()
 
 
@@ -234,7 +241,11 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
-    ax.axvline(x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()], color="red")
+    ax.axvline(
+        x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()] - sa_ce_df["COLLISION_ENERGY"].min(),
+        color="red",
+    )
+    plt.xticks(rotation=90)
     plt.grid()
     plt.savefig(filename, dpi=300)
     plt.plot()
@@ -291,8 +302,8 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
     bins = np.linspace(0, 1, 15)
-    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00")
-    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312")
+    plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
+    plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Spectral angle", size=14)
     plt.title("Target vs Decoys Spectral Angle Distribution")
     plt.legend(loc="upper right")
