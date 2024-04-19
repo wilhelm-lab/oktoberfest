@@ -2,7 +2,7 @@ import logging
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Union
-
+import scipy.sparse as sp
 import mokapot
 import numpy as np
 import pandas as pd
@@ -18,6 +18,7 @@ def generate_features(
     search_type: str,
     output_file: Union[str, Path],
     all_features: bool = False,
+    xl: bool = False,
     regression_method: str = "spline",
 ):
     """
@@ -32,15 +33,32 @@ def generate_features(
     :param all_features: whether to use all features or only the standard set TODO
     :param regression_method: The regression method to use for iRT alignment
     """
-    perc_features = Percolator(
+    if xl:
+        pred_a= library.get_matrix(FragmentType.PRED_A)[0]
+        pred_b= library.get_matrix(FragmentType.PRED_B)[0]
+        raw_a= library.get_matrix(FragmentType.RAW_A)[0]
+        raw_b= library.get_matrix(FragmentType.RAW_B)[0]
+        mz_a= library.get_matrix(FragmentType.MZ_A)[0]
+        mz_b= library.get_matrix(FragmentType.MZ_B)[0]
+        perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
-        pred_intensities=library.get_matrix(FragmentType.PRED)[0],
-        true_intensities=library.get_matrix(FragmentType.RAW)[0],
-        mz=library.get_matrix(FragmentType.MZ)[0],
+        pred_intensities=sp.hstack([pred_a, pred_b]),
+        true_intensities=sp.hstack([raw_a, raw_b]),
+        mz=sp.hstack([mz_a, mz_b]),
         input_type=search_type,
         all_features_flag=all_features,
         regression_method=regression_method,
     )
+    else:
+        perc_features = Percolator(
+            metadata=library.get_meta_data().reset_index(drop=True),
+            pred_intensities=library.get_matrix(FragmentType.PRED_A)[0],
+            true_intensities=library.get_matrix(FragmentType.RAW_A)[0],
+            mz=library.get_matrix(FragmentType.MZ_A)[0],
+            input_type=search_type,
+            all_features_flag=all_features,
+            regression_method=regression_method,
+        )
     perc_features.calc()
     perc_features.write_to_file(str(output_file))
 

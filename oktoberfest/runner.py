@@ -473,7 +473,7 @@ def run_ce_calibration(
             _ce_calib(spectra_file, config)
 
 
-def _calculate_features(spectra_file: Path, config: Config):
+def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
     library = _ce_calib(spectra_file, config)
 
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
@@ -487,18 +487,28 @@ def _calculate_features(spectra_file: Path, config: Config):
             "server_url": config.prediction_server,
             "ssl": config.ssl,
         }
-
-        pred_intensities = pr.predict(
+        if xl:
+            pred_intensities_a, pred_intensities_b  = pr.predict(
+            data=library.obs,
+            model_name=config.models["intensity"],
+            xl=True,
+            **predict_kwargs,
+        )
+            library.add_matrix(pred_intensities_a["intensities"], FragmentType.PRED_A)
+            library.add_matrix(pred_intensities_b["intensities"], FragmentType.PRED_B)
+            library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+            predict_step.mark_done()
+        else:
+            pred_intensities = pr.predict(
             data=library.obs,
             model_name=config.models["intensity"],
             **predict_kwargs,
         )
-
-        pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
-        library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
-        library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
-        library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
-        predict_step.mark_done()
+            pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
+            library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
+            library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+            library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+            predict_step.mark_done()
 
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
@@ -509,6 +519,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         search_type="original",
         output_file=fdr_dir / spectra_file.with_suffix(".original.tab").name,
         all_features=config.all_features,
+        xl=xl,
         regression_method=config.curve_fitting_method,
     )
     re.generate_features(
@@ -516,6 +527,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         search_type="rescore",
         output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
         all_features=config.all_features,
+        xl=xl,
         regression_method=config.curve_fitting_method,
     )
 
@@ -574,11 +586,17 @@ def run_rescoring(config_path: Union[str, Path]):
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
-            processing_pool.apply_async(_calculate_features, [spectra_file, config])
+            if "xl" in config.models["intensity"].lower():
+                processing_pool.apply_async(_calculate_features(xl=True), [spectra_file, config])
+            else:
+                processing_pool.apply_async(_calculate_features, [spectra_file, config])
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
-            _calculate_features(spectra_file, config)
+            if "xl" in config.models["intensity"].lower():
+                _calculate_features(spectra_file, config, xl=True)
+            else:
+                _calculate_features(spectra_file, config)
 
     # prepare rescoring
 
