@@ -9,7 +9,7 @@ from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, Union
-
+import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
@@ -565,6 +565,71 @@ def _rescore(fdr_dir: Path, config: Config):
         )
 
 
+
+def prepare_rescore_xl_csm_level(
+    featrures_dir: Path
+):
+    original_tab_file = pd.read_csv(featrures_dir + "/original.tab", sep="\t")
+    rescore_tab_file =  pd.read_csv(featrures_dir + "/rescore.tab", sep="\t")
+    columns_to_remove = ["run_name",
+            "scan_number",
+            "precursor_mass",
+            "precursor_charge",
+            "crosslinker_name",
+            "decoy_p1",
+            "base_sequence_p1",
+            "aa_len_p1",
+            "link_pos_p1",
+            "linked_aa_p1",
+            "mods_p1",
+            "mod_pos_p1",
+            "decoy_p2",
+            "base_sequence_p2",
+            "aa_len_p2",
+            "link_pos_p2",
+            "linked_aa_p2",
+            "mods_p2",
+            "mod_pos_p2",
+            "linear",
+            "match_score",
+            "decoy",
+            "RAW_FILE",
+            "MASS",
+            "PRECURSOR_CHARGE",
+            "CROSSLINKER_TYPE",
+            "REVERSE",
+            "SCAN_NUMBER",
+            "SEQUENCE_A",
+            "SEQUENCE_B",
+            "Modifications_A",
+            "Modifications_B",
+            "CROSSLINKER_POSITION_A",
+            "CROSSLINKER_POSITION_B",
+            "ModificationPositions1",
+            "ModificationPositions2",
+            "MODIFIED_SEQUENCE_A",
+            "MODIFIED_SEQUENCE_B",
+            "filename",
+            "ExpMass",
+            "FRAGMENTATION",
+            "INSTRUMENT_TYPES",
+            "MASS_ANALYZER",
+            "Unnamed: 0"
+    ]
+    original_tab_file.drop(columns=columns_to_remove, inplace=True)
+    rescore_tab_file.drop(columns=columns_to_remove, inplace=True)
+    original_tab_file = original_tab_file.fillna(0)
+    rescore_tab_file = rescore_tab_file.fillna(0)
+    string_columns = ['SpecId', 'Peptide', 'Proteins']  
+    original_tab_file_numeric_columns = [col for col in original_tab_file.columns if col not in string_columns]
+    rescore_tab_file_numeric_columns = [col for col in  rescore_tab_file.columns if col not in string_columns]
+    original_tab_file[original_tab_file_numeric_columns] = original_tab_file[original_tab_file_numeric_columns].apply(pd.to_numeric, errors='coerce')
+    rescore_tab_file[rescore_tab_file_numeric_columns] = rescore_tab_file[rescore_tab_file_numeric_columns].apply(pd.to_numeric, errors='coerce')
+
+    return original_tab_file, rescore_tab_file
+
+
+
 def run_rescoring(config_path: Union[str, Path]):
     """
     Create a ReScore object and run the rescoring.
@@ -587,7 +652,7 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                processing_pool.apply_async(_calculate_features(xl=True), [spectra_file, config])
+                processing_pool.apply_async(_calculate_features(spectra_file, config, xl=True), [spectra_file, config])
             else:
                 processing_pool.apply_async(_calculate_features, [spectra_file, config])
         processing_pool.check_pool()
@@ -601,9 +666,9 @@ def run_rescoring(config_path: Union[str, Path]):
     # prepare rescoring
 
     fdr_dir = config.output / "results" / config.fdr_estimation_method
-
     original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
     rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+    
 
     prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
     prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
@@ -617,6 +682,11 @@ def run_rescoring(config_path: Union[str, Path]):
         logger.info("Merging input tab files for rescoring with peptide property prediction")
         re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
         prepare_tab_rescore_step.mark_done()
+
+    if "xl" in config.models["intensity"].lower():
+        original_tab_file, rescore_tab_file = prepare_rescore_xl_csm_level(str(fdr_dir))
+        original_tab_file.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=False)
+        rescore_tab_file.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=False)
 
     # rescoring
     _rescore(fdr_dir, config)

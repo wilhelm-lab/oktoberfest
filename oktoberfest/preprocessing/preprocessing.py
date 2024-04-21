@@ -216,7 +216,7 @@ def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int,
         df = peptides.obs
     else:
         df = peptides
-
+        
     peptide_filter = (
     (df["PEPTIDE_LENGTH_A"] <= max_length)
     & (df["PEPTIDE_LENGTH_B"] <= max_length)
