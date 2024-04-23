@@ -7,7 +7,7 @@ import mokapot
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.percolator import Percolator
-from spectrum_io.search_result.xisearch import xisearch
+
 from ..data import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)

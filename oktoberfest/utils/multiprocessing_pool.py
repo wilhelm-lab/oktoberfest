@@ -24,9 +24,9 @@ class JobPool:
         self.pool = Pool(processes, self.init_worker)
         self.results = []
 
-    def apply_async(self, f, args):
+    def apply_async(self, f, args, **kwargs):
         """Apply async."""
-        r = self.pool.apply_async(f, args)
+        r = self.pool.apply_async(f, args=args, kwds=kwargs)
         self.results.append(r)
 
     def init_worker(self):
