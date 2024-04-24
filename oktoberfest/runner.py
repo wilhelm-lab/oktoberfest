@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
@@ -481,7 +480,7 @@ def _calculate_features(spectra_file: Path, config: Config):
     if not predict_step.is_done():
 
         if "alphapept" in config.models["intensity"].lower():
-            library.add_column(pd.Series(["QE"] * len(library.obs)), name="instrument_types")
+            library.obs["INSTRUMENT_TYPES"] = "QE"
 
         if "done" in list(library.obs.columns):
             predict_input = library.obs[~library.obs["done"]]
