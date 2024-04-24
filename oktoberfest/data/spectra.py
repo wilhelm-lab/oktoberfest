@@ -169,8 +169,13 @@ class Spectra(anndata.AnnData):
                 self.layers[layer] = csr_matrix(self.shape)
             if index is not None:
                 for r in index:
-                    idx = [list(self.var_names).index(i.decode("utf8")) for i in annotation[r]]
-                    self.layers[layer][r, idx] = intensity_data[r]
+                    idx = [
+                        list(self.var_names).index(i.decode("utf8"))
+                        for i in annotation[r]
+                        if i.decode("utf8") in list(self.var_names)
+                    ]
+                    stripped_annotation = [list(annotation[r]).index(a) for a in annotation[r] if a]
+                    self.layers[layer][r, idx] = intensity_data[r, stripped_annotation]
                 if "done" not in self.obs.columns:
                     self.obs["done"] = False
                 self.obs["done"].iloc[index] = True
