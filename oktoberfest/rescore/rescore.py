@@ -2,10 +2,11 @@ import logging
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Union
-import scipy.sparse as sp
+
 import mokapot
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType, Spectra
@@ -34,21 +35,21 @@ def generate_features(
     :param regression_method: The regression method to use for iRT alignment
     """
     if xl:
-        pred_a= library.get_matrix(FragmentType.PRED_A)[0]
-        pred_b= library.get_matrix(FragmentType.PRED_B)[0]
-        raw_a= library.get_matrix(FragmentType.RAW_A)[0]
-        raw_b= library.get_matrix(FragmentType.RAW_B)[0]
-        mz_a= library.get_matrix(FragmentType.MZ_A)[0]
-        mz_b= library.get_matrix(FragmentType.MZ_B)[0]
+        pred_a = library.get_matrix(FragmentType.PRED_A)[0]
+        pred_b = library.get_matrix(FragmentType.PRED_B)[0]
+        raw_a = library.get_matrix(FragmentType.RAW_A)[0]
+        raw_b = library.get_matrix(FragmentType.RAW_B)[0]
+        mz_a = library.get_matrix(FragmentType.MZ_A)[0]
+        mz_b = library.get_matrix(FragmentType.MZ_B)[0]
         perc_features = Percolator(
-        metadata=library.get_meta_data().reset_index(drop=True),
-        pred_intensities=sp.hstack([pred_a, pred_b]),
-        true_intensities=sp.hstack([raw_a, raw_b]),
-        mz=sp.hstack([mz_a, mz_b]),
-        input_type=search_type,
-        all_features_flag=all_features,
-        regression_method=regression_method,
-    )
+            metadata=library.get_meta_data().reset_index(drop=True),
+            pred_intensities=sp.hstack([pred_a, pred_b]),
+            true_intensities=sp.hstack([raw_a, raw_b]),
+            mz=sp.hstack([mz_a, mz_b]),
+            input_type=search_type,
+            all_features_flag=all_features,
+            regression_method=regression_method,
+        )
     else:
         perc_features = Percolator(
             metadata=library.get_meta_data().reset_index(drop=True),
@@ -108,6 +109,7 @@ def rescore_with_percolator(
     num_threads: int = 3,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
+    xl: bool = False,
 ):
     """
     Rescore using percolator.
@@ -140,18 +142,23 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
-
-    cmd = f"percolator --weights {weights_file} \
-                    --num-threads {num_threads} \
-                    --subset-max-train 500000 \
-                    --post-processing-tdc \
-                    --testFDR {test_fdr} \
-                    --trainFDR {train_fdr} \
+    if xl:
+        cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
-                    --results-peptides {target_peptides} \
-                    --decoy-results-peptides {decoy_peptides} \
                     {input_file} 2> {log_file}"
+    else:
+        cmd = f"percolator --weights {weights_file} \
+                        --num-threads {num_threads} \
+                        --subset-max-train 500000 \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
 
     logger.info(f"Starting percolator with command {cmd}")
     subprocess.run(cmd, shell=True, check=True)

@@ -14,7 +14,7 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage, Xisearch
+from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage, Scout, Xisearch
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -198,6 +198,7 @@ def filter_peptides(
 
     return peptides[peptide_filter]
 
+
 def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int) -> pd.DataFrame:
     """
     Filter xl search results using given constraints.
@@ -216,18 +217,19 @@ def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int,
         df = peptides.obs
     else:
         df = peptides
-        
+
     peptide_filter = (
-    (df["PEPTIDE_LENGTH_A"] <= max_length)
-    & (df["PEPTIDE_LENGTH_B"] <= max_length)
-    & (df["PEPTIDE_LENGTH_A"] >= min_length)
-    & (df["PEPTIDE_LENGTH_B"] >= min_length)
-    & (df["PRECURSOR_CHARGE"] <= max_charge)
-    & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
-    & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+        (df["PEPTIDE_LENGTH_A"] <= max_length)
+        & (df["PEPTIDE_LENGTH_B"] <= max_length)
+        & (df["PEPTIDE_LENGTH_A"] >= min_length)
+        & (df["PEPTIDE_LENGTH_B"] >= min_length)
+        & (df["PRECURSOR_CHARGE"] <= max_charge)
+        & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+        & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
     )
 
     return peptides[peptide_filter]
+
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
     """
@@ -318,6 +320,8 @@ def convert_search(
         search_result = Sage
     elif search_engine == "xisearch":
         search_result = Xisearch
+    elif search_engine == "scout":
+        search_result = Scout
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
@@ -580,6 +584,7 @@ def annotate_spectral_library(
     logger.info("Finished annotating.")
 
     return aspec
+
 
 def annotate_spectral_library_xl(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
     """

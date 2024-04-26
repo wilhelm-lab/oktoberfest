@@ -19,15 +19,15 @@ SpectraT = TypeVar("SpectraT", bound="Spectra")
 class FragmentType(Enum):
     """FragmentType class to enumerate pred, raw, and mz."""
 
-    PRED   = 1
+    PRED = 1
     PRED_A = 2
     PRED_B = 3
-    RAW    = 4
-    RAW_A  = 5
-    RAW_B  = 6
-    MZ     = 7
-    MZ_A   = 8
-    MZ_B   = 9
+    RAW = 4
+    RAW_A = 5
+    RAW_B = 6
+    MZ = 7
+    MZ_A = 8
+    MZ_B = 9
 
 
 class Spectra(anndata.AnnData):
@@ -65,7 +65,7 @@ class Spectra(anndata.AnnData):
         else:
             max_range = 30
         ion_nums = np.repeat(np.arange(1, max_range), 6)
-        ion_charge = np.tile([1, 2, 3], (max_range-1) * 2)
+        ion_charge = np.tile([1, 2, 3], (max_range - 1) * 2)
         temp_cols = []
         for size in range(1, max_range):
             for typ in ["Y", "B"]:
@@ -89,7 +89,7 @@ class Spectra(anndata.AnnData):
         if xl:
             max_range = 59
         else:
-            max_range = 30 
+            max_range = 30
         for i in range(1, max_range):
             for column in Spectra.COLUMNS_FRAGMENT_ION:
                 columns.append(prefix + "_" + column.replace("1", str(i)))
@@ -107,11 +107,11 @@ class Spectra(anndata.AnnData):
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
-            prefix = Spectra.INTENSITY_PRED_PREFIX_A    
+            prefix = Spectra.INTENSITY_PRED_PREFIX_A
         elif fragment_type.value == 3:
             prefix = Spectra.INTENSITY_PRED_PREFIX_B
         elif fragment_type.value == 4:
-            prefix = Spectra.INTENSITY_COLUMN_PREFIX   
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX
         elif fragment_type.value == 5:
             prefix = Spectra.INTENSITY_COLUMN_PREFIX_A
         elif fragment_type.value == 6:
@@ -119,7 +119,7 @@ class Spectra(anndata.AnnData):
         elif fragment_type.value == 7:
             prefix = Spectra.MZ_COLUMN_PREFIX
         elif fragment_type.value == 8:
-            prefix = Spectra.MZ_COLUMN_PREFIX_A       
+            prefix = Spectra.MZ_COLUMN_PREFIX_A
         else:
             prefix = Spectra.MZ_COLUMN_PREFIX_B
         return prefix

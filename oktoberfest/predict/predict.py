@@ -13,7 +13,7 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, xl : bool = False, **kwargs) -> Dict[str, np.ndarray]:
+def predict(data: pd.DataFrame, xl: bool = False, **kwargs) -> Dict[str, np.ndarray]:
     """
     Retrieve predictions from koina.
 
@@ -29,10 +29,10 @@ def predict(data: pd.DataFrame, xl : bool = False, **kwargs) -> Dict[str, np.nda
     predictor = Koina(**kwargs)
     if xl:
         results_a, results_b = predictor.predict_xl(data)
-        return results_a, results_b 
+        return results_a, results_b
     else:
         results = predictor.predict(data)
-        return results 
+        return results
 
 
 def parse_fragment_labels(
@@ -71,7 +71,9 @@ def parse_fragment_labels(
     return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False, xl : bool = False) -> Spectra:
+def _prepare_alignment_df(
+    library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False, xl: bool = False
+) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
@@ -102,7 +104,9 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     return alignment_library
 
 
-def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, xl : bool = False, **server_kwargs ) -> Spectra:
+def ce_calibration(
+    library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, xl: bool = False, **server_kwargs
+) -> Spectra:
     """
     Calculate best collision energy for peptide property predictions.
 
@@ -119,13 +123,13 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
     if xl:
-        intensities_a, intensities_b = predict(alignment_library.obs, xl = True, **server_kwargs)
+        intensities_a, intensities_b = predict(alignment_library.obs, xl=True, **server_kwargs)
         alignment_library.add_matrix(intensities_a["intensities"], FragmentType.PRED_A)
         alignment_library.add_matrix(intensities_b["intensities"], FragmentType.PRED_B)
     else:
         intensities = predict(alignment_library.obs, **server_kwargs)
         alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
-    
+
     _alignment(alignment_library, xl=xl)
     return alignment_library
 
@@ -148,13 +152,12 @@ def _alignment(alignment_library: Spectra, xl: bool = False):
         sm_b = SimilarityMetrics(pred_intensity_b, raw_intensity_b)
         alignment_library.add_column(sm_a.spectral_angle(raw_intensity_a, pred_intensity_a, 0), "SPECTRAL_ANGLE_A")
         alignment_library.add_column(sm_b.spectral_angle(raw_intensity_b, pred_intensity_b, 0), "SPECTRAL_ANGLE_B")
-        alignment_library.add_column((alignment_library.obs["SPECTRAL_ANGLE_A"] + alignment_library.obs["SPECTRAL_ANGLE_B"]) / 2, "SPECTRAL_ANGLE")
+        alignment_library.add_column(
+            (alignment_library.obs["SPECTRAL_ANGLE_A"] + alignment_library.obs["SPECTRAL_ANGLE_B"]) / 2,
+            "SPECTRAL_ANGLE",
+        )
     else:
         pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
         raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
         sm = SimilarityMetrics(pred_intensity, raw_intensity)
         alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
-
-
-    
-    

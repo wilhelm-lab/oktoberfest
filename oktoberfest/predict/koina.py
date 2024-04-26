@@ -1,7 +1,7 @@
 import time
 import warnings
 from functools import partial
-from typing import Dict, Generator, KeysView, List, Optional, Union
+from typing import Dict, Generator, KeysView, List, Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -35,8 +35,13 @@ alternative_column_map_xl = {
 alternative_column_map_xl_switched = {
     "peptide_sequences_1": "MODIFIED_SEQUENCE_B",
     "peptide_sequences_2": "MODIFIED_SEQUENCE_A",
-    **{key: value for key, value in alternative_column_map_xl.items() if key not in ["peptide_sequences_1", "peptide_sequences_2"]}
+    **{
+        key: value
+        for key, value in alternative_column_map_xl.items()
+        if key not in ["peptide_sequences_1", "peptide_sequences_2"]
+    },
 }
+
 
 class Koina:
     """A class for interacting with Koina models for inference."""
@@ -495,7 +500,7 @@ class Koina:
         data: Union[Dict[str, np.ndarray], pd.DataFrame],
         _async: bool = True,
         debug=False,
-    ) -> Dict[str, np.ndarray]:
+    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """
         Perform inference on the xl data using the Koina model.
 
@@ -538,7 +543,6 @@ class Koina:
             return self.__predict_async(data_1, debug=debug), self.__predict_async(data_2, debug=debug)
         else:
             return self.__predict_sequential(data_1), self.__predict_sequential(data_2)
-
 
     def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
         """
