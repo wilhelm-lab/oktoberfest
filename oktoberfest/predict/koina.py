@@ -586,7 +586,6 @@ class Koina:
 
                 unfinished_tasks = new_unfinished_tasks
                 pbar.refresh()
-
         return self.__handle_results(infer_results, debug)
 
     def __handle_results(

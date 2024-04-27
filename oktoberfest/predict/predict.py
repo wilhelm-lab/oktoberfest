@@ -87,17 +87,16 @@ def _prepare_alignment_df(
     :param xl: if true, select the top 50 spectra for cross-linked peptide
     :return: a library that is modified according to the description above
     """
-    top_n = 1000 if not xl else 50
+    top_n = 1000 if not xl else 20
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False)
     if group_by_charge:
         hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
     top_hcd_targets = hcd_targets.head(top_n)
-
+    top_n= len(top_hcd_targets)
     alignment_library = library[top_hcd_targets.index]
     alignment_library = Spectra(anndata.concat([alignment_library for _ in range(*ce_range)]))
     alignment_library.obs.reset_index(inplace=True)
-
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
     alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), top_n)
 
