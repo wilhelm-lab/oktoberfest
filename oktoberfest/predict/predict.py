@@ -88,7 +88,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
         (alignment_library.spectra_data["FRAGMENTATION"] == "HCD") & (~alignment_library.spectra_data["REVERSE"])
     ]
     # Select the 1000 highest scoring or all if there are less than 1000
-    temp_df = alignment_library.spectra_data.sort_values(by="SCORE", ascending=False)
+    temp_df = alignment_library.spectra_data.sort_values(by="SCORE", ascending=False).groupby("RAW_FILE")
     if group_by_charge:
         temp_df = temp_df.groupby("PRECURSOR_CHARGE")
 
