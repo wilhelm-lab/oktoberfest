@@ -551,15 +551,19 @@ def load_spectra(
         Only used for parsing of mzML files.
     :param tims_meta_file: Optional path to timstof metadata file in internal format. This is only required
         when loading timstof spectra and used for summation of spectra.
+    :raises TypeError: if not all filenames are provided as str or Path objects.
     :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
     :raises AssertionError: if no tims_meta_file was provided when loading timsTOF hdf data
     :return: measured spectra with metadata.
     """
     if isinstance(filenames, (str, Path)):
-        filenames = [filenames]
-    filenames = [Path(filename) for filename in filenames]
+        internal_filenames = [Path(filenames)]
+    elif isinstance(filenames, list):
+        internal_filenames = [Path(filename) for filename in filenames]
+    else:
+        raise TypeError("Type of filenames not understood.")
 
-    format_ = filenames[0].suffix.lower()
+    format_ = internal_filenames[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(
             source=filenames, package=parser, search_type=""
@@ -569,7 +573,7 @@ def load_spectra(
             raise AssertionError(
                 "Loading spectra from a timsTOF hdf file requires metadata provided by tims_meta_file."
             )
-        results = read_and_aggregate_timstof(source=filenames, tims_meta_file=Path(tims_meta_file))
+        results = read_and_aggregate_timstof(source=internal_filenames[0], tims_meta_file=Path(tims_meta_file))
         return results
 
     else:
