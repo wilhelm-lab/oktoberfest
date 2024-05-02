@@ -114,7 +114,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
 
     if "alphapept" in server_kwargs.get("model_name").lower():
-        alignment_library.obs["INSTRUMENT_TYPES"] = server_kwargs.get("instrument_type")
+        alignment_library.obs["INSTRUMENT_TYPES"] = "QE"
 
     if "done" in list(alignment_library.obs.columns):
         predict_input = alignment_library.obs[~alignment_library.obs["done"]]

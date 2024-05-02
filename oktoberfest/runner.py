@@ -141,7 +141,6 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             "server_url": config.prediction_server,
             "ssl": config.ssl,
             "model_name": config.models["intensity"],
-            "instrument_type": config.models["instrument_type"]
         }
         use_ransac_model = config.use_ransac_model
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
@@ -481,7 +480,7 @@ def _calculate_features(spectra_file: Path, config: Config):
     if not predict_step.is_done():
 
         if "alphapept" in config.models["intensity"].lower():
-            library.obs["INSTRUMENT_TYPES"] = config.models["instrument_type"]
+            library.obs["INSTRUMENT_TYPES"] = "QE"
 
         if "done" in list(library.obs.columns):
             predict_input = library.obs[~library.obs["done"]]
