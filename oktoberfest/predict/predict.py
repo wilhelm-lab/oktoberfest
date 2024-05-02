@@ -113,8 +113,20 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
-    intensities = predict(alignment_library.obs, **server_kwargs)
-    alignment_library.add_matrix(intensities["intensities"], FragmentType.PRED)
+
+    if "alphapept" in server_kwargs.get("model_name").lower():
+        alignment_library.obs["INSTRUMENT_TYPES"] = "QE"
+
+    if "done" in list(alignment_library.obs.columns):
+        predict_input = alignment_library.obs[~alignment_library.obs["done"]]
+    else:
+        predict_input = alignment_library.obs
+
+    intensities = predict(predict_input, **server_kwargs)
+    intensities["index"] = predict_input.index.values.astype(np.int32)
+    alignment_library.add_matrix(
+        intensities["intensities"], FragmentType.PRED, intensities["annotation"], intensities["index"]
+    )
     _alignment(alignment_library)
     return alignment_library
 

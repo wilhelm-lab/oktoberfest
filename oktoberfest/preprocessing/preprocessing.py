@@ -38,7 +38,9 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
     var_df = Spectra._gen_vars_df()
-    return Spectra(obs=library_df, var=var_df)
+    spec = Spectra(obs=library_df, var=var_df)
+    spec.var_names = var_df.index
+    return spec
 
 
 def generate_metadata(
@@ -153,6 +155,18 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
             "min_length": 7,
             "max_length": 30,
             "max_charge": 6,
+        }
+    elif "ms2pip" in model.lower():
+        filter_kwargs = {
+            "min_length": 2,
+            "max_length": 100,
+            "max_charge": 6,
+        }
+    elif "alphapept" in model.lower():
+        filter_kwargs = {
+            "min_length": 7,
+            "max_length": 35,
+            "max_charge": 4,
         }
     else:
         raise ValueError(f"The model {model} is not known.")
@@ -533,9 +547,14 @@ def annotate_spectral_library(
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
 
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df())
+    var_df = Spectra._gen_vars_df()
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.var_names = var_df.index
     aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
-    aspec.add_matrix(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
+    aspec.add_matrix(
+        np.stack(df_annotated_spectra["MZ"]),
+        FragmentType.MZ,
+    )
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.strings_to_categoricals()
 

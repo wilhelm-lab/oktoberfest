@@ -125,7 +125,6 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        print(library.columns)
         aspec = pp.annotate_spectral_library(
             library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
         )
@@ -480,19 +479,33 @@ def _calculate_features(spectra_file: Path, config: Config):
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
 
+        if "alphapept" in config.models["intensity"].lower():
+            library.obs["INSTRUMENT_TYPES"] = "QE"
+
+        if "done" in list(library.obs.columns):
+            predict_input = library.obs[~library.obs["done"]]
+        else:
+            predict_input = library.obs
+
         predict_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
         }
 
         pred_intensities = pr.predict(
-            data=library.obs,
+            data=predict_input,
             model_name=config.models["intensity"],
             **predict_kwargs,
         )
 
         pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
-        library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
+        pred_intensities["index"] = predict_input.index.values.astype(np.int32)
+        library.add_matrix(
+            pred_intensities["intensities"],
+            FragmentType.PRED,
+            pred_intensities["annotation"],
+            pred_intensities["index"],
+        )
         library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()
