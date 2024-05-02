@@ -82,7 +82,8 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     """
     top_n = 1000
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
-    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False)
+    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby("RAW_FILE")
+
     if group_by_charge:
         hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
     top_hcd_targets = hcd_targets.head(top_n)

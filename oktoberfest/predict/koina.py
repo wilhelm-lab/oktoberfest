@@ -1,3 +1,4 @@
+import logging
 import time
 import warnings
 from functools import partial
@@ -13,6 +14,9 @@ from tritonclient.grpc import (
     InferRequestedOutput,
     InferResult,
 )
+
+logger = logging.getLogger(__name__)
+
 
 alternative_column_map = {
     "peptide_sequences": "MODIFIED_SEQUENCE",
@@ -393,8 +397,8 @@ class Koina:
         data: Dict[str, np.ndarray],
         infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
-        timeout: int = 10000,
-        retries: int = 10,
+        timeout: int = 60000,
+        retries: int = 5,
     ):
         """
         Perform asynchronous batch inference on the given data using the Koina model.
@@ -419,8 +423,6 @@ class Koina:
                 yield
                 if isinstance(infer_results.get(request_id), InferResult):
                     break
-                del infer_results[request_id]  # avoid race condition in case inference is slower than tqdm loop
-
             self.client.async_infer(
                 model_name=self.model_name,
                 request_id=str(request_id),
@@ -510,10 +512,14 @@ class Koina:
                         pbar.n += 1
                     else:  # unexpected result / exception -> try again
                         try:
+                            del infer_results[j]
                             next(tasks[j])
+                            logger.warning(f"Unexpected response for batch {j}. Retrying...")
                             new_unfinished_tasks.append(j)
                         except StopIteration:
+                            logger.error(f"Unexpected response for batch {j}. Max retries exceeded. Stopping.")
                             pbar.n += 1
+                            infer_results[j] = result
 
                 unfinished_tasks = new_unfinished_tasks
                 pbar.refresh()
