@@ -551,10 +551,11 @@ def load_spectra(
     :raises AssertionError: if no tims_meta_file was provided when loading timsTOF hdf data
     :return: measured spectra with metadata.
     """
-    if isinstance(filename, str):
-        filename = Path(filename)
+    if isinstance(filename, (str, Path)):
+        filename = [filename]
+    filename = [Path(filename) for filename in filename]
 
-    format_ = filename.suffix.lower()
+    format_ = filename[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(
             source=filename, package=parser, search_type=""
