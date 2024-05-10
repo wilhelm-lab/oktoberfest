@@ -455,42 +455,6 @@ def run_ce_calibration(
            test =  _ce_calib(spectra_file, config)
 
 
-def _sqrt_intensities_for_model(library: Spectra, model: str) -> Spectra:
-    """
-    Performs a square-root transformation on the raw intensities for the sum-sqrt model (Prosit_2024_intensities_single_cell)
-
-    :param data: annotated Spectra object with raw intensities and sqrt predicted intensites and rest of relevant columns
-    :param model: Name of the prediction model
-
-    :return: spectra object with sqrt intensities as column
-    """
-
-    if "single_cell" in model.lower() or "sqrt" in model.lower():
-        col = library.get_matrix(FragmentType.RAW)[1]
-        sqrt_intensities = []
-
-        # iterate through the matrix (each row contains the intensities of one spectra, so put them back together in one list)
-        for index, row in library.spectra_data.iterrows():
-            # Extract the values of columns with intensities
-            raw_intensities = [row[col_name] for col_name in col]
-            # sqrt raw_intensities
-            sqrt_intensity = []
-            for intensity in raw_intensities:
-                if intensity > 0.0:
-                    sqrt_intensity.append(math.sqrt(intensity))
-                else:
-                    sqrt_intensity.append(intensity)
-            sqrt_intensities.append(sqrt_intensity) # list with sqrt fragment intensities of one spectrum per index
-    
-        logger.info(sqrt_intensities[:3])
-
-        # drop non-transformed intensities and add sqrt intensities instead
-        library.spectra_data.drop(columns=col, inplace=True)
-        library.add_matrix(pd.Series(sqrt_intensities), FragmentType.RAW)
-
-    return library
-
-
 def _calculate_features(spectra_file: Path, config: Config):
     library = _ce_calib(spectra_file, config)
 
@@ -514,7 +478,7 @@ def _calculate_features(spectra_file: Path, config: Config):
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
 
-    library = _sqrt_intensities_for_model(library, config.models["intensity"])
+    #library = _sqrt_intensities_for_model(library, config.models["intensity"])
 
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
 

@@ -138,18 +138,14 @@ def _alignment(alignment_library: Spectra, model: str):
 
     :param alignment_library: the library to perform the alignment on
     """
-    if "single_cell" in model.lower() or "sqrt" in model.lower():
-        raw_intensity = csr_matrix(np.sqrt(alignment_library.get_matrix(FragmentType.RAW)[0]))
-        filter_on = 0.2
-    else: 
-        raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
-        
+    
+    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]    
     pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
     
     # return pred_intensity.toarray(), raw_intensity.toarray()
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     if "single_cell" in model.lower() or "sqrt" in model.lower():
-        alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0, filter_on)
+        alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0, 0.2)
     elif "sum" in model.lower():
         alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0, 0.04)
     else:

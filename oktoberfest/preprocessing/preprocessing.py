@@ -1,5 +1,6 @@
 import logging
 from itertools import chain, product, repeat
+import math
 from pathlib import Path
 from sys import platform
 from typing import Any, Dict, List, Optional, Union
@@ -405,6 +406,33 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
 
     return library
 
+def sqrt_intensities_for_model(spectra: pd.DataFrame, model: str) -> pd.DataFrame:
+    """
+    Performs a square-root transformation on the raw intensities for the sum-sqrt model (Prosit_2024_intensities_single_cell)
+
+    :param data: annotated Spectra object with raw intensities and sqrt predicted intensites and rest of relevant columns
+    :param model: Name of the prediction model
+
+    :return: spectra object with sqrt intensities as column
+    """
+
+    if "single_cell" in model.lower() or "sqrt" in model.lower():
+        sqrt_intensities = []
+
+        # iterate through the intensities column, each row contains the intensities of a spectrum
+        for raw_intensities in spectra["INTENSITIES"]:
+            # sqrt raw_intensities
+            sqrt_intensity = []
+            for intensity in raw_intensities:
+                if intensity > 0.0:
+                    sqrt_intensity.append(math.sqrt(intensity))
+                else:
+                    sqrt_intensity.append(intensity)
+            sqrt_intensities.append(sqrt_intensity) # list with sqrt fragment intensities of one spectrum per index
+    
+        spectra["INTENSITIES"] = sqrt_intensities
+    return spectra
+
 
 def annotate_spectral_library(psms: Spectra,config: Config, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
     """
@@ -421,7 +449,7 @@ def annotate_spectral_library(psms: Spectra,config: Config, mass_tol: Optional[f
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms.spectra_data, mass_tol, unit_mass_tol)
     
-    #df_annotated_spectra = sqrt_intensities_for_model(df_annotated_spectra, config.models["intensity"])
+    df_annotated_spectra = sqrt_intensities_for_model(df_annotated_spectra, config.models["intensity"])
     
     logger.info("Finished annotating.")
     psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
