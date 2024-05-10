@@ -4,6 +4,8 @@ from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
+import math
+from scipy.sparse import csr_matrix
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
@@ -27,7 +29,9 @@ def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
     predictor = Koina(**kwargs)
 
-    results = predictor.predict(data)
+    model = kwargs.get("model_name")
+
+    results = predictor.predict(data)    
     return results
 
 
@@ -121,11 +125,11 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
     intensities = predict(alignment_library.spectra_data, **server_kwargs)
     alignment_library.add_matrix(pd.Series(intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
-    _alignment(alignment_library)
+    _alignment(alignment_library, server_kwargs.get("model_name"))
     return alignment_library
 
 
-def _alignment(alignment_library: Spectra):
+def _alignment(alignment_library: Spectra, model: str):
     """
     Perform the alignment of predicted versus raw intensities.
 
@@ -134,11 +138,22 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
+    if "single_cell" in model.lower() or "sqrt" in model.lower():
+        raw_intensity = csr_matrix(np.sqrt(alignment_library.get_matrix(FragmentType.RAW)[0]))
+        filter_on = 0.2
+    else: 
+        raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
+        
     pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
+    
     # return pred_intensity.toarray(), raw_intensity.toarray()
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
-    alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
+    if "single_cell" in model.lower() or "sqrt" in model.lower():
+        alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0, filter_on)
+    elif "sum" in model.lower():
+        alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0, 0.04)
+    else:
+        alignment_library.spectra_data["SPECTRAL_ANGLE"] = sm.spectral_angle(raw_intensity, pred_intensity, 0)
     alignment_library.spectra_data = alignment_library.spectra_data[
         alignment_library.spectra_data["SPECTRAL_ANGLE"] != 0
     ]

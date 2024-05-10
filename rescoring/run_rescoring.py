@@ -10,7 +10,7 @@ Code to run rescoring on server
 parser = argparse.ArgumentParser()
 parser.add_argument('--input', '-i')
 parser.add_argument('--output', '-o')
-parser.add_argument('--type', '-t', choices=['sqrt', 'sum', 'basic'])
+parser.add_argument('--type', '-t', choices=['sqrt', 'sum', 'basic', 'both'])
 
 args = parser.parse_args()
 
@@ -53,7 +53,7 @@ elif args.type == 'sum':
         },
         "output": args.output,
         "models": {
-            "intensity": "Prosit_2023_intensity_sum",
+            "intensity": "Prosit_2024_intensity_sum", #"Prosit_2023_intensity_sum",
             "irt": "Prosit_2019_irt"
         },
         "prediction_server": "10.157.98.62:9500",
@@ -83,6 +83,31 @@ elif args.type == 'basic':
         },
         "prediction_server": "koina.proteomicsdb.org:443",
         "ssl": True,
+        "thermoExe": "/cmnfs/home/m.khanh/oktoberfest/rescoring/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
+        "numThreads": 1,
+        "fdr_estimation_method": "mokapot",
+        "regressionMethod": "spline",
+        "allFeatures": False,
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm"
+    }
+elif args.type == 'both':
+    task_config_rescoring = {
+        "type": "Rescoring",
+        "tag": "",
+        "inputs": {
+            "search_results": args.input + "/txt/msms.txt",
+            "search_results_type": "Maxquant",
+            "spectra": args.input,
+            "spectra_type": "raw"
+        },
+        "output": args.output,
+        "models": {
+            "intensity": "Prosit_2024_intensity_single_cell",
+            "irt": "Prosit_2019_irt"
+        },
+        "prediction_server": "10.157.98.62:9500",
+        "ssl": False,
         "thermoExe": "/cmnfs/home/m.khanh/oktoberfest/rescoring/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
         "numThreads": 1,
         "fdr_estimation_method": "mokapot",

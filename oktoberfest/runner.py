@@ -10,6 +10,7 @@ from multiprocessing import Manager, Process, pool
 from pathlib import Path
 from typing import Dict, List, Tuple, Type, Union
 
+import math
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
@@ -73,6 +74,8 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
 
         # filter search results
         search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
+        # perform sqrt if necessary
+        #search_results = pp.sqrt_intensities_for_model(search_results=search_results, model=config.models["intensity"])
 
         # split search results
         filenames_found = pp.split_search(
@@ -112,7 +115,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
         spectra = pp.load_spectra(file_to_load)
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
+        pp.annotate_spectral_library(library,config, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
         library.write_as_hdf5(hdf5_path).join()  # write_metadata_annotation
 
     return library
@@ -449,7 +452,43 @@ def run_ce_calibration(
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
-            _ce_calib(spectra_file, config)
+           test =  _ce_calib(spectra_file, config)
+
+
+def _sqrt_intensities_for_model(library: Spectra, model: str) -> Spectra:
+    """
+    Performs a square-root transformation on the raw intensities for the sum-sqrt model (Prosit_2024_intensities_single_cell)
+
+    :param data: annotated Spectra object with raw intensities and sqrt predicted intensites and rest of relevant columns
+    :param model: Name of the prediction model
+
+    :return: spectra object with sqrt intensities as column
+    """
+
+    if "single_cell" in model.lower() or "sqrt" in model.lower():
+        col = library.get_matrix(FragmentType.RAW)[1]
+        sqrt_intensities = []
+
+        # iterate through the matrix (each row contains the intensities of one spectra, so put them back together in one list)
+        for index, row in library.spectra_data.iterrows():
+            # Extract the values of columns with intensities
+            raw_intensities = [row[col_name] for col_name in col]
+            # sqrt raw_intensities
+            sqrt_intensity = []
+            for intensity in raw_intensities:
+                if intensity > 0.0:
+                    sqrt_intensity.append(math.sqrt(intensity))
+                else:
+                    sqrt_intensity.append(intensity)
+            sqrt_intensities.append(sqrt_intensity) # list with sqrt fragment intensities of one spectrum per index
+    
+        logger.info(sqrt_intensities[:3])
+
+        # drop non-transformed intensities and add sqrt intensities instead
+        library.spectra_data.drop(columns=col, inplace=True)
+        library.add_matrix(pd.Series(sqrt_intensities), FragmentType.RAW)
+
+    return library
 
 
 def _calculate_features(spectra_file: Path, config: Config):
@@ -474,6 +513,8 @@ def _calculate_features(spectra_file: Path, config: Config):
 
     library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
     library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
+
+    library = _sqrt_intensities_for_model(library, config.models["intensity"])
 
     library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
 

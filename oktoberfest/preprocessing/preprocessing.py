@@ -14,6 +14,8 @@ from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
+from ..utils import Config
+
 from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
@@ -404,12 +406,12 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     return library
 
 
-def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+def annotate_spectral_library(psms: Spectra,config: Config, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
     """
     Annotate spectral library with peaks and mass.
 
     This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.
+    as well as the calculated monoisotopic mass of the precursor ion and the log-normalizied sum of peak intensities.
     The additional information is added to the provided spectral library.
 
     :param psms: Spectral library to be annotated.
@@ -418,12 +420,16 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms.spectra_data, mass_tol, unit_mass_tol)
+    
+    #df_annotated_spectra = sqrt_intensities_for_model(df_annotated_spectra, config.models["intensity"])
+    
     logger.info("Finished annotating.")
     psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
     psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
     psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
     psms.add_column(df_annotated_spectra["LOG_SUM_INTENSITIES"].to_numpy(), "LOG_SUM_INTENSITIES")
     psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
+    psms.add_column(df_annotated_spectra["FRAGMENTATION"].to_numpy(), "FRAGMENTATION")
 
 
 def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
