@@ -302,12 +302,12 @@ class Config:
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if "tmt" not in self.models["intensity"].lower():
+            if ("tmt" not in self.models["intensity"].lower()) and ("ptm" not in self.models["intensity"].lower()):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if "tmt" not in self.models["irt"].lower():
+            if ("tmt" not in self.models["irt"].lower()) and ("ptm" not in self.models["irt"].lower()):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
