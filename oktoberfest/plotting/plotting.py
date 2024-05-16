@@ -48,7 +48,7 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     score_col, _, _, _ = _check_columns(target)
 
     plt.figure(figsize=(8, 6))
-    bins = np.linspace(-3, 2, 15)
+    bins = np.linspace(-3, 2, 15).tolist()
     plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
     plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Score")
@@ -295,7 +295,7 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
-    bins = np.linspace(0, 1, 15)
+    bins = np.linspace(0, 1, 15).tolist()
     plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
     plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Spectral angle", size=14)
@@ -378,12 +378,7 @@ def plot_all(data_dir: Path):
 
 
 def plot_ce_ransac_model(
-    sa_ce_df: pd.DataFrame,
-    filename: Path,
-    xlabel: str = "MASS",
-    ylabel: str = "delta collision enegery",
-    *args,
-    **kwargs,
+    sa_ce_df: pd.DataFrame, filename: Path, xlabel: str = "MASS", ylabel: str = "delta collision enegery", **kwargs
 ):
     """Generate plot (mass vs ce difference)."""
     df = sa_ce_df.reset_index()
@@ -393,6 +388,6 @@ def plot_ce_ransac_model(
     sns.regplot(
         data=df, x="MASS", y="delta_collision_energy", scatter=False, ci=None, line_kws={"linestyle": "--"}, ax=ax
     )
-    ax.set(xlabel=xlabel, ylabel=ylabel, *args, **kwargs)
+    ax.set(xlabel=xlabel, ylabel=ylabel, **kwargs)
     plt.savefig(filename, dpi=300)
     plt.close()

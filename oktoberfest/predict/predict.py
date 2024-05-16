@@ -98,7 +98,9 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     return alignment_library
 
 
-def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, **server_kwargs) -> Spectra:
+def ce_calibration(
+    library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, model_name: str, **server_kwargs
+) -> Spectra:
     """
     Calculate best collision energy for peptide property predictions.
 
@@ -109,12 +111,13 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     :param library: spectral library to perform CE calibration on
     :param ce_range: the min and max CE to be tested during calibration
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
+    :param model_name: The name of the requested prediction model. This is forwarded to the prediction method with
+        server_kwargs and checked here to determine if alphapept is used for further preprocessing.
     :param server_kwargs: Additional parameters that are forwarded to the prediction method
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
-
-    if "alphapept" in server_kwargs.get("model_name").lower():
+    if "alphapept" in model_name.lower():
         alignment_library.obs["INSTRUMENT_TYPES"] = "QE"
 
     if "done" in list(alignment_library.obs.columns):
@@ -122,7 +125,7 @@ def ce_calibration(library: Spectra, ce_range: Tuple[int, int], group_by_charge:
     else:
         predict_input = alignment_library.obs
 
-    intensities = predict(predict_input, **server_kwargs)
+    intensities = predict(predict_input, model_name=model_name, **server_kwargs)
     intensities["index"] = predict_input.index.values.astype(np.int32)
     alignment_library.add_matrix(
         intensities["intensities"], FragmentType.PRED, intensities["annotation"], intensities["index"]
