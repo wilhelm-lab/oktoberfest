@@ -102,6 +102,11 @@ class Spectra(anndata.AnnData):
             layer = Spectra.MZ_LAYER_NAME
         return layer
 
+    def __getitem__(self, index: anndata._core.index.Index):
+        """Returns a sliced view of the object with this type to avoid returning AnnData instances when slicing."""
+        oidx, vidx = self._normalize_indices(index)
+        return Spectra(self, oidx=oidx, vidx=vidx, asview=True)
+
     def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
         """
         Add column to spectra data.
@@ -160,7 +165,7 @@ class Spectra(anndata.AnnData):
         intensity_data[intensity_data == 0] = c.EPSILON
         intensity_data[intensity_data == -1] = 0.0
 
-        intensity_data = csr_matrix(intensity_data)
+        intensity_data_sparse = csr_matrix(intensity_data)
 
         layer = self._resolve_layer_name(fragment_type)
 
@@ -175,13 +180,13 @@ class Spectra(anndata.AnnData):
                         if i.decode("utf8") in list(self.var_names)
                     ]
                     stripped_annotation = [list(annotation[r]).index(a) for a in annotation[r] if a]
-                    self.layers[layer][r, idx] = intensity_data[r, stripped_annotation]
+                    self.layers[layer][r, idx] = intensity_data_sparse[r, stripped_annotation]
                 if "done" not in self.obs.columns:
                     self.obs["done"] = False
                 self.obs["done"].iloc[index] = True
 
         else:
-            self.layers[layer] = intensity_data
+            self.layers[layer] = intensity_data_sparse
 
     def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
         """
@@ -207,7 +212,7 @@ class Spectra(anndata.AnnData):
         self.write(output_file, compression="gzip")
 
     @classmethod
-    def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]):
+    def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
         """
         Read from hdf5 file.
 
