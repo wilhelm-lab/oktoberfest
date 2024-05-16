@@ -104,7 +104,7 @@ jobs:
                   print("::set-output name=result::{}".format(result))
 
             - name: Restore pre-commit cache
-              uses: actions/cache@v3.3.2
+              uses: actions/cache@v4.0.2
               if: matrix.session == 'pre-commit'
               with:
                   path: ~/.cache/pre-commit
@@ -116,15 +116,15 @@ jobs:
               run: nox --force-color --python=${{ matrix.python-version }}
 
             - name: Upload coverage data
-              if: always() && matrix.session == 'tests'
-              uses: actions/upload-artifact@v3
+              if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v4
               with:
                   name: coverage-data
                   path: ".coverage.*"
 
             - name: Upload documentation
               if: matrix.session == 'docs-build'
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: docs
                   path: docs/_build
@@ -154,7 +154,7 @@ jobs:
                   nox --version
 
             - name: Download coverage data
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: coverage-data
 
