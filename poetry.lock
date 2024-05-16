@@ -1547,13 +1547,13 @@ research = ["entsoe-py (>=0.3.2)", "lxml (>=4.6.2)", "python-dotenv (>=0.15.0)",
 
 [[package]]
 name = "mokapot"
-version = "0.9.1"
+version = "0.10.0"
 description = "Fast and flexible semi-supervised learning for peptide detection"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "mokapot-0.9.1-py3-none-any.whl", hash = "sha256:00088431c22dfbff9bfae1ef0c4d97caa8f6dc78013a6c5ca95b3ff999698ab5"},
-    {file = "mokapot-0.9.1.tar.gz", hash = "sha256:b4b89e4e35f110e10ffd22498d758e61f83195a10f249cccee1092e760e82313"},
+    {file = "mokapot-0.10.0-py3-none-any.whl", hash = "sha256:3504f1a3b03214a0dc955c95297f9c28b4dfbe9d3162f36e70de19516a8ad521"},
+    {file = "mokapot-0.10.0.tar.gz", hash = "sha256:80e483491a5b2e6a069f561e88176d5751258b89a7147f5d855e3c11461b7c0b"},
 ]
 
 [package.dependencies]
@@ -3563,4 +3563,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.0,<3.11.0"
-content-hash = "da62362ab2294f0ea4050fef7f390103f319a70aa744adb74c6bcbe30851614e"
+content-hash = "bf111efc71b5421c09217bb84d444c12aea10dcb9eb9f9a2d75ab0229a4dfaa3"
