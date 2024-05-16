@@ -204,7 +204,7 @@ def filter_peptides(
         & (~df["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
     )
 
-    return peptides[peptide_filter]
+    return peptides[peptide_filter.values]
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
@@ -238,8 +238,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    filter_peptides_for_model(library, model)
-
+    library = filter_peptides_for_model(library, model)
     library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
