@@ -39,5 +39,10 @@ class TestTMTProsit(unittest.TestCase):
             library_expected.get_matrix(FragmentType.PRED)[0].toarray(),
             decimal=6,
         )
+        # explicitely set this to int64 as the default on windows is int32
+        # which causes the type check to fail on windows
+        library.var["num"] = library.var["num"].astype("int64")
+        library.var["charge"] = library.var["charge"].astype("int64")
+
         pd.testing.assert_frame_equal(library.obs, library_expected.obs)
         pd.testing.assert_frame_equal(library.var, library_expected.var)
