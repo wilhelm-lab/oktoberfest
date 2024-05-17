@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple, Union
 
 import anndata
 import numpy as np
@@ -8,12 +8,15 @@ import pandas as pd
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
+from ..utils import group_iterator
 from .koina import Koina
 
 logger = logging.getLogger(__name__)
 
 
-def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
+def predict(
+    data: pd.DataFrame, chunk: bool = False, **kwargs
+) -> Dict[str, Union[np.ndarray, List[np.ndarray], List[pd.Series]]]:
     """
     Retrieve predictions from koina.
 
@@ -22,13 +25,28 @@ def predict(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     See the koina predict function for details. TODO, link this properly.
 
     :param data: Dataframe containing the data for the prediction.
+    :param chunk: whether to chunk by peptide length. This is required if padding should
+        be avoided when predicting peptides of different length. For alphapept, this is required
+        as padding is only performed within one batch, leading to different sizes of arrays between
+        individual prediction batches. When chunk is true, only batches with the same length are
+        concatenated and a list of concatenated batches for each peptide length is returned instead.
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
-    :return: a dictionary with targets (keys) and predictions (values)
+    :return: a dictionary with targets (keys) and predictions (values) or list of predictions if chunk is true
     """
     predictor = Koina(**kwargs)
-    results = predictor.predict(data)
-    return results
+
+    if chunk:
+        results = []
+        indices = []
+        for chunk_idx in group_iterator(data, "PEPTIDE_LENGTH"):
+            results.append(predictor.predict(data.loc[chunk_idx]))
+            indices.append(chunk_idx)
+        ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
+        ret_val["chunk_indices"] = indices
+        return ret_val
+    else:
+        return predictor.predict(data)
 
 
 def parse_fragment_labels(
@@ -89,7 +107,10 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     top_hcd_targets = hcd_targets.head(top_n)
 
     alignment_library = library[top_hcd_targets.index]
-    alignment_library = Spectra(anndata.concat([alignment_library for _ in range(*ce_range)]))
+    alignment_library = Spectra(
+        anndata.concat([alignment_library for _ in range(*ce_range)], index_unique="_", keys=range(*ce_range))
+    )
+    alignment_library.var = library.var
     alignment_library.obs.reset_index(inplace=True)
 
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
@@ -117,19 +138,19 @@ def ce_calibration(
     :return: a spectra object containing the spectral angle for each tested CE
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
+    chunk = False
+
     if "alphapept" in model_name.lower():
+        chunk = True
         alignment_library.obs["INSTRUMENT_TYPES"] = "QE"
 
-    if "done" in list(alignment_library.obs.columns):
-        predict_input = alignment_library.obs[~alignment_library.obs["done"]]
+    intensities = predict(alignment_library.obs, chunk=chunk, model_name=model_name, **server_kwargs)
+    if chunk:
+        alignment_library.add_list_of_predicted_intensities(
+            intensities["intensities"], intensities["annotation"], intensities["chunk_indices"]
+        )
     else:
-        predict_input = alignment_library.obs
-
-    intensities = predict(predict_input, model_name=model_name, **server_kwargs)
-    intensities["index"] = predict_input.index.values.astype(np.int32)
-    alignment_library.add_matrix(
-        intensities["intensities"], FragmentType.PRED, intensities["annotation"], intensities["index"]
-    )
+        alignment_library.add_intensities(intensities["intensities"], fragment_type=FragmentType.PRED)
     _alignment(alignment_library)
     return alignment_library
 

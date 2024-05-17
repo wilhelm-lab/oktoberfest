@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
@@ -22,7 +23,7 @@ from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
 from .data.spectra import FragmentType, Spectra
-from .utils import Config, JobPool, ProcessStep
+from .utils import Config, JobPool, ProcessStep, group_iterator
 
 logger = logging.getLogger(__name__)
 
@@ -260,11 +261,11 @@ def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type
         raise ValueError(f"{output_format} is not supported as spectral library type")
 
 
-def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra: int, batchsize: int):
+def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batchsize: int, model: str):
     if out_file.is_file():
         if failed_batch_file.is_file():
             with open(failed_batch_file, "rb") as fh:
-                batches = pickle.load(fh)
+                batch_iterator = pickle.load(fh)
             mode = "a"
             logger.warning(
                 f"Found existing spectral library {out_file}. "
@@ -278,10 +279,13 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra
             )
             sys.exit(1)
     else:
-        batches = range(ceil(no_of_spectra / batchsize))
+        if "alphapept" in model.lower():
+            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
+
+        batch_iterator = (obs.index[i * batchsize : (i + 1) * batchsize] for i in range(ceil(len(obs) / batchsize)))
         mode = "w"
 
-    return batches, mode
+    return list(batch_iterator), mode
 
 
 def _update(pbar: tqdm, postfix_values: Dict[str, int]):
@@ -335,7 +339,9 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         batchsize = config.batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
-        batches, mode = _get_batches_and_mode(out_file, failed_batch_file, spec_library.n_obs, batchsize)
+        batches, mode = _get_batches_and_mode(
+            out_file, failed_batch_file, spec_library.obs["PEPTIDE_LENGTH"], batchsize, config.models["intensity"]
+        )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
 
@@ -362,7 +368,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
             try:
                 results = []
-                for i in batches:
+                for batch in batches:
                     result = predictor_pool.apply_async(
                         _make_predictions,
                         (
@@ -372,7 +378,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.obs[i * batchsize : (i + 1) * batchsize],
+                            spec_library.obs.loc[batch],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
@@ -479,7 +485,9 @@ def _calculate_features(spectra_file: Path, config: Config):
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
 
+        chunk = False
         if "alphapept" in config.models["intensity"].lower():
+            chunk = True
             library.obs["INSTRUMENT_TYPES"] = "QE"
 
         if "done" in list(library.obs.columns):
@@ -495,17 +503,17 @@ def _calculate_features(spectra_file: Path, config: Config):
         pred_intensities = pr.predict(
             data=predict_input,
             model_name=config.models["intensity"],
+            chunk=chunk,
             **predict_kwargs,
         )
 
         pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
-        pred_intensities["index"] = predict_input.index.values.astype(np.int32)
-        library.add_matrix(
-            pred_intensities["intensities"],
-            FragmentType.PRED,
-            pred_intensities["annotation"],
-            pred_intensities["index"],
-        )
+        if chunk:
+            library.add_list_of_predicted_intensities(
+                pred_intensities["intensities"], pred_intensities["annotation"], pred_intensities["chunk_indices"]
+            )
+        else:
+            library.add_intensities(pred_intensities["intensities"], fragment_type=FragmentType.PRED)
         library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()

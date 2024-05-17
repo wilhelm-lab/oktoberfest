@@ -29,7 +29,7 @@ class TestTMTProsit(unittest.TestCase):
             library.obs, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True
         )
 
-        library.add_matrix(pred_intensities["intensities"], FragmentType.PRED)
+        library.add_intensities(pred_intensities["intensities"], FragmentType.PRED)
         library.add_column(pred_irt["irt"].squeeze(), name="PREDICTED_IRT")
 
         library_expected = Spectra.from_hdf5(Path(__file__).parent / "data" / "predictions" / "library_output.h5ad.gz")

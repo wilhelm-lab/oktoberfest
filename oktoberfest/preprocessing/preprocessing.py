@@ -37,6 +37,7 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
+    library_df.sort_values("PEPTIDE_LENGTH", ascending=False, inplace=True)
     var_df = Spectra._gen_vars_df()
     spec = Spectra(obs=library_df, var=var_df)
     spec.var_names = var_df.index
@@ -83,6 +84,7 @@ def generate_metadata(
     metadata = pd.DataFrame(
         combinations, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
     )
+    metadata["peptide_length"] = metadata["modified_sequence"].str.len()
 
     if proteins is not None:
         n_repeats = len(metadata) // len(proteins)
@@ -544,16 +546,15 @@ def annotate_spectral_library(
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol).sort_values(
+        "PEPTIDE_LENGTH", ascending=False, inplace=True
+    )
 
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.var_names = var_df.index
-    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
-    aspec.add_matrix(
-        np.stack(df_annotated_spectra["MZ"]),
-        FragmentType.MZ,
-    )
+    aspec.add_intensities(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
+    aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.strings_to_categoricals()
 

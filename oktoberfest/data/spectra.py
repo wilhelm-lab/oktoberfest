@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, dok_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -145,48 +145,79 @@ class Spectra(anndata.AnnData):
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
-    def add_matrix(
+    def add_mzs(self, mzs: np.ndarray, fragment_type: FragmentType):
+        layer = self._resolve_layer_name(fragment_type)
+        self.layers[layer] = csr_matrix(mzs)
+
+    def add_intensities(self, intensities: np.ndarray, fragment_type: FragmentType):
+        intensities[intensities == 0] = c.EPSILON
+        intensities[intensities == -1] = 0.0
+        layer = self._resolve_layer_name(fragment_type)
+        self.layers[layer] = csr_matrix(intensities)
+
+    def add_list_of_predicted_intensities(
         self,
+        intensities: List[np.ndarray],
+        annotations: List[np.ndarray],
+        chunk_indices: List[np.ndarray],
+    ):
+        """
+        Add chunks of predicted intensities and convert to sparse matrix.
+
+        This function takes three lists of numpy arrays, containing intensities, the fragment ion annotations
+        in ProForma notation representing the column index, and a numeric index representing the row index.
+        Each intensity array is reordered using the cooresponding annotation element to match the order of the
+        fragment ion annotations in self.var_names and stored to the appropriate rows of a lil_matrix,
+        incrementally creating the full, sparse intensity matrix ordered by fragment types. The function then
+        converts the matrix to csr format.
+
+        :param intensities: List of intensity numpy arrays to add with shapes (n_1 x m_1), ..., (n_N x m_N)
+        :param annotations: List of fragment ion annotations in ProForma notation with shapes (m_1), ..., (m_N)
+        :param chunk_indices: List of row numbers with shapes (n_1), ..., (n_N)
+        """
+
+        sparse_intensity_matrix = dok_matrix(self.shape)
+
+        for i, a, c in zip(intensities, annotations, chunk_indices):
+            self._add_predicted_intensites(
+                mat=sparse_intensity_matrix,
+                intensity_data=i,
+                annotation=a.astype(str),
+                index=c,
+            )
+
+        layer = self._resolve_layer_name(FragmentType.PRED)
+        self.layers[layer] = csr_matrix(sparse_intensity_matrix)
+
+    def _add_predicted_intensites(
+        self,
+        mat: dok_matrix,
         intensity_data: np.ndarray,
-        fragment_type: FragmentType,
-        annotation: Optional[np.ndarray] = None,
-        index: Optional[np.ndarray] = None,
+        annotation: np.ndarray,
+        index: np.ndarray,
     ) -> None:
         """
         Concatenate intensity df as a sparse matrix to our data.
 
-        :param intensity_data: intensity numpy array to add with shape (n x m)
-        :param fragment_type: choose predicted, raw, or mz
-        :param annotation: Optional fragment ion annotations in ProForma notation with shape (n x m)
-        :param index: Optional index of intensity predictions with length n
+        :param mat: The lil_matrix into which to store the data
+        :param intensities: Intensity numpy array to add with shape (n x m)
+        :param annotations: Fragment ion annotations in ProForma notation with shape (m)
+        :param index: Row numbers with shape (n)
         """
+        # ensure intensities are properly masked where required (alphapept does not do that)
+        annotation_to_index = {annotation: index for index, annotation in enumerate(self.var_names)}
+        col_index = np.vectorize(annotation_to_index.get)(annotation[0])
+        fragment_charges = self.var.loc[annotation[0], "charge"].values
+        precursor_charges = self.obs.iloc[index][["PRECURSOR_CHARGE"]].values
+        intensity_data = np.where(fragment_charges <= precursor_charges, intensity_data, -1)
+        row_index = self.obs.index.get_indexer(index)[..., None]
         # Change zeros to epislon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_data[intensity_data == 0] = c.EPSILON
         intensity_data[intensity_data == -1] = 0.0
+        mat[row_index, col_index] = intensity_data
 
-        intensity_data_sparse = csr_matrix(intensity_data)
-
-        layer = self._resolve_layer_name(fragment_type)
-
-        if annotation is not None:
-            if layer not in list(self.layers):
-                self.layers[layer] = csr_matrix(self.shape)
-            if index is not None:
-                for r in index:
-                    idx = [
-                        list(self.var_names).index(i.decode("utf8"))
-                        for i in annotation[r]
-                        if i.decode("utf8") in list(self.var_names)
-                    ]
-                    stripped_annotation = [list(annotation[r]).index(a) for a in annotation[r] if a]
-                    self.layers[layer][r, idx] = intensity_data_sparse[r, stripped_annotation]
-                if "done" not in self.obs.columns:
-                    self.obs["done"] = False
-                self.obs["done"].iloc[index] = True
-
-        else:
-            self.layers[layer] = intensity_data_sparse
+        # self.obs.iloc[index]["done"] = True
 
     def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
         """
