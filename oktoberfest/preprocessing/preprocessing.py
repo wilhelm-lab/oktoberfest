@@ -554,7 +554,9 @@ def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, u
 
 
 def load_spectra(
-    filename: Union[str, Path], parser: str = "pyteomics", tims_meta_file: Optional[Union[str, Path]] = None
+    filenames: Union[str, Path, List[Union[str, Path]]],
+    parser: str = "pyteomics",
+    tims_meta_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
     Read spectra from a given file.
@@ -562,29 +564,36 @@ def load_spectra(
     This function reads MS2 spectra from a given mzML or hdf file using a specified parser. The file ending
     is used to determine the correct parsing method.
 
-    :param filename: Path to mzML / hdf file containing MS2 spectra to be loaded.
+    :param filenames: Path(s) to files containing MS2 spectra. Filenames need to end in ".mzML" (case-insensitive).
+        For timstof data, a single hdf5 path ending in ".hdf" (case-insensitive) needs to be provided.
+        Multiple paths are not yet supported for timstof.
     :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
         Only used for parsing of mzML files.
     :param tims_meta_file: Optional path to timstof metadata file in internal format. This is only required
         when loading timstof spectra and used for summation of spectra.
+    :raises TypeError: if not all filenames are provided as str or Path objects.
     :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
     :raises AssertionError: if no tims_meta_file was provided when loading timsTOF hdf data
     :return: measured spectra with metadata.
     """
-    if isinstance(filename, str):
-        filename = Path(filename)
+    if isinstance(filenames, (str, Path)):
+        internal_filenames = [Path(filenames)]
+    elif isinstance(filenames, list):
+        internal_filenames = [Path(filename) for filename in filenames]
+    else:
+        raise TypeError("Type of filenames not understood.")
 
-    format_ = filename.suffix.lower()
+    format_ = internal_filenames[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(
-            source=filename, package=parser, search_type=""
+            source=filenames, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
     elif format_ == ".hdf":
         if tims_meta_file is None:
             raise AssertionError(
                 "Loading spectra from a timsTOF hdf file requires metadata provided by tims_meta_file."
             )
-        results = read_and_aggregate_timstof(source=filename, tims_meta_file=Path(tims_meta_file))
+        results = read_and_aggregate_timstof(source=internal_filenames[0], tims_meta_file=Path(tims_meta_file))
         return results
 
     else:
