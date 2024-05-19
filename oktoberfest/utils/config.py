@@ -182,6 +182,11 @@ class Config:
         else:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
+    @property
+    def instrument_type(self) -> str:
+        """Get type of mass spectrometer from the config file (superseeds value read from from mzML)."""
+        return self.inputs.get("instrument_type").upper()
+
     #####################################
     # these are fasta digestion options #
     #####################################
@@ -314,6 +319,16 @@ class Config:
                 )
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
+
+        if "alphapept" in self.models["intensity"].lower():
+            instrument_type = self.instrument_type
+            if instrument_type is not None and instrument_type not in ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]:
+                valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+                raise ValueError(
+                    f"The chosen intensity model {self.models['intensity']} does not supported the specified instrument type "
+                    f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
+                    f"of {valid_alphapept_instrument_types}."
+                )
 
     def _check_for_speclib(self):
         if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
