@@ -187,8 +187,7 @@ def ce_calibration(
         chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
     else:
         chunk_idx = None
-
-    predict_intensities(data=alignment_library, chunk_idx=chunk_idx, **server_kwargs)
+    predict_intensities(data=alignment_library, chunk_idx=chunk_idx, model_name=model_name, **server_kwargs)
     _alignment(alignment_library)
     return alignment_library
 

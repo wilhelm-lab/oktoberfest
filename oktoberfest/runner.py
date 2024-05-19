@@ -111,6 +111,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
     if hdf5_path.is_file():
         aspec = Spectra.from_hdf5(hdf5_path)
+        instrument_type = config.instrument_type
+        if instrument_type is not None and aspec.obs["INSTRUMENT_TYPES"].values[0] != instrument_type:
+            aspec.obs["INSTRUMENT_TYPES"] = instrument_type
+            aspec.write_as_hdf5(hdf5_path)
     else:
         spectra_dir = config.output / "spectra"
         spectra_dir.mkdir(exist_ok=True)
@@ -285,8 +289,10 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
     else:
         if "alphapept" in model.lower():
             batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
-
-        batch_iterator = (obs.index[i * batchsize : (i + 1) * batchsize] for i in range(ceil(len(obs) / batchsize)))
+        else:
+            batch_iterator = (
+                obs.index[i * batchsize : (i + 1) * batchsize].to_numpy() for i in range(ceil(len(obs) / batchsize))
+            )
         mode = "w"
 
     return list(batch_iterator), mode
@@ -498,9 +504,9 @@ def _calculate_features(spectra_file: Path, config: Config):
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-            pr.predict_intensities(
-                data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
-            )
+        pr.predict_intensities(
+            data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
+        )
 
         pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
 
