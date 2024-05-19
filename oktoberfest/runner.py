@@ -22,7 +22,7 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-from .data.spectra import FragmentType, Spectra
+from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, group_iterator
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,9 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
             pp.convert_d_to_hdf(spectra_file, file_to_load)
         spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
+        config_instrument_type = config.instrument_type
+        if config_instrument_type is not None:
+            spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         aspec = pp.annotate_spectral_library(
@@ -492,21 +495,13 @@ def _calculate_features(spectra_file: Path, config: Config):
 
         if "alphapept" in config.models["intensity"].lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
-            library.obs["INSTRUMENT_TYPES"] = "QE"
-            chunk_pred_intensities = pr.predict_in_chunks(
-                data=library.obs,
-                chunk_idx=chunk_idx,
-                **predict_kwargs,
-            )
-            library.add_list_of_predicted_intensities(
-                chunk_pred_intensities["intensities"], chunk_pred_intensities["annotation"], chunk_idx
-            )
         else:
-            pred_intensities = pr.predict_at_once(data=library.obs, **predict_kwargs)
-            library.add_intensities(pred_intensities["intensities"], fragment_type=FragmentType.PRED)
+            chunk_idx = None
+            pr.predict_intensities(
+                data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
+            )
 
-        pred_irts = pr.predict_at_once(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
-        library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+        pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
 
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()

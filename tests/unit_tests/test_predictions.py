@@ -6,7 +6,7 @@ from numpy.testing import assert_almost_equal
 
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
-from oktoberfest.pr import predict
+from oktoberfest.pr import predict_intensities, predict_rt
 
 
 class TestTMTProsit(unittest.TestCase):
@@ -18,19 +18,15 @@ class TestTMTProsit(unittest.TestCase):
         var = Spectra._gen_vars_df()
         library = Spectra(obs=meta_df, var=var)
         library.strings_to_categoricals()
-        pred_intensities = predict(
-            library.obs,
+
+        predict_intensities(
+            data=library,
             model_name="Prosit_2020_intensity_TMT",
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
             targets=["intensities", "annotation"],
         )
-        pred_irt = predict(
-            library.obs, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True
-        )
-
-        library.add_intensities(pred_intensities["intensities"], FragmentType.PRED)
-        library.add_column(pred_irt["irt"].squeeze(), name="PREDICTED_IRT")
+        predict_rt(data=library, model_name="Prosit_2020_irt_TMT", server_url="koina.wilhelmlab.org:443", ssl=True)
 
         library_expected = Spectra.from_hdf5(Path(__file__).parent / "data" / "predictions" / "library_output.h5ad.gz")
 

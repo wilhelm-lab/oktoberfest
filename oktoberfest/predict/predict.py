@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Dict, List, Optional, Tuple, Union
 
 import anndata
@@ -14,11 +13,54 @@ from .koina import Koina
 logger = logging.getLogger(__name__)
 
 
+def predict_intensities(data: anndata.AnnData, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
+    """
+    Retrieve intensity predictions from koina and add them to the provided data object.
+
+    This function takes a dataframe containing information about PSMS and predicts intensities using
+    a koina server. The configuration of koina is set using the kwargs.
+    The function either predicts everything at once by concatenating all prediction results
+    into single numpy arrays, or returns a list of individual numpy arrays, following the
+    indices provided by optionally provided chunks of the dataframe.
+
+    :param data: Anndata object containing the required data for prediction and to store the
+        predictions in after retrieval from the server.
+    :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
+        e.g. if padding should be avoided when predicting peptides of different length.
+        For alphapept, this is required as padding is only performed within one batch, leading to
+        different sizes of arrays between individual prediction batches that cannot be concatenated.
+    :param kwargs: Additional keyword arguments forwarded to Koina::predict
+    """
+    if chunk_idx is None:
+        intensities = predict_at_once(data=data.obs, **kwargs)
+        data.add_intensities(intensities["intensities"], fragment_type=FragmentType.PRED)
+    else:
+        chunked_intensities = predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
+        data.add_list_of_predicted_intensities(
+            chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
+        )
+
+
+def predict_rt(data: anndata.AnnData, **kwargs):
+    """
+    Retrieve retention time predictions from koina and add them to the provided data object.
+
+    This function takes a dataframe containing information about PSMS and predicts retention time
+    using a koina server. The configuration of koina is set using the kwargs.
+
+    :param data: Anndata object containing the data required for prediction and to store the
+        predictions in after retrieval from the server.
+    :param kwargs: Additional keyword arguments forwarded to Koina::predict
+    """
+    pred_irts = predict_at_once(data=data.obs, **kwargs)
+    data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+
+
 def predict(
     data: pd.DataFrame, chunk_idx: Optional[List[pd.Index]] = None, **kwargs
 ) -> Union[Dict[str, List[np.ndarray]], Dict[str, np.ndarray]]:
     """
-    Retrieve predictions from koina.
+    Retrieve and return predictions from koina.
 
     This function takes a dataframe containing information about PSMS and predicts peptide
     properties using a koina server. The configuration of koina is set using the kwargs.
@@ -45,7 +87,7 @@ def predict(
 
 def predict_at_once(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     """
-    Retrieve predictions from koina in one go.
+    Retrieve and return predictions from koina in one go.
 
     This function takes a dataframe containing information about PSMS and predicts peptide
     properties using a koina server. The configuration of koina is set using the kwargs.
@@ -62,7 +104,7 @@ def predict_at_once(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
 
 def predict_in_chunks(data: pd.DataFrame, chunk_idx: List[pd.Index], **kwargs) -> Dict[str, List[np.ndarray]]:
     """
-    Retrieve predictions from koina in chunks.
+    Retrieve and return predictions from koina in chunks.
 
     This function takes a dataframe containing information about PSMS and predicts peptide
     properties using a koina server. The configuration of koina is set using the kwargs.
@@ -85,42 +127,6 @@ def predict_in_chunks(data: pd.DataFrame, chunk_idx: List[pd.Index], **kwargs) -
         results.append(predictor.predict(data.loc[idx]))
     ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
     return ret_val
-
-
-def parse_fragment_labels(
-    spectra_labels: np.ndarray, precursor_charges: np.ndarray, seq_lengths: np.ndarray
-) -> Dict[str, np.ndarray]:
-    """Uses regex to parse labels."""
-    pattern = rb"([y|b])([0-9]{1,2})\+([1-3])"
-    fragment_types = []
-    fragment_numbers = []
-    fragment_charges = []
-    for spectrum_labels in spectra_labels:
-        types = []
-        numbers = []
-        charges = []
-        for label in spectrum_labels:
-            match = re.match(pattern, label)
-            if match:
-                groups = match.groups()
-                types.append(groups[0].decode())
-                numbers.append(int(groups[1]))
-                charges.append(int(groups[2]))
-            else:
-                raise ValueError(f"String {label} does not match the expected fragment label pattern")
-        fragment_types.append(types)
-        fragment_numbers.append(numbers)
-        fragment_charges.append(charges)
-
-    fragment_type_array = np.array(fragment_types)
-    fragment_number_array = np.array(fragment_numbers)
-    fragment_charge_array = np.array(fragment_charges)
-    mask = np.where((fragment_charge_array > precursor_charges) | (fragment_number_array >= seq_lengths))
-    fragment_type_array[mask] = "N"
-    fragment_number_array[mask] = 0
-    fragment_charge_array[mask] = 0
-
-    return {"type": fragment_type_array, "number": fragment_number_array, "charge": fragment_charge_array}
 
 
 def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False) -> Spectra:
@@ -179,14 +185,10 @@ def ce_calibration(
 
     if "alphapept" in model_name.lower():
         chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
-        alignment_library.obs["INSTRUMENT_TYPES"] = "QE"
-        chunked_intensities = predict_in_chunks(data=alignment_library.obs, chunk_idx=chunk_idx, **server_kwargs)
-        alignment_library.add_list_of_predicted_intensities(
-            chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
-        )
     else:
-        intensities = predict_at_once(data=alignment_library.obs, **server_kwargs)
-        alignment_library.add_intensities(intensities["intensities"], fragment_type=FragmentType.PRED)
+        chunk_idx = None
+
+    predict_intensities(data=alignment_library, chunk_idx=chunk_idx, **server_kwargs)
     _alignment(alignment_library)
     return alignment_library
 
