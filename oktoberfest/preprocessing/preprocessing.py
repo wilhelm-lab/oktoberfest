@@ -49,6 +49,7 @@ def generate_metadata(
     collision_energy: Union[int, List[int]],
     precursor_charge: Union[int, List[int]],
     fragmentation: Union[str, List[str]],
+    instrument_type: Optional[str] = None,
     proteins: Optional[List[List[str]]] = None,
 ) -> pd.DataFrame:
     """
@@ -64,6 +65,8 @@ def generate_metadata(
     :param collision_energy: A list of collision energies corresponding to each peptide.
     :param precursor_charge: A list of precursor charges corresponding to each peptide.
     :param fragmentation: A list of fragmentation methods corresponding to each peptide.
+    :param instrument_type: The type of mass spectrometeter. Only required when predicting intensities
+        with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].
     :param proteins: An optional list of proteins associated with each peptide.
         If provided, it must have the same length as the number of peptides.
     :raises AssertionError: If the lengths of peptides and proteins is not the same.
@@ -85,6 +88,7 @@ def generate_metadata(
         combinations, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
     )
     metadata["peptide_length"] = metadata["modified_sequence"].str.len()
+    metadata["instrument_types"] = instrument_type
 
     if proteins is not None:
         n_repeats = len(metadata) // len(proteins)

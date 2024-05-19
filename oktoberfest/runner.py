@@ -226,6 +226,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 collision_energy=config.collision_energy,
                 precursor_charge=config.precursor_charge,
                 fragmentation=config.fragmentation,
+                instrument_type=config.instrument_type,
                 proteins=list(peptide_dict.values()),
             )
             library_file = config.output / "prosit_input.csv"

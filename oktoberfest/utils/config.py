@@ -183,9 +183,12 @@ class Config:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
     @property
-    def instrument_type(self) -> str:
+    def instrument_type(self) -> Optional[str]:
         """Get type of mass spectrometer from the config file (superseeds value read from from mzML)."""
-        return self.inputs.get("instrument_type").upper()
+        _instrument_type = self.inputs.get("instrument_type")
+        if _instrument_type is None:
+            return None
+        return _instrument_type.upper()
 
     #####################################
     # these are fasta digestion options #
@@ -322,10 +325,10 @@ class Config:
 
         if "alphapept" in self.models["intensity"].lower():
             instrument_type = self.instrument_type
-            if instrument_type is not None and instrument_type not in ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]:
-                valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
                 raise ValueError(
-                    f"The chosen intensity model {self.models['intensity']} does not supported the specified instrument type "
+                    f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
                     f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
                     f"of {valid_alphapept_instrument_types}."
                 )
@@ -352,6 +355,20 @@ class Config:
                 raise AssertionError(
                     f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
                 )
+        if "alphapept" in self.models["intensity"].lower():
+            instrument_type = self.instrument_type
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is None:
+                raise AssertionError(
+                    f"The chosen intensity model {self.models['intensity']} requires an instrument type. "
+                    f"Provide one of {valid_alphapept_instrument_types}."
+                )
+            else:
+                if instrument_type not in valid_alphapept_instrument_types:
+                    raise ValueError(
+                        f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                        f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
+                    )
 
     def __init__(self):
         """Initialize config file data."""
