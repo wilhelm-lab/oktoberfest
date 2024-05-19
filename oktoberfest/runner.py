@@ -40,8 +40,8 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
 
 def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
     predictions = {
-        **pr.predict(batch_df, model_name=int_model, **predict_kwargs),
-        **pr.predict(batch_df, model_name=irt_model, **predict_kwargs),
+        **pr.predict_at_once(batch_df, model_name=int_model, **predict_kwargs),
+        **pr.predict_at_once(batch_df, model_name=irt_model, **predict_kwargs),
     }
     queue_out.put((predictions, batch_df))
     with lock:
@@ -340,7 +340,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
-            out_file, failed_batch_file, spec_library.obs["PEPTIDE_LENGTH"], batchsize, config.models["intensity"]
+            out_file, failed_batch_file, spec_library.obs, batchsize, config.models["intensity"]
         )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
@@ -485,36 +485,29 @@ def _calculate_features(spectra_file: Path, config: Config):
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
 
-        chunk = False
-        if "alphapept" in config.models["intensity"].lower():
-            chunk = True
-            library.obs["INSTRUMENT_TYPES"] = "QE"
-
-        if "done" in list(library.obs.columns):
-            predict_input = library.obs[~library.obs["done"]]
-        else:
-            predict_input = library.obs
-
         predict_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
         }
 
-        pred_intensities = pr.predict(
-            data=predict_input,
-            model_name=config.models["intensity"],
-            chunk=chunk,
-            **predict_kwargs,
-        )
-
-        pred_irts = pr.predict(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
-        if chunk:
+        if "alphapept" in config.models["intensity"].lower():
+            chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
+            library.obs["INSTRUMENT_TYPES"] = "QE"
+            chunk_pred_intensities = pr.predict_in_chunks(
+                data=library.obs,
+                chunk_idx=chunk_idx,
+                **predict_kwargs,
+            )
             library.add_list_of_predicted_intensities(
-                pred_intensities["intensities"], pred_intensities["annotation"], pred_intensities["chunk_indices"]
+                chunk_pred_intensities["intensities"], chunk_pred_intensities["annotation"], chunk_idx
             )
         else:
+            pred_intensities = pr.predict_at_once(data=library.obs, **predict_kwargs)
             library.add_intensities(pred_intensities["intensities"], fragment_type=FragmentType.PRED)
+
+        pred_irts = pr.predict_at_once(data=library.obs, model_name=config.models["irt"], **predict_kwargs)
         library.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()
 

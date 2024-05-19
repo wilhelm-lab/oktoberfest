@@ -1,9 +1,26 @@
-from typing import Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 
 
-def group_iterator(df, group_by_column: str, max_batch_size: Optional[int] = None):
+def group_iterator(df: pd.DataFrame, group_by_column: Union[str, List[str]], max_batch_size: Optional[int] = None):
+    """
+    Returns an index iterator producing chunks for each group of a given max size.
+
+    This function groups a given dataframe by the specified column(s) and provides an iterator
+    yielding the dataframe indicies in chunks of up to a given number of elements in each
+    group. If the remaining elements of a group or the total number of elements in a group are
+    less than the given number, the chunk is smaller, accordingly. If no upper limit is provided,
+    the indices for the entire group are returned at once irrespective of the group size.
+
+    :param df: The dataframe to produce the iterator from
+    :param group_by_column: The name(s) of the columns to group the dataframe by
+    :param max_batch_size: Optional upper limit for the number of indices within each group that
+        are yieled at once.
+
+    :yields: An iterator yielding the dataframe index in batches containing only one group and up
+        to the provided number of elements at once
+    """
     # Group the dataframe by the specified column
     grouped = df.groupby(group_by_column)
 

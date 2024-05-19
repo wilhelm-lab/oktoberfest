@@ -146,10 +146,28 @@ class Spectra(anndata.AnnData):
         self.layers[layer] = scipy.sparse.csr_matrix(intensity_data)
 
     def add_mzs(self, mzs: np.ndarray, fragment_type: FragmentType):
+        """
+        Add mass to charge ratios.
+
+        This function adds a matrix of mass to charge ratios of shape (PSMs x fragment ions)
+        to this data object.
+
+        :param mzs: the mass to charge ratio array
+        :param fragment_type: the type of mzs to add. Currently, only FragmentType.MZ is supported.
+        """
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = csr_matrix(mzs)
 
     def add_intensities(self, intensities: np.ndarray, fragment_type: FragmentType):
+        """
+        Add intensities.
+
+        This function adds a matrix of fragment intensities of shape (PSMs x fragment ions)
+        to this data object.
+
+        :param intensities: the intensity array
+        :param fragment_type: the type of intensities to add. Can be FragmentType.RAW or FragmentType.PRED.
+        """
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
         layer = self._resolve_layer_name(fragment_type)
@@ -175,15 +193,14 @@ class Spectra(anndata.AnnData):
         :param annotations: List of fragment ion annotations in ProForma notation with shapes (m_1), ..., (m_N)
         :param chunk_indices: List of row numbers with shapes (n_1), ..., (n_N)
         """
-
         sparse_intensity_matrix = dok_matrix(self.shape)
 
-        for i, a, c in zip(intensities, annotations, chunk_indices):
+        for ints, annots, chunk in zip(intensities, annotations, chunk_indices):
             self._add_predicted_intensites(
                 mat=sparse_intensity_matrix,
-                intensity_data=i,
-                annotation=a.astype(str),
-                index=c,
+                intensity_data=ints,
+                annotation=annots.astype(str),
+                index=chunk,
             )
 
         layer = self._resolve_layer_name(FragmentType.PRED)
@@ -200,8 +217,8 @@ class Spectra(anndata.AnnData):
         Concatenate intensity df as a sparse matrix to our data.
 
         :param mat: The lil_matrix into which to store the data
-        :param intensities: Intensity numpy array to add with shape (n x m)
-        :param annotations: Fragment ion annotations in ProForma notation with shape (m)
+        :param intensity_data: Intensity numpy array to add with shape (n x m)
+        :param annotation: Fragment ion annotations in ProForma notation with shape (m)
         :param index: Row numbers with shape (n)
         """
         # ensure intensities are properly masked where required (alphapept does not do that)
