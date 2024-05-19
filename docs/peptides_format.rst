@@ -29,7 +29,7 @@ Oktoberfest expects a csv formatted file where each row represents a peptide fra
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | instrument_types  | An optional column containing the type of mass spectrometer. Only needed when predicting intensities with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].                                                                                                          |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | proteins          | An optional list of protein ids separate by ';'                                                                                                                                                                                                                                     |
+    | proteins          | An optional list of protein ids separated by ';'                                                                                                                                                                                                                                    |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
@@ -38,7 +38,7 @@ Example
 
 .. code-block::
 
-    modified_sequence,collision_energy,precursor_charge,fragmentation,peptide_length,instrument_type,proteins
+    modified_sequence,collision_energy,precursor_charge,fragmentation,peptide_lengths,instrument_type,proteins
     ASPTQPIQL,31,1,HCD,,,
     KIEKLKVEL,31,2,HCD,9,QE,
     AAAAAWEEPSSGNGTAR,30,3,HCD,,,Q9P258
