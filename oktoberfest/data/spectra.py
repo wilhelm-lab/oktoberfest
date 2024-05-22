@@ -158,20 +158,31 @@ class Spectra(anndata.AnnData):
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = csr_matrix(mzs)
 
-    def add_intensities(self, intensities: np.ndarray, fragment_type: FragmentType):
+    def add_intensities(self, intensities: np.ndarray, annotation: np.ndarray, fragment_type: FragmentType):
         """
-        Add intensities.
+        Add predicted intensities and convert to sparse matrix.
 
-        This function adds a matrix of fragment intensities of shape (PSMs x fragment ions)
-        to this data object.
+        This function takes two numpy arrays, containing intensities and the fragment ion annotations
+        in ProForma notation representing the column index.
+        Each intensity array is reordered using the annotation to match the order of the
+        fragment ion annotations in self.var_names and stored as a csr_matrix.
 
-        :param intensities: the intensity array
+        :param intensities: intensity numpy array to add with shapes (n x m)
+        :param annotation: fragment ion annotation numpy array in ProForma notation with shape (... x m). Only
+            the first row of the annotation array is used, i.e. intensities for all PSMs must be provided in
+            the same order.
         :param fragment_type: the type of intensities to add. Can be FragmentType.RAW or FragmentType.PRED.
         """
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
+
+        annotation_to_index = {annot: index for index, annot in enumerate(self.var_names)}
+        col_index = np.vectorize(annotation_to_index.get)(annotation[0].astype(str))
+        sparse_intensity_matrix = dok_matrix(self.shape)
+        sparse_intensity_matrix[:, col_index] = intensities
+
         layer = self._resolve_layer_name(fragment_type)
-        self.layers[layer] = csr_matrix(intensities)
+        self.layers[layer] = csr_matrix(sparse_intensity_matrix)
 
     def add_list_of_predicted_intensities(
         self,
@@ -184,8 +195,8 @@ class Spectra(anndata.AnnData):
 
         This function takes three lists of numpy arrays, containing intensities, the fragment ion annotations
         in ProForma notation representing the column index, and a numeric index representing the row index.
-        Each intensity array is reordered using the cooresponding annotation element to match the order of the
-        fragment ion annotations in self.var_names and stored to the appropriate rows of a lil_matrix,
+        Each intensity array is reordered using the corresponding annotation element to match the order of the
+        fragment ion annotations in self.var_names and stored to the appropriate rows of a dok_matrix,
         incrementally creating the full, sparse intensity matrix ordered by fragment types. The function then
         converts the matrix to csr format.
 
@@ -216,7 +227,7 @@ class Spectra(anndata.AnnData):
         """
         Concatenate intensity df as a sparse matrix to our data.
 
-        :param mat: The lil_matrix into which to store the data
+        :param mat: The dok_matrix into which to store the data
         :param intensity_data: Intensity numpy array to add with shape (n x m)
         :param annotation: Fragment ion annotations in ProForma notation with shape (m)
         :param index: Row numbers with shape (n)

@@ -33,7 +33,7 @@ def predict_intensities(data: anndata.AnnData, chunk_idx: Optional[List[pd.Index
     """
     if chunk_idx is None:
         intensities = predict_at_once(data=data.obs, **kwargs)
-        data.add_intensities(intensities["intensities"], fragment_type=FragmentType.PRED)
+        data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
     else:
         chunked_intensities = predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
         data.add_list_of_predicted_intensities(
