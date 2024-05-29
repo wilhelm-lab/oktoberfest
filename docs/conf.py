@@ -195,6 +195,7 @@ intersphinx_mapping = dict(
     scipy=("https://docs.scipy.org/doc/scipy/", None),
     seaborn=("https://seaborn.pydata.org/", None),
     sklearn=("https://scikit-learn.org/stable/", None),
+    anndata=("https://anndata.readthedocs.io/en/stable", None),
 )
 
 
