@@ -3067,13 +3067,13 @@ files = [
 
 [[package]]
 name = "spectrum-fundamentals"
-version = "0.5.3"
+version = "0.5.4"
 description = "Fundamental functions, annotation pipeline and constants for oktoberfest"
 optional = false
 python-versions = "<3.11.0,>=3.8.0"
 files = [
-    {file = "spectrum_fundamentals-0.5.3-py3-none-any.whl", hash = "sha256:0f8b038f3984d74fa80bedd16b9097c8074306461fe9238732d60abeb169ee44"},
-    {file = "spectrum_fundamentals-0.5.3.tar.gz", hash = "sha256:aa481d8bd3fca28807bdd006b9ac2d8af9900a0cd868512bfff99f93eeab5c29"},
+    {file = "spectrum_fundamentals-0.5.4-py3-none-any.whl", hash = "sha256:11ff8cc4b9568dc3a3d16aa125bccf2941bb94e49fdbc4470d6903f342d64009"},
+    {file = "spectrum_fundamentals-0.5.4.tar.gz", hash = "sha256:9c148e5e6623bc67135de9e29ea10a7eb32ab19bcfe2ecd9c4e2a890bb6c3dfb"},
 ]
 
 [package.dependencies]
@@ -3081,7 +3081,7 @@ click = ">=8.0.0"
 joblib = ">=1.0.1,<2.0.0"
 moepy = ">=1.1.4,<2.0.0"
 numpy = ">=1.24.1,<1.25"
-pandas = ">=1.3.0,<2.0.0"
+pandas = ">=1.3,<3.0"
 PyYAML = ">=5.4.1"
 rich = ">=10.3.0"
 scikit-learn = ">=1.0,<2.0"
