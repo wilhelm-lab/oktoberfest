@@ -59,7 +59,8 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -115,7 +116,8 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "library_input": "uniprot.fasta",
-            "library_input_type": "fasta"
+            "library_input_type": "fasta",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -184,7 +186,8 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
