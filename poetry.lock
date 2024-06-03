@@ -3435,14 +3435,14 @@ threadpoolctl = ">=3.1.0,<4.0.0"
 
 [[package]]
 name = "tritonclient"
-version = "2.44.0"
+version = "2.46.0"
 description = "Python client library and utilities for communicating with Triton Inference Server"
 optional = false
 python-versions = "*"
 files = [
-    {file = "tritonclient-2.44.0-py3-none-any.whl", hash = "sha256:2d0e7f3b414b4fc39dd406b6e1c004954c722516dc5707bd83049de76d06af2c"},
-    {file = "tritonclient-2.44.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:ed8a64ecbb7594ea196dfdc9678d6356b24fdf484995f53400004a195ef33749"},
-    {file = "tritonclient-2.44.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:64f6a48db0a2f2b57f9c03c338669ee9203eeda30aa7d007a10daabd1acd3689"},
+    {file = "tritonclient-2.46.0-py3-none-any.whl", hash = "sha256:6e64e64ee94cb53d807f9103cefea2ffb4c2e9b3bf5a82cebb108d984e5060df"},
+    {file = "tritonclient-2.46.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:10d2cda89b72599757ef5aeab160c39c6dead64a97871c6156cdf25043f2f655"},
+    {file = "tritonclient-2.46.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1fc5859ee9cbf92e071dcdba0f7836b3f44d205ab481bd0a2e4ba480f7db1e3b"},
 ]
 
 [package.dependencies]
@@ -3810,4 +3810,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "c07a76a7dcd26b77fb97f7229c9bb8912206cbbc8a702c0d758e69124d96492c"
+content-hash = "72a583243d6140e99e36552070cfaf6fdd95cffcbead754e0860d49428b8fb68"
