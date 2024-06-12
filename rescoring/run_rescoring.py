@@ -10,7 +10,7 @@ Code to run rescoring on server
 parser = argparse.ArgumentParser()
 parser.add_argument('--input', '-i')
 parser.add_argument('--output', '-o')
-parser.add_argument('--type', '-t', choices=['sqrt', 'sum', 'basic', 'both'])
+parser.add_argument('--type', '-t', choices=['sqrt', 'sum', 'basic', 'sc'])
 
 args = parser.parse_args()
 
@@ -31,7 +31,7 @@ if args.type == 'sqrt':
             "intensity": "Prosit_2023_intensity_sqrt",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "10.157.98.62:9500",
+        "prediction_server": "10.157.98.66:9500",
         "ssl": False,
         "thermoExe": "/cmnfs/home/m.khanh/oktoberfest/rescoring/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
         "numThreads": 1,
@@ -56,7 +56,7 @@ elif args.type == 'sum':
             "intensity": "Prosit_2024_intensity_sum", #"Prosit_2023_intensity_sum",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "10.157.98.62:9500",
+        "prediction_server": "10.157.98.66:9500",
         "ssl": False,
         "thermoExe": "/cmnfs/home/m.khanh/oktoberfest/rescoring/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
         "numThreads": 1,
@@ -91,7 +91,7 @@ elif args.type == 'basic':
         "massTolerance": 20,
         "unitMassTolerance": "ppm"
     }
-elif args.type == 'both':
+elif args.type == 'sc':
     task_config_rescoring = {
         "type": "Rescoring",
         "tag": "",
@@ -106,7 +106,7 @@ elif args.type == 'both':
             "intensity": "Prosit_2024_intensity_single_cell",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "10.157.98.62:9500",
+        "prediction_server": "10.157.98.66:9500",
         "ssl": False,
         "thermoExe": "/cmnfs/home/m.khanh/oktoberfest/rescoring/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
         "numThreads": 1,

@@ -8,7 +8,7 @@ Code to re-run rescoring on all files in /cmnfs/home/m.khanh/rescoring_output on
 """
 
 input_dir = '/cmnfs/data/proteomics/single_cell/PXD043355/'
-output_dir = '/cmnfs/home/m.khanh/rescoring_output'
+output_dir = '/cmnfs/proj/prosit/singleCell/rescoring_PXD043355'
 
 dir = [f for f in os.listdir(output_dir) if os.path.isdir(f)]
 
