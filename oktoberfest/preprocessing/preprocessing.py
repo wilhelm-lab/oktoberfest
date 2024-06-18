@@ -531,10 +531,10 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 
 def annotate_spectral_library(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None, ion_types: Optional[List[str]] = ['b', 'y']
 ) -> Spectra:
     """
-    Annotate all b and y ion peaks of given PSMs.
+    Annotate all specified ion peaks of given PSMs. (Default b and y ions)
 
     This function annotates the b any ion peaks of given psms by matching the mzs
     of all peaks to the theoretical mzs and discards all other peaks. It also calculates
@@ -549,7 +549,7 @@ def annotate_spectral_library(
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, ion_types)
 
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
