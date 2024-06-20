@@ -531,7 +531,10 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 
 def annotate_spectral_library(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None, ion_types: Optional[List[str]] = ['b', 'y']
+    psms: pd.DataFrame,
+    mass_tol: Optional[float] = None,
+    unit_mass_tol: Optional[str] = None,
+    fragmentation_method: Optional[str] = "HCD",
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs. (Default b and y ions)
@@ -545,11 +548,11 @@ def annotate_spectral_library(
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
-
+    :param fragmentation_method: fragmentation method that was used
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, ion_types)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method)
 
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)

@@ -89,11 +89,11 @@ class Config:
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
-    
+
     @property
-    def ion_types(self) -> Optional[List[str]]:
-        """Get possible iontypes from config file"""
-        return self.data.get("ion_types", ["b", "y"])
+    def fragmentation_method(self) -> Optional[str]:
+        """Get fragmentation method from config file"""
+        return self.data.get("fragmentation_method", ["HCD"])
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
