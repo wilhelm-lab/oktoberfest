@@ -537,7 +537,7 @@ def annotate_spectral_library(
     fragmentation_method: Optional[str] = "HCD",
 ) -> Spectra:
     """
-    Annotate all specified ion peaks of given PSMs. (Default b and y ions)
+    Annotate all specified ion peaks of given PSMs (Default b and y ions).
 
     This function annotates the b any ion peaks of given psms by matching the mzs
     of all peaks to the theoretical mzs and discards all other peaks. It also calculates

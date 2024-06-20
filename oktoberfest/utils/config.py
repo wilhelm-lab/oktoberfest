@@ -92,7 +92,7 @@ class Config:
 
     @property
     def fragmentation_method(self) -> Optional[str]:
-        """Get fragmentation method from config file"""
+        """Get fragmentation method from config file."""
         return self.data.get("fragmentation_method", ["HCD"])
 
     @property
