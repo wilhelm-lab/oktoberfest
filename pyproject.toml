@@ -68,6 +68,12 @@ oktoberfest = "oktoberfest.__main__:main"
 [tool.poetry.group.dev.dependencies]
 sphinx-autodoc-typehints = "^1.24.0"
 
+[tool.poetry.group.dlomix]
+optional = true
+
+[tool.poetry.group.dlomix.dependencies]
+dlomix = ">=0.1.1"
+
 [tool.black]
 line-length = 120
 

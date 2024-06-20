@@ -38,10 +38,9 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
+def _make_predictions(predictors: dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
     predictions = {
-        **pr.predict_at_once(batch_df, model_name=int_model, **predict_kwargs),
-        **pr.predict_at_once(batch_df, model_name=irt_model, **predict_kwargs),
+        output_name: output for predictor in predictors.values() for output_name, output in predictor.predict_at_once(batch_df)
     }
     queue_out.put((predictions, batch_df))
     with lock:
@@ -142,16 +141,13 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
+    # TODO adapt to new predictor
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
     if (library.obs["FRAGMENTATION"] == "HCD").any():
-        server_kwargs = {
-            "server_url": config.prediction_server,
-            "ssl": config.ssl,
-            "model_name": config.models["intensity"],
-        }
         use_ransac_model = config.use_ransac_model
-        alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        predictor = pr.Predictor.from_config(config, model_name="intensity")
+        alignment_library = predictor.ce_calibration(library, config.ce_range, use_ransac_model, model_name="intensity")
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
@@ -335,11 +331,10 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
     spec_library = _speclib_from_digestion(config)
 
-    server_kwargs = {
-        "server_url": config.prediction_server,
-        "ssl": config.ssl,
+    predictor_kwargs = {
         "disable_progress_bar": True,
     }
+    predictors = {model_key: pr.Predictor.from_config(config, model_key, **predictor_kwargs) for model_key in config.models}
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
     if not speclib_written_step.is_done():
@@ -382,9 +377,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                     result = predictor_pool.apply_async(
                         _make_predictions,
                         (
-                            config.models["intensity"],
-                            config.models["irt"],
-                            server_kwargs,
+                            predictors,
                             shared_queue,
                             prediction_progress,
                             lock,
@@ -495,20 +488,15 @@ def _calculate_features(spectra_file: Path, config: Config):
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
 
-        predict_kwargs = {
-            "server_url": config.prediction_server,
-            "ssl": config.ssl,
-        }
-
         if "alphapept" in config.models["intensity"].lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        pr.predict_intensities(
-            data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
-        )
+        intensity_predictor = pr.Predictor.from_config(config, model_name="intensity")
+        intensity_predictor.predict_intensities(data=library, chunk_idx=chunk_idx)
 
-        pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
+        irt_predictor = pr.Predictor.from_config(config, model_name="irt")
+        predictor.predict_rt(data=library)
 
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()

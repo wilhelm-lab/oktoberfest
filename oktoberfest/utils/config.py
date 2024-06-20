@@ -18,7 +18,11 @@ class Config:
     @property
     def prediction_server(self) -> str:
         """Get prosit server from the config file."""
-        return self.data["prediction_server"]
+        return self.data.get("prediction_server", "koina.wilhelmlab.org:443")
+
+    @property
+    def predict_locally(self) -> bool:
+        return "localPredictionOptions" in self.data
 
     @property
     def ssl(self) -> bool:
@@ -292,6 +296,15 @@ class Config:
     def precursor_charge(self) -> List[int]:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
+
+    ######################################
+    # these are local prediction options #
+    ######################################
+
+    @property
+    def local_prediction_options(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("localPredictionOptions", {})
 
     ########################
     # functions start here #

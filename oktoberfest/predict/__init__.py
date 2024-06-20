@@ -1,4 +1,5 @@
 """Init predict."""
 
-from .koina import Koina
-from .predict import *
+from .predictor import Predictor
+
+__all__ = ["Predictor"]
