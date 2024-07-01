@@ -9,7 +9,7 @@ import pandas as pd
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
-from spectrum_fundamentals.fragments import compute_peptide_mass
+from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
@@ -554,8 +554,10 @@ def annotate_spectral_library(
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method)
 
-    var_df = Spectra._gen_vars_df()
+    ion_types = retrieve_ion_types(fragmentation_method)
+    var_df = Spectra._gen_vars_df(ion_types)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
         np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
     )

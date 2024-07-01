@@ -36,17 +36,22 @@ class Spectra(anndata.AnnData):
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
 
     @staticmethod
-    def _gen_vars_df() -> pd.DataFrame:
+    def _gen_vars_df(specified_ion_types: Optional[List[str]]) -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
+        :param specified_ion_types: ion types that are expected to be in the spectra. If None default back to
         :return: pd.Dataframe of Frgment Annotation
         """
-        ion_nums = np.repeat(np.arange(1, 30), 6)
-        ion_charge = np.tile([1, 2, 3], 29 * 2)
+        if not specified_ion_types:
+            specified_ion_types = ["y", "b"]
+
+        number_of_ion_types = len(specified_ion_types)
+        ion_nums = np.repeat(np.arange(1, 30), 3 * number_of_ion_types)
+        ion_charge = np.tile([1, 2, 3], 29 * number_of_ion_types)
         temp_cols = []
         for size in range(1, 30):
-            for typ in ["y", "b"]:
+            for typ in specified_ion_types:
                 for charge in ["+1", "+2", "+3"]:
                     temp_cols.append(f"{typ}{size}{charge}")
         ion_types = [frag[0] for frag in temp_cols]
