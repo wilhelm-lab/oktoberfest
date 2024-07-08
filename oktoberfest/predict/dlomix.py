@@ -14,7 +14,7 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 DUMMY_COLUMN_NAME = "intensities_raw_dummy"
-ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode("utf-8") for ion_type, charge, pos in list(zip(*ANNOTATION))]
+ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
 
 
 class DLomix:
