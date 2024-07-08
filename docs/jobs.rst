@@ -112,8 +112,6 @@ Example config file:
         "tag": "",
         "output": "./out",
         "inputs": {
-            "search_results": "./msms.txt",
-            "search_results_type": "Maxquant",
             "library_input": "uniprot.fasta",
             "library_input_type": "fasta"
         },
