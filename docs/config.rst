@@ -1,7 +1,7 @@
 Configuration
 =============
 
-The following provides an overview of all available flags in the configuration file to use the high level API and run jobs. Parameters may be applicable to more than one job type and are collected within indivdual tables.
+The following provides an overview of all available flags in the configuration file to use the high-level API and run jobs. Parameters may be applicable to more than one job type and are collected within indivdual tables.
 
 Always applicable
 -----------------
@@ -18,9 +18,9 @@ Always applicable
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | models                     | Contains information about the used models for peptide property prediction (see following 2 nested parameters)                                                                                                                                                                             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     intensity              | Name of the model used for fragment intensity prediction                                                                                                                                                                                                                                   |
+   |     intensity              | Name or path of the model used for fragment intensity prediction                                                                                                                                                                                                                                   |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     irt                    | Name of the model used for indexed retention time prediction                                                                                                                                                                                                                               |
+   |     irt                    | Name or path of the model used for indexed retention time prediction                                                                                                                                                                                                                               |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | inputs                     | Contains information about inputs and the type of the inputs (see following nested parameter)                                                                                                                                                                                              |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -137,4 +137,18 @@ Applicable to in-silico digestion
    |     specialAas             | Special amino acids for decoy generation; default = "KR"                                                                                                           |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Applicable to local prediction and transfer learning
+----------------------------------------------------
+
+.. table::
+   :class: fixed-table local-prediction-config-table
+
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | Parameter                  |                             Description                                                                                                                            |
+   +============================+====================================================================================================================================================================+
+   | localPredictionOptions     | Contains specific settings for using DLomix to generate intensity and iRT predictions locally (see following nested parameters)                                |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     batch_size             | Batch size to use for inference; default = 1024                                                                                                                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

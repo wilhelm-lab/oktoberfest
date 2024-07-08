@@ -155,19 +155,19 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
 
     :return: The filtered dataframe or AnnData object to be used with the given model.
     """
-    if "prosit" in model.lower():
+    if "prosit" in model:
         filter_kwargs = {
             "min_length": 7,
             "max_length": 30,
             "max_charge": 6,
         }
-    elif "ms2pip" in model.lower():
+    elif "ms2pip" in model:
         filter_kwargs = {
             "min_length": 2,
             "max_length": 100,
             "max_charge": 6,
         }
-    elif "alphapept" in model.lower():
+    elif "alphapept" in model:
         filter_kwargs = {
             "min_length": 7,
             "max_length": 35,

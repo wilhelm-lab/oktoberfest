@@ -40,7 +40,9 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
 
 def _make_predictions(predictors: dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
     predictions = {
-        output_name: output for predictor in predictors.values() for output_name, output in predictor.predict_at_once(batch_df)
+        output_name: output
+        for predictor in predictors.values()
+        for output_name, output in predictor.predict_at_once(batch_df)
     }
     queue_out.put((predictions, batch_df))
     with lock:
@@ -78,7 +80,11 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
         # filter search results
-        search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
+        if config.predict_locally:
+            model_type = "prosit"
+        else:
+            model_type = config.models["intensity"].lower()
+        search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -334,7 +340,9 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     predictor_kwargs = {
         "disable_progress_bar": True,
     }
-    predictors = {model_key: pr.Predictor.from_config(config, model_key, **predictor_kwargs) for model_key in config.models}
+    predictors = {
+        model_key: pr.Predictor.from_config(config, model_key, **predictor_kwargs) for model_key in config.models
+    }
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
     if not speclib_written_step.is_done():
@@ -496,7 +504,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         intensity_predictor.predict_intensities(data=library, chunk_idx=chunk_idx)
 
         irt_predictor = pr.Predictor.from_config(config, model_name="irt")
-        predictor.predict_rt(data=library)
+        irt_predictor.predict_rt(data=library)
 
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()

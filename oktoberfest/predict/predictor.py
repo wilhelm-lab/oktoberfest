@@ -1,13 +1,12 @@
 # TODO remove unused imports
 from __future__ import annotations
+
 import logging
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
+from pathlib import Path
 
 import anndata
 import numpy as np
 import pandas as pd
-from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
@@ -19,31 +18,41 @@ logger = logging.getLogger(__name__)
 
 
 class Predictor:
-    def __init__(self, predictor: Union[Koina, DLomix]):
+    def __init__(self, predictor: Koina | DLomix):
         self._predictor = predictor
 
     @classmethod
     def from_config(cls, config: Config, model_name: str, **kwargs) -> Predictor:
+        # TODO add documentation for config
         if not config.predict_locally:
             koina = Koina(
-                model_name=config.models[model_name],
-                server_url=config.prediction_server,
-                ssl=config.ssl,
-                **kwargs
+                model_name=config.models[model_name], server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
             return Predictor(koina)
+        elif not Path(config.models[model_name]).exists():
+            # TODO properly wrap this
+            # should this be the default behavior? Or should we throw an exception right away?
+            logger.info(f"Path {config.models[model_name]} does not exist, trying to find it on Koina server")
+            try:
+                return Predictor(
+                    Koina(model_name=config.models[model_name], server_url="koina.wilhelmlab.org:443", ssl=True)
+                )
+                logger.info(f"Successfully using Koina server for model {config.models[model_name]}")
+            except Exception as e:
+                raise e
         else:
-            # TODO add documentation for config
             try:
                 import dlomix
-            except ImportError:
-                logger.critical("DLomix package required for local prediction not found. Please verify that the optional DLomix dependency has been installed.")
-                # TODO terminate execution
-                dlomix = DLomix()
+
+                return Predictor(DLomix(model_name, config.models[model_name], config.output / "results"))
+            except ImportError as e:
+                logger.critical(
+                    "DLomix package required for local prediction not found. Please verify that the optional DLomix dependency has been installed."
+                )
+                raise e
             return Predictor(dlomix)
 
-
-    def predict_intensities(self, data: anndata.AnnData, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
+    def predict_intensities(self, data: anndata.AnnData, chunk_idx: list[pd.Index] | None = None, **kwargs):
         """
         Retrieve intensity predictions from koina and add them to the provided data object.
 
@@ -70,7 +79,6 @@ class Predictor:
                 chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
             )
 
-
     def predict_rt(self, data: anndata.AnnData, **kwargs):
         """
         Retrieve retention time predictions from koina and add them to the provided data object.
@@ -85,11 +93,9 @@ class Predictor:
         pred_irts = self.predict_at_once(data=data.obs, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-
     def predict(
-        self,
-        data: pd.DataFrame, chunk_idx: Optional[List[pd.Index]] = None, **kwargs
-    ) -> Union[Dict[str, List[np.ndarray]], Dict[str, np.ndarray]]:
+        self, data: pd.DataFrame, chunk_idx: list[pd.Index] | None = None, **kwargs
+    ) -> dict[str, list[np.ndarray]] | dict[str, np.ndarray]:
         """
         Retrieve and return predictions from koina.
 
@@ -115,8 +121,7 @@ class Predictor:
             return self.predict_at_once(data, **kwargs)
         return self.predict_in_chunks(data, chunk_idx, **kwargs)
 
-
-    def predict_at_once(self, data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
+    def predict_at_once(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions from koina in one go.
 
@@ -125,14 +130,13 @@ class Predictor:
         See the koina predict function for details. TODO, link this properly.
 
         :param data: Dataframe containing the data for the prediction.
-        :param kwargs: Additional keyword arguments forwarded to Koina::predict
+        :param kwargs: Additonal keyword arguments forwarded to Koina::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
         """
         return self._predictor.predict(data)
 
-
-    def predict_in_chunks(self, data: pd.DataFrame, chunk_idx: List[pd.Index], **kwargs) -> Dict[str, List[np.ndarray]]:
+    def predict_in_chunks(self, data: pd.DataFrame, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions from koina in chunks.
 
@@ -157,7 +161,7 @@ class Predictor:
         return ret_val
 
     def ce_calibration(
-        self, library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool, model_name: str, **server_kwargs
+        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, model_name: str, **server_kwargs
     ) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
