@@ -43,13 +43,12 @@ class Predictor:
             try:
                 import dlomix
 
-                return Predictor(DLomix(model_name, config.models[model_name], config.output / "results"))
+                return Predictor(DLomix(model_name, config.models[model_name], config.output / "results", config.inference_batch_size))
             except ImportError as e:
                 logger.critical(
                     "DLomix package required for local prediction not found. Please verify that the optional DLomix dependency has been installed."
                 )
                 raise e
-            return Predictor(dlomix)
 
     def predict_intensities(self, data: anndata.AnnData, chunk_idx: list[pd.Index] | None = None, **kwargs):
         """
