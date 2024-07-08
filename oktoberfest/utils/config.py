@@ -306,6 +306,10 @@ class Config:
         """Get inputs dictionary from the config file."""
         return self.data.get("localPredictionOptions", {})
 
+    @property
+    def inference_batch_size(self) -> int:
+        return self.local_prediction_options.get("batch_size", 1024)
+
     ########################
     # functions start here #
     ########################

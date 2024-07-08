@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -20,9 +20,15 @@ ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode("utf-8") for ion_type, charge,
 class DLomix:
     """A class for interacting with DLomix models locally for inference."""
 
-    def __init__(self, model_name: str, model_path: Path, output_path: Path):
+    def __init__(self, model_name: str, model_path: Path, output_path: Path, batch_size: Optional[int]):
         self.model_name = model_name
         self.output_path = output_path
+        if not self.batch_size:
+            # TODO maximize batch size given memory available
+            logging.info("Setting batch size to default of 1024")
+            self.batch_size = 1024
+        else:
+            self.batch_size = batch_size
 
         if model_name == "intensity":
             logger.info(f"Loading model weights from {model_path}")
@@ -54,21 +60,23 @@ class DLomix:
         processed_data.to_parquet(data_path)
 
         # TODO grab & reformat dataset preprocessing logs
-        # TODO maximize batch size given memory available
+        logger.info("Processing data for DLomix")
         ds = FragmentIonIntensityDataset(
             test_data_source=str(data_path),
             label_column=DUMMY_COLUMN_NAME,
             model_features=["precursor_charge_onehot", "collision_energy_aligned_normed", "method_nbr"],
             alphabet=PTMS_ALPHABET,
-            batch_size=1024,
+            batch_size=self.batch_size,
         )
 
         # TODO can we extract progress information from the Keras progress bar and nicely integrate it into our progress instead of just hiding it?
         # TODO can we serve this more efficiently? Multi-threading?
-        preds = np.concatenate([
-            self.model.predict(batch, verbose=0)
-            for batch, _ in tqdm(ds.tensor_test_data, desc="Generating predictions")
-        ])
+        preds = np.concatenate(
+            [
+                self.model.predict(batch, verbose=0)
+                for batch, _ in tqdm(ds.tensor_test_data, desc="Generating predictions")
+            ]
+        )
         return {self.output_name: preds, "annotation": np.tile(np.array(ANNOTATIONS), (preds.shape[0], 1))}
 
     @staticmethod
