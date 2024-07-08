@@ -1,4 +1,3 @@
-# TODO remove unused imports
 from __future__ import annotations
 
 import logging
@@ -72,7 +71,7 @@ class Predictor:
         """
         if chunk_idx is None:
             intensities = self.predict_at_once(data=data.obs, **kwargs)
-            data.add_intensities(intensities["intensities"], fragment_type=FragmentType.PRED)
+            data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
         else:
             chunked_intensities = self.predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
             data.add_list_of_predicted_intensities(
@@ -178,13 +177,12 @@ class Predictor:
         :param server_kwargs: Additional parameters that are forwarded to the prediction method
         :return: a spectra object containing the spectral angle for each tested CE
         """
-        # TODO move model_name and server_args up
         alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
 
         if "alphapept" in model_name.lower():
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, **server_kwargs)
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, model_name=model_name, **server_kwargs)
         _alignment(alignment_library)
         return alignment_library

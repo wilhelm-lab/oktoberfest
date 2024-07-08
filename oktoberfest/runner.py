@@ -38,7 +38,7 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(predictors: dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
+def _make_predictions(predictors: Dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
     predictions = {
         output_name: output
         for predictor in predictors.values()

@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -39,10 +39,10 @@ class DLomix:
 
     def predict(
         self,
-        data: Union[dict[str, np.ndarray], pd.DataFrame],
+        data: Union[Dict[str, np.ndarray], pd.DataFrame],
         _async: bool = True,
         debug=False,
-    ) -> dict[str, np.ndarray]:
+    ) -> Dict[str, np.ndarray]:
 
         if not isinstance(data, pd.DataFrame):
             data = pd.DataFrame(data)
