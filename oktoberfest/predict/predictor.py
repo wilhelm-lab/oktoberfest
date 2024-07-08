@@ -113,7 +113,7 @@ class Predictor:
             different sizes of arrays between individual prediction batches that cannot be concatenated.
         :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
-        :return: a dictionary with targets (keys) and predictions (values). If chunk indicies are
+        :return: a dictionary with targets (keys) and predictions (values). If chunk indices are
             provided, values for each target are a list of numpy array with a length equal to the number
             of chunks provided, else single numpy arrays.
         """
