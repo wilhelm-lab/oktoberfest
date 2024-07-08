@@ -7,13 +7,14 @@ import pandas as pd
 from dlomix.constants import PTMS_ALPHABET
 from dlomix.data.fragment_ion_intensity import FragmentIonIntensityDataset
 from dlomix.losses import masked_pearson_correlation_distance, masked_spectral_distance
-from spectrum_fundamentals.constants import FRAGMENTATION_ENCODING
+from spectrum_fundamentals.constants import ANNOTATION, FRAGMENTATION_ENCODING
 from tensorflow import keras
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
 DUMMY_COLUMN_NAME = "intensities_raw_dummy"
+ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode("utf-8") for ion_type, charge, pos in list(zip(*ANNOTATION))]
 
 
 class DLomix:
@@ -64,11 +65,11 @@ class DLomix:
 
         # TODO can we extract progress information from the Keras progress bar and nicely integrate it into our progress instead of just hiding it?
         # TODO can we serve this more efficiently? Multi-threading?
-        preds = [
+        preds = np.concatenate([
             self.model.predict(batch, verbose=0)
             for batch, _ in tqdm(ds.tensor_test_data, desc="Generating predictions")
-        ]
-        return {self.output_name: np.concatenate(preds)}
+        ])
+        return {self.output_name: preds, "annotation": np.tile(np.array(ANNOTATIONS), (preds.shape[0], 1))}
 
     @staticmethod
     def __transform_data(data: pd.DataFrame) -> pd.DataFrame:
