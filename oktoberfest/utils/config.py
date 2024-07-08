@@ -313,22 +313,24 @@ class Config:
     def check(self):
         """Validate the configuration."""
         # check tmt tag and models
+        int_model = self.models["intensity"].lower()
+        irt_model = self.models["irt"].lower()
         if self.tag == "":
-            if "tmt" in self.models["intensity"].lower():
+            if "tmt" in int_model:
                 raise AssertionError(
                     f"You requested the intensity model {self.models['intensity']} but provided no tag. Please check."
                 )
-            if "tmt" in self.models["irt"].lower():
+            if "tmt" in irt_model:
                 raise AssertionError(
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if "tmt" not in self.models["intensity"].lower():
+            if ("alphapept" not in int_model) and ("tmt" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if "tmt" not in self.models["irt"].lower():
+            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
@@ -336,7 +338,7 @@ class Config:
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
 
-        if "alphapept" in self.models["intensity"].lower():
+        if "alphapept" in int_model:
             instrument_type = self.instrument_type
             valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
             if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:

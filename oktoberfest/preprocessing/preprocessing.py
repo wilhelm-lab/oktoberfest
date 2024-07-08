@@ -553,8 +553,9 @@ def annotate_spectral_library(
 
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
-    aspec.var_names = var_df.index
-    aspec.add_intensities(np.stack(df_annotated_spectra["INTENSITIES"]), FragmentType.RAW)
+    aspec.add_intensities(
+        np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
+    )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.strings_to_categoricals()
