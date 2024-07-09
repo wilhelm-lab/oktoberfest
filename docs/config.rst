@@ -118,6 +118,8 @@ Additional parameters required for in-silico digestion
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     nrOx                   | The maximum number of oxidations allowed on Methionine residues (M) in peptides during spectral library generation; default = 1                                    |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Additional parameters required for rescoring
 --------------------------------------------

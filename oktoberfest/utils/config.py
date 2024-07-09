@@ -228,7 +228,7 @@ class Config:
 
     @property
     def nr_ox(self) -> int:
-        """Get the maximum number of oxidations allowed."""
+        """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
         return self.fasta_digest_options.get("nrOx", 1)
 
     ##################################

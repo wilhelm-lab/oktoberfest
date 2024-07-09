@@ -67,5 +67,6 @@ LIBGEN = {
         "enzyme": "trypsin",
         "specialAas": "KR",
         "db": "concat",
+        "nrOx": 1,
     },
 }
