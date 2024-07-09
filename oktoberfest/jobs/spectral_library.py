@@ -12,7 +12,6 @@ import pandas as pd
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
 
-from oktoberfest import __copyright__, __version__
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 

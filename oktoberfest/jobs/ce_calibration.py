@@ -5,14 +5,12 @@ from typing import List, Optional, Union
 import numpy as np
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
-from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
-from oktoberfest import rescore as re
 
 from ..data.spectra import Spectra
-from ..utils import Config, JobPool, ProcessStep, group_iterator
+from ..utils import Config, JobPool, ProcessStep
 
 logger = logging.getLogger(__name__)
 

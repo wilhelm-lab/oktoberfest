@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from typing import Union
 
-from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
