@@ -18,7 +18,7 @@ except ImportError:
     sys.exit(1)
 
 package = "oktoberfest"
-python_versions = ["3.8", "3.9"]
+python_versions = ["3.9", "3.10"]
 nox.options.sessions = (
     "pre-commit",
     "safety",
@@ -108,6 +108,7 @@ def precommit(session: Session) -> None:
         "flake8-bandit",
         "flake8-bugbear",
         "flake8-docstrings",
+        "darglint",
         "flake8-rst-docstrings",
         "isort",
         "pep8-naming",

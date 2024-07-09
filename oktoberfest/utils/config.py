@@ -182,6 +182,14 @@ class Config:
         else:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
+    @property
+    def instrument_type(self) -> Optional[str]:
+        """Get type of mass spectrometer from the config file (superseeds value read from from mzML)."""
+        _instrument_type = self.inputs.get("instrument_type")
+        if _instrument_type is None:
+            return None
+        return _instrument_type.upper()
+
     #####################################
     # these are fasta digestion options #
     #####################################
@@ -297,28 +305,40 @@ class Config:
     def check(self):
         """Validate the configuration."""
         # check tmt tag and models
+        int_model = self.models["intensity"].lower()
+        irt_model = self.models["irt"].lower()
         if self.tag == "":
-            if "tmt" in self.models["intensity"].lower():
+            if "tmt" in int_model:
                 raise AssertionError(
                     f"You requested the intensity model {self.models['intensity']} but provided no tag. Please check."
                 )
-            if "tmt" in self.models["irt"].lower():
+            if "tmt" in irt_model:
                 raise AssertionError(
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if "tmt" not in self.models["intensity"].lower():
+            if ("alphapept" not in int_model) and ("tmt" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if "tmt" not in self.models["irt"].lower():
+            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
                 )
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
+
+        if "alphapept" in int_model:
+            instrument_type = self.instrument_type
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
+                raise ValueError(
+                    f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                    f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
+                    f"of {valid_alphapept_instrument_types}."
+                )
 
     def _check_for_speclib(self):
         if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
@@ -342,6 +362,20 @@ class Config:
                 raise AssertionError(
                     f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
                 )
+        if "alphapept" in self.models["intensity"].lower():
+            instrument_type = self.instrument_type
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is None:
+                raise AssertionError(
+                    f"The chosen intensity model {self.models['intensity']} requires an instrument type. "
+                    f"Provide one of {valid_alphapept_instrument_types}."
+                )
+            else:
+                if instrument_type not in valid_alphapept_instrument_types:
+                    raise ValueError(
+                        f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                        f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
+                    )
 
     def __init__(self):
         """Initialize config file data."""

@@ -19,47 +19,47 @@ jobs:
             matrix:
                 include:
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "pre-commit",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "safety",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "mypy",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: windows-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: macos-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "typeguard",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "xdoctest",
                       }
                     - {
-                          python-version: 3.8,
+                          python-version: 3.9,
                           os: ubuntu-latest,
                           session: "docs-build",
                       }
@@ -165,4 +165,4 @@ jobs:
               run: nox --force-color --session=coverage -- xml -i
 
             - name: Upload coverage report
-              uses: codecov/codecov-action@v4.3.1
+              uses: codecov/codecov-action@v4.4.1

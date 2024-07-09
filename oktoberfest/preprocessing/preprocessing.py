@@ -1,12 +1,14 @@
 import logging
-from itertools import chain, product, repeat, combinations
+import re
+from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
 from typing import Any, Dict, List, Optional, Union
-import re
 
+import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
+from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
@@ -36,9 +38,10 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    library = Spectra()
-    library.add_columns(library_df)
-    return library
+    var_df = Spectra._gen_vars_df()
+    spec = Spectra(obs=library_df, var=var_df)
+    spec.var_names = var_df.index
+    return spec
 
 
 def generate_metadata(
@@ -47,6 +50,7 @@ def generate_metadata(
     precursor_charge: Union[int, List[int]],
     fragmentation: Union[str, List[str]],
     nr_ox: int,
+    instrument_type: Optional[str] = None,
     proteins: Optional[List[List[str]]] = None,
 ) -> pd.DataFrame:
     """
@@ -63,6 +67,8 @@ def generate_metadata(
     :param precursor_charge: A list of precursor charges corresponding to each peptide.
     :param fragmentation: A list of fragmentation methods corresponding to each peptide.
     :param nr_ox: Maximal number of allowed oxidations.
+    :param instrument_type: The type of mass spectrometeter. Only required when predicting intensities
+        with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].
     :param proteins: An optional list of proteins associated with each peptide.
         If provided, it must have the same length as the number of peptides.
     :raises AssertionError: If the lengths of peptides and proteins is not the same.
@@ -84,6 +90,8 @@ def generate_metadata(
     metadata = pd.DataFrame(
         combinations_product, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
     )
+    metadata["peptide_length"] = metadata["modified_sequence"].str.len()
+    metadata["instrument_types"] = instrument_type
 
     if proteins is not None:
         n_repeats = len(metadata) // len(proteins)
@@ -101,7 +109,7 @@ def generate_metadata(
             for index in possible_indices:
                 string_mod = peptide
                 for j in index:
-                    string_mod = string_mod[:j + 1] + "[UNIMOD:35]" + string_mod[j + 1:]
+                    string_mod = string_mod[: j + 1] + "[UNIMOD:35]" + string_mod[j + 1 :]
                 new_row = row.copy()
                 new_row["modified_sequence"] = string_mod
                 modified_peptides.append(new_row)
@@ -153,7 +161,7 @@ def digest(
     )
 
 
-def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFrame:
+def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results to support a given peptide prediction model.
 
@@ -165,7 +173,7 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
 
     :raises ValueError: if an unsupported model is supplied
 
-    :return: The filtered dataframe to be used with the given model.
+    :return: The filtered dataframe or AnnData object to be used with the given model.
     """
     if "prosit" in model.lower():
         filter_kwargs = {
@@ -173,13 +181,27 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
             "max_length": 30,
             "max_charge": 6,
         }
+    elif "ms2pip" in model.lower():
+        filter_kwargs = {
+            "min_length": 2,
+            "max_length": 100,
+            "max_charge": 6,
+        }
+    elif "alphapept" in model.lower():
+        filter_kwargs = {
+            "min_length": 7,
+            "max_length": 35,
+            "max_charge": 4,
+        }
     else:
         raise ValueError(f"The model {model} is not known.")
 
     return filter_peptides(peptides, **filter_kwargs)
 
 
-def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int) -> pd.DataFrame:
+def filter_peptides(
+    peptides: Union[pd.DataFrame, AnnData], min_length: int, max_length: int, max_charge: int
+) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results using given constraints.
 
@@ -191,24 +213,30 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
     :param max_length: The maximal length of a peptide to be retained
     :param max_charge: The maximal precursor charge of a peptide to be retained
 
-    :return: The filtered dataframe given the provided constraints.
+    :return: The filtered dataframe or AnnData object given the provided constraints.
     """
-    return peptides[
-        (peptides["PEPTIDE_LENGTH"] <= max_length)
-        & (peptides["PEPTIDE_LENGTH"] >= min_length)
-        & (peptides["PRECURSOR_CHARGE"] <= max_charge)
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
-    ]
+    if isinstance(peptides, AnnData):
+        df = peptides.obs
+    else:
+        df = peptides
+    peptide_filter = (
+        (df["PEPTIDE_LENGTH"] <= max_length)
+        & (df["PEPTIDE_LENGTH"] >= min_length)
+        & (df["PRECURSOR_CHARGE"] <= max_charge)
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
+        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
+        & (~df["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
+    )
+
+    return peptides[peptide_filter.values]
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
     """
     Process and filter the spectra data in the given SpectralLibrary object.
 
-    This function applies various modifications and filters to the 'spectra_data' DataFrame
+    This function applies various modifications and filters to the obs DataFrame
     in the provided SpectralLibrary object. It modifies the 'MODIFIED_SEQUENCE' column,
     converts the 'MODIFIED_SEQUENCE' to internal format, extracts 'SEQUENCE', and filters
     out certain entries based on specific criteria. The specification of the internal file format can be found at
@@ -221,27 +249,22 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     :return: The processed and filtered Spectra object
     """
     # add fixed mods and translate to internal format
-    library.spectra_data["MODIFIED_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
+    library.obs["MODIFIED_SEQUENCE"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
 
     fixed_mods = {"C": "C[UNIMOD:4]"}
     if tmt_label is not None and tmt_label != "":
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-        library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
-    )
+    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods)
 
     # get sequence and its length
-    library.spectra_data["SEQUENCE"] = internal_without_mods(library.spectra_data["MODIFIED_SEQUENCE"])
-    library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
+    library.obs["SEQUENCE"] = internal_without_mods(library.obs["MODIFIED_SEQUENCE"])
+    library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    logger.info(f"No of sequences before filtering is {len(library.spectra_data)}")
-    library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
-    logger.info(f"No of sequences after filtering is {len(library.spectra_data)}")
-
-    library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
+    library = filter_peptides_for_model(library, model)
+    library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
 
@@ -508,7 +531,7 @@ def split_timstof_metadata(
     return filenames_found
 
 
-def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> Spectra:
+def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> pd.DataFrame:
     """
     Merge peptides with spectra.
 
@@ -524,33 +547,42 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
-    logger.info(f"There are {len(psms)} matched identifications")
-
-    library = Spectra()
-    library.add_columns(psms)
-
-    return library
+    return psms
 
 
-def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+def annotate_spectral_library(
+    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+) -> Spectra:
     """
-    Annotate spectral library with peaks and mass.
+    Annotate all b and y ion peaks of given PSMs.
 
-    This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.
-    The additional information is added to the provided spectral library.
+    This function annotates the b any ion peaks of given psms by matching the mzs
+    of all peaks to the theoretical mzs and discards all other peaks. It also calculates
+    the theoretical monoisotopic mass of each b and y ion fragment.
+    The function thenr returns a Spectra object containing the mzs and intensities of
+    all b and y ions in charge states 1-3 and the additional metadata.
 
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
+
+    :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms.spectra_data, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+
+    var_df = Spectra._gen_vars_df()
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.add_intensities(
+        np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
+    )
+    aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
+    aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
+    aspec.strings_to_categoricals()
+
     logger.info("Finished annotating.")
-    psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
-    psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
-    psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
-    psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
+
+    return aspec
 
 
 def load_spectra(
