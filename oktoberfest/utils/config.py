@@ -234,6 +234,11 @@ class Config:
         """Target, decoy or concat (relevant if fasta file provided)."""
         return self.fasta_digest_options.get("db", "concat").lower()
 
+    @property
+    def nr_ox(self) -> int:
+        """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
+        return self.fasta_digest_options.get("nrOx", 1)
+
     ##################################
     # these are ce alignment options #
     ##################################
