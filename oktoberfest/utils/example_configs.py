@@ -68,6 +68,7 @@ LIBGEN = {
         "collisionEnergy": 30,
         "precursorCharge": (2, 3),
         "minIntensity": 5e-4,
+        "nrOx": 1,
         "batchsize": 10000,
         "format": "msp",
     },
@@ -80,6 +81,5 @@ LIBGEN = {
         "enzyme": "trypsin",
         "specialAas": "KR",
         "db": "concat",
-        "nrOx": 1,
     },
 }
