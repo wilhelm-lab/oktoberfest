@@ -39,6 +39,10 @@ This is the list of currently supported and tested models for Oktoberfest provid
    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | `Prosit_2023_intensity_timsTOF <https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer>`_   | Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.                                                                                       |
    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |  `AlphaPept_ms2_generic <https://koina.wilhelmlab.org/docs#post-/AlphaPept_ms2_generic/infer>`_                  | Developed for generic data support, including TMT, timsTOF and various instrument types.                                                                                                     |
+   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |  `ms2pip_2021_HCD <https://koina.wilhelmlab.org/docs#post-/ms2pip_2021_HCD/infer>`_                              | Developed for HCD tryptic and non-tryptic peptides.                                                                                                                                          |
+   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. table::
    :class: fixed-table
@@ -49,6 +53,8 @@ This is the list of currently supported and tested models for Oktoberfest provid
    | `Prosit_2019_irt <https://koina.wilhelmlab.org/docs#post-/Prosit_2019_irt/infer>`_            | While developed for tryptic peptides only, we did not observe a drop in prediction performance for non-tryptic peptides.  |
    +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
    | `Prosit_2020_irt_TMT <https://koina.wilhelmlab.org/docs/#post-/Prosit_2020_irt_TMT/infer>`_   | Developed for TMT labeled peptides.                                                                                       |
+   +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
+   | `AlphaPept_rt_generic <https://koina.wilhelmlab.org/docs#post-/AlphaPept_rt_generic/infer>`_  | Developed for for generic data support, including TMT, timsTOF and various instrument types.                              |
    +-----------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------+
 
 Once support for additional models is implemented in Oktoberfest, they will be added here.

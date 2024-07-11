@@ -108,6 +108,8 @@ Applicable to spectral library generation
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     minIntensity           | The minimal relative intensity threshold for peaks, everything below is not saved, this can help reducing the library size; default = 5e-4                                       |
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     nrOx                   | The maximum number of oxidations allowed on Methionine residues (M) in peptides during spectral library generation; default = 1                                                  |
+   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     batchSize              | Number of peptides for which predictions are retrieved at once before writing, larger batches result in higher memory peaks, needs to be balanced with n_threads, default = 10000|
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     format                 | Output format of the generated spectral library; can be "spectronaut" or "msp"; default = "msp"                                                                                  |
@@ -137,6 +139,4 @@ Applicable to in-silico digestion
    |     specialAas             | Special amino acids for decoy generation; default = "KR"                                                                                                           |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
-   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     nrOx                   | The maximum number of oxidations allowed on Methionine residues (M) in peptides during spectral library generation; default = 1                                    |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

@@ -59,7 +59,8 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -112,10 +113,9 @@ Example config file:
         "tag": "",
         "output": "./out",
         "inputs": {
-            "search_results": "./msms.txt",
-            "search_results_type": "Maxquant",
             "library_input": "uniprot.fasta",
-            "library_input_type": "fasta"
+            "library_input_type": "fasta",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -126,6 +126,7 @@ Example config file:
             "collisionEnergy": 30,
             "precursorCharge": [2,3],
             "minIntensity": 5e-4,
+            "nrOx": 1,
             "batchsize": 10000,
             "format": "msp"
         },
@@ -136,8 +137,7 @@ Example config file:
             "maxLength": 60,
             "enzyme": "trypsin",
             "specialAas": "KR",
-            "db": "concat",
-            "nrOx": 1
+            "db": "concat"
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
@@ -185,7 +185,8 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",

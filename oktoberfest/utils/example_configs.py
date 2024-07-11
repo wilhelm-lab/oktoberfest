@@ -1,7 +1,13 @@
 RESCORING = {
     "type": "Rescoring",
     "tag": "",
-    "inputs": {"search_results": "msms.txt", "search_results_type": "Maxquant", "spectra": "./", "spectra_type": "raw"},
+    "inputs": {
+        "search_results": "msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "instrument_type": "QE",
+    },
     "output": "./out",
     "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
     "prediction_server": "koina.wilhelmlab.org:443",
@@ -22,7 +28,13 @@ RESCORING = {
 CECALIB = {
     "type": "CollisionEnergyCalibration",
     "tag": "",
-    "inputs": {"search_results": "msms.txt", "search_results_type": "Maxquant", "spectra": "./", "spectra_type": "raw"},
+    "inputs": {
+        "search_results": "msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "instrument_type": "QE",
+    },
     "output": "./out",
     "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
     "prediction_server": "koina.wilhelmlab.org:443",
@@ -45,6 +57,7 @@ LIBGEN = {
         "search_results_type": "Maxquant",
         "library_input": "uniprot.fasta",
         "library_input_type": "fasta",
+        "instrument_type": "QE",
     },
     "output": "./out",
     "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
@@ -55,6 +68,7 @@ LIBGEN = {
         "collisionEnergy": 30,
         "precursorCharge": (2, 3),
         "minIntensity": 5e-4,
+        "nrOx": 1,
         "batchsize": 10000,
         "format": "msp",
     },
@@ -67,6 +81,5 @@ LIBGEN = {
         "enzyme": "trypsin",
         "specialAas": "KR",
         "db": "concat",
-        "nrOx": 1,
     },
 }
