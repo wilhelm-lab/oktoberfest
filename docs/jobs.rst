@@ -136,7 +136,8 @@ Example config file:
             "maxLength": 60,
             "enzyme": "trypsin",
             "specialAas": "KR",
-            "db": "concat"
+            "db": "concat",
+            "nrOx": 1
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
