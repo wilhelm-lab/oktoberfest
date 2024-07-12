@@ -2,7 +2,7 @@ import logging
 from itertools import chain, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
@@ -267,6 +267,8 @@ def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
+    stat_modifications: Dict[str, Tuple[str, float]] = None,
+    var_modifications: Dict[str, Tuple[str, float]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -288,6 +290,7 @@ def convert_search(
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
     """
+
     search_engine = search_engine.lower()
     search_result: Any
     if search_engine == "maxquant":
@@ -301,7 +304,8 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file, 
+                                                       custom_stat_mods=stat_modifications, custom_var_mods= var_modifications)
 
 
 def convert_timstof_metadata(
