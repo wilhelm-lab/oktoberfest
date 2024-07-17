@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -146,17 +146,17 @@ class Config:
     
 
     @property
-    def custom_modifications(self) -> dict:
+    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[str, float]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> dict:
+    def static_mods(self) -> Dict[str, Tuple[str, float]]:
         """Get the custom static modification labels as keys, with the UniMod identifiers and their masses as tuple values"""
         return self.custom_modifications.get("static_mods", {})
 
     @property
-    def var_mods(self) -> dict:
+    def var_mods(self) -> Dict[str, Tuple[str, float]]:
         """Get the custom variable modification labels as keys, with the UniMod identifiers and their masses as tuple values"""
         return self.custom_modifications.get("var_mods", {})
 

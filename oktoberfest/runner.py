@@ -14,8 +14,6 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
-from spectrum_fundamentals.spectrum_fundamentals.mod_string import custom_to_internal
-from spectrum_fundamentals.spectrum_fundamentals.constants import update_mod_masses
 from tqdm.auto import tqdm
 
 from oktoberfest import __copyright__, __version__
@@ -61,20 +59,18 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
             tmt_label = config.tag
-            custom_var_mods = config.var_mods
-            custom_static_mods = config.static_mods
+            
 
-            if custom_var_mods is not None and not custom_var_mods:
+            """if custom_var_mods is not None and not custom_var_mods:
                 update_mod_masses(custom_var_mods.values())
             if custom_static_mods is not None and not custom_static_mods:
-                update_mod_masses(custom_static_mods.values())
+                update_mod_masses(custom_static_mods.values())"""
 
             search_results = pp.convert_search(
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
-                stat_modifications=custom_static_mods,
-                var_modifications= custom_var_mods,
+                custom_mods=config.custom_modifications,
                 output_file=internal_search_file,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
@@ -85,12 +81,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 )
         else:
             internal_search_file = config.search_results
-            search_results = pp.load_search(internal_search_file)
-            # convert custom modifications to internal
-
-            if custom_static_mods is not None:
-                search_results["MODIFIED_SEQUENCE"]=custom_to_internal(search_results["MODIFIED_SEQUENCE"], 
-                                                                       stat_custom_mods=custom_static_mods, var_custom_mods=custom_var_mods)
+            search_results = pp.load_search(internal_search_file, custom_mods=config.custom_modifications)
 
             # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")

@@ -10,7 +10,7 @@ import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
-from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal, custom_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
@@ -250,7 +250,8 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
 
 
 # CeCalibration
-def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
+def load_search(input_file: Union[str, Path], custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
+) -> pd.DataFrame:
     """
     Load search results.
 
@@ -258,17 +259,24 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
     The specification of the internal file format can be found at :doc:`../../internal_format`.
 
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
+    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+        static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
+        their respective masses as tuples as values.  
     :return: dataframe containing the search results.
     """
-    return csv.read_file(input_file)
+    search_results = csv.read_file(input_file)
+    if custom_mods is not None: 
+        search_results["MODIFIED_SEQUENCE"]=custom_to_internal(search_results["MODIFIED_SEQUENCE"], 
+                                                               stat_custom_mods=custom_mods.get("static_mods"), 
+                                                               var_custom_mods=custom_mods.get("var_mods"))
+    return search_results
 
 
 def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
-    stat_modifications: Dict[str, Tuple[str, float]] = None,
-    var_modifications: Dict[str, Tuple[str, float]] = None,
+    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -284,13 +292,15 @@ def convert_search(
         currently supported are "Maxquant", "Mascot" and "MSFragger"
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
+    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+        static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
+        their respective masses as tuples as values. 
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
 
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
     """
-
     search_engine = search_engine.lower()
     search_result: Any
     if search_engine == "maxquant":
@@ -305,7 +315,7 @@ def convert_search(
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
     return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file, 
-                                                       custom_stat_mods=stat_modifications, custom_var_mods= var_modifications)
+                                                       custom_mods=custom_mods)
 
 
 def convert_timstof_metadata(
