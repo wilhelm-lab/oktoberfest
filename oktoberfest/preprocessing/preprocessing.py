@@ -98,6 +98,8 @@ def generate_metadata(
         metadata["proteins"] = list(
             chain.from_iterable([repeat(";".join(prot_list), n_repeats) for prot_list in proteins])
         )
+    else:
+        metadata["proteins"] = "unknown"
 
     modified_peptides = []
     for _, row in metadata.iterrows():
