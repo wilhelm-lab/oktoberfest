@@ -550,7 +550,9 @@ def annotate_spectral_library(
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
-
+    s = sum(df_annotated_spectra["removed_peaks"])
+    with open("/cmnfs/home/students/p.pfeiffer/mapra/Oktoberfest_output/peaks", "a") as file:
+        file.write(str(s) + " ")
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.add_intensities(
