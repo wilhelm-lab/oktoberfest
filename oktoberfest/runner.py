@@ -22,8 +22,8 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-from .data.spectra import FragmentType, Spectra
-from .utils import Config, JobPool, ProcessStep
+from .data.spectra import Spectra
+from .utils import Config, JobPool, ProcessStep, group_iterator
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
 
 def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
     predictions = {
-        **pr.predict(batch_df, model_name=int_model, **predict_kwargs),
-        **pr.predict(batch_df, model_name=irt_model, **predict_kwargs),
+        **pr.predict_at_once(batch_df, model_name=int_model, **predict_kwargs),
+        **pr.predict_at_once(batch_df, model_name=irt_model, **predict_kwargs),
     }
     queue_out.put((predictions, batch_df))
     with lock:
@@ -110,7 +110,11 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
     if hdf5_path.is_file():
-        library = Spectra.from_hdf5(hdf5_path)
+        aspec = Spectra.from_hdf5(hdf5_path)
+        instrument_type = config.instrument_type
+        if instrument_type is not None and aspec.obs["INSTRUMENT_TYPES"].values[0] != instrument_type:
+            aspec.obs["INSTRUMENT_TYPES"] = instrument_type
+            aspec.write_as_hdf5(hdf5_path)
     else:
         spectra_dir = config.output / "spectra"
         spectra_dir.mkdir(exist_ok=True)
@@ -124,18 +128,23 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
             pp.convert_d_to_hdf(spectra_file, file_to_load)
         spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
+        config_instrument_type = config.instrument_type
+        if config_instrument_type is not None:
+            spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path).join()  # write_metadata_annotation
+        aspec = pp.annotate_spectral_library(
+            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+        )
+        aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
-    return library
+    return aspec
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
+    if (library.obs["FRAGMENTATION"] == "HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -147,7 +156,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
-                alignment_library.spectra_data.groupby(
+                alignment_library.obs.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
                 )["SPECTRAL_ANGLE"]
                 .mean()
@@ -172,38 +181,41 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     title=title,
                 )
 
-            delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
-            library.spectra_data["COLLISION_ENERGY"] = np.maximum(
-                0, library.spectra_data["COLLISION_ENERGY"] + delta_ce
-            )
+            delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
+            library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
 
         else:
-            ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+
             best_ce = ce_alignment.idxmax()
             pl.plot_mean_sa_ce(
                 sa_ce_df=ce_alignment.to_frame().reset_index(),
                 filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
             )
             pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
-            library.spectra_data["COLLISION_ENERGY"] = best_ce
+            library.obs["COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
+                f.close()
     else:
         best_ce = 35
-        library.spectra_data["COLLISION_ENERGY"] = best_ce
+        library.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
+            f.close()
 
 
 def _speclib_from_digestion(config: Config) -> Spectra:
     library_input_type = config.library_input_type
+    peptide_dict = None
+    library_file = config.library_input
     if library_input_type == "fasta":
+        p2p_file = config.output / "peptide_to_proteins.csv"
         digest_step = ProcessStep(config.output, "speclib_digested")
-        library_file = config.output / "prosit_input.csv"
         if not digest_step.is_done():
             peptide_dict = pp.digest(
                 fasta=config.library_input,
@@ -215,20 +227,49 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 min_length=config.min_length,
                 max_length=config.max_length,
             )
-            metadata = pp.generate_metadata(
-                peptides=list(peptide_dict.keys()),
+            # Convert dictionary to DataFrame
+            p2p_df = pd.DataFrame(list(peptide_dict.items()), columns=["peptide", "proteins"])
+            p2p_df["proteins"] = p2p_df["proteins"].apply(lambda x: ";".join(x))
+            p2p_df.to_csv(p2p_file, index=False)
+            digest_step.mark_done()
+        library_input_type = "peptides"
+        library_file = p2p_file
+
+    if library_input_type == "peptides":
+        internal_library_file = config.output / "peptides_internal.csv"
+        created_internal_step = ProcessStep(config.output, "speclib_created_internal")
+        if not created_internal_step.is_done():
+            proteins = None
+
+            if peptide_dict is None:
+                p2p_df = pd.read_csv(library_file)
+                if "proteins" in p2p_df.columns:
+                    p2p_df["proteins"].fillna("unknown", inplace=True)
+                    proteins = p2p_df["proteins"].apply(lambda x: x.split(";")).to_list()
+                peptides = p2p_df["peptide"].to_list()
+            else:
+                peptides = list(peptide_dict.keys())
+                proteins = list(peptide_dict.values())
+            internal_df = pp.generate_metadata(
+                peptides=peptides,
                 collision_energy=config.collision_energy,
                 precursor_charge=config.precursor_charge,
                 fragmentation=config.fragmentation,
-                proteins=list(peptide_dict.values()),
+                nr_ox=config.nr_ox,
+                instrument_type=config.instrument_type,
+                proteins=proteins,
             )
-            library_file = config.output / "prosit_input.csv"
-            metadata.to_csv(library_file, sep=",", index=None)
-            digest_step.mark_done()
-    elif library_input_type == "peptides":
-        library_file = config.library_input
+            library_file = config.output / "peptides_internal.csv"
+            internal_df.to_csv(internal_library_file, sep=",", index=None)
+            created_internal_step.mark_done()
+        library_file = internal_library_file
+
+    elif library_input_type == "internal":
+        pass
     else:
-        raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".')
+        raise ValueError(
+            f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides", or "internal".'
+        )
     spec_library = pp.gen_lib(library_file)
 
     pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")
@@ -239,7 +280,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
         spec_library = pp.process_and_filter_spectra_data(
             library=spec_library, model=config.models["intensity"], tmt_label=config.tag
         )
-        spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5").join()
+        spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
         pp_and_filter_step.mark_done()
     else:
         spec_library = Spectra.from_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
@@ -248,21 +289,22 @@ def _speclib_from_digestion(config: Config) -> Spectra:
 
 
 def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+    libfile_prefix = "predicted_library"
     if output_format == "msp":
-        return MSP, results_path / "myPrositLib.msp"
+        return MSP, results_path / f"{libfile_prefix}.msp"
     elif output_format == "spectronaut":
-        return Spectronaut, results_path / "myPrositLib.csv"
+        return Spectronaut, results_path / f"{libfile_prefix}.csv"
     elif output_format == "dlib":
-        return DLib, results_path / "myPrositLib.dlib"
+        return DLib, results_path / f"{libfile_prefix}.dlib"
     else:
         raise ValueError(f"{output_format} is not supported as spectral library type")
 
 
-def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra: int, batchsize: int):
+def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batchsize: int, model: str):
     if out_file.is_file():
         if failed_batch_file.is_file():
             with open(failed_batch_file, "rb") as fh:
-                batches = pickle.load(fh)
+                batch_iterator = pickle.load(fh)
             mode = "a"
             logger.warning(
                 f"Found existing spectral library {out_file}. "
@@ -276,10 +318,15 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, no_of_spectra
             )
             sys.exit(1)
     else:
-        batches = range(ceil(no_of_spectra / batchsize))
+        if "alphapept" in model.lower():
+            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
+        else:
+            batch_iterator = (
+                obs.index[i * batchsize : (i + 1) * batchsize].to_numpy() for i in range(ceil(len(obs) / batchsize))
+            )
         mode = "w"
 
-    return batches, mode
+    return list(batch_iterator), mode
 
 
 def _update(pbar: tqdm, postfix_values: Dict[str, int]):
@@ -333,9 +380,10 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         batchsize = config.batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
-        batches, mode = _get_batches_and_mode(out_file, failed_batch_file, len(spec_library.spectra_data), batchsize)
+        batches, mode = _get_batches_and_mode(
+            out_file, failed_batch_file, spec_library.obs, batchsize, config.models["intensity"]
+        )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
-
         n_batches = len(batches)
 
         with Manager() as manager:
@@ -361,7 +409,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
             try:
                 results = []
-                for i in batches:
+                for batch in batches:
                     result = predictor_pool.apply_async(
                         _make_predictions,
                         (
@@ -371,7 +419,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                             shared_queue,
                             prediction_progress,
                             lock,
-                            spec_library.spectra_data.iloc[i * batchsize : (i + 1) * batchsize],
+                            spec_library.obs.loc[batch],
                         ),
                         error_callback=partial(
                             _make_predictions_error_callback, prediction_failure_progress, lock_failure
@@ -383,8 +431,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                 with tqdm(
                     total=n_batches, desc="Writing library", postfix={"successful": 0, "missing": 0}
                 ) as writer_pbar:
-                    # Start the consumer process
-
                     consumer_process.start()
                     with tqdm(
                         total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
@@ -430,14 +476,14 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     tims_meta_file = None
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
-    library = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
-    _get_best_ce(library, spectra_file, config)
+    aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
+    _get_best_ce(aspec, spectra_file, config)
 
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
+    aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
 
-    return library
+    return aspec
 
 
 def run_ce_calibration(
@@ -485,19 +531,17 @@ def _calculate_features(spectra_file: Path, config: Config):
             "ssl": config.ssl,
         }
 
-        pred_intensities = pr.predict(
-            data=library.spectra_data,
-            model_name=config.models["intensity"],
-            **predict_kwargs,
+        if "alphapept" in config.models["intensity"].lower():
+            chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
+        else:
+            chunk_idx = None
+        pr.predict_intensities(
+            data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
         )
 
-        pred_irts = pr.predict(data=library.spectra_data, model_name=config.models["irt"], **predict_kwargs)
+        pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
 
-        library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
-        library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
-
-        library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name).join()
-
+        library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()
 
     # produce percolator tab files

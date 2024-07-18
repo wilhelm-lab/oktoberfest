@@ -33,7 +33,7 @@ def generate_features(
     :param regression_method: The regression method to use for iRT alignment
     """
     perc_features = Percolator(
-        metadata=library.get_meta_data(),
+        metadata=library.get_meta_data().reset_index(drop=True),
         pred_intensities=library.get_matrix(FragmentType.PRED)[0],
         true_intensities=library.get_matrix(FragmentType.RAW)[0],
         mz=library.get_matrix(FragmentType.MZ)[0],
