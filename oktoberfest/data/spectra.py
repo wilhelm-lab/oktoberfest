@@ -341,9 +341,13 @@ class Spectra(anndata.AnnData):
 
         ready_to_parquet = pd.DataFrame()
         ready_to_parquet["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
-        ready_to_parquet["precursor_charge_onehot"] = list(pd.get_dummies(self.obs["PRECURSOR_CHARGE"]).to_numpy())
+        ready_to_parquet["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy()-1])
         ready_to_parquet["collision_energy_aligned_normed"] = 35
         ready_to_parquet["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: frag_dict[x])
-        ready_to_parquet["intensities_raw"] = list(self.layers["raw_int"].toarray()) #TODO get rid of 1e-07 values instead of 0
+
+        raw_int = self.layers["raw_int"].toarray()
+        raw_int[raw_int == 0] = -1
+        raw_int[raw_int == c.EPSILON] = 0
+        ready_to_parquet["intensities_raw"] = list(raw_int)
 
         return ready_to_parquet
