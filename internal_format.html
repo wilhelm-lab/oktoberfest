@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Custom search results &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>Custom search results &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -97,13 +97,13 @@
            <div itemprop="articleBody">
              
   <section id="custom-search-results">
-<h1>Custom search results<a class="headerlink" href="#custom-search-results" title="Permalink to this heading"></a></h1>
+<h1>Custom search results<a class="headerlink" href="#custom-search-results" title="Link to this heading"></a></h1>
 <p>If the search engine you get your results from is not directly supported by Oktoberfest, the outputs can be manually transformed into the internal prosit file format. If you want to use this format, you need have the following parameter in your config file:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;search_results_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;internal&quot;</span><span class="p">,</span>
 </pre></div>
 </div>
 <section id="internal-file-format-specification">
-<h2>Internal file format specification<a class="headerlink" href="#internal-file-format-specification" title="Permalink to this heading"></a></h2>
+<h2>Internal file format specification<a class="headerlink" href="#internal-file-format-specification" title="Link to this heading"></a></h2>
 <p>Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the file format specification.</p>
 <table class="docutils align-default">
 <thead>
@@ -146,7 +146,7 @@
 </table>
 </section>
 <section id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">RAW_FILE</span><span class="p">,</span><span class="n">SCAN_NUMBER</span><span class="p">,</span><span class="n">MODIFIED_SEQUENCE</span><span class="p">,</span><span class="n">PRECURSOR_CHARGE</span><span class="p">,</span><span class="n">SCAN_EVENT_NUMBER</span><span class="p">,</span><span class="n">MASS</span><span class="p">,</span><span class="n">SCORE</span><span class="p">,</span><span class="n">REVERSE</span><span class="p">,</span><span class="n">SEQUENCE</span><span class="p">,</span><span class="n">PEPTIDE_LENGTH</span>
 <span class="n">GN20170722_SK_HLA_G0103_R1_02</span><span class="p">,</span><span class="mi">51825</span><span class="p">,</span><span class="n">AAAAPPWAC</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="n">FAAV</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">1301.6227</span><span class="p">,</span><span class="mf">3.9695</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="n">AAAAPPWACFAAV</span><span class="p">,</span><span class="mi">13</span>
 <span class="n">GN20170722_SK_HLA_G0103_R1_01</span><span class="p">,</span><span class="mi">23561</span><span class="p">,</span><span class="n">AMILGKM</span><span class="p">[</span><span class="n">UNIMOD</span><span class="p">:</span><span class="mi">35</span><span class="p">]</span><span class="n">VL</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mf">990.56059</span><span class="p">,</span><span class="mf">47.574</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="n">AMILGKMVL</span><span class="p">,</span><span class="mi">9</span>

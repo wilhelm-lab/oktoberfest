@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pr.predict &mdash; Oktoberfest 0.7.0 documentation</title>
+  <title>oktoberfest.pr.predict_in_chunks &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
@@ -22,8 +22,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.pr.predict_at_once" href="oktoberfest.pr.predict_at_once.html" />
-    <link rel="prev" title="oktoberfest.pr.ce_calibration" href="oktoberfest.pr.ce_calibration.html" /> 
+    <link rel="next" title="oktoberfest.re.generate_features" href="../re/oktoberfest.re.generate_features.html" />
+    <link rel="prev" title="oktoberfest.pr.predict_at_once" href="oktoberfest.pr.predict_at_once.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -58,9 +58,9 @@
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="../../API.html#high-level-features">High level features</a></li>
 <li class="toctree-l3 current"><a class="reference internal" href="../../API.html#koina-interface">Koina interface</a><ul class="current">
-<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pr.predict</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pr.predict.html">oktoberfest.pr.predict</a></li>
 <li class="toctree-l4"><a class="reference internal" href="oktoberfest.pr.predict_at_once.html">oktoberfest.pr.predict_at_once</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pr.predict_in_chunks.html">oktoberfest.pr.predict_in_chunks</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pr.predict_in_chunks</a></li>
 </ul>
 </li>
 </ul>
@@ -88,10 +88,10 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../API.html">API</a></li>
-      <li class="breadcrumb-item active">oktoberfest.pr.predict</li>
+      <li class="breadcrumb-item active">oktoberfest.pr.predict_in_chunks</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L59-L85" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L105-L129" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -99,23 +99,20 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-pr-predict">
-<h1>oktoberfest.pr.predict<a class="headerlink" href="#oktoberfest-pr-predict" title="Link to this heading"></a></h1>
+  <section id="oktoberfest-pr-predict-in-chunks">
+<h1>oktoberfest.pr.predict_in_chunks<a class="headerlink" href="#oktoberfest-pr-predict-in-chunks" title="Link to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="oktoberfest.pr.predict">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.predict" title="Link to this definition"></a></dt>
-<dd><p>Retrieve and return predictions from koina.</p>
+<dt class="sig sig-object py" id="oktoberfest.pr.predict_in_chunks">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">predict_in_chunks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_idx</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.predict_in_chunks" title="Link to this definition"></a></dt>
+<dd><p>Retrieve and return predictions from koina in chunks.</p>
 <p>This function takes a dataframe containing information about PSMS and predicts peptide
 properties using a koina server. The configuration of koina is set using the kwargs.
-See the koina predict function for details. TODO, link this properly.
-The function either predicts everything at once by concatenating all prediction results
-into single numpy arrays, or returns a list of individual numpy arrays, following the
-indices provided by optionally provided chunks of the dataframe.</p>
+See the koina predict function for details. TODO, link this properly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Dataframe containing the data for the prediction.</p></li>
-<li><p><strong>chunk_idx</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Index</span></code></a>]]</span>) – The chunked indices of the provided dataframe. This is required in some cases,
+<li><p><strong>chunk_idx</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Index</span></code></a>]</span>) – The chunked indices of the provided dataframe. This is required in some cases,
 e.g. if padding should be avoided when predicting peptides of different length.
 For alphapept, this is required as padding is only performed within one batch, leading to
 different sizes of arrays between individual prediction batches that cannot be concatenated.</p></li>
@@ -123,12 +120,11 @@ different sizes of arrays between individual prediction batches that cannot be c
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]], <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]]</span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>a dictionary with targets (keys) and predictions (values). If chunk indicies are
-provided, values for each target are a list of numpy array with a length equal to the number
-of chunks provided, else single numpy arrays.</p>
+<dd class="field-odd"><p>a dictionary with targets (keys) and list of predictions (values) with a length equal
+to the number of chunks provided.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -139,8 +135,8 @@ of chunks provided, else single numpy arrays.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="oktoberfest.pr.ce_calibration.html" class="btn btn-neutral float-left" title="oktoberfest.pr.ce_calibration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.pr.predict_at_once.html" class="btn btn-neutral float-right" title="oktoberfest.pr.predict_at_once" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pr.predict_at_once.html" class="btn btn-neutral float-left" title="oktoberfest.pr.predict_at_once" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../re/oktoberfest.re.generate_features.html" class="btn btn-neutral float-right" title="oktoberfest.re.generate_features" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

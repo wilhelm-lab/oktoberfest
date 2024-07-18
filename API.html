@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>API &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -74,12 +74,16 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#koina-interface">Koina interface</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html">oktoberfest.pr.predict</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#high-level-features">High level features</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict_intensities.html">oktoberfest.pr.predict_intensities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict_rt.html">oktoberfest.pr.predict_rt</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.ce_calibration.html">oktoberfest.pr.ce_calibration</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#postprocessing-koina-response">Postprocessing koina response</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.parse_fragment_labels.html">oktoberfest.pr.parse_fragment_labels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#koina-interface">Koina interface</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html">oktoberfest.pr.predict</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict_at_once.html">oktoberfest.pr.predict_at_once</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/pr/oktoberfest.pr.predict_in_chunks.html">oktoberfest.pr.predict_in_chunks</a></li>
 </ul>
 </li>
 </ul>
@@ -137,22 +141,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <span class="target" id="module-oktoberfest"></span><p>Oktoberfest: Rescoring and Spectral Library Generation for Proteomics.</p>
+  <p id="module-oktoberfest">Oktoberfest: Rescoring and Spectral Library Generation for Proteomics.</p>
 <section id="api">
-<h1>API<a class="headerlink" href="#api" title="Permalink to this heading"></a></h1>
+<h1>API<a class="headerlink" href="#api" title="Link to this heading"></a></h1>
 <p>Import Oktoberfest using</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">oktoberfest</span> <span class="k">as</span> <span class="nn">ok</span>
 </pre></div>
 </div>
 <section id="module-oktoberfest.pp">
-<span id="preprocessing-pp"></span><h2>Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code><a class="headerlink" href="#module-oktoberfest.pp" title="Permalink to this heading"></a></h2>
+<span id="preprocessing-pp"></span><h2>Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code><a class="headerlink" href="#module-oktoberfest.pp" title="Link to this heading"></a></h2>
 <p>Generating libraries</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.digest.html#oktoberfest.pp.digest" title="oktoberfest.pp.digest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.digest</span></code></a>(fasta, digestion, ...)</p></td>
 <td><p>Digest a given fasta file with specific settings.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.generate_metadata.html#oktoberfest.pp.generate_metadata" title="oktoberfest.pp.generate_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.generate_metadata</span></code></a>(peptides, ...[, proteins])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.generate_metadata.html#oktoberfest.pp.generate_metadata" title="oktoberfest.pp.generate_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.generate_metadata</span></code></a>(peptides, ...[, ...])</p></td>
 <td><p>Create metadata about peptides for a spectral library.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.gen_lib.html#oktoberfest.pp.gen_lib" title="oktoberfest.pp.gen_lib"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.gen_lib</span></code></a>(input_file)</p></td>
@@ -162,7 +166,7 @@
 <td><p>Merge peptides with spectra.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.annotate_spectral_library.html#oktoberfest.pp.annotate_spectral_library" title="oktoberfest.pp.annotate_spectral_library"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.annotate_spectral_library</span></code></a>(psms[, ...])</p></td>
-<td><p>Annotate spectral library with peaks and mass.</p></td>
+<td><p>Annotate all b and y ion peaks of given PSMs.</p></td>
 </tr>
 </tbody>
 </table>
@@ -178,7 +182,7 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.convert_d_to_hdf.html#oktoberfest.pp.convert_d_to_hdf" title="oktoberfest.pp.convert_d_to_hdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.convert_d_to_hdf</span></code></a>(d_dir, output_file)</p></td>
 <td><p>Convert d to hdf format.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html#oktoberfest.pp.load_spectra" title="oktoberfest.pp.load_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_spectra</span></code></a>(filename[, parser, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pp/oktoberfest.pp.load_spectra.html#oktoberfest.pp.load_spectra" title="oktoberfest.pp.load_spectra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pp.load_spectra</span></code></a>(filenames[, parser, ...])</p></td>
 <td><p>Read spectra from a given file.</p></td>
 </tr>
 </tbody>
@@ -211,33 +215,45 @@
 </table>
 </section>
 <section id="module-oktoberfest.pr">
-<span id="predicting-pr"></span><h2>Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code><a class="headerlink" href="#module-oktoberfest.pr" title="Permalink to this heading"></a></h2>
-<p>All things predictions</p>
-<section id="koina-interface">
-<h3>Koina interface<a class="headerlink" href="#koina-interface" title="Permalink to this heading"></a></h3>
+<span id="predicting-pr"></span><h2>Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code><a class="headerlink" href="#module-oktoberfest.pr" title="Link to this heading"></a></h2>
+<p>Access to functions that communicate with a Koina server to retrieve predictions from various prediction models.</p>
+<section id="high-level-features">
+<h3>High level features<a class="headerlink" href="#high-level-features" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html#oktoberfest.pr.predict" title="oktoberfest.pr.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict</span></code></a>(data, **kwargs)</p></td>
-<td><p>Retrieve predictions from koina.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict_intensities.html#oktoberfest.pr.predict_intensities" title="oktoberfest.pr.predict_intensities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict_intensities</span></code></a>(data[, chunk_idx])</p></td>
+<td><p>Retrieve intensity predictions from koina and add them to the provided data object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict_rt.html#oktoberfest.pr.predict_rt" title="oktoberfest.pr.predict_rt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict_rt</span></code></a>(data, **kwargs)</p></td>
+<td><p>Retrieve retention time predictions from koina and add them to the provided data object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.ce_calibration.html#oktoberfest.pr.ce_calibration" title="oktoberfest.pr.ce_calibration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.ce_calibration</span></code></a>(library, ce_range, ...)</p></td>
+<td><p>Calculate best collision energy for peptide property predictions.</p></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="postprocessing-koina-response">
-<h3>Postprocessing koina response<a class="headerlink" href="#postprocessing-koina-response" title="Permalink to this heading"></a></h3>
+<section id="koina-interface">
+<h3>Koina interface<a class="headerlink" href="#koina-interface" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.parse_fragment_labels.html#oktoberfest.pr.parse_fragment_labels" title="oktoberfest.pr.parse_fragment_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.parse_fragment_labels</span></code></a>(spectra_labels, ...)</p></td>
-<td><p>Uses regex to parse labels.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict.html#oktoberfest.pr.predict" title="oktoberfest.pr.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict</span></code></a>(data[, chunk_idx])</p></td>
+<td><p>Retrieve and return predictions from koina.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict_at_once.html#oktoberfest.pr.predict_at_once" title="oktoberfest.pr.predict_at_once"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict_at_once</span></code></a>(data, **kwargs)</p></td>
+<td><p>Retrieve and return predictions from koina in one go.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="api/pr/oktoberfest.pr.predict_in_chunks.html#oktoberfest.pr.predict_in_chunks" title="oktoberfest.pr.predict_in_chunks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pr.predict_in_chunks</span></code></a>(data, chunk_idx, **kwargs)</p></td>
+<td><p>Retrieve and return predictions from koina in chunks.</p></td>
 </tr>
 </tbody>
 </table>
 </section>
 </section>
 <section id="module-oktoberfest.re">
-<span id="rescoring-re"></span><h2>Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code><a class="headerlink" href="#module-oktoberfest.re" title="Permalink to this heading"></a></h2>
+<span id="rescoring-re"></span><h2>Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code><a class="headerlink" href="#module-oktoberfest.re" title="Link to this heading"></a></h2>
 <section id="general">
-<h3>General<a class="headerlink" href="#general" title="Permalink to this heading"></a></h3>
+<h3>General<a class="headerlink" href="#general" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/re/oktoberfest.re.generate_features.html#oktoberfest.re.generate_features" title="oktoberfest.re.generate_features"><code class="xref py py-obj docutils literal notranslate"><span class="pre">re.generate_features</span></code></a>(library, search_type, ...)</p></td>
@@ -257,9 +273,9 @@
 </section>
 </section>
 <section id="module-oktoberfest.pl">
-<span id="plotting-pl"></span><h2>Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code><a class="headerlink" href="#module-oktoberfest.pl" title="Permalink to this heading"></a></h2>
+<span id="plotting-pl"></span><h2>Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code><a class="headerlink" href="#module-oktoberfest.pl" title="Link to this heading"></a></h2>
 <section id="id1">
-<h3>General<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
+<h3>General<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/pl/oktoberfest.pl.plot_score_distribution.html#oktoberfest.pl.plot_score_distribution" title="oktoberfest.pl.plot_score_distribution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pl.plot_score_distribution</span></code></a>(target, decoy, ...)</p></td>

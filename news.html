@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>News &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>News &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -37,7 +37,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -81,9 +81,19 @@
            <div itemprop="articleBody">
              
   <section id="news">
-<h1>News<a class="headerlink" href="#news" title="Permalink to this heading"></a></h1>
+<h1>News<a class="headerlink" href="#news" title="Link to this heading"></a></h1>
+<section id="oktoberfest-provides-access-to-alphapept-and-ms2pip-predictions-2024-05-29">
+<h2>Oktoberfest provides access to AlphaPept and MS2PIP predictions <span class="date">2024-05-29</span><a class="headerlink" href="#oktoberfest-provides-access-to-alphapept-and-ms2pip-predictions-2024-05-29" title="Link to this heading"></a></h2>
+<div class="line-block">
+<div class="line">Oktoberfest 0.7.0 is published, providing access to predictions from AlphaPept and MS2PIP. This comes with a large API overhaul that allows easier access to underlying data for manual insights and analysis.</div>
+<div class="line">Please note that you can now specify the instrument type in the configuration for AlphaPept predictions.</div>
+<div class="line">Spectral libraries can now be generated using a simple peptide list using a variety of options, such as precursor charge, max. number of oxidations and collision energy, or directly in internal format. Check the new <a class="reference external" href="./peptides_format.html">peptides / internal format specification</a> and <a class="reference external" href="./config.html">configuration options</a>.</div>
+<div class="line">Stay tuned for a documentation update including jupyter notebooks on how to navigate and make use of your data for manual in-depth analysis.</div>
+<div class="line">This release drops python 3.8 support!</div>
+</div>
+</section>
 <section id="support-for-timstof-added-spectral-library-generation-overhaul-2024-01-31">
-<h2>Support for timsTOF added / spectral library generation overhaul <span class="date">2024-01-31</span><a class="headerlink" href="#support-for-timstof-added-spectral-library-generation-overhaul-2024-01-31" title="Permalink to this heading"></a></h2>
+<h2>Support for timsTOF added / spectral library generation overhaul <span class="date">2024-01-31</span><a class="headerlink" href="#support-for-timstof-added-spectral-library-generation-overhaul-2024-01-31" title="Link to this heading"></a></h2>
 <div class="line-block">
 <div class="line">Oktoberfest 0.6.0 is out supporting the new Prosit model for timsTOF data. Check out the preprint at <a class="reference external" href="https://doi.org/10.1101/2023.07.17.549401">BioRxiv</a>.</div>
 <div class="line">Spectral library generation was completely overhauled, resulting in more stability, dramatic decreases in runtime and storage requirements and more customization in the config.</div>
@@ -91,14 +101,14 @@
 </div>
 </section>
 <section id="oktoberfest-now-provides-a-low-level-api-2023-10-03">
-<h2>Oktoberfest now provides a low level API <span class="date">2023-10-03</span><a class="headerlink" href="#oktoberfest-now-provides-a-low-level-api-2023-10-03" title="Permalink to this heading"></a></h2>
+<h2>Oktoberfest now provides a low level API <span class="date">2023-10-03</span><a class="headerlink" href="#oktoberfest-now-provides-a-low-level-api-2023-10-03" title="Link to this heading"></a></h2>
 <div class="line-block">
 <div class="line">With our new release 0.5.0, we refactored our code base to provide a low level API to the users. Check the new <a class="reference external" href="./API.html">API</a> section for more details.</div>
 <div class="line">Please note: We dropped support for percolator version 3.05. Please update to version 3.06.1. See <a class="reference external" href="./installation.html">installation</a> for details.</div>
 </div>
 </section>
 <section id="oktoberfest-is-published-2023-09-07">
-<h2>Oktoberfest is published! <span class="date">2023-09-07</span><a class="headerlink" href="#oktoberfest-is-published-2023-09-07" title="Permalink to this heading"></a></h2>
+<h2>Oktoberfest is published! <span class="date">2023-09-07</span><a class="headerlink" href="#oktoberfest-is-published-2023-09-07" title="Link to this heading"></a></h2>
 <div class="line-block">
 <div class="line">Alongside the new 0.4.0 release, Oktoberfest was published in Proteomics.</div>
 <div class="line">Check out the publication here: <a class="reference external" href="https://doi.org/10.1002/pmic.202300112">https://doi.org/10.1002/pmic.202300112</a>.</div>
@@ -106,7 +116,7 @@
 </div>
 </section>
 <section id="the-first-oktoberfest-release-is-ready-2023-06-25">
-<h2>The first Oktoberfest release is ready! <span class="date">2023-06-25</span><a class="headerlink" href="#the-first-oktoberfest-release-is-ready-2023-06-25" title="Permalink to this heading"></a></h2>
+<h2>The first Oktoberfest release is ready! <span class="date">2023-06-25</span><a class="headerlink" href="#the-first-oktoberfest-release-is-ready-2023-06-25" title="Link to this heading"></a></h2>
 <p>Version 0.3.0 is available on <a class="reference external" href="https://pypi.org/project/oktoberfest/">PyPI</a>.</p>
 <p>We are happy to announce that our first standalone version of Oktoberfest is finally ready.
 Besides a lot of bugfixes, new features and performance enhancements over the existing online Prosit service at <a class="reference external" href="https://proteomicsdb.org/prosit">ProteomicsDB</a>, the Oktoberfest codebase is now open source and available on <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest">GitHub</a>.

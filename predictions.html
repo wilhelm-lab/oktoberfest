@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retrieving predictions &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>Retrieving predictions &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -98,10 +98,10 @@
            <div itemprop="articleBody">
              
   <section id="retrieving-predictions">
-<h1>Retrieving predictions<a class="headerlink" href="#retrieving-predictions" title="Permalink to this heading"></a></h1>
+<h1>Retrieving predictions<a class="headerlink" href="#retrieving-predictions" title="Link to this heading"></a></h1>
 <p>Oktoberfest relies on retrieving predictions from a <a class="reference external" href="https://koina.wilhelmlab.org/">Koina</a> server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.</p>
 <section id="connecting-to-a-community-server">
-<h2>Connecting to a community server<a class="headerlink" href="#connecting-to-a-community-server" title="Permalink to this heading"></a></h2>
+<h2>Connecting to a community server<a class="headerlink" href="#connecting-to-a-community-server" title="Link to this heading"></a></h2>
 <p>Our publicly available community server is available at <cite>koina.wilhelmlab.org:443</cite>.
 If you want to connect to it, you need to have the following flags in your config file (default settings):</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -113,7 +113,7 @@ If you want to connect to it, you need to have the following flags in your confi
 <p>Once more community servers become available, we will add a list here.</p>
 </section>
 <section id="currently-supported-models">
-<h2>Currently supported models<a class="headerlink" href="#currently-supported-models" title="Permalink to this heading"></a></h2>
+<h2>Currently supported models<a class="headerlink" href="#currently-supported-models" title="Link to this heading"></a></h2>
 <p>This is the list of currently supported and tested models for Oktoberfest provided by our community server.</p>
 <table class="fixed-table docutils align-default">
 <thead>
@@ -137,6 +137,12 @@ If you want to connect to it, you need to have the following flags in your confi
 <tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer">Prosit_2023_intensity_timsTOF</a></p></td>
 <td><p>Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/AlphaPept_ms2_generic/infer">AlphaPept_ms2_generic</a></p></td>
+<td><p>Developed for generic data support, including TMT, timsTOF and various instrument types.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/ms2pip_2021_HCD/infer">ms2pip_2021_HCD</a></p></td>
+<td><p>Developed for HCD tryptic and non-tryptic peptides.</p></td>
+</tr>
 </tbody>
 </table>
 <table class="fixed-table docutils align-default">
@@ -152,12 +158,15 @@ If you want to connect to it, you need to have the following flags in your confi
 <tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs/#post-/Prosit_2020_irt_TMT/infer">Prosit_2020_irt_TMT</a></p></td>
 <td><p>Developed for TMT labeled peptides.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/AlphaPept_rt_generic/infer">AlphaPept_rt_generic</a></p></td>
+<td><p>Developed for for generic data support, including TMT, timsTOF and various instrument types.</p></td>
+</tr>
 </tbody>
 </table>
 <p>Once support for additional models is implemented in Oktoberfest, they will be added here.</p>
 </section>
 <section id="hosting-and-adding-your-own-models">
-<h2>Hosting and adding your own models<a class="headerlink" href="#hosting-and-adding-your-own-models" title="Permalink to this heading"></a></h2>
+<h2>Hosting and adding your own models<a class="headerlink" href="#hosting-and-adding-your-own-models" title="Link to this heading"></a></h2>
 <p>In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official <a class="reference external" href="https://koina.wilhelmlab.org/docs#overview">Koina documentation</a>.</p>
 </section>
 </section>

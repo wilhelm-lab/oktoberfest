@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.re.merge_input &mdash; Oktoberfest 0.7.0 documentation</title>
+  <title>oktoberfest.pr.predict_at_once &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
@@ -22,8 +22,8 @@
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.re.rescore_with_mokapot" href="oktoberfest.re.rescore_with_mokapot.html" />
-    <link rel="prev" title="oktoberfest.re.generate_features" href="oktoberfest.re.generate_features.html" /> 
+    <link rel="next" title="oktoberfest.pr.predict_in_chunks" href="oktoberfest.pr.predict_in_chunks.html" />
+    <link rel="prev" title="oktoberfest.pr.predict" href="oktoberfest.pr.predict.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,17 +55,17 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a><ul class="current">
-<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#general">General</a><ul class="current">
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.generate_features.html">oktoberfest.re.generate_features</a></li>
-<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.re.merge_input</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.rescore_with_mokapot.html">oktoberfest.re.rescore_with_mokapot</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.rescore_with_percolator.html">oktoberfest.re.rescore_with_percolator</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#high-level-features">High level features</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#koina-interface">Koina interface</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pr.predict.html">oktoberfest.pr.predict</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pr.predict_at_once</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pr.predict_in_chunks.html">oktoberfest.pr.predict_in_chunks</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a></li>
 </ul>
 </li>
@@ -88,10 +88,10 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../../API.html">API</a></li>
-      <li class="breadcrumb-item active">oktoberfest.re.merge_input</li>
+      <li class="breadcrumb-item active">oktoberfest.pr.predict_at_once</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L48-L84" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L88-L102" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -99,22 +99,27 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="oktoberfest-re-merge-input">
-<h1>oktoberfest.re.merge_input<a class="headerlink" href="#oktoberfest-re-merge-input" title="Link to this heading"></a></h1>
+  <section id="oktoberfest-pr-predict-at-once">
+<h1>oktoberfest.pr.predict_at_once<a class="headerlink" href="#oktoberfest-pr-predict-at-once" title="Link to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="oktoberfest.re.merge_input">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">merge_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tab_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">typing.Union[str,</span> <span class="pre">pathlib.Path]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.merge_input" title="Link to this definition"></a></dt>
-<dd><p>Merge spectra file identifier specific tab files into one large file for combined percolation.</p>
-<p>The function takes a list of tab files and concatenates them before writing a combined tab file back to
-the chosen output file location.</p>
-<p>Fastest solution according to:
-<a class="reference external" href="https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one">https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one</a></p>
+<dt class="sig sig-object py" id="oktoberfest.pr.predict_at_once">
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">predict_at_once</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.predict_at_once" title="Link to this definition"></a></dt>
+<dd><p>Retrieve and return predictions from koina in one go.</p>
+<p>This function takes a dataframe containing information about PSMS and predicts peptide
+properties using a koina server. The configuration of koina is set using the kwargs.
+See the koina predict function for details. TODO, link this properly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tab_files</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – list of paths pointing to the individual tab files to be concatenated</p></li>
-<li><p><strong>output_file</strong> – path to the generated output tab file</p></li>
+<li><p><strong>data</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Dataframe containing the data for the prediction.</p></li>
+<li><p><strong>kwargs</strong> – Additional keyword arguments forwarded to Koina::predict</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></a>]</span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a dictionary with targets (keys) and predictions (values)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -125,8 +130,8 @@ the chosen output file location.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="oktoberfest.re.generate_features.html" class="btn btn-neutral float-left" title="oktoberfest.re.generate_features" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.re.rescore_with_mokapot.html" class="btn btn-neutral float-right" title="oktoberfest.re.rescore_with_mokapot" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pr.predict.html" class="btn btn-neutral float-left" title="oktoberfest.pr.predict" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="oktoberfest.pr.predict_in_chunks.html" class="btn btn-neutral float-right" title="oktoberfest.pr.predict_in_chunks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

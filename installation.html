@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>Installation &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -93,11 +93,11 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
 <p>Oktoberfest can be installed on all three major platforms (Linux, MacOS, Windows).</p>
 <p>An installer script is provided for Linux (installers for MacOS and Windows are currently prepared), which takes care of all dependencies. For MacOS and Windows, the Docker container or manual installation can be used.</p>
 <section id="installer-script-debian-ubuntu-only">
-<h2>Installer script (Debian / Ubuntu only)<a class="headerlink" href="#installer-script-debian-ubuntu-only" title="Permalink to this heading"></a></h2>
+<h2>Installer script (Debian / Ubuntu only)<a class="headerlink" href="#installer-script-debian-ubuntu-only" title="Link to this heading"></a></h2>
 <p>The installer script automatically installs dependencies and creates a new conda environment for oktoberfest. The installation takes roughly 5 minutes and follows the steps outlined in the manual installation below. Get the installer and execute the script using</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget<span class="w"> </span>https://raw.githubusercontent.com/wilhelm-lab/oktoberfest/main/installer.sh<span class="w"> </span>-O<span class="w"> </span>install_oktoberfest.sh
 bash<span class="w"> </span>install_oktoberfest.sh
@@ -106,7 +106,7 @@ bash<span class="w"> </span>install_oktoberfest.sh
 <p>The installer searches for existing anaconda / miniconda installation. If none was found, it will download and install miniconda.</p>
 </section>
 <section id="docker-image">
-<h2>Docker Image<a class="headerlink" href="#docker-image" title="Permalink to this heading"></a></h2>
+<h2>Docker Image<a class="headerlink" href="#docker-image" title="Link to this heading"></a></h2>
 <p>This is only recommended for experienced users and can take up to 30 minutes to install, depending on experience.</p>
 <dl class="simple">
 <dt>Prerequisites:</dt><dd><ul class="simple">
@@ -122,10 +122,10 @@ The latest stable version is always on the main branch. Then build the container
 </div>
 </section>
 <section id="manual-installation">
-<h2>Manual installation<a class="headerlink" href="#manual-installation" title="Permalink to this heading"></a></h2>
+<h2>Manual installation<a class="headerlink" href="#manual-installation" title="Link to this heading"></a></h2>
 <p>This is a step-by-step guide for the manual installation of all mandatory and optional dependencies which should roughly take up to 20 minutes if all dependencies are installed.</p>
 <section id="install-python">
-<h3>Install Python<a class="headerlink" href="#install-python" title="Permalink to this heading"></a></h3>
+<h3>Install Python<a class="headerlink" href="#install-python" title="Link to this heading"></a></h3>
 <p>Oktoberfest requires python &gt;=3.8 and &lt;=3.11. Best practise is to use a clean conda environment (<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a>).
 Follow the installation guide for your operating system, then create a new environment using</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>oktoberfest<span class="w"> </span><span class="nv">python</span><span class="o">==</span><span class="m">3</span>.10
@@ -133,7 +133,7 @@ Follow the installation guide for your operating system, then create a new envir
 </div>
 </section>
 <section id="optional-dependencies">
-<h3>Optional dependencies<a class="headerlink" href="#optional-dependencies" title="Permalink to this heading"></a></h3>
+<h3>Optional dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h3>
 <p>There are three dependencies that are required for specific tasks:</p>
 <p><a class="reference external" href="https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3">ThermoRawFileParser v1.4.3</a>:
 For conversion of RAW to mzML format. Download and unpack the zip or tar.gz file. The default locations Oktoberfest expects the executable to be at “/opt/compomics/” (Linux/MacOS) or the folder from which you want to execute Oktoberfest (Windows).
@@ -148,7 +148,7 @@ This is the tool Mokapot is based on. As it has more options and is generally mo
 Installable packages are provided for Linux/MacOS/Windows.</p>
 </section>
 <section id="installing-oktoberfest">
-<h3>Installing Oktoberfest<a class="headerlink" href="#installing-oktoberfest" title="Permalink to this heading"></a></h3>
+<h3>Installing Oktoberfest<a class="headerlink" href="#installing-oktoberfest" title="Link to this heading"></a></h3>
 <p>Oktoberfest is listed on the Python Package Index (PyPI) and can be installed with pip. Activate your conda environment (or skip this if you use a system wide python installation) and install the package (and optionally jupyterlab) using</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>oktoberfest
 pip<span class="w"> </span>install<span class="w"> </span>oktoberfest<span class="w"> </span>jupyterlab

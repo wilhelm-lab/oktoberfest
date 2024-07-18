@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pl.joint_plot &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>oktoberfest.pl.joint_plot &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="../../_static/doctools.js?v=888ff710"></script>
-        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -94,7 +94,7 @@
       <li class="breadcrumb-item active">oktoberfest.pl.joint_plot</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/plotting/plotting.py#L62-L131" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/plotting/plotting.py#L61-L129" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -103,18 +103,18 @@
            <div itemprop="articleBody">
              
   <section id="oktoberfest-pl-joint-plot">
-<h1>oktoberfest.pl.joint_plot<a class="headerlink" href="#oktoberfest-pl-joint-plot" title="Permalink to this heading"></a></h1>
+<h1>oktoberfest.pl.joint_plot<a class="headerlink" href="#oktoberfest-pl-joint-plot" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.pl.joint_plot">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pl.</span></span><span class="sig-name descname"><span class="pre">joint_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prosit_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pl.joint_plot" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pl.</span></span><span class="sig-name descname"><span class="pre">joint_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prosit_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prosit_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">andromeda_decoy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pl.joint_plot" title="Link to this definition"></a></dt>
 <dd><p>Generate joint plot to compare rescoring with and without peptide property predictions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>prosit_target</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator target output for rescoring with peptide property prediction</p></li>
-<li><p><strong>prosit_decoy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator decoy output for rescoring with peptide property prediction</p></li>
-<li><p><strong>andromeda_target</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator target output for rescoring without peptide property prediction</p></li>
-<li><p><strong>andromeda_decoy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator decoy output for rescoring without peptide property prediction</p></li>
+<li><p><strong>prosit_target</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator target output for rescoring with peptide property prediction</p></li>
+<li><p><strong>prosit_decoy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator decoy output for rescoring with peptide property prediction</p></li>
+<li><p><strong>andromeda_target</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator target output for rescoring without peptide property prediction</p></li>
+<li><p><strong>andromeda_decoy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – mokapot / percolator decoy output for rescoring without peptide property prediction</p></li>
 <li><p><strong>level</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The level on which to produce the comparison. Can be either “peptide” or “psm”</p></li>
 <li><p><strong>filename</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – the path to the location used for storing the plot</p></li>
 </ul>

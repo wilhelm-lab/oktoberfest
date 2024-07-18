@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.annotate_spectral_library &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>oktoberfest.pp.annotate_spectral_library &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="../../_static/doctools.js?v=888ff710"></script>
-        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -103,7 +103,7 @@
       <li class="breadcrumb-item active">oktoberfest.pp.annotate_spectral_library</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L515-L533" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L555-L587" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -112,21 +112,29 @@
            <div itemprop="articleBody">
              
   <section id="oktoberfest-pp-annotate-spectral-library">
-<h1>oktoberfest.pp.annotate_spectral_library<a class="headerlink" href="#oktoberfest-pp-annotate-spectral-library" title="Permalink to this heading"></a></h1>
+<h1>oktoberfest.pp.annotate_spectral_library<a class="headerlink" href="#oktoberfest-pp-annotate-spectral-library" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.pp.annotate_spectral_library">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">annotate_spectral_library</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">psms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit_mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.annotate_spectral_library" title="Permalink to this definition"></a></dt>
-<dd><p>Annotate spectral library with peaks and mass.</p>
-<p>This function annotates a given spectral library with peak intensities and mass to charge ratio,
-as well as the calculated monoisotopic mass of the precursor ion.
-The additional information is added to the provided spectral library.</p>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">annotate_spectral_library</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">psms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit_mass_tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.annotate_spectral_library" title="Link to this definition"></a></dt>
+<dd><p>Annotate all b and y ion peaks of given PSMs.</p>
+<p>This function annotates the b any ion peaks of given psms by matching the mzs
+of all peaks to the theoretical mzs and discards all other peaks. It also calculates
+the theoretical monoisotopic mass of each b and y ion fragment.
+The function thenr returns a Spectra object containing the mzs and intensities of
+all b and y ions in charge states 1-3 and the additional metadata.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>psms</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></span>) – Spectral library to be annotated.</p></li>
+<li><p><strong>psms</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span>) – Spectral library to be annotated.</p></li>
 <li><p><strong>mass_tol</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a>]</span>) – The mass tolerance allowed for retaining peaks</p></li>
 <li><p><strong>unit_mass_tol</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The unit in which the mass tolerance is given</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Spectra object containing the annotated b and y ion peaks including metadata</p>
 </dd>
 </dl>
 </dd></dl>

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contributor Guide &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>Contributor Guide &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -91,7 +91,7 @@
            <div itemprop="articleBody">
              
   <section id="contributor-guide">
-<h1>Contributor Guide<a class="headerlink" href="#contributor-guide" title="Permalink to this heading"></a></h1>
+<h1>Contributor Guide<a class="headerlink" href="#contributor-guide" title="Link to this heading"></a></h1>
 <p>Thank you for your interest in improving this project.
 This project is open-source under the <a class="reference external" href="https://opensource.org/licenses/MIT">MIT license</a> and
 highly welcomes contributions in the form of bug reports, feature requests, and pull requests.</p>
@@ -103,15 +103,15 @@ highly welcomes contributions in the form of bug reports, feature requests, and 
 <li><p><a class="reference external" href="CODE_OF_CONDUCT.rst">Code of Conduct</a></p></li>
 </ul>
 <section id="how-to-report-a-bug">
-<h2>How to report a bug<a class="headerlink" href="#how-to-report-a-bug" title="Permalink to this heading"></a></h2>
+<h2>How to report a bug<a class="headerlink" href="#how-to-report-a-bug" title="Link to this heading"></a></h2>
 <p>Report bugs on the <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/issues">Issue Tracker</a>.</p>
 </section>
 <section id="how-to-request-a-feature">
-<h2>How to request a feature<a class="headerlink" href="#how-to-request-a-feature" title="Permalink to this heading"></a></h2>
+<h2>How to request a feature<a class="headerlink" href="#how-to-request-a-feature" title="Link to this heading"></a></h2>
 <p>Request features on the <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/issues">Issue Tracker</a>.</p>
 </section>
 <section id="how-to-set-up-your-development-environment">
-<h2>How to set up your development environment<a class="headerlink" href="#how-to-set-up-your-development-environment" title="Permalink to this heading"></a></h2>
+<h2>How to set up your development environment<a class="headerlink" href="#how-to-set-up-your-development-environment" title="Link to this heading"></a></h2>
 <p>You need Python 3.8+ and the following tools:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://python-poetry.org/">Poetry</a></p></li>
@@ -134,7 +134,7 @@ or the command-line interface:</p>
 </div>
 </section>
 <section id="how-to-test-the-project">
-<h2>How to test the project<a class="headerlink" href="#how-to-test-the-project" title="Permalink to this heading"></a></h2>
+<h2>How to test the project<a class="headerlink" href="#how-to-test-the-project" title="Link to this heading"></a></h2>
 <p>Run the full test suite:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox
 </pre></div>
@@ -152,7 +152,7 @@ For example, invoke the unit test suite like this:</p>
 and are written using the <a class="reference external" href="https://pytest.readthedocs.io/">pytest</a> testing framework.</p>
 </section>
 <section id="how-to-build-and-view-the-documentation">
-<h2>How to build and view the documentation<a class="headerlink" href="#how-to-build-and-view-the-documentation" title="Permalink to this heading"></a></h2>
+<h2>How to build and view the documentation<a class="headerlink" href="#how-to-build-and-view-the-documentation" title="Link to this heading"></a></h2>
 <p>This project uses <a class="reference external" href="https://www.sphinx-doc.org/en/master/">Sphinx</a> together with several extensions to build the documentation.
 It further requires <a class="reference external" href="https://pandoc.org/">Pandoc</a> to translate various formats.</p>
 <p>To install all required dependencies for the documentation run:</p>
@@ -167,7 +167,7 @@ It further requires <a class="reference external" href="https://pandoc.org/">Pan
 Simply open them with your favorite browser.</p>
 </section>
 <section id="how-to-submit-changes">
-<h2>How to submit changes<a class="headerlink" href="#how-to-submit-changes" title="Permalink to this heading"></a></h2>
+<h2>How to submit changes<a class="headerlink" href="#how-to-submit-changes" title="Link to this heading"></a></h2>
 <p>Open a <a class="reference external" href="https://github.com/wilhelm-lab/oktoberfest/pulls">pull request</a> to submit changes to this project against the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch.</p>
 <p>Your pull request needs to meet the following guidelines for acceptance:</p>
 <ul class="simple">

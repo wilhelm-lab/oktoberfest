@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Running Oktoberfest &mdash; Oktoberfest 0.6.2 documentation</title>
+  <title>Running Oktoberfest &mdash; Oktoberfest 0.7.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=5b6b3916" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
 
   
   <!--[if lt IE 9]>
@@ -16,9 +16,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=3e526bd2"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.6.2
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -99,10 +99,10 @@
            <div itemprop="articleBody">
              
   <section id="running-oktoberfest">
-<h1>Running Oktoberfest<a class="headerlink" href="#running-oktoberfest" title="Permalink to this heading"></a></h1>
+<h1>Running Oktoberfest<a class="headerlink" href="#running-oktoberfest" title="Link to this heading"></a></h1>
 <p>This documentation provides an overview of the high level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.</p>
 <section id="executing-a-job">
-<h2>Executing a job<a class="headerlink" href="#executing-a-job" title="Permalink to this heading"></a></h2>
+<h2>Executing a job<a class="headerlink" href="#executing-a-job" title="Link to this heading"></a></h2>
 <p>Oktoberfest can be run in three different ways. The only input required is a configuration for setting up the job (we provide examples further down and a full documentation on the next page).</p>
 <p>The command for executing a job from terminal:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>oktoberfest<span class="w"> </span>--config_path<span class="w"> </span>&lt;path/to/config.json&gt;
@@ -123,7 +123,7 @@
 </div>
 </section>
 <section id="a-collision-energy-calibration">
-<h2>A. Collision Energy Calibration<a class="headerlink" href="#a-collision-energy-calibration" title="Permalink to this heading"></a></h2>
+<h2>A. Collision Energy Calibration<a class="headerlink" href="#a-collision-energy-calibration" title="Link to this heading"></a></h2>
 <p>This task estimates the optimal normalised collision energy (NCE) based on a given search result.
 Oktoberfest will:</p>
 <ol class="arabic simple">
@@ -145,7 +145,8 @@ Oktoberfest will:</p>
 <span class="w">        </span><span class="nt">&quot;search_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./msms.txt&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;search_results_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Maxquant&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;spectra&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;spectra_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;raw&quot;</span>
+<span class="w">        </span><span class="nt">&quot;spectra_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;instrument_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;QE&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;intensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prosit_2020_intensity_HCD&quot;</span><span class="p">,</span>
@@ -174,7 +175,7 @@ Oktoberfest will:</p>
 </div>
 </section>
 <section id="b-spectral-library-generation">
-<h2>B. Spectral Library Generation<a class="headerlink" href="#b-spectral-library-generation" title="Permalink to this heading"></a></h2>
+<h2>B. Spectral Library Generation<a class="headerlink" href="#b-spectral-library-generation" title="Link to this heading"></a></h2>
 <p>This task generates a spectral library either by digesting a given FASTA file, or by predicting a list of peptides given in a CSV file. You need to provide a collision energy (CE) for prediction (see above).
 Oktoberfest will:
 1. Digest the FASTA using a given protease and other parameters and create a peptides.csv file from that.
@@ -191,10 +192,9 @@ Oktoberfest will:
 <span class="w">    </span><span class="nt">&quot;tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./out&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;inputs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;search_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./msms.txt&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;search_results_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Maxquant&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;library_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;uniprot.fasta&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;library_input_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fasta&quot;</span>
+<span class="w">        </span><span class="nt">&quot;library_input_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fasta&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;instrument_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;QE&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;intensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prosit_2020_intensity_HCD&quot;</span><span class="p">,</span>
@@ -205,6 +205,7 @@ Oktoberfest will:
 <span class="w">        </span><span class="nt">&quot;collisionEnergy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;precursorCharge&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span>
 <span class="w">        </span><span class="nt">&quot;minIntensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5e-4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;nrOx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;batchsize&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;msp&quot;</span>
 <span class="w">    </span><span class="p">},</span>
@@ -232,7 +233,7 @@ Oktoberfest will:
 </div>
 </section>
 <section id="c-rescoring">
-<h2>C. Rescoring<a class="headerlink" href="#c-rescoring" title="Permalink to this heading"></a></h2>
+<h2>C. Rescoring<a class="headerlink" href="#c-rescoring" title="Link to this heading"></a></h2>
 <p>This task rescores an existing search result using features generated from peptide property prediction.
 Oktoberfest will:</p>
 <ol class="arabic simple">
@@ -257,7 +258,8 @@ Oktoberfest will:</p>
 <span class="w">        </span><span class="nt">&quot;search_results&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./msms.txt&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;search_results_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Maxquant&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;spectra&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;./&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;spectra_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;raw&quot;</span>
+<span class="w">        </span><span class="nt">&quot;spectra_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;raw&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;instrument_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;QE&quot;</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;intensity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Prosit_2020_intensity_HCD&quot;</span><span class="p">,</span>
