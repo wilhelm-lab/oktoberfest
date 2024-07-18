@@ -26,7 +26,7 @@ Oktoberfest expects a csv formatted file, where each row represent a peptide and
     +===================+==============================================================================================================================================================================================================+
     | peptide           | The unmodified peptide sequence. "C" will always be carbamidomethylated (fixed modification), and a TMT modification is always added to the N-term and "K" if a tag is specified in the configuration file.  |
     +-------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | proteins          | An optional list of protein ids separated by ';'. If this column is left out, or if no protein is provided, the string "unknown" will be used as a proteinID in the spectral library.                        |                                                                                                                                                                                                                                  |
+    | proteins          | An optional list of protein ids separated by ';'. If this column is left out, or if no protein is provided, the string "unknown" will be used as a proteinID in the spectral library.                        |
     +-------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Example
@@ -78,7 +78,6 @@ Oktoberfest expects a csv formatted file where each row represents a peptide wit
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | proteins          | An optional list of protein ids separated by ';'                                                                                                                                                                                                                                    |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
 
 Example
 ~~~~~~~
