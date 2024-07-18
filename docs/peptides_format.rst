@@ -84,7 +84,7 @@ Example
 
 .. code-block::
 
-    modified_sequence,collision_energy,precursor_charge,fragmentation,peptide_lengths,instrument_type,proteins
+    modified_sequence,collision_energy,precursor_charge,fragmentation,peptide_length,instrument_types,proteins
     ASPTQPIQL,31,1,HCD,,,
     KIEKLKVEL,31,2,HCD,9,QE,
     AAAAAWEEPSSGNGTAR,30,3,HCD,,,Q9P258
