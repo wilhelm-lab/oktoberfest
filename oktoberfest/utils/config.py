@@ -298,6 +298,11 @@ class Config:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
 
+    @property
+    def nr_ox(self) -> int:
+        """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
+        return self.spec_lib_options.get("nrOx", 1)
+
     ########################
     # functions start here #
     ########################

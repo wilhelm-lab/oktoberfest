@@ -214,9 +214,11 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
 
 def _speclib_from_digestion(config: Config) -> Spectra:
     library_input_type = config.library_input_type
+    peptide_dict = None
+    library_file = config.library_input
     if library_input_type == "fasta":
+        p2p_file = config.output / "peptide_to_proteins.csv"
         digest_step = ProcessStep(config.output, "speclib_digested")
-        library_file = config.output / "prosit_input.csv"
         if not digest_step.is_done():
             peptide_dict = pp.digest(
                 fasta=config.library_input,
@@ -228,21 +230,49 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 min_length=config.min_length,
                 max_length=config.max_length,
             )
-            metadata = pp.generate_metadata(
-                peptides=list(peptide_dict.keys()),
+            # Convert dictionary to DataFrame
+            p2p_df = pd.DataFrame(list(peptide_dict.items()), columns=["peptide", "proteins"])
+            p2p_df["proteins"] = p2p_df["proteins"].apply(lambda x: ";".join(x))
+            p2p_df.to_csv(p2p_file, index=False)
+            digest_step.mark_done()
+        library_input_type = "peptides"
+        library_file = p2p_file
+
+    if library_input_type == "peptides":
+        internal_library_file = config.output / "peptides_internal.csv"
+        created_internal_step = ProcessStep(config.output, "speclib_created_internal")
+        if not created_internal_step.is_done():
+            proteins = None
+
+            if peptide_dict is None:
+                p2p_df = pd.read_csv(library_file)
+                if "proteins" in p2p_df.columns:
+                    p2p_df["proteins"].fillna("unknown", inplace=True)
+                    proteins = p2p_df["proteins"].apply(lambda x: x.split(";")).to_list()
+                peptides = p2p_df["peptide"].to_list()
+            else:
+                peptides = list(peptide_dict.keys())
+                proteins = list(peptide_dict.values())
+            internal_df = pp.generate_metadata(
+                peptides=peptides,
                 collision_energy=config.collision_energy,
                 precursor_charge=config.precursor_charge,
                 fragmentation=config.fragmentation,
+                nr_ox=config.nr_ox,
                 instrument_type=config.instrument_type,
-                proteins=list(peptide_dict.values()),
+                proteins=proteins,
             )
-            library_file = config.output / "prosit_input.csv"
-            metadata.to_csv(library_file, sep=",", index=None)
-            digest_step.mark_done()
-    elif library_input_type == "peptides":
-        library_file = config.library_input
+            library_file = config.output / "peptides_internal.csv"
+            internal_df.to_csv(internal_library_file, sep=",", index=None)
+            created_internal_step.mark_done()
+        library_file = internal_library_file
+
+    elif library_input_type == "internal":
+        pass
     else:
-        raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".')
+        raise ValueError(
+            f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides", or "internal".'
+        )
     spec_library = pp.gen_lib(library_file)
 
     pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")
@@ -262,12 +292,13 @@ def _speclib_from_digestion(config: Config) -> Spectra:
 
 
 def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+    libfile_prefix = "predicted_library"
     if output_format == "msp":
-        return MSP, results_path / "myPrositLib.msp"
+        return MSP, results_path / f"{libfile_prefix}.msp"
     elif output_format == "spectronaut":
-        return Spectronaut, results_path / "myPrositLib.csv"
+        return Spectronaut, results_path / f"{libfile_prefix}.csv"
     elif output_format == "dlib":
-        return DLib, results_path / "myPrositLib.dlib"
+        return DLib, results_path / f"{libfile_prefix}.dlib"
     else:
         raise ValueError(f"{output_format} is not supported as spectral library type")
 

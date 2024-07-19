@@ -1,5 +1,6 @@
 import logging
-from itertools import chain, product, repeat
+import re
+from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
 from typing import Any, Dict, List, Optional, Union
@@ -48,6 +49,7 @@ def generate_metadata(
     collision_energy: Union[int, List[int]],
     precursor_charge: Union[int, List[int]],
     fragmentation: Union[str, List[str]],
+    nr_ox: int,
     instrument_type: Optional[str] = None,
     proteins: Optional[List[List[str]]] = None,
 ) -> pd.DataFrame:
@@ -64,6 +66,7 @@ def generate_metadata(
     :param collision_energy: A list of collision energies corresponding to each peptide.
     :param precursor_charge: A list of precursor charges corresponding to each peptide.
     :param fragmentation: A list of fragmentation methods corresponding to each peptide.
+    :param nr_ox: Maximal number of allowed oxidations.
     :param instrument_type: The type of mass spectrometeter. Only required when predicting intensities
         with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].
     :param proteins: An optional list of proteins associated with each peptide.
@@ -82,9 +85,10 @@ def generate_metadata(
     if proteins is not None and len(proteins) != len(peptides):
         raise AssertionError("Number of proteins must match the number of peptides.")
 
-    combinations = product(peptides, collision_energy, precursor_charge, fragmentation)
+    combinations_product = product(peptides, collision_energy, precursor_charge, fragmentation)
+
     metadata = pd.DataFrame(
-        combinations, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
+        combinations_product, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
     )
     metadata["peptide_length"] = metadata["modified_sequence"].str.len()
     metadata["instrument_types"] = instrument_type
@@ -94,6 +98,24 @@ def generate_metadata(
         metadata["proteins"] = list(
             chain.from_iterable([repeat(";".join(prot_list), n_repeats) for prot_list in proteins])
         )
+    else:
+        metadata["proteins"] = "unknown"
+
+    modified_peptides = []
+    for _, row in metadata.iterrows():
+        peptide = row["modified_sequence"]
+        res = [i.start() for i in re.finditer("M", peptide)]
+        res.reverse()
+        for i in range(1, min(len(res), nr_ox) + 1):
+            possible_indices = list(combinations(res, i))
+            for index in possible_indices:
+                string_mod = peptide
+                for j in index:
+                    string_mod = string_mod[: j + 1] + "[UNIMOD:35]" + string_mod[j + 1 :]
+                new_row = row.copy()
+                new_row["modified_sequence"] = string_mod
+                modified_peptides.append(new_row)
+    metadata = pd.concat([metadata, pd.DataFrame(modified_peptides)], ignore_index=True)
 
     return metadata
 
