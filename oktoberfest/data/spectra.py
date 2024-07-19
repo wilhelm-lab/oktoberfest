@@ -1,15 +1,15 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple, Type, TypeVar, Union, Set
+from typing import List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import anndata
 import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from spectrum_fundamentals.fragments import retrieve_ion_types
 from scipy.sparse import csr_matrix, dok_matrix
+from spectrum_fundamentals.fragments import retrieve_ion_types
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(specified_ion_types: Optional[List[str]]) -> pd.DataFrame:
+    def _gen_vars_df(specified_ion_types: Optional[List[str]] = None) -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
@@ -62,7 +62,7 @@ class Spectra(anndata.AnnData):
         return var_df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType):#, fragmentation_methods: Set[str]) -> List[str]:
+    def _gen_column_names(fragment_type: FragmentType):  # , fragmentation_methods: Set[str]) -> List[str]:
         """
         Get column names of the spectra data.
 
@@ -72,7 +72,7 @@ class Spectra(anndata.AnnData):
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
         for i in range(1, 30):
-            for column in Spectra.COLUMNS_FRAGMENT_ION:#_resolve_fragment_columns(fragmentation_methods):
+            for column in Spectra.COLUMNS_FRAGMENT_ION:  # _resolve_fragment_columns(fragmentation_methods):
                 columns.append(prefix + "_" + column.replace("1", str(i)))
         return columns
 
@@ -110,11 +110,13 @@ class Spectra(anndata.AnnData):
         return layer
 
     @staticmethod
-    def _resolve_fragment_columns(fragmentation_methods: Set[str]) -> str:
+    def _resolve_fragment_columns(fragmentation_methods: Set[str]) -> List[str]:
         """
-        COLUMNS_FRAGMENT_ION
-        """
+        Creates a list of all fragments with their charge and position number in the correct order.
 
+        :param fragmentation_methods: fragmentation methods that were used
+        :return: list of fragments
+        """
         possible_ion_types = []
         if "UVPD" in fragmentation_methods:
             possible_ion_types = retrieve_ion_types("UVPD")
@@ -125,15 +127,14 @@ class Spectra(anndata.AnnData):
         elif len(fragmentation_methods.intersection({"CID", "HCD"})) > 0:
             possible_ion_types = retrieve_ion_types("CID")
         else:
-            retrieve_ion_types(fragmentation_methods[0])
-        
+            retrieve_ion_types(list(fragmentation_methods)[0])
+
         fragment_columns = []
         for ion_type in possible_ion_types:
             for i in range(Spectra.MAX_CHARGE):
                 fragment_columns.append(ion_type.upper() + "1+" + (i * "+"))
 
         return fragment_columns
-
 
     def __getitem__(self, index: anndata._core.index.Index):
         """Returns a sliced view of the object with this type to avoid returning AnnData instances when slicing."""
@@ -293,7 +294,7 @@ class Spectra(anndata.AnnData):
         layer = self._resolve_layer_name(fragment_type)
         matrix = self.layers[layer]
 
-        return matrix, self._gen_column_names(fragment_type)#, set(self.obs["FRAGMENTATION"]))
+        return matrix, self._gen_column_names(fragment_type)  # , set(self.obs["FRAGMENTATION"]))
 
     def write_as_hdf5(self, output_file: Union[str, Path]):
         """
@@ -324,24 +325,36 @@ class Spectra(anndata.AnnData):
 
         if "mz" in list(self.layers):
             mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
-            mz_cols.columns = self._gen_column_names(FragmentType.MZ)#, set(self.obs["FRAGMENTATION"]))
+            mz_cols.columns = self._gen_column_names(FragmentType.MZ)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, mz_cols], axis=1)
         if "raw_int" in list(self.layers):
             raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
-            raw_cols.columns = self._gen_column_names(FragmentType.RAW)#, set(self.obs["FRAGMENTATION"]))
+            raw_cols.columns = self._gen_column_names(FragmentType.RAW)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, raw_cols], axis=1)
         if "pred_int" in list(self.layers):
             pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED)[0].toarray())
-            pred_cols.columns = self._gen_column_names(FragmentType.PRED)#, set(self.obs["FRAGMENTATION"]))
+            pred_cols.columns = self._gen_column_names(FragmentType.PRED)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
-    
-    def assemble_df_for_parquet(self):
-        frag_dict = {"CID":1, "HCD": 2, "electron transfer dissociation":3, "ETD":3} #TODO get frag dict from constants in spectrum fundamentals
+
+    def assemble_df_for_parquet(self) -> pd.DataFrame:
+        """
+        Returns a dataframe that can be written as parquet with contains all the information needed for dlomix.
+
+        :return: pandas DataFrame
+        """
+        frag_dict = {
+            "CID": 1,
+            "HCD": 2,
+            "electron transfer dissociation": 3,
+            "ETD": 3,
+        }  # TODO get frag dict from constants in spectrum fundamentals
 
         ready_to_parquet = pd.DataFrame()
         ready_to_parquet["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
-        ready_to_parquet["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy()-1])
+        ready_to_parquet["precursor_charge_onehot"] = list(
+            np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        )
         ready_to_parquet["collision_energy_aligned_normed"] = 35
         ready_to_parquet["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: frag_dict[x])
 
