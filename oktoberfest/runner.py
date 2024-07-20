@@ -59,12 +59,6 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
             tmt_label = config.tag
-            
-
-            """if custom_var_mods is not None and not custom_var_mods:
-                update_mod_masses(custom_var_mods.values())
-            if custom_static_mods is not None and not custom_static_mods:
-                update_mod_masses(custom_static_mods.values())"""
 
             search_results = pp.convert_search(
                 input_path=config.search_results,
