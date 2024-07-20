@@ -31,6 +31,41 @@ def generate_features(
     :param output_file: the location to the generated tab file to be used for percolator / mokapot
     :param all_features: whether to use all features or only the standard set TODO
     :param regression_method: The regression method to use for iRT alignment
+
+    :Example:
+
+    .. code-block:: python
+
+        from oktoberfest import rescore as re
+        from oktoberfest import predict as pr
+        import pandas as pd
+        import numpy as np
+        # Required columns: RAW_FILE, MODIFIED_SEQUENCE, SEQUENCE, CALCULATED_MASS, SCAN_NUMBER,
+        # COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+        meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+                                "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+                                "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
+                                "CALCULATED_MASS": [1000,4000],
+                                "SCAN_NUMBER": [1,2],
+                                "COLLISION_ENERGY": [30,35],
+                                "PRECURSOR_CHARGE": [1,2],
+                                "FRAGMENTATION": ["HCD","HCD"],
+                                "REVERSE": [False,False],
+                                "SCORE": [0,0]})
+        var = Spectra._gen_vars_df()
+        library = Spectra(obs=meta_df, var=var)
+        raw_intensities = np.random.rand(2,174)
+        mzs = np.random.rand(2,174)*1000
+        annotation = np.array([var.index,var.index])
+        library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
+        library.add_mzs(mzs, FragmentType.MZ)
+        library.strings_to_categoricals()
+        pr.predict_intensities(data=library,
+                            model_name="Prosit_2020_intensity_HCD",
+                            server_url="koina.wilhelmlab.org:443",
+                            ssl=True,
+                            targets=["intensities", "annotation"])
+        re.generate_features(library, search_type="original", regression_method="spline", output_file="original.tab")
     """
     perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
@@ -60,6 +95,17 @@ def merge_input(
 
     :param tab_files: list of paths pointing to the individual tab files to be concatenated
     :param output_file: path to the generated output tab file
+
+    :Example:
+
+    .. code-block:: python
+
+        from oktoberfest import rescore as re
+        from pathlib import Path
+        tabfile1 = Path("out/results/percolator/rescore1.tab")
+        tabfile2 = Path("out/results/percolator/rescore2.tab")
+        filelist = [tabfile1,tabfile2]
+        re.merge_input(filelist, "out/results/percolator/rescore2.tab")
     """
     with open(output_file, "wb") as fout:
         first = True
@@ -103,6 +149,15 @@ def rescore_with_percolator(
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
     :raises FileNotFoundError: if the input file does not exist
+
+    :Example:
+
+    .. code-block:: python
+
+        from oktoberfest import rescore as re
+        from pathlib import Path
+        file = Path("out/results/percolator/rescore.tab")
+        re.rescore_with_percolator(file, num_threads=3, test_fdr=0.01, train_fdr=0.01)
     """
     if isinstance(input_file, str):
         input_file = Path(input_file)
@@ -155,6 +210,15 @@ def rescore_with_mokapot(
     :param output_folder: An optional output folder for all percolator files, default is the parent directory of the input_file
     :param test_fdr: the fdr cutoff for the test set
     :raises FileNotFoundError: if the input file does not exist
+
+    :Example:
+
+    .. code-block:: python
+
+        from oktoberfest import rescore as re
+        from pathlib import Path
+        file = Path("out/results/percolator/rescore.tab")
+        re.rescore_with_mokapot(file, test_fdr=0.01)
     """
     if isinstance(input_file, str):
         input_file = Path(input_file)
