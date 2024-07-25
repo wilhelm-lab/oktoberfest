@@ -145,6 +145,11 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
+    def use_feature_cols(self) -> Union[str, list]:
+        """Get additional columns ("all" for all columns or list with column names) from the config file."""
+        return self.inputs.get("use_feature_cols", "none")
+
+    @property
     def spectra(self) -> Path:
         """Get path to spectra files from the config file."""
         # check if spectra is absolute and if not, append with the directory
