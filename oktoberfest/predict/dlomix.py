@@ -1,100 +1,163 @@
+import contextlib
 import logging
+import multiprocessing as mp
+import os
+import sys
+import warnings
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Union
 
 import numpy as np
-import pandas as pd
-from dlomix.constants import PTMS_ALPHABET
-from dlomix.data.fragment_ion_intensity import FragmentIonIntensityDataset
-from dlomix.losses import masked_pearson_correlation_distance, masked_spectral_distance
-from spectrum_fundamentals.constants import ANNOTATION, FRAGMENTATION_ENCODING
-from tensorflow import keras
-from tqdm import tqdm
+from spectrum_fundamentals.constants import ALPHABET, ANNOTATION
+from spectrum_fundamentals.mod_string import parse_modstrings
+from spectrum_io.file.parquet import write_file
+
+sys.path.append("/cmnfs/home/students/j.schlensok/dlomix/bmpc_shared_scripts/oktoberfest_interface")
+# Suppress unnecessary feature processor info from DLomix
+with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):  # noqa: E402
+    from oktoberfest_interface import (
+        download_model_from_github,
+        load_keras_model,
+        process_dataset,
+    )
+
+from ..data.spectra import Spectra  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-DUMMY_COLUMN_NAME = "intensities_raw_dummy"
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
 
 
 class DLomix:
     """A class for interacting with DLomix models locally for inference."""
 
-    def __init__(self, model_name: str, model_path: Path, output_path: Path, batch_size: Optional[int]):
-        self.model_name = model_name
+    def __init__(self, model_type: str, model_path: Union[Path, str], output_path: Path):
+        """Initialize a DLomix predictor from name or path of pre-loaded weights.
+
+        Weights for a baseline intensity predictor can also be downloaded by specifying model_path=\"baseline\"
+
+       :param model_type: Type of model (intensity or irt)
+       :param model_path: Path of pre-trained PrositIntensityPredictor, or \"baseline\"
+       :param output_path: Directory to save processed data for predictor to for reuse
+
+       :raises NotImplementedError: if a retention time predictor is requested
+       :raises ValueError: if a name other than \"baseline\" is provided as model_path instead of a path
+        """
+        self.model_type = model_type
+        self.model_path = model_path
         self.output_path = output_path
-        if not self.batch_size:
-            # TODO maximize batch size given memory available
-            logging.info("Setting batch size to default of 1024")
-            self.batch_size = 1024
-        else:
-            self.batch_size = batch_size
 
-        if model_name == "intensity":
-            logger.info(f"Loading model weights from {model_path}")
-            self.model = keras.models.load_model(
-                model_path,
-                custom_objects={
-                    "masked_spectral_distance": masked_spectral_distance,
-                    "masked_pearson_correlation_distance": masked_pearson_correlation_distance,
-                },
+        if model_type == "irt":
+            logger.exception(NotImplementedError())
+
+        self.output_name = "intensities"
+
+        if model_path == "baseline":
+            with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
+                model_path = download_model_from_github()
+        elif isinstance(model_path, str):
+            raise ValueError("Non-path model names other than 'baseline' are not supported for local prediction")
+
+        logger.info(f"Loading model weights from {model_path}")
+        self.model = load_keras_model(str(model_path))
+
+    def predict(self, data: Spectra, dataset_name: str, temporary: bool = False) -> Dict[str, np.ndarray]:
+        """Create predictions for dataset using Keras model.
+
+        :param data: spectral library to predict features for
+        :param dataset_name: Name of the dataset for storing processed files for DLomix
+        :param temporary: Whether to keep the processed files on the disk after they've been used for inference
+
+        :return: a dictionary containing predicted features (key: feature type) and a mask of the ion annotations of
+            the predicted feature matrix (key: 'annotation')
+
+        """
+        # TODO create wrapper for folder with Parquet file + ion type & modification files
+        logger.info(f"Pre-processing dataset {dataset_name}")
+
+        data_dir = self.output_path / dataset_name
+
+        parquet_path = data_dir / "processed_dataset.parquet"
+        ion_type_file = data_dir / "ion_types.txt"
+        modification_file = data_dir / "modifications.txt"
+
+        create_new_parquet = True
+
+        if parquet_path.exists():
+            if ion_type_file.exists() and modification_file.exists():
+                logger.info(f"Parquet file {parquet_path} already exists, reusing it")
+                create_new_parquet = False
+                ion_types = np.loadtxt(ion_type_file, dtype=object).tolist()
+                modifications = np.loadtxt(modification_file, dtype=object).tolist()
+            else:
+                logger.info(
+                    f"""Existing Parquet file found at {parquet_path} but missing ion type/modification info, so it
+                     will be overwritten"""
+                )
+
+        data_dir.mkdir(exist_ok=True, parents=True)
+
+        if create_new_parquet:
+            processed_data = data.assemble_df_for_parquet(include_intensities=False)
+            write_file(processed_data, parquet_path)
+            ion_types = data.uns["ion_types"].tolist()
+            modifications = sorted(
+                list(
+                    {
+                        token
+                        for peptide in parse_modstrings(processed_data["modified_sequence"].tolist(), ALPHABET)
+                        for token in peptide
+                    }
+                ),
+                key=lambda token: ALPHABET[token],
             )
-            self.output_name = "intensities"
-        else:
-            # TODO implement iRT predictor
-            raise NotImplementedError
 
-    def predict(
-        self,
-        data: Union[Dict[str, np.ndarray], pd.DataFrame],
-        _async: bool = True,
-        debug=False,
-    ) -> Dict[str, np.ndarray]:
+        if not temporary:
+            ion_type_file.write_text("\n".join(ion_types))
+            modification_file.write_text("\n".join(modifications))
 
-        if not isinstance(data, pd.DataFrame):
-            data = pd.DataFrame(data)
-        processed_data = self.__transform_data(data)
+        with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull), warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ds = process_dataset(
+                str(parquet_path),
+                self.model,
+                ion_types=ion_types,
+                modifications=modifications,
+                label_column=None,
+                test_ratio=1,
+                val_ratio=0,
+            )
 
-        # TODO check if already exists
-        data_path = self.output_path / "dlomix_input.parquet"
-        processed_data.to_parquet(data_path)
+        # TODO set batch size based on available memory
+        # TODO improve Keras progress bar:
+        # - solve glitching with multi-threading
+        # - possibly write custom callback that only returns progress information so we can display it ourselves
+        preds = self.model.predict(ds.tensor_inference_data)
 
-        # TODO grab & reformat dataset preprocessing logs
-        logger.info("Processing data for DLomix")
-        ds = FragmentIonIntensityDataset(
-            test_data_source=str(data_path),
-            label_column=DUMMY_COLUMN_NAME,
-            model_features=["precursor_charge_onehot", "collision_energy_aligned_normed", "method_nbr"],
-            alphabet=PTMS_ALPHABET,
-            batch_size=self.batch_size,
-        )
+        if temporary:
+            parquet_path.unlink()
+            data_dir.rmdir()
 
-        # TODO can we extract progress information from the Keras progress bar and nicely integrate it into our progress instead of just hiding it?
-        # TODO can we serve this more efficiently? Multi-threading?
-        preds = np.concatenate(
-            [
-                self.model.predict(batch, verbose=0)
-                for batch, _ in tqdm(ds.tensor_test_data, desc="Generating predictions")
-            ]
-        )
         return {self.output_name: preds, "annotation": np.tile(np.array(ANNOTATIONS), (preds.shape[0], 1))}
 
     @staticmethod
-    def __transform_data(data: pd.DataFrame) -> pd.DataFrame:
-        """Transform data into format required by DLomix
-
-        - rename column names from input dataset to corresponding lowercase column names
-        - one-hot encode precursor charge
-        - scale collision energy
-        - integer-encode fragmentation method
-        - add dummy label column (required by DLomix dataset classes even for test data)
+    def initialize_tensorflow(gpu_number: int = 0) -> None:
         """
-        return pd.DataFrame(
-            {
-                "method_nbr": data["FRAGMENTATION"].apply(lambda x: FRAGMENTATION_ENCODING[x]),
-                "precursor_charge_onehot": list(np.eye(6)[data["PRECURSOR_CHARGE"].to_numpy() - 1]),
-                "collision_energy_aligned_normed": data["COLLISION_ENERGY"] / 100,
-                "modified_sequence": data["MODIFIED_SEQUENCE"],
-                DUMMY_COLUMN_NAME: list(np.ones((data.shape[0], 30)).astype(np.float64)),
-            }
-        )
+        Set some enviroment variables before importing TensorFlow.
+
+        - only use one GPU (otherwise TensorFlow will reserve all available ones)
+        - use all available cores
+        - change logging level
+
+        :param gpu_number: Number of GPU to use
+        """
+        logging.getLogger("tensorflow").setLevel(logging.WARNING)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_number)
+
+        n_threads = mp.cpu_count()
+
+        os.environ["OP_NUM_THREADS"] = str(n_threads)
+        os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
+        os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)

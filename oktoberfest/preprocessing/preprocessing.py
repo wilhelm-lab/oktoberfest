@@ -1,5 +1,6 @@
 import logging
-from itertools import chain, product, repeat
+import re
+from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
 from typing import Any, Dict, List, Optional, Union
@@ -9,7 +10,7 @@ import pandas as pd
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
-from spectrum_fundamentals.fragments import compute_peptide_mass
+from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
@@ -48,6 +49,7 @@ def generate_metadata(
     collision_energy: Union[int, List[int]],
     precursor_charge: Union[int, List[int]],
     fragmentation: Union[str, List[str]],
+    nr_ox: int,
     instrument_type: Optional[str] = None,
     proteins: Optional[List[List[str]]] = None,
 ) -> pd.DataFrame:
@@ -64,6 +66,7 @@ def generate_metadata(
     :param collision_energy: A list of collision energies corresponding to each peptide.
     :param precursor_charge: A list of precursor charges corresponding to each peptide.
     :param fragmentation: A list of fragmentation methods corresponding to each peptide.
+    :param nr_ox: Maximal number of allowed oxidations.
     :param instrument_type: The type of mass spectrometeter. Only required when predicting intensities
         with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].
     :param proteins: An optional list of proteins associated with each peptide.
@@ -82,9 +85,10 @@ def generate_metadata(
     if proteins is not None and len(proteins) != len(peptides):
         raise AssertionError("Number of proteins must match the number of peptides.")
 
-    combinations = product(peptides, collision_energy, precursor_charge, fragmentation)
+    combinations_product = product(peptides, collision_energy, precursor_charge, fragmentation)
+
     metadata = pd.DataFrame(
-        combinations, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
+        combinations_product, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
     )
     metadata["peptide_length"] = metadata["modified_sequence"].str.len()
     metadata["instrument_types"] = instrument_type
@@ -94,6 +98,24 @@ def generate_metadata(
         metadata["proteins"] = list(
             chain.from_iterable([repeat(";".join(prot_list), n_repeats) for prot_list in proteins])
         )
+    else:
+        metadata["proteins"] = "unknown"
+
+    modified_peptides = []
+    for _, row in metadata.iterrows():
+        peptide = row["modified_sequence"]
+        res = [i.start() for i in re.finditer("M", peptide)]
+        res.reverse()
+        for i in range(1, min(len(res), nr_ox) + 1):
+            possible_indices = list(combinations(res, i))
+            for index in possible_indices:
+                string_mod = peptide
+                for j in index:
+                    string_mod = string_mod[: j + 1] + "[UNIMOD:35]" + string_mod[j + 1 :]
+                new_row = row.copy()
+                new_row["modified_sequence"] = string_mod
+                modified_peptides.append(new_row)
+    metadata = pd.concat([metadata, pd.DataFrame(modified_peptides)], ignore_index=True)
 
     return metadata
 
@@ -155,19 +177,19 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
 
     :return: The filtered dataframe or AnnData object to be used with the given model.
     """
-    if "prosit" in model:
+    if "prosit" in model.lower():
         filter_kwargs = {
             "min_length": 7,
             "max_length": 30,
             "max_charge": 6,
         }
-    elif "ms2pip" in model:
+    elif "ms2pip" in model.lower():
         filter_kwargs = {
             "min_length": 2,
             "max_length": 100,
             "max_charge": 6,
         }
-    elif "alphapept" in model:
+    elif "alphapept" in model.lower():
         filter_kwargs = {
             "min_length": 7,
             "max_length": 35,
@@ -531,10 +553,13 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 
 def annotate_spectral_library(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+    psms: pd.DataFrame,
+    mass_tol: Optional[float] = None,
+    unit_mass_tol: Optional[str] = None,
+    fragmentation_method: Optional[str] = "HCD",
 ) -> Spectra:
     """
-    Annotate all b and y ion peaks of given PSMs.
+    Annotate all specified ion peaks of given PSMs (Default b and y ions).
 
     This function annotates the b any ion peaks of given psms by matching the mzs
     of all peaks to the theoretical mzs and discards all other peaks. It also calculates
@@ -545,14 +570,16 @@ def annotate_spectral_library(
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
-
+    :param fragmentation_method: fragmentation method that was used
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method)
 
-    var_df = Spectra._gen_vars_df()
+    ion_types = retrieve_ion_types(fragmentation_method)
+    var_df = Spectra._gen_vars_df(ion_types)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
         np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
     )

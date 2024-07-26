@@ -62,17 +62,13 @@ Predicting: :code:`pr`
 
 .. currentmodule:: oktoberfest
 
-Access to functions that communicate with a Koina server to retrieve predictions from various prediction models.
+Access to functions that communicate with a Koina server to retrieve predictions from various prediction models, or serve pre-trained TensorFlow models locally.
 
 High level features
 ~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
-   :toctree: api/pr
-
-   pr.predict_intensities
-   pr.predict_rt
-   pr.ce_calibration
+.. autoclass:: pr.predictor.Predictor
+    :members: from_config, predict_intensities, predict_irt, ce_calibration
 
 Koina interface
 ~~~~~~~~~~~~~~~
@@ -80,10 +76,20 @@ Koina interface
 .. autosummary::
    :toctree: api/pr
 
-   pr.predict
-   pr.predict_at_once
-   pr.predict_in_chunks
+   pr.Predictor.predict
+   pr.Predictor.predict_at_once
+   pr.Predictor.predict_in_chunks
+   pr.koina.Koina
 
+DLomix interface
+~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: api/pr
+
+    pr.Predictor.predict
+    pr.Predictor.predict_at_once
+    pr.dlomix.DLomix
 
 Rescoring: :code:`re`
 ---------------------

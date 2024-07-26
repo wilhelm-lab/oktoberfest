@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
 import logging
 from pathlib import Path
+from typing import Dict, List
 
 import anndata
 import numpy as np
@@ -9,55 +11,63 @@ import pandas as pd
 
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
+from .alignment import _alignment, _prepare_alignment_df
 from .dlomix import DLomix
 from .koina import Koina
-from .predict import _alignment, _prepare_alignment_df
 
 logger = logging.getLogger(__name__)
 
 
 class Predictor:
+    """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""
+
     def __init__(self, predictor: Koina | DLomix):
+        """Initialize from Koina or DLomix instance."""
         self._predictor = predictor
 
     @classmethod
-    def from_config(cls, config: Config, model_name: str, **kwargs) -> Predictor:
+    def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
+        """Load from config object."""
+        model_name = config.models[model_type]
+
         # TODO add documentation for config
-        if not config.predict_locally:
-            koina = Koina(
-                model_name=config.models[model_name], server_url=config.prediction_server, ssl=config.ssl, **kwargs
-            )
+        if model_type == "irt" or not config.predict_intensity_locally:
+            logger.info(f"Using model {model_name} via Koina")
+            koina = Koina(model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs)
             return Predictor(koina)
-        elif not Path(config.models[model_name]).exists():
-            # TODO properly wrap this
-            # should this be the default behavior? Or should we throw an exception right away?
-            logger.info(f"Path {config.models[model_name]} does not exist, trying to find it on Koina server")
-            try:
-                return Predictor(
-                    Koina(model_name=config.models[model_name], server_url="koina.wilhelmlab.org:443", ssl=True)
+
+        DLomix.initialize_tensorflow()
+
+        if not importlib.util.find_spec("dlomix"):
+            logger.exception(
+                ModuleNotFoundError(
+                    """Local prediction configured, but the DLomix package could not be found. Please verify that the
+                     optional DLomix dependency has been installed."""
                 )
-                logger.info(f"Successfully using Koina server for model {config.models[model_name]}")
-            except Exception as e:
-                raise e
+            )
+
+        output_folder = config.output / "data/dlomix"
+
+        if model_name == "baseline":
+            return Predictor(DLomix(model_type, model_name, output_folder))
+
+        model_path = Path(model_name)
+        if model_path.exists():
+            logger.info(f"Loading pre-trained PrositIntensityPredictor from {model_path}")
+            return Predictor(DLomix(model_type, model_path, output_folder))
         else:
-            try:
-                import dlomix
+            logger.critical(f"Specified model path {model_name} does not exist, please check")
+            logger.exception(FileNotFoundError())
 
-                return Predictor(DLomix(model_name, config.models[model_name], config.output / "results", config.inference_batch_size))
-            except ImportError as e:
-                logger.critical(
-                    "DLomix package required for local prediction not found. Please verify that the optional DLomix dependency has been installed."
-                )
-                raise e
+        return
 
-    def predict_intensities(self, data: anndata.AnnData, chunk_idx: list[pd.Index] | None = None, **kwargs):
+    def predict_intensities(self, data: anndata.AnnData, chunk_idx: List[pd.Index] | None = None, **kwargs):
         """
-        Retrieve intensity predictions from koina and add them to the provided data object.
+        Generate intensity predictions and add them to the provided data object.
 
-        This function takes a dataframe containing information about PSMS and predicts intensities using
-        a koina server. The configuration of koina is set using the kwargs.
-        The function either predicts everything at once by concatenating all prediction results
-        into single numpy arrays, or returns a list of individual numpy arrays, following the
+        This function takes a dataframe containing information about PSMs and predicts intensities. The configuration
+        of Koina/DLomix is set using the kwargs. The function either predicts everything at once by concatenating all
+        prediction results into single numpy arrays, or returns a list of individual numpy arrays, following the
         indices provided by optionally provided chunks of the dataframe.
 
         :param data: Anndata object containing the required data for prediction and to store the
@@ -66,10 +76,10 @@ class Predictor:
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
-        :param kwargs: Additional keyword arguments forwarded to Koina::predict
+        :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data.obs, **kwargs)
+            intensities = self.predict_at_once(data=data, **kwargs)
             data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
         else:
             chunked_intensities = self.predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
@@ -79,27 +89,27 @@ class Predictor:
 
     def predict_rt(self, data: anndata.AnnData, **kwargs):
         """
-        Retrieve retention time predictions from koina and add them to the provided data object.
+        Generate retention time predictions and add them to the provided data object.
 
-        This function takes a dataframe containing information about PSMS and predicts retention time
-        using a koina server. The configuration of koina is set using the kwargs.
+        This function takes a dataframe containing information about PSMs and predicts retention times. The
+        configuration of Koina/DLomix is set using the kwargs.
 
         :param data: Anndata object containing the data required for prediction and to store the
             predictions in after retrieval from the server.
-        :param kwargs: Additional keyword arguments forwarded to Koina::predict
+        :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
         """
         pred_irts = self.predict_at_once(data=data.obs, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
     def predict(
-        self, data: pd.DataFrame, chunk_idx: list[pd.Index] | None = None, **kwargs
-    ) -> dict[str, list[np.ndarray]] | dict[str, np.ndarray]:
+        self, data: pd.DataFrame, chunk_idx: List[pd.Index] | None = None, **kwargs
+    ) -> Dict[str, List[np.ndarray]] | Dict[str, np.ndarray]:
         """
-        Retrieve and return predictions from koina.
+        Retrieve and return predictions.
 
-        This function takes a dataframe containing information about PSMS and predicts peptide
-        properties using a koina server. The configuration of koina is set using the kwargs.
-        See the koina predict function for details. TODO, link this properly.
+        This function takes a dataframe containing information about PSMs and predicts peptide properties. The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
         The function either predicts everything at once by concatenating all prediction results
         into single numpy arrays, or returns a list of individual numpy arrays, following the
         indices provided by optionally provided chunks of the dataframe.
@@ -109,7 +119,7 @@ class Predictor:
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
-        :param kwargs: Additional keyword arguments forwarded to Koina::predict
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values). If chunk indices are
             provided, values for each target are a list of numpy array with a length equal to the number
@@ -119,35 +129,35 @@ class Predictor:
             return self.predict_at_once(data, **kwargs)
         return self.predict_in_chunks(data, chunk_idx, **kwargs)
 
-    def predict_at_once(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(self, data: Spectra, **kwargs) -> Dict[str, np.ndarray]:
         """
-        Retrieve and return predictions from koina in one go.
+        Retrieve and return predictions in one go.
 
-        This function takes a dataframe containing information about PSMS and predicts peptide
-        properties using a koina server. The configuration of koina is set using the kwargs.
-        See the koina predict function for details. TODO, link this properly.
+        This function takes a dataframe containing information about PSMs and predicts peptide properties. The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
 
         :param data: Dataframe containing the data for the prediction.
-        :param kwargs: Additonal keyword arguments forwarded to Koina::predict
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
         """
-        return self._predictor.predict(data)
+        return self._predictor.predict(data, **kwargs)
 
-    def predict_in_chunks(self, data: pd.DataFrame, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(self, data: Spectra, chunk_idx: List[pd.Index], **kwargs) -> Dict[str, List[np.ndarray]]:
         """
-        Retrieve and return predictions from koina in chunks.
+        Retrieve and return predictions in chunks.
 
-        This function takes a dataframe containing information about PSMS and predicts peptide
-        properties using a koina server. The configuration of koina is set using the kwargs.
-        See the koina predict function for details. TODO, link this properly.
+        This function takes a dataframe containing information about PSMs and predicts peptide properties.The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
 
         :param data: Dataframe containing the data for the prediction.
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
-        :param kwargs: Additional keyword arguments forwarded to Koina::predict
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
             to the number of chunks provided.
@@ -159,7 +169,7 @@ class Predictor:
         return ret_val
 
     def ce_calibration(
-        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, model_name: str, **server_kwargs
+        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, model_name: str, **kwargs
     ) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
@@ -172,8 +182,8 @@ class Predictor:
         :param ce_range: the min and max CE to be tested during calibration
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
         :param model_name: The name of the requested prediction model. This is forwarded to the prediction method with
-            server_kwargs and checked here to determine if alphapept is used for further preprocessing.
-        :param server_kwargs: Additional parameters that are forwarded to the prediction method
+            kwargs and checked here to determine if alphapept is used for further preprocessing.
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
         :return: a spectra object containing the spectral angle for each tested CE
         """
         alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
@@ -182,6 +192,6 @@ class Predictor:
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, model_name=model_name, **server_kwargs)
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, temporary=True, **kwargs)
         _alignment(alignment_library)
         return alignment_library

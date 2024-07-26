@@ -15,6 +15,8 @@ from tritonclient.grpc import (
     InferResult,
 )
 
+from ..data.spectra import Spectra
+
 logger = logging.getLogger(__name__)
 
 
@@ -434,10 +436,11 @@ class Koina:
 
     def predict(
         self,
-        data: Union[Dict[str, np.ndarray], pd.DataFrame],
+        data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra],
         _async: bool = True,
         debug=False,
     ) -> Dict[str, np.ndarray]:
+        # TODO update docstring to include AnnData object instead of DF
         """
         Perform inference on the given data using the Koina model.
 
@@ -467,6 +470,8 @@ class Koina:
             }
             predictions = model.predict(input_data)
         """
+        if isinstance(data, Spectra):
+            data = data.obs
         if isinstance(data, pd.DataFrame):
             data = {
                 input_field: data[alternative_column_map[input_field]].to_numpy()

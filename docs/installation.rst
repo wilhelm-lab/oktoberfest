@@ -17,7 +17,7 @@ The installer script automatically installs dependencies and creates a new conda
    wget https://raw.githubusercontent.com/wilhelm-lab/oktoberfest/main/installer.sh -O install_oktoberfest.sh
    bash install_oktoberfest.sh
 
-The installer searches for existing anaconda / miniconda installation. If none was found, it will download and install miniconda.
+The installer searches for an existing anaconda / miniconda installation. If none is found, it will download and install miniconda.
 
 Docker Image
 ------------

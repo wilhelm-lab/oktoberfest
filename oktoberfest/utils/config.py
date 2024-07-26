@@ -21,10 +21,6 @@ class Config:
         return self.data.get("prediction_server", "koina.wilhelmlab.org:443")
 
     @property
-    def predict_locally(self) -> bool:
-        return "localPredictionOptions" in self.data
-
-    @property
     def ssl(self) -> bool:
         """Get ssl flag for prediction server."""
         return self.data.get("ssl", False)
@@ -93,6 +89,11 @@ class Config:
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
+
+    @property
+    def fragmentation_method(self) -> str:
+        """Get fragmentation method from config file."""
+        return self.data.get("fragmentation_method", "HCD")
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
@@ -297,18 +298,21 @@ class Config:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
 
+    @property
+    def nr_ox(self) -> int:
+        """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
+        return self.spec_lib_options.get("nrOx", 1)
+
     ######################################
     # these are local prediction options #
     ######################################
 
-    @property
-    def local_prediction_options(self) -> dict:
-        """Get inputs dictionary from the config file."""
-        return self.data.get("localPredictionOptions", {})
+    # TODO expand this when transfer learning API is released
 
     @property
-    def inference_batch_size(self) -> int:
-        return self.local_prediction_options.get("batch_size", 1024)
+    def predict_intensity_locally(self) -> bool:
+        """Whether to predict intensity locally or using Koina."""
+        return self.data.get("predictIntensityLocally", False)
 
     ########################
     # functions start here #
