@@ -355,7 +355,7 @@ class Spectra(anndata.AnnData):
         ready_to_parquet["precursor_charge_onehot"] = list(
             np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
         )
-        ready_to_parquet["collision_energy_aligned_normed"] = 35
+        ready_to_parquet["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
         ready_to_parquet["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: frag_dict[x])
 
         raw_int = self.layers["raw_int"].toarray()
