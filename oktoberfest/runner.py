@@ -136,7 +136,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         aspec = pp.annotate_spectral_library(
-            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance, custom_mods=Config.custom_modifications
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -375,6 +375,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                 args=(
                     shared_queue,
                     writing_progress,
+                    Config.custom_modifications
                 ),
             )
 

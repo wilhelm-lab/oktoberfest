@@ -2,7 +2,7 @@ import logging
 from itertools import chain, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -10,7 +10,11 @@ import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass
-from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal, custom_to_internal
+from spectrum_fundamentals.mod_string import (
+    internal_without_mods,
+    maxquant_to_internal,
+    msfragger_to_internal,
+)
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
@@ -250,7 +254,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
 
 
 # CeCalibration
-def load_search(input_file: Union[str, Path], custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
+def load_search(
+    input_file: Union[str, Path],
+    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
 ) -> pd.DataFrame:
     """
     Load search results.
@@ -261,14 +267,18 @@ def load_search(input_file: Union[str, Path], custom_mods: Optional[Dict[str, Di
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
     :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
         static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
-        their respective masses as tuples as values.  
+        their respective masses as tuples as values.
     :return: dataframe containing the search results.
     """
     search_results = csv.read_file(input_file)
-    if custom_mods is not None: 
-        search_results["MODIFIED_SEQUENCE"]=custom_to_internal(search_results["MODIFIED_SEQUENCE"], 
-                                                               stat_custom_mods=custom_mods.get("static_mods"), 
-                                                               var_custom_mods=custom_mods.get("var_mods"))
+    if custom_mods is not None:
+        stat_mods: Dict[str, str] = {key: value[0] for key, value in (custom_mods.get("stat_mods") or {}).items()}
+        var_mods: Dict[str, str] = {key: value[0] for key, value in (custom_mods.get("var_mods") or {}).items()}
+        mods = {**stat_mods, **var_mods}
+
+        search_results["MODIFIED_SEQUENCE"] = msfragger_to_internal(
+            search_results["MODIFIED_SEQUENCE"], mods=mods
+        )
     return search_results
 
 
@@ -294,7 +304,7 @@ def convert_search(
         fixed modification for the N-terminus and lysin will be added
     :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
         static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
-        their respective masses as tuples as values. 
+        their respective masses as tuples as values.
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
 
@@ -314,8 +324,9 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file, 
-                                                       custom_mods=custom_mods)
+    return search_result(input_path).generate_internal(
+        tmt_labeled=tmt_label, out_path=output_file, custom_mods=custom_mods
+    )
 
 
 def convert_timstof_metadata(
@@ -545,7 +556,8 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 
 def annotate_spectral_library(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None, 
+    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
 ) -> Spectra:
     """
     Annotate all b and y ion peaks of given PSMs.
@@ -559,11 +571,12 @@ def annotate_spectral_library(
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
+    :param custom_mods: Custom Modifications with the identifier, the unimod equivalent and the respective mass
 
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, custom_mods=custom_mods)
 
     var_df = Spectra._gen_vars_df()
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)

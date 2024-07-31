@@ -143,7 +143,6 @@ class Config:
     def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         return self.inputs.get("search_results_type", "maxquant").lower()
-    
 
     @property
     def custom_modifications(self) -> Dict[str, Dict[str, Tuple[str, float]]]:
@@ -159,7 +158,6 @@ class Config:
     def var_mods(self) -> Dict[str, Tuple[str, float]]:
         """Get the custom variable modification labels as keys, with the UniMod identifiers and their masses as tuple values"""
         return self.custom_modifications.get("var_mods", {})
-
 
     @property
     def spectra(self) -> Path:
