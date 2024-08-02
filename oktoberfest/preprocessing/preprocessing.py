@@ -286,7 +286,7 @@ def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
-    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
+    custom_mods: Optional[Dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -303,8 +303,7 @@ def convert_search(
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
     :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
-        static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
-        their respective masses as tuples as values.
+        static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
 
