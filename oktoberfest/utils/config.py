@@ -146,20 +146,20 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[str, float]]]:
+    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[int, float, str]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> Dict[str, Union[int, float, str]]:
+    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
         """Get the custom static modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as Union values."""
+        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
         return self.custom_modifications.get("static_mods", {})
 
     @property
-    def var_mods(self) -> Dict[str, Union[int, float, str]]:
+    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
         """Get the custom variable modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as Union values."""
+        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
         return self.custom_modifications.get("var_mods", {})
 
     @property
@@ -407,7 +407,7 @@ class Config:
             self.data = json.load(f)
         self.base_path = config_path.parent
 
-    def custom_to_unimod(self):
+    def custom_to_unimod(self) -> Dict[str, int]:
         """
         Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
         """
@@ -420,6 +420,24 @@ class Config:
                 mods[k] = v[0]
 
         return mods
+    
+    def custom_to_unimod_mass(self) -> Dict[str, Dict[str, Tuple[int, float]]]:
+        """
+        Parse modifications to dict with custom identifier as key and
+        UNIMOD integer and its mass as value for internal processing.
+        """
+        mods_dict: Dict[str, Dict[str, Tuple[int, float]]] = {}
+        for key, subdict in self.custom_modifications.items():
+            n_subdict: Dict[str, Tuple[int, float]] = {}
+            for subkey, value in subdict.items():
+                try:
+                    n_subdict[subkey] = (int(value[0]), float(value[1]))
+                except (ValueError, TypeError) as e:
+                    raise AssertionError(f"Cannot handle modification {subkey} because of wrong type ")
+            if n_subdict:
+                mods_dict[key] = n_subdict
+        
+        return mods_dict
     
     """def custom_for_dlomix(self):
         return list(parse_mods(self.custom_to_unimod()).values())

@@ -20,6 +20,7 @@ from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
+from spectrum_io.search_result.search_results import parse_mods
 
 from ..data.spectra import FragmentType, Spectra
 
@@ -256,7 +257,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
 # CeCalibration
 def load_search(
     input_file: Union[str, Path],
-    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
+    custom_mods: Optional[Dict[str, int]] = None,
 ) -> pd.DataFrame:
     """
     Load search results.
@@ -271,12 +272,8 @@ def load_search(
     :return: dataframe containing the search results.
     """
     search_results = csv.read_file(input_file)
-    if custom_mods is not None:
-        stat_mods: Dict[str, str] = {key: value[0] for key, value in (custom_mods.get("stat_mods") or {}).items()}
-        var_mods: Dict[str, str] = {key: value[0] for key, value in (custom_mods.get("var_mods") or {}).items()}
-        mods = {**stat_mods, **var_mods}
-
-        search_results["MODIFIED_SEQUENCE"] = msfragger_to_internal(
+    mods = parse_mods(mods=custom_mods)
+    search_results["MODIFIED_SEQUENCE"] = msfragger_to_internal(
             search_results["MODIFIED_SEQUENCE"], mods=mods
         )
     return search_results
@@ -556,7 +553,7 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 def annotate_spectral_library(
     psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None, 
-    custom_mods: Optional[Dict[str, Dict[str, Tuple[str, float]]]] = None,
+    custom_mods: Optional[Dict[str, Dict[str, Tuple[int, float]]]] = None,
 ) -> Spectra:
     """
     Annotate all b and y ion peaks of given PSMs.

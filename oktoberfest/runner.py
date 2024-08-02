@@ -64,7 +64,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
-                custom_mods=config.custom_modifications,
+                custom_mods=config.custom_to_unimod(),
                 output_file=internal_search_file,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
@@ -75,7 +75,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 )
         else:
             internal_search_file = config.search_results
-            search_results = pp.load_search(internal_search_file, custom_mods=config.custom_modifications)
+            search_results = pp.load_search(internal_search_file, custom_mods=config.custom_to_unimod())
 
             # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
@@ -136,7 +136,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         aspec = pp.annotate_spectral_library(
-            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance, custom_mods=Config.custom_modifications
+            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance, 
+            custom_mods=config.custom_to_unimod_mass()
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
