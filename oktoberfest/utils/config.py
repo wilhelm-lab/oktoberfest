@@ -153,13 +153,13 @@ class Config:
     @property
     def static_mods(self) -> Dict[str, Union[int, float, str]]:
         """Get the custom static modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as Union values"""
+        with the UniMod Integer identifiers, their masses and neutral loss as Union values."""
         return self.custom_modifications.get("static_mods", {})
 
     @property
     def var_mods(self) -> Dict[str, Union[int, float, str]]:
         """Get the custom variable modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as Union values"""
+        with the UniMod Integer identifiers, their masses and neutral loss as Union values."""
         return self.custom_modifications.get("var_mods", {})
 
     @property
@@ -408,6 +408,9 @@ class Config:
         self.base_path = config_path.parent
 
     def custom_to_unimod(self):
+        """
+        Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+        """
         mods = {}
         if self.var_mods is not None:
             for k,v in self.var_mods.items():
