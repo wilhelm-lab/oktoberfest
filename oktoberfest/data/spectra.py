@@ -286,6 +286,14 @@ class Spectra(anndata.AnnData):
         """
         return cls(anndata.read_h5ad(str(input_file)))
 
+    def remove_decoys(self):
+        """Remove decoys in-place."""
+        self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
+
+    def filter_by_score(self, threshold: float):
+        """Filter out peptides with Andromeda score below threshold in-place."""
+        self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
+
     def convert_to_df(self) -> pd.DataFrame:
         """
         Gives back spectra_data instance as a pandas Dataframe.
@@ -309,34 +317,52 @@ class Spectra(anndata.AnnData):
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
 
-    def assemble_df_for_parquet(self, include_intensities: bool = False) -> pd.DataFrame:
+    def preprocess_for_machine_learning(
+        self,
+        filter_peptides: bool = False,
+        include_intensities: bool = True,
+        include_additional_columns: Optional[List[str]] = None,
+    ) -> pd.DataFrame:
+        """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
+
+        :param filter_peptides: Whether to filter peptides based on Andromeda score
+        :param include_intensities: Whether to include intensity (label) column
+        :param include_additional_columns: Additional column names that are not required by DLomix to include in output.
+            Capitalization does not matter - internal column names are all uppercase, whereas returned column names are
+            all lowercase.
+
+        :return: Pandas DataFrame with column names and dtypes corresponding to those required by DLomix
+            - modified_sequence (str)
+            - precursor_charge_onehot (list[int])
+            - collision_energy_aligned_normal (int)
+            - method_nbr (int)
+            [- intensities_raw (list[float]) (if `include_intensities == True`)]
+            [additional columns (if specified via `include_additional_columns`)]
         """
-        Returns a Pandas dataframe that can be serialized to Parquet for building a DLomix dataset.
+        self.remove_decoys()
 
-        :param include_intensities: Whether to include raw intensity values (i.e. labels required for training a model,
-            but not for inference)
+        if filter_peptides:
+            logger.warning("Peptide filtering by score not implemented, including all peptides")
+            threshold = 0.0  # TODO actually set threshold
+            self.filter_by_score(threshold)
 
-        :return: Pandas DataFrame with column names matching to those required for DLomix datasets
-        """
-        frag_dict = {
-            "CID": 1,
-            "HCD": 2,
-            "electron transfer dissociation": 3,
-            "ETD": 3,
-        }  # TODO get frag dict from constants in spectrum fundamentals
-
-        ready_to_parquet = pd.DataFrame()
-        ready_to_parquet["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
-        ready_to_parquet["precursor_charge_onehot"] = list(
-            np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
-        )
-        ready_to_parquet["collision_energy_aligned_normed"] = 35
-        ready_to_parquet["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: frag_dict[x])
+        df = pd.DataFrame()
+        df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
+        df["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
+        df["collision_energy_aligned_normed"] = 35
+        df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:
             raw_int = self.layers["raw_int"].toarray()
             raw_int[raw_int == 0] = -1
             raw_int[raw_int == c.EPSILON] = 0
-            ready_to_parquet["intensities_raw"] = list(raw_int)
+            df["intensities_raw"] = list(raw_int)
 
-        return ready_to_parquet
+        if include_additional_columns:
+            for column_name in include_additional_columns:
+                if column_name in self.obs:
+                    df[column_name.lower()] = self.obs[column_name.upper()]
+                else:
+                    logger.warning(f"Column '{column_name.upper()} not present in spectrum, excluded from output")
+
+        return df
