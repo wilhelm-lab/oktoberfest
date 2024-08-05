@@ -258,7 +258,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods)
+    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], mods=fixed_mods)
 
     # get sequence and its length
     library.obs["SEQUENCE"] = internal_without_mods(library.obs["MODIFIED_SEQUENCE"])
@@ -323,7 +323,7 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(tmt_label=tmt_label, out_path=output_file)
 
 
 def convert_timstof_metadata(
@@ -556,7 +556,7 @@ def annotate_spectral_library(
     psms: pd.DataFrame,
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
-    fragmentation_method: Optional[str] = "HCD",
+    fragmentation_method: str = "HCD",
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -574,7 +574,7 @@ def annotate_spectral_library(
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method)
+    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method=fragmentation_method)
 
     ion_types = retrieve_ion_types(fragmentation_method)
     var_df = Spectra._gen_vars_df(ion_types)
