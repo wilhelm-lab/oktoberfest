@@ -28,47 +28,63 @@ if importlib.util.find_spec("dlomix"):
 class Predictor:
     """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""
 
-    def __init__(self, predictor: Koina | DLomix):
+    def __init__(self, predictor: PredictionInterface):
         """Initialize from Koina or DLomix instance."""
         self._predictor = predictor
+
+    @classmethod
+    def from_koina(
+        cls,
+        model_name: str,
+        server_url: str = "koina.wilhelmlab.org:443",
+        ssl: bool = True,
+        targets: Optional[List[str]] = None,
+        disable_progress_bar: bool = False,
+    ) -> Predictor:
+        """Create Koina predictor."""
+        return Predictor(
+            Koina(
+                model_name=model_name,
+                server_url=server_url,
+                ssl=ssl,
+                targets=targets,
+                disable_progress_bar=disable_progress_bar,
+            )
+        )
+
+    @classmethod
+    def from_dlomix(cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int) -> Predictor:
+        """Create DLomix predictor."""
+        return Predictor(
+            DLomix(model_type=model_type, model_path=model_path, output_path=output_path, batch_size=batch_size)
+        )
 
     @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
         model_name = config.models[model_type]
 
-        # TODO add documentation for config
         if model_type == "irt" or not config.predict_intensity_locally:
             logger.info(f"Using model {model_name} via Koina")
-            koina = Koina(model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs)
-            return Predictor(koina)
-
-        DLomix.initialize_tensorflow()
-
-        if not importlib.util.find_spec("dlomix"):
-            logger.exception(
-                ModuleNotFoundError(
-                    """Local prediction configured, but the DLomix package could not be found. Please verify that the
-                     optional DLomix dependency has been installed."""
-                )
+            return Predictor.from_koina(
+                model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
 
         output_folder = config.output / "data/dlomix"
 
         if model_name == "baseline":
-            return Predictor(DLomix(model_type, model_name, output_folder))
+            return Predictor.from_dlomix(model_type, model_name, output_folder, config.batch_size)
 
         model_path = Path(model_name)
         if model_path.exists():
             logger.info(f"Loading pre-trained PrositIntensityPredictor from {model_path}")
-            return Predictor(DLomix(model_type, model_path, output_folder))
+            return Predictor.from_dlomix(model_type, model_path, output_folder, config.batch_size)
         else:
-            logger.critical(f"Specified model path {model_name} does not exist, please check")
-            logger.exception(FileNotFoundError())
+            raise FileNotFoundError(f"Specified model path {model_name} does not exist, please check")
 
         return
 
-    def predict_intensities(self, data: anndata.AnnData, chunk_idx: List[pd.Index] | None = None, **kwargs):
+    def predict_intensities(self, data: anndata.AnnData, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -109,7 +125,7 @@ class Predictor:
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
     def predict(
-        self, data: pd.DataFrame, chunk_idx: List[pd.Index] | None = None, **kwargs
+        self, data: pd.DataFrame, chunk_idx: Optional[List[pd.Index]] = None, **kwargs
     ) -> Dict[str, List[np.ndarray]] | Dict[str, np.ndarray]:
         """
         Retrieve and return predictions.
@@ -171,7 +187,7 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data.loc[idx]))
+            results.append(self._predictor.predict(data.loc[idx], **kwargs))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
@@ -199,6 +215,6 @@ class Predictor:
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, temporary=True, **kwargs)
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, **kwargs)
         _alignment(alignment_library)
         return alignment_library

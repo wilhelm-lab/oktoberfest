@@ -42,7 +42,7 @@ def _make_predictions(predictors: Dict[str, pr.Predictor], queue_out, progress, 
     predictions = {
         output_name: output
         for predictor in predictors.values()
-        for output_name, output in predictor.predict_at_once(batch_df)
+        for output_name, output in predictor.predict_at_once(batch_df).items()
     }
     queue_out.put((predictions, batch_df))
     with lock:
@@ -380,7 +380,8 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         "disable_progress_bar": True,
     }
     predictors = {
-        model_key: pr.Predictor.from_config(config, model_key, **predictor_kwargs) for model_key in config.models
+        model_key: pr.Predictor.from_config(config, model_type=model_key, **predictor_kwargs)
+        for model_key in config.models
     }
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
