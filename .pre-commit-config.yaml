@@ -40,7 +40,7 @@ repos:
             entry: pyupgrade
             language: system
             types: [python]
-            args: [--py38-plus]
+            args: [--py38-plus, --keep-runtime-typing]
           - id: trailing-whitespace
             name: Trim Trailing Whitespace
             entry: trailing-whitespace-fixer
