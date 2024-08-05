@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import logging
 from pathlib import Path
@@ -376,6 +377,12 @@ class Config:
         if "alphapept" in self.models["intensity"].lower():
             self._check_for_alphapept()
 
+        if self.predict_intensity_locally:
+            self._check_for_local_prediction()
+
+        if self.do_refinement_learning:
+            self._check_for_refinement_learning()
+
     def _check_tmt(self):
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
@@ -446,6 +453,36 @@ class Config:
                         f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
                         f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
                     )
+
+    def _check_for_local_prediction(self):
+        if not importlib.util.find_spec("dlomix"):
+            raise ModuleNotFoundError(
+                """Local prediction requested, but the DLomix package could not be found. Please verify that it has been
+                installed as an optional dependency."""
+            )
+
+    def _check_for_refinement_learning(self):
+        if not self.predict_intensity_locally:
+            logger.warning(
+                """Refinement learning but not local intensity prediction requested. Koina models cannot be used for
+                refinement learning. Checking if provided intensity predictor exists locally."""
+            )
+        if not Path(self.models["intensity"]).exists():
+            if self.models["intensity"].lower() not in ["baseline", ""]:
+                raise ValueError(
+                    f"You requested the intensity model {self.models['intensity']}, but it is neither a path that exists"
+                    "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"
+                    "for refinement learning."
+                )
+            else:
+                # set to none to not have to deal with two possible types
+                self.models["intensity"] = None
+
+        if self.use_wandb and not importlib.util.find_spec("wandb"):
+            raise ModuleNotFoundError(
+                """Using WandB for refinement learning requested, but the wandb package could not be found. Please
+                verify that it has been installed as an optional dependency."""
+            )
 
     def __init__(self):
         """Initialize config file data."""
