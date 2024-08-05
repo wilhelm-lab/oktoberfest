@@ -8,7 +8,7 @@ from functools import partial
 from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -525,6 +525,36 @@ def run_ce_calibration(
             _ce_calib(spectra_file, config)
 
 
+def _refinement_learn(spectra_files: List[Path], config: Config):
+    # TODO create process step for this
+    libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
+    if config.models["intensity"]:
+        baseline_model_path = Path(config.models["intensity"])
+
+    wandb_kwargs: Dict[str, Any] = {}
+    if config.use_wandb:
+        wandb_kwargs["wandb_project"] = config.wandb_project
+        wandb_kwargs["wandb_tags"] = config.wandb_tags
+
+    if config.include_original_sequences:
+        additional_columns = ["SEQUENCE"]
+    else:
+        additional_columns = None
+
+    pr.dlomix.refine_intensity_predictor(
+        baseline_model_path=baseline_model_path,
+        spectra=libraries,
+        output_directory=config.output / "data/dlomix",
+        dataset_name="refinement_dataset",
+        model_name="refined",
+        batch_size=config.training_batch_size,
+        additional_columns=additional_columns,
+        available_gpus=config.available_gpus,
+        use_wandb=config.use_wandb,
+        **wandb_kwargs,
+    )
+
+
 def _calculate_features(spectra_file: Path, config: Config):
     library = _ce_calib(spectra_file, config)
 
@@ -539,8 +569,19 @@ def _calculate_features(spectra_file: Path, config: Config):
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
-        intensity_predictor.predict_intensities(data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem)
+        if config.do_refinement_learning:
+            intensity_predictor = pr.Predictor.from_dlomix(
+                model_type="intensity",
+                model_path=config.output / "data/dlomix/refined.keras",
+                output_path=config.output / "data/dlomix/",
+                batch_size=config.batch_size,
+            )
+        else:
+            intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
+
+        intensity_predictor.predict_intensities(
+            data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
+        )
 
         irt_predictor = pr.Predictor.from_config(config, model_type="irt")
         irt_predictor.predict_rt(data=library)
@@ -618,6 +659,21 @@ def run_rescoring(config_path: Union[str, Path]):
     proc_dir.mkdir(parents=True, exist_ok=True)
 
     spectra_files = _preprocess(spectra_files, config)
+
+    # TODO is this the most elegant way to multi-thread CE calibration before running refinement learning?
+    # Should we store the returned libraries and pass them to _calculate_features and _refinement_learn instead of
+    # _ce_calib returning cached outputs?
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            _ = processing_pool.apply_async(_ce_calib, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _ = _ce_calib(spectra_file, config)
+
+    if config.do_refinement_learning:
+        _refinement_learn(spectra_files, config)
 
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)

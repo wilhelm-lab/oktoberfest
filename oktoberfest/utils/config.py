@@ -307,12 +307,60 @@ class Config:
     # these are local prediction options #
     ######################################
 
-    # TODO expand this when transfer learning API is released
+    @property
+    def local_prediction_options(self) -> dict:
+        """Get local prediction parameter dictionary from config file."""
+        return self.data.get("localPredictionOptions", {})
 
     @property
     def predict_intensity_locally(self) -> bool:
         """Whether to predict intensity locally or using Koina."""
-        return self.data.get("predictIntensityLocally", False)
+        return "localPredictionOptions" in self.data
+
+    @property
+    def refinement_learning_options(self) -> dict:
+        """Get refinement learning parameter dictionary from config file."""
+        return self.data.get("refinementLearningOptions", {})
+
+    @property
+    def include_original_sequences(self) -> bool:
+        """Whether to keep unmodified peptide sequences in processed dataset."""
+        return self.refinement_learning_options.get("includeOriginalSequences", False)
+
+    @property
+    def training_batch_size(self) -> int:
+        """Batch size to use for refinement learning."""
+        return self.refinement_learning_options.get("batchSize", 1024)
+
+    @property
+    def do_refinement_learning(self) -> bool:
+        """Whether to do refinement learning for intensity predictor."""
+        return "refinementLearningOptions" in self.data
+
+    @property
+    def available_gpus(self) -> List[int]:
+        """Indices of GPUS to set as visible for CUDA."""
+        return self.refinement_learning_options.get("availableGpus", [])
+
+    @property
+    def use_wandb(self) -> bool:
+        """Whether to use WandB for refinement learning training."""
+        return "wandbOptions" in self.refinement_learning_options
+
+    @property
+    def wandb_options(self) -> dict:
+        """Get WandB options from config file."""
+        return self.refinement_learning_options.get("wandbOptions", {})
+
+    @property
+    def wandb_project(self) -> str:
+        """Project to save WandB run to."""
+        return self.wandb_options.get("project", "DLomix_auto_RL_TL")
+
+    @property
+    def wandb_tags(self) -> List[str]:
+        """Tags to use for WandB run."""
+        return self.wandb_options.get("tags", [])
 
     ########################
     # functions start here #

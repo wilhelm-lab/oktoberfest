@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 
 import anndata
 import numpy as np
@@ -12,11 +12,18 @@ import pandas as pd
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
 from .alignment import _alignment, _prepare_alignment_df
-from .dlomix import DLomix
 from .koina import Koina
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from .dlomix import DLomix
+    PredictionInterface = Union[DLomix, Koina]
+else:
+    PredictionInterface = Koina
+
+if importlib.util.find_spec("dlomix"):
+    from .dlomix import DLomix
 
 class Predictor:
     """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""

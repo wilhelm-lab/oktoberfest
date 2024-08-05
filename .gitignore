@@ -149,3 +149,6 @@ tutorials/
 
 # example data
 data/
+
+# Machine learning artifacts
+wandb/

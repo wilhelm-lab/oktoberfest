@@ -2,122 +2,246 @@ import contextlib
 import logging
 import multiprocessing as mp
 import os
-import sys
+import shutil
 import warnings
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
+import spectrum_io.file.parquet as parquet
 from spectrum_fundamentals.constants import ALPHABET, ANNOTATION
 from spectrum_fundamentals.mod_string import parse_modstrings
-from spectrum_io.file.parquet import write_file
 
-sys.path.append("/cmnfs/home/students/j.schlensok/dlomix/bmpc_shared_scripts/oktoberfest_interface")
-# Suppress unnecessary feature processor info from DLomix
-with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):  # noqa: E402
-    from oktoberfest_interface import (
-        download_model_from_github,
-        load_keras_model,
-        process_dataset,
-    )
-
-from ..data.spectra import Spectra  # noqa: E402
+from oktoberfest.data import Spectra
 
 logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
 
+# TODO maybe move this to DLomix::interface::__init__.py?
+# Set some enviroment variables before importing TensorFlow.
+# 1. change logging level
+logging.getLogger("tensorflow").setLevel(logging.WARNING)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+# 2. use all available cores
+n_threads = mp.cpu_count()
+os.environ["OP_NUM_THREADS"] = str(n_threads)
+os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
+os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)
+
+
+@contextlib.contextmanager
+def mute_stdout(ignore_warnings: bool = False):
+    """Mute print statements and user warnings from DLomix."""
+    with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
+        if ignore_warnings:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                yield
+        else:
+            yield
+
+
+with mute_stdout():
+    import tensorflow as tf
+    from dlomix.interface import download_model_from_github, load_keras_model, process_dataset, save_keras_model
+    from dlomix.models import PrositIntensityPredictor
+    from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
+
+
+def _load_model(model_path: Path) -> PrositIntensityPredictor:
+    if not model_path.exists():
+        downloaded_model_path = Path(download_model_from_github())
+        downloaded_model_path.rename(model_path)
+    return load_keras_model(str(model_path))
+
+
+def refine_intensity_predictor(
+    baseline_model_path: Optional[Path],
+    spectra: List[Spectra],
+    output_directory: Path,
+    dataset_name: str,
+    model_name: str,
+    batch_size: int = 1024,
+    additional_columns: Optional[List[str]] = None,
+    available_gpus: Optional[List[int]] = None,
+    use_wandb: bool = False,
+    wandb_project: Optional[str] = None,
+    wandb_tags: Optional[List[str]] = None,
+) -> None:
+    """Perform refinement/transfer learning on a baseline intensity predictor.
+
+    :param baseline_model_path: Path of baseline model to refine
+    :param spectra: Spectral libraries to use as training data for refinement
+    :param output_directory: Directory to save processed dataset and refined model to. The Parquet and ion_type and
+        modification metadata files for the processed dataset will be stored in `<output_directory>/<dataset_name>/`,
+        and the refined model as `<output_directory>/<model_name>.keras`
+    :param dataset_name: Name of dataset
+    :param model_name: Name of refined model
+    :param batch_size: Batch size to use for training
+    :param additional_columns: Additional columns to keep in DLomix dataset for downstream analyis
+    :param available_gpus: Indices of GPUs to use for training
+    :param use_wandb: Whether to use WandB to log training
+    :param wandb_project: Name of WandB project to save run to
+    :param wandb_tags: Tags to assing to WandB run
+    """
+    # TODO check if GPUs are available
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        logger.warning(
+            """TensorFlow could not detect GPU devices to use for refinement learning, so it will run on CPU and take
+            much longer"""
+        )
+    else:
+        for device in gpus:
+            tf.config.experimental.set_memory_growth(device, True)
+        if available_gpus:
+            tf.config.set_visible_devices([gpus[i] for i in available_gpus], "GPU")
+
+    parquet_path, ion_types, modifications = create_dlomix_dataset(
+        spectra, output_directory / dataset_name, include_additional_columns=additional_columns
+    )
+
+    if not baseline_model_path:
+        baseline_model_path = output_directory / f"{model_name}_baseline.keras"
+    baseline_model = _load_model(baseline_model_path)
+
+    model_path = output_directory / (model_name + ".keras")
+    if model_path.exists():
+        logger.info(f"Found existing refined model at {model_path}, re-using it")
+        return
+
+    logger.info("Pre-processing dataset for refinement learning")
+    with mute_stdout(ignore_warnings=True):
+        ds = process_dataset(
+            str(parquet_path),
+            baseline_model,
+            ion_types=ion_types,
+            modifications=modifications,
+            label_column="intensities_raw",
+            val_ratio=0.2,
+            batch_size=batch_size,
+            additional_columns=additional_columns,
+        )
+
+    config = AutomaticRlTlTrainingConfig(
+        dataset=ds,
+        baseline_model=baseline_model,
+        use_wandb=use_wandb,
+        wandb_project=wandb_project,
+        wandb_tags=wandb_tags,
+    )
+
+    trainer = AutomaticRlTlTraining(config)
+    refined_model = trainer.train()
+
+    save_keras_model(refined_model, str(model_path))
+
+
+def create_dlomix_dataset(
+    spectra: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
+) -> Tuple[Path, List[str], List[str]]:
+    """Transform one or multiple spectra into Parquet file that can be used by DLomix.
+
+    Processes spectral libraries into DLomix-compatible format and detects fragment ion types and peptide modifications
+        present in the dataset, then writes the dataset to `output_dir` as `processed_dataset.parquet` and the lists of
+        ion types and modifications as `ion_types.txt` and `modifications.txt`.
+
+    :param spectra: Spectral libraries to include
+    :param output_dir: Directory to save processed dataset to
+    :param include_additional_columns: additional columns to keep in the dataset
+
+    :returns:
+        - path of saved Parquet file
+        - a list of ion types in it
+        - a list of modifications in it (in the form of modstring tokens from spectrum_fundamentals)
+    """
+    # TODO create wrapper for folder with Parquet file + ion type & modification files
+
+    output_dir.mkdir(exist_ok=True, parents=True)
+    parquet_path = output_dir / "processed_dataset.parquet"
+    ion_type_file = output_dir / "ion_types.txt"
+    modification_file = output_dir / "modifications.txt"
+
+    # Re-use existing dataset if all necessary files are there
+    if parquet_path.exists() and ion_type_file.exists() and modification_file.exists():
+        logger.info(f"Re-using saved dataset from {output_dir}")
+        ion_types = np.loadtxt(ion_type_file, dtype=object).tolist()
+        modifications = np.loadtxt(modification_file, dtype=object).tolist()
+        return parquet_path, ion_types, modifications
+
+    # Otherwise regenerate dataset because ion type metadata isn't stored in the Parquet file
+    processed_data = pd.concat(
+        [
+            spectrum.preprocess_for_machine_learning(include_additional_columns=["RAW_FILE", "SCAN_NUMBER"])
+            for spectrum in spectra
+        ]
+    )
+    if not parquet_path.exists():
+        logger.info(f"Saving DLomix dataset to {parquet_path}")
+        parquet.write_file(processed_data, parquet_path)
+
+    modifications = sorted(
+        list(
+            {
+                token
+                for peptide in parse_modstrings(processed_data["modified_sequence"].tolist(), ALPHABET)
+                for token in peptide
+            }
+        ),
+        key=lambda token: ALPHABET[token],
+    )
+    logger.debug(f"Detected modifications in dataset: {modifications}")
+    modification_file.write_text("\n".join(modifications))
+    ion_types = list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"].tolist()})
+    logger.debug(f"Detected ion types in dataset: {ion_types}")
+    ion_type_file.write_text("\n".join(ion_types))
+
+    return parquet_path, ion_types, modifications
+
 
 class DLomix:
     """A class for interacting with DLomix models locally for inference."""
 
-    def __init__(self, model_type: str, model_path: Union[Path, str], output_path: Path):
+    def __init__(self, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int):
         """Initialize a DLomix predictor from name or path of pre-loaded weights.
 
-        Weights for a baseline intensity predictor can also be downloaded by specifying model_path=\"baseline\"
+        :param model_type: Type of model (intensity or irt)
+        :param model_path: Path of pre-trained PrositIntensityPredictor. If None, a baseline model will be downloaded
+            from GitHub.
+        :param output_path: Directory to save processed data for predictor to for reuse
+        :param batch_size: Batch size to use for inference
 
-       :param model_type: Type of model (intensity or irt)
-       :param model_path: Path of pre-trained PrositIntensityPredictor, or \"baseline\"
-       :param output_path: Directory to save processed data for predictor to for reuse
-
-       :raises NotImplementedError: if a retention time predictor is requested
-       :raises ValueError: if a name other than \"baseline\" is provided as model_path instead of a path
+        :raises NotImplementedError: if a retention time predictor is requested
         """
         self.model_type = model_type
-        self.model_path = model_path
         self.output_path = output_path
+        self.batch_size = batch_size
 
         if model_type == "irt":
-            logger.exception(NotImplementedError())
+            raise NotImplementedError("Local prediction not implemented for iRT prediction")
 
         self.output_name = "intensities"
+        if not model_path:
+            model_path = output_path / "intensity_prosit_baseline_model.keras"
+        self.model = _load_model(model_path)
 
-        if model_path == "baseline":
-            with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
-                model_path = download_model_from_github()
-        elif isinstance(model_path, str):
-            raise ValueError("Non-path model names other than 'baseline' are not supported for local prediction")
-
-        logger.info(f"Loading model weights from {model_path}")
-        self.model = load_keras_model(str(model_path))
-
-    def predict(self, data: Spectra, dataset_name: str, temporary: bool = False) -> Dict[str, np.ndarray]:
+    def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> Dict[str, np.ndarray]:
         """Create predictions for dataset using Keras model.
 
         :param data: spectral library to predict features for
         :param dataset_name: Name of the dataset for storing processed files for DLomix
-        :param temporary: Whether to keep the processed files on the disk after they've been used for inference
+        :param keep_dataset: Whether to keep or discard the pre-processed dataset after inference
 
         :return: a dictionary containing predicted features (key: feature type) and a mask of the ion annotations of
             the predicted feature matrix (key: 'annotation')
 
         """
-        # TODO create wrapper for folder with Parquet file + ion type & modification files
-        logger.info(f"Pre-processing dataset {dataset_name}")
-
-        data_dir = self.output_path / dataset_name
-
-        parquet_path = data_dir / "processed_dataset.parquet"
-        ion_type_file = data_dir / "ion_types.txt"
-        modification_file = data_dir / "modifications.txt"
-
-        create_new_parquet = True
-
-        if parquet_path.exists():
-            if ion_type_file.exists() and modification_file.exists():
-                logger.info(f"Parquet file {parquet_path} already exists, reusing it")
-                create_new_parquet = False
-                ion_types = np.loadtxt(ion_type_file, dtype=object).tolist()
-                modifications = np.loadtxt(modification_file, dtype=object).tolist()
-            else:
-                logger.info(
-                    f"""Existing Parquet file found at {parquet_path} but missing ion type/modification info, so it
-                     will be overwritten"""
-                )
-
-        data_dir.mkdir(exist_ok=True, parents=True)
-
-        if create_new_parquet:
-            processed_data = data.assemble_df_for_parquet(include_intensities=False)
-            write_file(processed_data, parquet_path)
-            ion_types = data.uns["ion_types"].tolist()
-            modifications = sorted(
-                list(
-                    {
-                        token
-                        for peptide in parse_modstrings(processed_data["modified_sequence"].tolist(), ALPHABET)
-                        for token in peptide
-                    }
-                ),
-                key=lambda token: ALPHABET[token],
-            )
-
-        if not temporary:
-            ion_type_file.write_text("\n".join(ion_types))
-            modification_file.write_text("\n".join(modifications))
-
-        with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull), warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        # TODO reuse training dataset if doing transfer learning (load subset based on RAW_FILE column)
+        parquet_path, ion_types, modifications = create_dlomix_dataset([data], self.output_path / dataset_name)
+        with mute_stdout(ignore_warnings=True):
             ds = process_dataset(
                 str(parquet_path),
                 self.model,
@@ -126,38 +250,15 @@ class DLomix:
                 label_column=None,
                 test_ratio=1,
                 val_ratio=0,
+                batch_size=self.batch_size,
             )
 
-        # TODO set batch size based on available memory
         # TODO improve Keras progress bar:
         # - solve glitching with multi-threading
         # - possibly write custom callback that only returns progress information so we can display it ourselves
         preds = self.model.predict(ds.tensor_inference_data)
 
-        if temporary:
-            parquet_path.unlink()
-            data_dir.rmdir()
+        if not keep_dataset:
+            shutil.rmtree(self.output_path / dataset_name)
 
         return {self.output_name: preds, "annotation": np.tile(np.array(ANNOTATIONS), (preds.shape[0], 1))}
-
-    @staticmethod
-    def initialize_tensorflow(gpu_number: int = 0) -> None:
-        """
-        Set some enviroment variables before importing TensorFlow.
-
-        - only use one GPU (otherwise TensorFlow will reserve all available ones)
-        - use all available cores
-        - change logging level
-
-        :param gpu_number: Number of GPU to use
-        """
-        logging.getLogger("tensorflow").setLevel(logging.WARNING)
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_number)
-
-        n_threads = mp.cpu_count()
-
-        os.environ["OP_NUM_THREADS"] = str(n_threads)
-        os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
-        os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)
