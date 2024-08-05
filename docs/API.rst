@@ -20,6 +20,7 @@ Preprocessing: :code:`pp`
 .. currentmodule:: oktoberfest
 
 Generating libraries
+~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp
@@ -31,6 +32,7 @@ Generating libraries
    pp.annotate_spectral_library
 
 Spectra preprocessing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp
@@ -42,6 +44,7 @@ Spectra preprocessing
 
 
 Peptide preprocessing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp

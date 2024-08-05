@@ -310,7 +310,7 @@ def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type
         raise ValueError(f"{output_format} is not supported as spectral library type")
 
 
-def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batchsize: int, model: str):
+def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batch_size: int, model: str):
     if out_file.is_file():
         if failed_batch_file.is_file():
             with open(failed_batch_file, "rb") as fh:
@@ -329,10 +329,10 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
             sys.exit(1)
     else:
         if "alphapept" in model.lower():
-            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
+            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batch_size)
         else:
             batch_iterator = (
-                obs.index[i * batchsize : (i + 1) * batchsize].to_numpy() for i in range(ceil(len(obs) / batchsize))
+                obs.index[i * batch_size : (i + 1) * batch_size].to_numpy() for i in range(ceil(len(obs) / batch_size))
             )
         mode = "w"
 
@@ -388,11 +388,11 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         results_path = config.output / "results"
         results_path.mkdir(exist_ok=True)
 
-        batchsize = config.batch_size
+        batch_size = config.batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
-            out_file, failed_batch_file, spec_library.obs, batchsize, config.models["intensity"]
+            out_file, failed_batch_file, spec_library.obs, batch_size, config.models["intensity"]
         )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)

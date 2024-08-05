@@ -1,7 +1,7 @@
 Running Oktoberfest
 ===================
 
-This documentation provides an overview of the high level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
+This documentation provides an overview of the high-level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
 
 
 Executing a job
