@@ -368,7 +368,15 @@ class Config:
 
     def check(self):
         """Validate the configuration."""
-        # check tmt tag and models
+        self._check_tmt()
+
+        if self.job_type == "SpectralLibraryGeneration":
+            self._check_for_speclib()
+
+        if "alphapept" in self.models["intensity"].lower():
+            self._check_for_alphapept()
+
+    def _check_tmt(self):
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
         if self.tag == "":
@@ -391,18 +399,16 @@ class Config:
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
                 )
-        if self.job_type == "SpectralLibraryGeneration":
-            self._check_for_speclib()
 
-        if "alphapept" in int_model:
-            instrument_type = self.instrument_type
-            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
-            if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
-                raise ValueError(
-                    f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
-                    f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
-                    f"of {valid_alphapept_instrument_types}."
-                )
+    def _check_for_alphapept(self):
+        instrument_type = self.instrument_type
+        valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+        if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
+            raise ValueError(
+                f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
+                f"of {valid_alphapept_instrument_types}."
+            )
 
     def _check_for_speclib(self):
         if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
