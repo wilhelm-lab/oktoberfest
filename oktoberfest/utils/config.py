@@ -23,7 +23,7 @@ class Config:
     @property
     def ssl(self) -> bool:
         """Get ssl flag for prediction server."""
-        return self.data.get("ssl", False)
+        return self.data.get("ssl", True)
 
     @property
     def models(self) -> dict:
