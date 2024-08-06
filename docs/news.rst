@@ -4,6 +4,23 @@ News
 .. role:: date
     :class: date
 
+
+Oktoberfest provides access to AlphaPept and MS2PIP predictions :date:`2024-05-29`
+----------------------------------------------------------------------------------
+
+| Oktoberfest 0.7.0 is published, providing access to predictions from AlphaPept and MS2PIP. This comes with a large API overhaul that allows easier access to underlying data for manual insights and analysis.
+| Please note that you can now specify the instrument type in the configuration for AlphaPept predictions.
+| Spectral libraries can now be generated using a simple peptide list using a variety of options, such as precursor charge, max. number of oxidations and collision energy, or directly in internal format. Check the new `peptides / internal format specification <./peptides_format.html>`_ and `configuration options <./config.html>`_.
+| Stay tuned for a documentation update including jupyter notebooks on how to navigate and make use of your data for manual in-depth analysis.
+| This release drops python 3.8 support!
+
+Support for timsTOF added / spectral library generation overhaul :date:`2024-01-31`
+------------------------------------------------------------------------------------
+
+| Oktoberfest 0.6.0 is out supporting the new Prosit model for timsTOF data. Check out the preprint at `BioRxiv <https://doi.org/10.1101/2023.07.17.549401>`__.
+| Spectral library generation was completely overhauled, resulting in more stability, dramatic decreases in runtime and storage requirements and more customization in the config.
+| Note that this release introduces changes in the configuration file that might break your previous setup! Please check the `new configuration format <./config.html>`_.
+
 Oktoberfest now provides a low level API :date:`2023-10-03`
 ------------------------------------------------------------
 

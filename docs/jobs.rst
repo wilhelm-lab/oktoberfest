@@ -59,13 +59,14 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "regressionMethod": "spline",
         "ssl": true,
@@ -112,10 +113,9 @@ Example config file:
         "tag": "",
         "output": "./out",
         "inputs": {
-            "search_results": "./msms.txt",
-            "search_results_type": "Maxquant",
             "library_input": "uniprot.fasta",
-            "library_input_type": "fasta"
+            "library_input_type": "fasta",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
@@ -126,6 +126,7 @@ Example config file:
             "collisionEnergy": 30,
             "precursorCharge": [2,3],
             "minIntensity": 5e-4,
+            "nrOx": 1,
             "batchsize": 10000,
             "format": "msp"
         },
@@ -138,7 +139,7 @@ Example config file:
             "specialAas": "KR",
             "db": "concat"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "ssl": true
     }
@@ -184,13 +185,14 @@ Example config file:
             "search_results": "./msms.txt",
             "search_results_type": "Maxquant",
             "spectra": "./",
-            "spectra_type": "raw"
+            "spectra_type": "raw",
+            "instrument_type": "QE"
         },
         "models": {
             "intensity": "Prosit_2020_intensity_HCD",
             "irt": "Prosit_2019_irt"
         },
-        "prediction_server": "koina.proteomicsdb.org:443",
+        "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "fdr_estimation_method": "mokapot",
         "allFeatures": false,

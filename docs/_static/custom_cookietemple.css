@@ -35,11 +35,20 @@ table.align-default {
     margin-left: 0;
 }
 
+.wy-table-responsive table th p,
+.wy-table-responsive table td p {
+    white-space: normal;
+}
+
 .autosummary {
     margin-left: 0 !important;
 }
 
 .main-config-table tbody tr:nth-child(n + 4):nth-child(-n + 5) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.main-config-table tbody tr:nth-child(n + 7):nth-child(-n + 7) td:nth-child(1) {
     padding-left: 50px;
 }
 
@@ -58,7 +67,7 @@ table.align-default {
     padding-left: 50px;
 }
 
-.lib-config-table tbody tr:nth-last-child(-n + 6) td:nth-child(1) {
+.lib-config-table tbody tr:nth-last-child(-n + 7) td:nth-child(1) {
     padding-left: 50px;
 }
 

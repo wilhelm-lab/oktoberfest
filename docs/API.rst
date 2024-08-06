@@ -36,7 +36,8 @@ Spectra preprocessing
    :toctree: api/pp
 
    pp.list_spectra
-   pp.convert_spectra_to_mzml
+   pp.convert_raw_to_mzml
+   pp.convert_d_to_hdf
    pp.load_spectra
 
 
@@ -47,6 +48,9 @@ Peptide preprocessing
 
    pp.convert_search
    pp.load_search
+   pp.split_search
+   pp.convert_timstof_metadata
+   pp.split_timstof_metadata
    pp.filter_peptides
    pp.filter_peptides_for_model
 
@@ -58,7 +62,17 @@ Predicting: :code:`pr`
 
 .. currentmodule:: oktoberfest
 
-All things predictions
+Access to functions that communicate with a Koina server to retrieve predictions from various prediction models.
+
+High level features
+~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: api/pr
+
+   pr.predict_intensities
+   pr.predict_rt
+   pr.ce_calibration
 
 Koina interface
 ~~~~~~~~~~~~~~~
@@ -67,14 +81,8 @@ Koina interface
    :toctree: api/pr
 
    pr.predict
-
-Postprocessing koina response
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: api/pr
-
-   pr.parse_fragment_labels
+   pr.predict_at_once
+   pr.predict_in_chunks
 
 
 Rescoring: :code:`re`

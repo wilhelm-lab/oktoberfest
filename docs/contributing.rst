@@ -32,7 +32,7 @@ Request features on the `Issue Tracker`_.
 How to set up your development environment
 ------------------------------------------
 
-You need Python 3.8+ and the following tools:
+You need Python 3.9+ and the following tools:
 
 - Poetry_
 - Nox_
@@ -135,4 +135,3 @@ It is recommended to open an issue before starting work on anything.
 This will allow a chance to talk it over with the owners and validate your approach.
 
 .. _pull request: https://github.com/wilhelm-lab/oktoberfest/pulls
-.. _Code of Conduct: CODE_OF_CONDUCT.rst

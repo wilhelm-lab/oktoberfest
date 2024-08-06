@@ -12,7 +12,7 @@ class TestProcessing(unittest.TestCase):
         spectra_path = Path(__file__).parent
         spectra_file = spectra_path / "test.mzml"
         spectra_file.open("w").close()
-        self.assertEqual([spectra_path / "test.mzml"], pp.list_spectra(spectra_path, file_format="mzml"))
+        self.assertEqual([spectra_path / "test.mzml"], pp.list_spectra(spectra_path, input_format="mzml"))
         spectra_file.unlink()
 
     def test_list_spectra_with_empty_string_folder(self):

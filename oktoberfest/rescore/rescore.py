@@ -33,7 +33,7 @@ def generate_features(
     :param regression_method: The regression method to use for iRT alignment
     """
     perc_features = Percolator(
-        metadata=library.get_meta_data(),
+        metadata=library.get_meta_data().reset_index(drop=True),
         pred_intensities=library.get_matrix(FragmentType.PRED)[0],
         true_intensities=library.get_matrix(FragmentType.RAW)[0],
         mz=library.get_matrix(FragmentType.MZ)[0],
@@ -178,12 +178,6 @@ def rescore_with_mokapot(
     mokapot_logger.addHandler(file_handler)
 
     np.random.seed(123)
-
-    df = pd.read_csv(input_file, sep="\t")
-
-    # TODO remove this if not necessary
-    df = df.rename(columns={"Protein": "Proteins"})
-    df.to_csv(input_file, sep="\t")
 
     psms = mokapot.read_pin(input_file)
     logger.info(f"Number of PSMs used for training: {len(psms)}")
