@@ -71,9 +71,10 @@ class Predictor:
             )
 
         output_folder = config.output / "data/dlomix"
+        output_folder.mkdir(exist_ok=True)
 
         if model_name == "baseline":
-            return Predictor.from_dlomix(model_type, model_name, output_folder, config.batch_size)
+            return Predictor.from_dlomix(model_type=model_type, model_path=None, output_path=output_folder, batch_size=config.batch_size)
 
         model_path = Path(model_name)
         if model_path.exists():
