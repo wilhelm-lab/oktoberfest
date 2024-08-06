@@ -49,3 +49,10 @@ class TestTMTProsit(unittest.TestCase):
         pd.testing.assert_frame_equal(library.obs, library_expected.obs)
         pd.testing.assert_frame_equal(library.var, library_expected.var)
 
+
+class TestLocalPrediction(unittest.TestCase):
+    """Test class for local prediction."""
+
+
+class TestRefinementLearning(unittest.TestCase):
+    """Test class for refinement learning."""
