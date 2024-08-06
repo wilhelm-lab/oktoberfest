@@ -527,7 +527,10 @@ def run_ce_calibration(
 
 
 def _refinement_learn(spectra_files: List[Path], config: Config):
-    # TODO create process step for this
+    refinement_step = ProcessStep(config.output, "refinement_learning")
+    if refinement_step.is_done():
+        return
+
     libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
     if config.models["intensity"]:
         baseline_model_path = Path(config.models["intensity"])
@@ -554,6 +557,8 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         use_wandb=config.use_wandb,
         **wandb_kwargs,
     )
+
+    refinement_step.mark_done()
 
 
 def _calculate_features(spectra_file: Path, config: Config):
