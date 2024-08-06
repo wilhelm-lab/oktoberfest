@@ -373,6 +373,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     spec_library = _speclib_from_digestion(config)
 
@@ -507,6 +508,7 @@ def run_ce_calibration(
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     # load spectra file names
     spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
@@ -654,6 +656,7 @@ def run_rescoring(config_path: Union[str, Path]):
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     # load spectra file names
     spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
