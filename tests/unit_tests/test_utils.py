@@ -1,7 +1,8 @@
+import json
 import unittest
 from pathlib import Path
 
-from oktoberfest.utils import JobPool, ProcessStep
+from oktoberfest.utils import Config, JobPool, ProcessStep
 
 
 def add_one(i: int):
@@ -34,3 +35,39 @@ class TestProcessStep(unittest.TestCase):
         proc_step_file = proc_step._get_done_file_path()
         self.assertTrue(proc_step_file.is_file())
         proc_step_file.unlink()
+
+
+class TestConfig(unittest.TestCase):
+    """Test the Config class."""
+
+    def setUp(self):  # noqa: D102
+        self.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
+
+    def test_check_dlomix_installed(self):
+        """Test if optional DLomix dependency is being checked."""
+        conf = Config()
+        conf.read(self.config_path)
+        with self.assertRaises(ModuleNotFoundError):
+            conf.check()
+
+    def test_check_wandb_installed(self):
+        """Test if optional WandB dependency is being checked."""
+        conf = Config()
+        conf.read(self.config_path)
+        with self.assertRaises(ModuleNotFoundError):
+            conf.check()
+
+    def test_check_model_path(self):
+        """Test if invalid model path is being checked."""
+        with open(self.config_path) as f:
+            raw_config = json.load(f)
+        raw_config["models"]["intensity"] = "garbage"
+        garbage_config_file = self.config_path.parent / "garbage_config.json"
+        with open(garbage_config_file, "w+") as f:
+            json.dump(raw_config, f)
+
+        conf = Config()
+        conf.read(garbage_config_file)
+        with self.assertRaises(ValueError):
+            conf.check()
+        garbage_config_file.unlink()
