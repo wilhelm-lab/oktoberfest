@@ -22,8 +22,9 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-from .data.spectra import Spectra
-from .utils import Config, JobPool, ProcessStep, group_iterator
+from .data.spectra import FragmentType, Spectra
+from .utils import Config, JobPool, ProcessStep, group_iterator, apply_quant
+
 
 logger = logging.getLogger(__name__)
 
@@ -646,6 +647,11 @@ def run_rescoring(config_path: Union[str, Path]):
 
     # rescoring
     _rescore(fdr_dir, config)
+
+    if config.quantification:
+        logger.info("Quantification starting")
+        # method contains picked-group-FDR call
+        apply_quant(config)
 
     # plotting
     logger.info("Generating summary plots...")
