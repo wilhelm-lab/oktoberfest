@@ -258,7 +258,10 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods)
+    # we use this method since we expect the input to be similar to MQ in that fixed modifications are
+    # not written. This needs to be changed once we allow arbitrary modifications for the spectral library
+    # generation, not just a number of oxidations and fixed carbamidomethylation / + TMT.
+    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], mods=fixed_mods)
 
     # get sequence and its length
     library.obs["SEQUENCE"] = internal_without_mods(library.obs["MODIFIED_SEQUENCE"])
@@ -574,7 +577,9 @@ def annotate_spectral_library(
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method)
+    df_annotated_spectra = annotate_spectra(
+        psms=psms, mass_tol=mass_tol, unit_mass_tol=unit_mass_tol, fragmentation_method=fragmentation_method
+    )
 
     ion_types = retrieve_ion_types(fragmentation_method)
     var_df = Spectra._gen_vars_df(ion_types)

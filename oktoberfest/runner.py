@@ -147,7 +147,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.obs["Fragmentation"].isin(["CID", "HCD"])).all():
+    if library.obs["Fragmentation"].str.endswith("HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
