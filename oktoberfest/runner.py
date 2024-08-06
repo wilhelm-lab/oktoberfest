@@ -541,7 +541,7 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         wandb_kwargs["wandb_tags"] = config.wandb_tags
 
     if config.include_original_sequences:
-        additional_columns = ["SEQUENCE"]
+        additional_columns = ["sequence"]
     else:
         additional_columns = None
 

@@ -360,9 +360,9 @@ class Spectra(anndata.AnnData):
 
         if include_additional_columns:
             for column_name in include_additional_columns:
-                if column_name in self.obs:
+                if column_name.upper() in self.obs:
                     df[column_name.lower()] = self.obs[column_name.upper()]
                 else:
-                    logger.warning(f"Column '{column_name.upper()} not present in spectrum, excluded from output")
+                    logger.warning(f"Column '{column_name.upper()}' not present in spectrum, excluded from output")
 
         return df

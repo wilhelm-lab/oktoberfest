@@ -141,7 +141,7 @@ def refine_intensity_predictor(
 
 
 def create_dlomix_dataset(
-    spectra: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
+    spectra: List[Spectra], output_dir: Path, include_additional_columns: List[str] = []
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
@@ -173,9 +173,10 @@ def create_dlomix_dataset(
         return parquet_path, ion_types, modifications
 
     # Otherwise regenerate dataset because ion type metadata isn't stored in the Parquet file
+    include_additional_columns.extend(["RAW_FILE", "SCAN_NUMBER"])
     processed_data = pd.concat(
         [
-            spectrum.preprocess_for_machine_learning(include_additional_columns=["RAW_FILE", "SCAN_NUMBER"])
+            spectrum.preprocess_for_machine_learning(include_additional_columns=include_additional_columns)
             for spectrum in spectra
         ]
     )
