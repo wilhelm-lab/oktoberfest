@@ -119,7 +119,7 @@ Applicable to in-silico digestion
 ---------------------------------
 
 .. table::
-   :class: fixed-table digest-config-table
+   :class: fixed-table
 
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                                                                            |
@@ -141,14 +141,28 @@ Applicable to in-silico digestion
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-Applicable to local prediction and transfer learning
-----------------------------------------------------
+Applicable to local intensity prediction and transfer learning
+--------------------------------------------------------------
 
 .. table::
    :class: fixed-table local-prediction-config-table
 
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | Parameter                    |                             Description                                                                                                                            |
+   +==============================+====================================================================================================================================================================+
+   | localPredictionOptions       | Contains specific settings for predicting intensity locally. If not present, on-line intensity prediction using Koina will be performed.                           |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Parameter                  |                             Description                                                                                                                            |
-   +============================+====================================================================================================================================================================+
-   | predictIntensityLocally    | Defines whether an off-line model should be used for predicting insensity; can be True or False; default = False                                                   |
+   | refinementLearningOptions    | Contains specific settings for local refinement learning of intensity predictor on provided spectra. If not present, no refinement learning will be performed.     |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     batchSize                | Defines batch size to use for training; default = 1024                                                                                                             |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     includeOriginalSequences | Defines whether unmodified peptide sequences should be kept in processed DLomix dataset for downstream analysis; default = False                                   |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     availableGpus            | Specifies indices of GPUs to set as visible to CUDA for training process. If not specified, all available GPUs will be used.                                       |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     wandbOptions             | Contains specific settings for using WandB when doing refinement learning. If not present, WandB will not be used.                                                 |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         project              | Project to save WandB run to; default = "DLomix_auto_RL_TL"                                                                                                        |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         targets              | Tags to use for WandB run; default = None                                                                                                                          |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

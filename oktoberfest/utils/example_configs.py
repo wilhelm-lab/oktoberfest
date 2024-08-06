@@ -25,6 +25,35 @@ RESCORING = {
     },
 }
 
+RESCORING_WITH_REFINEMENT = {
+    "type": "Rescoring",
+    "tag": "",
+    "inputs": {
+        "search_results": "msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "instrument_type": "QE",
+    },
+    "output": "./out",
+    "models": {"intensity": "baseline", "irt": "Prosit_2019_irt"},
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": True,
+    "localPredictionOptions": {},
+    "refinementLearningOptions": {"batchSize": 1024},
+    "thermoExe": "ThermoRawFileParser.exe",
+    "numThreads": 1,
+    "fdr_estimation_method": "mokapot",
+    "regressionMethod": "spline",
+    "allFeatures": False,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": (19, 50),
+        "use_ransac_model": False,
+    },
+}
+
 CECALIB = {
     "type": "CollisionEnergyCalibration",
     "tag": "",

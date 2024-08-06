@@ -60,39 +60,43 @@ Peptide preprocessing
 
 Predicting: :code:`pr`
 ----------------------
+.. TODO
+    add full class documentation through autosummary
 
 .. module:: oktoberfest.pr
 
 .. currentmodule:: oktoberfest
 
-Access to functions that communicate with a Koina server to retrieve predictions from various prediction models, or serve pre-trained TensorFlow models locally.
+Access to functions that interface either a Koina server to retrieve predictions from various prediction models, or DLomix to serve & refinement-learn pre-trained models locally.
 
-High level features
-~~~~~~~~~~~~~~~~~~~
+High-level prediction runner
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: pr.predictor.Predictor
-    :members: from_config, predict_intensities, predict_irt, ce_calibration
+.. autosummary::
+    :recursive:
+    :toctree: api/pr
+
+    pr.Predictor
 
 Koina interface
 ~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: api/pr
+    :recursive:
+    :toctree: api/pr
 
-   pr.Predictor.predict
-   pr.Predictor.predict_at_once
-   pr.Predictor.predict_in_chunks
-   pr.koina.Koina
+    pr.Koina
 
 DLomix interface
 ~~~~~~~~~~~~~~~~
 
 .. autosummary::
+    :recursive:
     :toctree: api/pr
 
-    pr.Predictor.predict
-    pr.Predictor.predict_at_once
-    pr.dlomix.DLomix
+    pr.DLomix
+    pr.create_dlomix_dataset
+    pr.refine_intensity_predictor
 
 Rescoring: :code:`re`
 ---------------------
