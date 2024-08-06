@@ -65,7 +65,7 @@ def refine_intensity_predictor(
     dataset_name: str,
     model_name: str,
     batch_size: int = 1024,
-    additional_columns: Optional[List[str]] = None,
+    additional_columns: List[str] = [],
     available_gpus: Optional[List[int]] = None,
     use_wandb: bool = False,
     wandb_project: Optional[str] = None,
@@ -112,6 +112,8 @@ def refine_intensity_predictor(
     if model_path.exists():
         logger.info(f"Found existing refined model at {model_path}, re-using it")
         return
+
+    additional_columns = [column_name.lower() for column_name in additional_columns]
 
     logger.info("Pre-processing dataset for refinement learning")
     with mute_stdout(ignore_warnings=True):
