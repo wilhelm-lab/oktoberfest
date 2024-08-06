@@ -343,7 +343,7 @@ def convert_search(
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
     return search_result(input_path).generate_internal(
-        tmt_labeled=tmt_label, out_path=output_file, custom_mods=custom_mods
+        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
     )
 
 
