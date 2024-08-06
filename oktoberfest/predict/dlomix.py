@@ -87,7 +87,6 @@ def refine_intensity_predictor(
     :param wandb_project: Name of WandB project to save run to
     :param wandb_tags: Tags to assing to WandB run
     """
-    # TODO check if GPUs are available
     gpus = tf.config.list_physical_devices("GPU")
     if len(gpus) == 0:
         logger.warning(
