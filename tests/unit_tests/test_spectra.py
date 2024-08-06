@@ -39,14 +39,25 @@ class TestSpectra:
 @pytest.fixture
 def var_df_cid():
     """Returns var_df with y and b ions."""
-    var_df = pd.read_csv(Path(__file__).parent / "data/spectra/vardf_CID.tsv", index_col="ion", sep="\t")
+    var_df = pd.read_csv(
+        Path(__file__).parent / "data/spectra/vardf_CID.tsv",
+        index_col="ion",
+        sep="\t",
+        dtype={"ion": "str", "num": "int32", "type": "str", "charge": "int32"},
+    )
+    print(var_df.dtypes)
     return var_df
 
 
 @pytest.fixture
 def var_df_uvpd():
     """Returns var_df with z, y, x, c, b and a ions."""
-    var_df = pd.read_csv(Path(__file__).parent / "data/spectra/vardf_UVPD.tsv", index_col="ion", sep="\t")
+    var_df = pd.read_csv(
+        Path(__file__).parent / "data/spectra/vardf_UVPD.tsv",
+        index_col="ion",
+        sep="\t",
+        dtype={"ion": str, "num": "int32", "type": str, "charge": "int32"},
+    )
     return var_df
 
 

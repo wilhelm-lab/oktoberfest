@@ -48,8 +48,8 @@ class Spectra(anndata.AnnData):
             specified_ion_types = ["y", "b"]
 
         number_of_ion_types = len(specified_ion_types)
-        ion_nums = np.repeat(np.arange(1, 30), 3 * number_of_ion_types)
-        ion_charge = np.tile([1, 2, 3], 29 * number_of_ion_types)
+        ion_nums = np.repeat(np.arange(1, 30, dtype=np.int32), 3 * number_of_ion_types)
+        ion_charge = np.tile(np.arange(1, 4, dtype=np.int32), 29 * number_of_ion_types)
         temp_cols = []
         for size in range(1, 30):
             for typ in specified_ion_types:
