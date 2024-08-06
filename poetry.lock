@@ -280,13 +280,13 @@ files = [
 
 [[package]]
 name = "attrs"
-version = "24.1.0"
+version = "24.2.0"
 description = "Classes Without Boilerplate"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "attrs-24.1.0-py3-none-any.whl", hash = "sha256:377b47448cb61fea38533f671fba0d0f8a96fd58facd4dc518e3dac9dbea0905"},
-    {file = "attrs-24.1.0.tar.gz", hash = "sha256:adbdec84af72d38be7628e353a09b6a6790d15cd71819f6e9d7b0faa8a125745"},
+    {file = "attrs-24.2.0-py3-none-any.whl", hash = "sha256:81921eb96de3191c8258c199618104dd27ac608d9366f5e35d011eae1867ede2"},
+    {file = "attrs-24.2.0.tar.gz", hash = "sha256:5cfb1b9148b5b086569baec03f20d7b6bf3bcacc9a42bebf87ffaaca362f6346"},
 ]
 
 [package.extras]
@@ -961,8 +961,8 @@ wandb = ["wandb (>=0.15)"]
 [package.source]
 type = "git"
 url = "git@github.com:wilhelm-lab/dlomix.git"
-reference = "feature/bmpc"
-resolved_reference = "08e10d8ee568cb8d43fee8bbdadd6436b2c1abc9"
+reference = "34433a0"
+resolved_reference = "34433a0a679ff26b983c7b28b5e074db4743a124"
 
 [[package]]
 name = "dm-tree"
@@ -5644,4 +5644,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "80144723905c7f79dffcbb2d6d5c658a8f92128b818c53af67c17bf46315879e"
+content-hash = "855f4b25700faa63a07cf5f6f1d4a8d502de736f8da9aacc2249a8051f73e11b"
