@@ -91,6 +91,11 @@ class Config:
         return self.data.get("massTolerance", None)
 
     @property
+    def fragmentation_method(self) -> str:
+        """Get fragmentation method from config file."""
+        return self.data.get("fragmentation_method", "HCD")
+
+    @property
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
