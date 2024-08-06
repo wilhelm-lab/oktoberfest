@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from sys import platform
 from typing import Dict, List, Optional, Tuple, Union
+#from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
 
@@ -143,23 +144,23 @@ class Config:
     def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         return self.inputs.get("search_results_type", "maxquant").lower()
-    
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[str, float]]]:
+    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[int, float, str]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> Dict[str, Tuple[str, float]]:
-        """Get the custom static modification labels as keys, with the UniMod identifiers and their masses as tuple values"""
+    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """Get the custom static modification labels as keys, 
+        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
         return self.custom_modifications.get("static_mods", {})
 
     @property
-    def var_mods(self) -> Dict[str, Tuple[str, float]]:
-        """Get the custom variable modification labels as keys, with the UniMod identifiers and their masses as tuple values"""
+    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """Get the custom variable modification labels as keys, 
+        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
         return self.custom_modifications.get("var_mods", {})
-
 
     @property
     def spectra(self) -> Path:
@@ -410,3 +411,39 @@ class Config:
         with open(config_path) as f:
             self.data = json.load(f)
         self.base_path = config_path.parent
+
+    def custom_to_unimod(self) -> Dict[str, int]:
+        """
+        Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+        """
+        mods = {}
+        if self.var_mods is not None:
+            for k,v in self.var_mods.items():
+                mods[k] = v[0]
+        if self.static_mods is not None:
+            for k,v in self.static_mods.items():
+                mods[k] = v[0]
+
+        return mods
+    
+    def custom_to_unimod_mass(self) -> Dict[str, Dict[str, Tuple[int, float]]]:
+        """
+        Parse modifications to dict with custom identifier as key and
+        UNIMOD integer and its mass as value for internal processing.
+        """
+        mods_dict: Dict[str, Dict[str, Tuple[int, float]]] = {}
+        for key, subdict in self.custom_modifications.items():
+            n_subdict: Dict[str, Tuple[int, float]] = {}
+            for subkey, value in subdict.items():
+                try:
+                    n_subdict[subkey] = (int(value[0]), float(value[1]))
+                except (ValueError, TypeError) as e:
+                    raise AssertionError(f"Cannot handle modification {subkey} because of wrong type ")
+            if n_subdict:
+                mods_dict[key] = n_subdict
+        
+        return mods_dict
+    
+    """def custom_for_dlomix(self):
+        return list(parse_mods(self.custom_to_unimod()).values())
+        """
