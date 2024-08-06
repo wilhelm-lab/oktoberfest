@@ -38,8 +38,11 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
+    if "PROTEINS" not in library_df.obs.columns:
+        library_df.obs["PROTEINS"] = "unknown"
     var_df = Spectra._gen_vars_df()
     spec = Spectra(obs=library_df, var=var_df)
+
     spec.var_names = var_df.index
     return spec
 
