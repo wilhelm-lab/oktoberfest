@@ -3,7 +3,7 @@ import re
 from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -11,12 +11,11 @@ import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
 from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
-from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal, msfragger_to_internal
+from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
-from spectrum_io.search_result.search_results import parse_mods
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -278,10 +277,8 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     return library
 
 
-# CeCalibration
 def load_search(
     input_file: Union[str, Path],
-    custom_mods: Optional[Dict[str, int]] = None,
 ) -> pd.DataFrame:
     """
     Load search results.
@@ -290,14 +287,9 @@ def load_search(
     The specification of the internal file format can be found at :doc:`../../internal_format`.
 
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
-    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
-        static and variable mods as keys. The values are dicts with the custom modification as keys and the internal format with
-        their respective masses as tuples as values.
     :return: dataframe containing the search results.
     """
     search_results = csv.read_file(input_file)
-    mods = parse_mods(mods=custom_mods)
-    search_results["MODIFIED_SEQUENCE"] = msfragger_to_internal(search_results["MODIFIED_SEQUENCE"], mods=mods)
     return search_results
 
 
@@ -578,7 +570,7 @@ def annotate_spectral_library(
     fragmentation_method: str = "HCD",
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
-    custom_mods: Optional[Dict[str, Dict[str, Tuple[int, float]]]] = None,
+    custom_mods: Optional[Dict[str, float]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -593,7 +585,7 @@ def annotate_spectral_library(
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :param fragmentation_method: fragmentation method that was used
-    :param custom_mods: Custom Modifications with the identifier, the unimod equivalent and the respective mass
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
 
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """

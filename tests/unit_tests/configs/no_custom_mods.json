@@ -7,7 +7,7 @@
         "spectra": "../data/ce_calib/tims_example.pkl",
         "spectra_type": "pkl"
     },
-    "output": "../out",
+    "output": "../data/unmod_out",
     "models": {
         "intensity": "Prosit_2023_intensity_timsTOF",
         "irt": "Prosit_2019_irt"

@@ -10,10 +10,9 @@
             "var_mods": {
                 "N(cit)": [7, 0.828, ""]
             }
-
         }
     },
-    "output": "../out",
+    "output": "../data/mod_out",
     "models": {
         "intensity": "Prosit_2023_intensity_timsTOF",
         "irt": "Prosit_2019_irt"

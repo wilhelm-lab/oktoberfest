@@ -75,7 +75,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 )
         else:
             internal_search_file = config.search_results
-            search_results = pp.load_search(internal_search_file, custom_mods=config.custom_to_unimod())
+            search_results = pp.load_search(internal_search_file)
 
             # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
@@ -140,7 +140,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             mass_tol=config.mass_tolerance,
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
-            custom_mods=config.custom_to_unimod_mass(),
+            custom_mods=config.unimod_to_mass(),
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -407,7 +407,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
             consumer_process = Process(
                 target=speclib.async_write,
-                args=(shared_queue, writing_progress, Config.custom_modifications),
+                args=(shared_queue, writing_progress, config.custom_to_unimod()),
             )
 
             try:

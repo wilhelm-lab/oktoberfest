@@ -438,15 +438,28 @@ class Config:
 
         :return: a dictionary mapping custom mod identifiers (keys) to the unimod id (values).
         """
-        mods = {}
-        if self.var_mods is not None:
-            for k, v in self.var_mods.items():
-                mods[k] = v[0]
-        if self.static_mods is not None:
-            for k, v in self.static_mods.items():
-                mods[k] = v[0]
+        custom_to_unimod = {}
+        for k, v in self.var_mods.items():
+            custom_to_unimod[k] = v[0]
+        for k, v in self.static_mods.items():
+            custom_to_unimod[k] = v[0]
+        return custom_to_unimod
 
-        return mods
+    def unimod_to_mass(self) -> Dict[str, float]:
+        """
+        Map UNIMOD Id to its mass for all static and variable modifications.
+
+        This function maps the UNIMOD Id to its corresponding mass for each custom modifiction
+        provided in the static and variable modifications.
+
+        :return: a dictionary mapping the UNIMOD Ids (keys) to the mass(value) of a given modification
+        """
+        unimod_to_mass = {}
+        for unimod_id, mass in self.var_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        for unimod_id, mass in self.static_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        return unimod_to_mass
 
     def custom_to_unimod_mass(self) -> Dict[str, Dict[str, Tuple[int, float]]]:
         """
@@ -469,6 +482,7 @@ class Config:
 
         return mods_dict
 
-    """def custom_for_dlomix(self):
+    """
+    def custom_for_dlomix(self):
         return list(parse_mods(self.custom_to_unimod()).values())
-        """
+    """
