@@ -628,8 +628,8 @@ def load_spectra(
     format_ = internal_filenames[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(
-            source=filenames, package=parser, search_type=""
-        )  # TODO in spectrum_io, remove unnecessary argument
+            source=filenames, package=parser
+        )
     elif format_ == ".hdf":
         if tims_meta_file is None:
             raise AssertionError(
