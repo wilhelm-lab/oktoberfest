@@ -38,8 +38,8 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    if "PROTEINS" not in library_df.obs.columns:
-        library_df.obs["PROTEINS"] = "unknown"
+    if "PROTEINS" not in library_df.columns:
+        library_df["PROTEINS"] = "unknown"
     var_df = Spectra._gen_vars_df()
     spec = Spectra(obs=library_df, var=var_df)
 
@@ -560,9 +560,9 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 def annotate_spectral_library(
     psms: pd.DataFrame,
+    fragmentation_method: str = "HCD",
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
-    fragmentation_method: Optional[str] = "HCD",
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -581,7 +581,10 @@ def annotate_spectral_library(
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(
-        psms=psms, mass_tol=mass_tol, unit_mass_tol=unit_mass_tol, fragmentation_method=fragmentation_method
+        un_annot_spectra=psms,
+        mass_tolerance=mass_tol,
+        unit_mass_tolerance=unit_mass_tol,
+        fragmentation_method=fragmentation_method,
     )
 
     ion_types = retrieve_ion_types(fragmentation_method)
