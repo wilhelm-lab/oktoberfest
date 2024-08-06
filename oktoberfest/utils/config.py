@@ -320,6 +320,11 @@ class Config:
         return "localPredictionOptions" in self.data
 
     @property
+    def download_baseline_intensity_predictor(self) -> bool:
+       """Whether to download a baseline intensity predictor from GitHub."""
+       return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
+
+    @property
     def refinement_learning_options(self) -> dict:
         """Get refinement learning parameter dictionary from config file."""
         return self.data.get("refinementLearningOptions", {})
@@ -475,9 +480,6 @@ class Config:
                     "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"
                     "for refinement learning."
                 )
-            else:
-                # set to none to not have to deal with two possible types
-                self.models["intensity"] = None
 
         if self.use_wandb and not importlib.util.find_spec("wandb"):
             raise ModuleNotFoundError(

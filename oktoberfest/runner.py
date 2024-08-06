@@ -534,7 +534,10 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         return
 
     libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
-    if config.models["intensity"]:
+
+    if config.download_baseline_intensity_predictor:
+        baseline_model_path = None
+    else:
         baseline_model_path = Path(config.models["intensity"])
 
     wandb_kwargs: Dict[str, Any] = {}
