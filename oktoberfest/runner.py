@@ -136,8 +136,11 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         aspec = pp.annotate_spectral_library(
-            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance, 
-            custom_mods=config.custom_to_unimod_mass()
+            psms=library,
+            mass_tol=config.mass_tolerance,
+            unit_mass_tol=config.unit_mass_tolerance,
+            fragmentation_method=config.fragmentation_method,
+            custom_mods=config.custom_to_unimod_mass(),
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -147,7 +150,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.obs["FRAGMENTATION"] == "HCD").any():
+    if library.obs["Fragmentation"].str.endswith("HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -404,11 +407,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
             consumer_process = Process(
                 target=speclib.async_write,
-                args=(
-                    shared_queue,
-                    writing_progress,
-                    Config.custom_modifications
-                ),
+                args=(shared_queue, writing_progress, Config.custom_modifications),
             )
 
             try:

@@ -3,7 +3,8 @@ import logging
 from pathlib import Path
 from sys import platform
 from typing import Dict, List, Optional, Tuple, Union
-#from spectrum_io.search_result.search_results import parse_mods
+
+# from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,11 @@ class Config:
         return self.data.get("massTolerance", None)
 
     @property
+    def fragmentation_method(self) -> str:
+        """Get fragmentation method from config file."""
+        return self.data.get("fragmentation_method", "HCD")
+
+    @property
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
@@ -152,14 +158,28 @@ class Config:
 
     @property
     def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
-        """Get the custom static modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
+        """
+        Get the custom static modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+
+        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
         return self.custom_modifications.get("static_mods", {})
 
     @property
     def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
-        """Get the custom variable modification labels as keys, 
-        with the UniMod Integer identifiers, their masses and neutral loss as tuple as values."""
+        """
+        Get the custom variable modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+
+        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
         return self.custom_modifications.get("var_mods", {})
 
     @property
@@ -415,21 +435,26 @@ class Config:
     def custom_to_unimod(self) -> Dict[str, int]:
         """
         Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+
+        :return: a dictionary mapping custom mod identifiers (keys) to the unimod id (values).
         """
         mods = {}
         if self.var_mods is not None:
-            for k,v in self.var_mods.items():
+            for k, v in self.var_mods.items():
                 mods[k] = v[0]
         if self.static_mods is not None:
-            for k,v in self.static_mods.items():
+            for k, v in self.static_mods.items():
                 mods[k] = v[0]
 
         return mods
-    
+
     def custom_to_unimod_mass(self) -> Dict[str, Dict[str, Tuple[int, float]]]:
         """
-        Parse modifications to dict with custom identifier as key and
-        UNIMOD integer and its mass as value for internal processing.
+        Parse modifications to dict with custom identifier as key and UNIMOD integer and its mass as value.
+
+        :raises AssertionError: if formatting isn't correct.
+
+        :return: dictionary combining static and variable modifications.
         """
         mods_dict: Dict[str, Dict[str, Tuple[int, float]]] = {}
         for key, subdict in self.custom_modifications.items():
@@ -438,12 +463,12 @@ class Config:
                 try:
                     n_subdict[subkey] = (int(value[0]), float(value[1]))
                 except (ValueError, TypeError) as e:
-                    raise AssertionError(f"Cannot handle modification {subkey} because of wrong type ")
+                    raise AssertionError(f"Cannot handle modification {subkey} because of wrong type ") from e
             if n_subdict:
                 mods_dict[key] = n_subdict
-        
+
         return mods_dict
-    
+
     """def custom_for_dlomix(self):
         return list(parse_mods(self.custom_to_unimod()).values())
         """
