@@ -461,27 +461,6 @@ class Config:
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
 
-    def custom_to_unimod_mass(self) -> Dict[str, Dict[str, Tuple[int, float]]]:
-        """
-        Parse modifications to dict with custom identifier as key and UNIMOD integer and its mass as value.
-
-        :raises AssertionError: if formatting isn't correct.
-
-        :return: dictionary combining static and variable modifications.
-        """
-        mods_dict: Dict[str, Dict[str, Tuple[int, float]]] = {}
-        for key, subdict in self.custom_modifications.items():
-            n_subdict: Dict[str, Tuple[int, float]] = {}
-            for subkey, value in subdict.items():
-                try:
-                    n_subdict[subkey] = (int(value[0]), float(value[1]))
-                except (ValueError, TypeError) as e:
-                    raise AssertionError(f"Cannot handle modification {subkey} because of wrong type ") from e
-            if n_subdict:
-                mods_dict[key] = n_subdict
-
-        return mods_dict
-
     """
     def custom_for_dlomix(self):
         return list(parse_mods(self.custom_to_unimod()).values())
