@@ -84,8 +84,8 @@ class Predictor:
         output_folder.mkdir(exist_ok=True)
 
         if config.download_baseline_intensity_predictor:
-            model_path = (output_folder / "prosit_baseline_model.keras",)
-            download = (True,)
+            model_path = output_folder / "prosit_baseline_model.keras"
+            download = True
         else:
             model_path = Path(model_name)
             download = False
