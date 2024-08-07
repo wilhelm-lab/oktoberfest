@@ -131,34 +131,6 @@ class Predictor:
         pred_irts = self.predict_at_once(data=data.obs, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict(
-        self, data: pd.DataFrame, chunk_idx: Optional[List[pd.Index]] = None, **kwargs
-    ) -> Dict[str, List[np.ndarray]] | Dict[str, np.ndarray]:
-        """
-        Retrieve and return predictions.
-
-        This function takes a dataframe containing information about PSMs and predicts peptide properties. The
-        configuration of Koina/DLomix is set using the kwargs.
-        See the Koina or DLomix predict functions for details. TODO, link this properly.
-        The function either predicts everything at once by concatenating all prediction results
-        into single numpy arrays, or returns a list of individual numpy arrays, following the
-        indices provided by optionally provided chunks of the dataframe.
-
-        :param data: Dataframe containing the data for the prediction.
-        :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
-            e.g. if padding should be avoided when predicting peptides of different length.
-            For alphapept, this is required as padding is only performed within one batch, leading to
-            different sizes of arrays between individual prediction batches that cannot be concatenated.
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
-
-        :return: a dictionary with targets (keys) and predictions (values). If chunk indices are
-            provided, values for each target are a list of numpy array with a length equal to the number
-            of chunks provided, else single numpy arrays.
-        """
-        if chunk_idx is None:
-            return self.predict_at_once(data, **kwargs)
-        return self.predict_in_chunks(data, chunk_idx, **kwargs)
-
     def predict_at_once(self, data: Spectra, **kwargs) -> Dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
