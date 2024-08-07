@@ -2,7 +2,9 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+# from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +150,37 @@ class Config:
     def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         return self.inputs.get("search_results_type", "maxquant").lower()
+
+    @property
+    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+        """Get the custom modification dictionary from the config file."""
+        return self.inputs.get("custom_modifications", {})
+
+    @property
+    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom static modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("static_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
+
+    @property
+    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom variable modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping var mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("var_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
     def spectra(self) -> Path:
@@ -398,3 +431,37 @@ class Config:
         with open(config_path) as f:
             self.data = json.load(f)
         self.base_path = config_path.parent
+
+    def custom_to_unimod(self) -> Dict[str, int]:
+        """
+        Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+
+        :return: a dictionary mapping custom mod identifiers (keys) to the unimod id (values).
+        """
+        custom_to_unimod = {}
+        for k, v in self.var_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        for k, v in self.static_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        return custom_to_unimod
+
+    def unimod_to_mass(self) -> Dict[str, float]:
+        """
+        Map UNIMOD Id to its mass for all static and variable modifications.
+
+        This function maps the UNIMOD Id to its corresponding mass for each custom modifiction
+        provided in the static and variable modifications.
+
+        :return: a dictionary mapping the UNIMOD Ids (keys) to the mass(value) of a given modification
+        """
+        unimod_to_mass = {}
+        for unimod_id, mass, _ in self.var_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        for unimod_id, mass, _ in self.static_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        return unimod_to_mass
+
+    """
+    def custom_for_dlomix(self):
+        return list(parse_mods(self.custom_to_unimod()).values())
+    """

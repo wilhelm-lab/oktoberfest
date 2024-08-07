@@ -277,8 +277,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     return library
 
 
-# CeCalibration
-def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
+def load_search(
+    input_file: Union[str, Path],
+) -> pd.DataFrame:
     """
     Load search results.
 
@@ -288,13 +289,15 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
     :return: dataframe containing the search results.
     """
-    return csv.read_file(input_file)
+    search_results = csv.read_file(input_file)
+    return search_results
 
 
 def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
+    custom_mods: Optional[Dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -310,6 +313,8 @@ def convert_search(
         currently supported are "Maxquant", "Mascot" and "MSFragger"
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
+    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+        static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
 
@@ -329,7 +334,9 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(
+        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
+    )
 
 
 def convert_timstof_metadata(
@@ -563,6 +570,7 @@ def annotate_spectral_library(
     fragmentation_method: str = "HCD",
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
+    custom_mods: Optional[Dict[str, float]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -577,6 +585,8 @@ def annotate_spectral_library(
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :param fragmentation_method: fragmentation method that was used
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
@@ -585,6 +595,7 @@ def annotate_spectral_library(
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
+        custom_mods=custom_mods,
     )
 
     ion_types = retrieve_ion_types(fragmentation_method)
