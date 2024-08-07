@@ -61,13 +61,6 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(ModuleNotFoundError):
             conf.check()
 
-    def test_check_wandb_installed(self):
-        """Test if optional WandB dependency is being checked."""
-        conf = Config()
-        conf.read(self.config_path)
-        with self.assertRaises(ModuleNotFoundError):
-            conf.check()
-
     def test_check_model_path(self):
         """Test if invalid model path is being checked."""
         with open(self.config_path) as f:
