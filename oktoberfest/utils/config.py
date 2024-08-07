@@ -514,12 +514,6 @@ class Config:
                     "for refinement learning."
                 )
 
-        if self.use_wandb and not importlib.util.find_spec("wandb"):
-            raise ModuleNotFoundError(
-                """Using WandB for refinement learning requested, but the wandb package could not be found. Please
-                verify that it has been installed as an optional dependency."""
-            )
-
     def __init__(self):
         """Initialize config file data."""
         self.data = {}
