@@ -388,11 +388,8 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
     spec_library = _speclib_from_digestion(config)
 
-    predictor_kwargs = {
-        "disable_progress_bar": True,
-    }
     predictors = {
-        model_key: pr.Predictor.from_config(config, model_type=model_key, **predictor_kwargs)
+        model_key: pr.Predictor.from_config(config, model_type=model_key, disable_progress_bar=True)
         for model_key in config.models
     }
 
