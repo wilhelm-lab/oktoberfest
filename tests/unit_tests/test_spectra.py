@@ -26,9 +26,9 @@ class TestSpectra:
         var_df2 = Spectra._gen_vars_df(["x", "y", "z", "a", "b", "c"])
         pd.testing.assert_frame_equal(var_df2, var_df_uvpd)
 
-    def test_assemble_for_parquet(self, mini_spectra, df_for_parquet):
-        """Test assemlbe_for_parquet method."""
-        df = mini_spectra.assemble_df_for_parquet()
+    def test_preprocess_for_machine_learning(self, mini_spectra, df_for_parquet):
+        """Test preprocess_for_machine_learning method."""
+        df = mini_spectra.preprocess_for_machine_learning()
         df = df.astype({"modified_sequence": "object"})
         df = df.astype({"modified_sequence": "category"})
         pd.testing.assert_frame_equal(
