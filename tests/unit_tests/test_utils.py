@@ -1,4 +1,5 @@
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -42,6 +43,10 @@ class TestConfig(unittest.TestCase):
 
     def setUp(self):  # noqa: D102
         self.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
+        self.temp_dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):  # noqa: D102
+        shutil.rmtree(self.temp_dir)
 
     def test_check_dlomix_installed(self):
         """Test if optional DLomix dependency is being checked."""
@@ -62,7 +67,7 @@ class TestConfig(unittest.TestCase):
         with open(self.config_path) as f:
             raw_config = json.load(f)
         raw_config["models"]["intensity"] = "garbage"
-        garbage_config_file = self.config_path.parent / "garbage_config.json"
+        garbage_config_file = self.temp_dir / "garbage_config.json"
         with open(garbage_config_file, "w+") as f:
             json.dump(raw_config, f)
 
