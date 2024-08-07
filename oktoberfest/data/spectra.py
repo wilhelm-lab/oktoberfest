@@ -61,7 +61,7 @@ class Spectra(anndata.AnnData):
         return var_df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType):  # , fragmentation_methods: Set[str]) -> List[str]:
+    def _gen_column_names(fragment_type: FragmentType) -> List[str]:
         """
         Get column names of the spectra data.
 
