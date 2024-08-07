@@ -536,9 +536,11 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
     libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
 
     if config.download_baseline_intensity_predictor:
-        baseline_model_path = None
+        baseline_model_path = config.output / "data/dlomix/prosit_baseline_model.keras"
+        download_new_baseline_model=True
     else:
         baseline_model_path = Path(config.models["intensity"])
+        download_new_baseline_model=False
 
     wandb_kwargs: Dict[str, Any] = {}
     if config.use_wandb:
@@ -554,6 +556,7 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         result_directory=config.output / "results/dlomix",
         dataset_name="refinement_dataset",
         model_name="refined",
+        download_new_baseline_model=download_new_baseline_model,
         batch_size=config.training_batch_size,
         additional_columns=additional_columns,
         available_gpus=config.available_gpus,

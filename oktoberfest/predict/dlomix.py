@@ -50,20 +50,18 @@ def mute_stdout(ignore_warnings: bool = False):
             yield
 
 
-def _load_model(model_path: Path) -> PrositIntensityPredictor:
-    if not model_path.exists():
-        downloaded_model_path = Path(download_model_from_github())
-        downloaded_model_path.rename(model_path)
-    return load_keras_model(str(model_path))
-
+def _download_baseline_model(model_path: Path) -> None:
+    downloaded_model_path = Path(download_model_from_github())
+    downloaded_model_path.rename(model_path)
 
 def refine_intensity_predictor(
-    baseline_model_path: Optional[Path],
+    baseline_model_path: Path,
     spectra: List[Spectra],
     data_directory: Path,
     result_directory: Path,
     dataset_name: str,
     model_name: str,
+    download_new_baseline_model: bool = False,
     batch_size: int = 1024,
     additional_columns: List[str] = [],
     available_gpus: Optional[List[int]] = None,
@@ -81,6 +79,7 @@ def refine_intensity_predictor(
     :param result_directory: Directory to save CSV logs & report notebook to.
     :param dataset_name: Name of dataset
     :param model_name: Name of refined model
+    :param download_new_baseline_model: Whether to download a new baseline model from GitHub to the specified path.
     :param batch_size: Batch size to use for training
     :param additional_columns: Additional columns to keep in DLomix dataset for downstream analyis
     :param available_gpus: Indices of GPUs to use for training
@@ -104,9 +103,9 @@ def refine_intensity_predictor(
         spectra, data_directory / dataset_name, include_additional_columns=additional_columns
     )
 
-    if not baseline_model_path:
-        baseline_model_path = data_directory / f"{model_name}_baseline.keras"
-    baseline_model = _load_model(baseline_model_path)
+    if download_new_baseline_model:
+        _download_baseline_model(baseline_model_path)
+    baseline_model = load_keras_model(str(baseline_model_path))
 
     model_path = data_directory / (model_name + ".keras")
     if model_path.exists():
@@ -209,14 +208,14 @@ def create_dlomix_dataset(
 class DLomix:
     """A class for interacting with DLomix models locally for inference."""
 
-    def __init__(self, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int):
+    def __init__(self, model_type: str, model_path: Path, output_path: Path, batch_size: int, download: bool = False):
         """Initialize a DLomix predictor from name or path of pre-loaded weights.
 
         :param model_type: Type of model (intensity or irt)
-        :param model_path: Path of pre-trained PrositIntensityPredictor. If None, a baseline model will be downloaded
-            from GitHub.
+        :param model_path: Path of model file
         :param output_path: Directory to save processed data for predictor to for reuse
         :param batch_size: Batch size to use for inference
+        :param download: Whether to download a new baseline model from GitHub to the model_path
 
         :raises NotImplementedError: if a retention time predictor is requested
         """
@@ -228,9 +227,9 @@ class DLomix:
             raise NotImplementedError("Local prediction not implemented for iRT prediction")
 
         self.output_name = "intensities"
-        if not model_path:
-            model_path = output_path / "intensity_prosit_baseline_model.keras"
-        self.model = _load_model(model_path)
+        if download:
+            _download_baseline_model(model_path)
+        self.model = load_keras_model(str(model_path))
 
     def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> Dict[str, np.ndarray]:
         """Create predictions for dataset using Keras model.

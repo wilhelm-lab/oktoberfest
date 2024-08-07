@@ -53,10 +53,10 @@ class Predictor:
         )
 
     @classmethod
-    def from_dlomix(cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int) -> Predictor:
+    def from_dlomix(cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int, download: bool=False) -> Predictor:
         """Create DLomix predictor."""
         return Predictor(
-            DLomix(model_type=model_type, model_path=model_path, output_path=output_path, batch_size=batch_size)
+            DLomix(model_type=model_type, model_path=model_path, output_path=output_path, batch_size=batch_size, download=download)
         )
 
     @classmethod
@@ -70,11 +70,12 @@ class Predictor:
                 model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
 
+        # TODO actually pass the output folder through kwargs
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(exist_ok=True)
 
         if model_name == "baseline":
-            return Predictor.from_dlomix(model_type=model_type, model_path=None, output_path=output_folder, batch_size=config.batch_size)
+            return Predictor.from_dlomix(model_type=model_type, model_path=output_folder / "prosit_baseline_model.keras", output_path=output_folder, batch_size=config.batch_size, download=True)
 
         model_path = Path(model_name)
         if model_path.exists():
