@@ -34,19 +34,25 @@ class Spectra(anndata.AnnData):
     INTENSITY_LAYER_NAME = "raw_int"
     MZ_LAYER_NAME = "mz"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
+    MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df() -> pd.DataFrame:
+    def _gen_vars_df(specified_ion_types: Optional[List[str]] = None) -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
+        :param specified_ion_types: ion types that are expected to be in the spectra. If None defaults to y,b
         :return: pd.Dataframe of Frgment Annotation
         """
-        ion_nums = np.repeat(np.arange(1, 30), 6)
-        ion_charge = np.tile([1, 2, 3], 29 * 2)
+        if not specified_ion_types:
+            specified_ion_types = ["y", "b"]
+
+        number_of_ion_types = len(specified_ion_types)
+        ion_nums = np.repeat(np.arange(1, 30, dtype=np.int32), 3 * number_of_ion_types)
+        ion_charge = np.tile(np.arange(1, 4, dtype=np.int32), 29 * number_of_ion_types)
         temp_cols = []
         for size in range(1, 30):
-            for typ in ["y", "b"]:
+            for typ in specified_ion_types:
                 for charge in ["+1", "+2", "+3"]:
                     temp_cols.append(f"{typ}{size}{charge}")
         ion_types = [frag[0] for frag in temp_cols]
@@ -302,3 +308,31 @@ class Spectra(anndata.AnnData):
             pred_cols.columns = self._gen_column_names(FragmentType.PRED)
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
+
+    def assemble_df_for_parquet(self) -> pd.DataFrame:
+        """
+        Returns a dataframe that can be written as parquet with contains all the information needed for dlomix.
+
+        :return: pandas DataFrame
+        """
+        frag_dict = {
+            "CID": 1,
+            "HCD": 2,
+            "electron transfer dissociation": 3,
+            "ETD": 3,
+        }  # TODO get frag dict from constants in spectrum fundamentals
+
+        ready_to_parquet = pd.DataFrame()
+        ready_to_parquet["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
+        ready_to_parquet["precursor_charge_onehot"] = list(
+            np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        )
+        ready_to_parquet["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
+        ready_to_parquet["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: frag_dict[x])
+
+        raw_int = self.layers["raw_int"].toarray()
+        raw_int[raw_int == 0] = -1
+        raw_int[raw_int == c.EPSILON] = 0
+        ready_to_parquet["intensities_raw"] = list(raw_int)
+
+        return ready_to_parquet
