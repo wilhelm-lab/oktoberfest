@@ -348,7 +348,7 @@ class Config:
     def predict_intensity_locally(self) -> bool:
         """Whether to predict intensity locally or using Koina."""
         return (
-            self.models["intensity"] in [BASELINE_MODEL_KEYS]
+            self.models["intensity"] in BASELINE_MODEL_KEYS
             or self.models["intensity"].endswith(".keras")
             or Path(self.models["intensity"]).exists()
         )
@@ -495,7 +495,7 @@ class Config:
                     )
 
     def _check_for_local_prediction(self):
-        if not self.models["intensity"] in [BASELINE_MODEL_KEYS]:
+        if not self.models["intensity"] in BASELINE_MODEL_KEYS:
             model_path = Path(self.models["intensity"])
             if not model_path.exists():
                 raise FileNotFoundError(f"Model file {model_path} does not exist")
