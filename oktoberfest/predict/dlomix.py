@@ -61,7 +61,8 @@ def _load_model(model_path: Path) -> PrositIntensityPredictor:
 def refine_intensity_predictor(
     baseline_model_path: Optional[Path],
     spectra: List[Spectra],
-    output_directory: Path,
+    data_directory: Path,
+    result_directory: Path,
     dataset_name: str,
     model_name: str,
     batch_size: int = 1024,
@@ -75,9 +76,10 @@ def refine_intensity_predictor(
 
     :param baseline_model_path: Path of baseline model to refine
     :param spectra: Spectral libraries to use as training data for refinement
-    :param output_directory: Directory to save processed dataset and refined model to. The Parquet and ion_type and
+    :param data_directory: Directory to save processed dataset and refined model to. The Parquet and ion_type and
         modification metadata files for the processed dataset will be stored in `<output_directory>/<dataset_name>/`,
         and the refined model as `<output_directory>/<model_name>.keras`
+    :param result_directory: Directory to save CSV logs & report notebook to.
     :param dataset_name: Name of dataset
     :param model_name: Name of refined model
     :param batch_size: Batch size to use for training
@@ -100,14 +102,14 @@ def refine_intensity_predictor(
             tf.config.set_visible_devices([gpus[i] for i in available_gpus], "GPU")
 
     parquet_path, ion_types, modifications = create_dlomix_dataset(
-        spectra, output_directory / dataset_name, include_additional_columns=additional_columns
+        spectra, data_directory / dataset_name, include_additional_columns=additional_columns
     )
 
     if not baseline_model_path:
-        baseline_model_path = output_directory / f"{model_name}_baseline.keras"
+        baseline_model_path = data_directory / f"{model_name}_baseline.keras"
     baseline_model = _load_model(baseline_model_path)
 
-    model_path = output_directory / (model_name + ".keras")
+    model_path = data_directory / (model_name + ".keras")
     if model_path.exists():
         logger.info(f"Found existing refined model at {model_path}, re-using it")
         return
@@ -133,6 +135,7 @@ def refine_intensity_predictor(
         use_wandb=use_wandb,
         wandb_project=wandb_project,
         wandb_tags=wandb_tags,
+        results_log=str(result_directory)
     )
 
     trainer = AutomaticRlTlTraining(config)

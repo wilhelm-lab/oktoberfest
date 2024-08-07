@@ -550,7 +550,8 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
     pr.dlomix.refine_intensity_predictor(
         baseline_model_path=baseline_model_path,
         spectra=libraries,
-        output_directory=config.output / "data/dlomix",
+        data_directory=config.output / "data/dlomix",
+        result_directory=config.output / "results/dlomix",
         dataset_name="refinement_dataset",
         model_name="refined",
         batch_size=config.training_batch_size,
