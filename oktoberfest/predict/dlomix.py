@@ -15,15 +15,11 @@ from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
 
-logger = logging.getLogger(__name__)
-
-ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
-
 # TODO maybe move this to DLomix::interface::__init__.py?
 # Set some enviroment variables before importing TensorFlow.
 # 1. change logging level
 logging.getLogger("tensorflow").setLevel(logging.WARNING)
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 # 2. use all available cores
 n_threads = mp.cpu_count()
@@ -31,6 +27,16 @@ os.environ["OP_NUM_THREADS"] = str(n_threads)
 os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)
 
+import tensorflow as tf
+from dlomix.interface import load_keras_model, save_keras_model, process_dataset, download_model_from_github
+from dlomix.models import PrositIntensityPredictor
+from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+logger = logging.getLogger(__name__)
+
+ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
 
 @contextlib.contextmanager
 def mute_stdout(ignore_warnings: bool = False):
@@ -42,13 +48,6 @@ def mute_stdout(ignore_warnings: bool = False):
                 yield
         else:
             yield
-
-
-with mute_stdout():
-    import tensorflow as tf
-    from dlomix.interface import download_model_from_github, load_keras_model, process_dataset, save_keras_model
-    from dlomix.models import PrositIntensityPredictor
-    from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
 
 
 def _load_model(model_path: Path) -> PrositIntensityPredictor:
