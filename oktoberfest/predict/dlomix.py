@@ -239,7 +239,7 @@ class DLomix:
             _download_baseline_model(model_path)
         self.model = load_keras_model(str(model_path))
 
-    def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> Dict[str, np.ndarray]:
+    def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True, **kwargs) -> Dict[str, np.ndarray]:
         """Create predictions for dataset using Keras model.
 
         :param data: spectral library to predict features for
