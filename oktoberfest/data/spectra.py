@@ -294,6 +294,10 @@ class Spectra(anndata.AnnData):
         """Filter out peptides with Andromeda score below threshold in-place."""
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
+    def standardize_fragmentation_names(self) -> None:
+        """Replace non-abbreviated fragmentation method spellings in-place."""
+        self.obs.replace({"FRAGMENTATION": {"electron transfer dissociation": "ETD"}}, inplace=True)
+
     def convert_to_df(self) -> pd.DataFrame:
         """
         Gives back spectra_data instance as a pandas Dataframe.
@@ -350,6 +354,7 @@ class Spectra(anndata.AnnData):
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
         df["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
         df["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
+        self.standardize_fragmentation_names()
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:
