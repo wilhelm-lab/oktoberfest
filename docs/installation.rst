@@ -69,8 +69,6 @@ There are multiple optional dependencies depending on job types. Detailed notes 
     | :ref:`Rescoring <jobs:a) without refinement>`                    | Percolator          |                                                         |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
     | :ref:`Rescoring + refinement learning <jobs:b) with refinement>` | DLomix              |                                                         |
-    +                                                                  +---------------------+---------------------------------------------------------+
-    |                                                                  | WandB               | only required if you want to log training data with it  |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
 
 **ThermoRawFileParser**
@@ -97,14 +95,7 @@ Installable packages are provided for Linux/MacOS/Windows.
 
 .. code-block:: bash
 
-    poetry install --with dlomix
-
-**WandB**
-`WandB v0.17.5 <https://wandb.ai/home>`_ support is provided for optionally using it as an experiment manager when performing refinement learning. It can be installed via
-
-.. code-block:: bash
-
-    poetry install wandb>=0.17.5
+    poetry install -E dlomix
 
 Installing Oktoberfest
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -116,5 +107,9 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
 
+For local prediction & refinement learning, instead install with the `[dlomix]` extra:
 
+.. code-block:: bash
 
+   conda activate oktoberfest
+   pip install oktoberfest[dlomix]
