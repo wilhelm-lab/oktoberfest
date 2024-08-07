@@ -41,20 +41,20 @@ class Spectra(anndata.AnnData):
         """
         Creates Annotation dataframe for vars in AnnData object.
 
-        :param specified_ion_types: ion types that are expected to be in the spectra. If None default back to
+        :param specified_ion_types: ion types that are expected to be in the spectra. If None defaults to y,b
         :return: pd.Dataframe of Frgment Annotation
         """
         if not specified_ion_types:
             specified_ion_types = ["y", "b"]
 
         number_of_ion_types = len(specified_ion_types)
-        ion_nums = np.repeat(np.arange(1, 30), 3 * number_of_ion_types)
-        ion_charge = np.tile([1, 2, 3], 29 * number_of_ion_types)
+        ion_nums = np.repeat(np.arange(1, 30, dtype=np.int32), 3 * number_of_ion_types)
+        ion_charge = np.tile(np.arange(1, 4, dtype=np.int32), 29 * number_of_ion_types)
         temp_cols = []
         for size in range(1, 30):
-            for typ in specified_ion_types:
+            for type in specified_ion_types:
                 for charge in ["+1", "+2", "+3"]:
-                    temp_cols.append(f"{typ}{size}{charge}")
+                    temp_cols.append(f"{type}{size}{charge}")
         ion_types = [frag[0] for frag in temp_cols]
         var_df = pd.DataFrame({"ion": temp_cols, "num": ion_nums, "type": ion_types, "charge": ion_charge})
         var_df = var_df.set_index("ion")
@@ -349,7 +349,7 @@ class Spectra(anndata.AnnData):
         df = pd.DataFrame()
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
         df["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
-        df["collision_energy_aligned_normed"] = 35
+        df["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:

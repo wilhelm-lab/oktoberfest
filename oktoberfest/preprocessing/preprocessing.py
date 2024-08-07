@@ -38,8 +38,8 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    if "PROTEINS" not in library_df.obs.columns:
-        library_df.obs["PROTEINS"] = "unknown"
+    if "PROTEINS" not in library_df.columns:
+        library_df["PROTEINS"] = "unknown"
     var_df = Spectra._gen_vars_df()
     spec = Spectra(obs=library_df, var=var_df)
 
@@ -261,6 +261,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
+    # we use this method since we expect the input to be similar to MQ in that fixed modifications are
+    # not written. This needs to be changed once we allow arbitrary modifications for the spectral library
+    # generation, not just a number of oxidations and fixed carbamidomethylation / + TMT.
     library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], mods=fixed_mods)
 
     # get sequence and its length
@@ -274,8 +277,9 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     return library
 
 
-# CeCalibration
-def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
+def load_search(
+    input_file: Union[str, Path],
+) -> pd.DataFrame:
     """
     Load search results.
 
@@ -285,13 +289,15 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
     :return: dataframe containing the search results.
     """
-    return csv.read_file(input_file)
+    search_results = csv.read_file(input_file)
+    return search_results
 
 
 def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
+    custom_mods: Optional[Dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -307,6 +313,8 @@ def convert_search(
         currently supported are "Maxquant", "Mascot" and "MSFragger"
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
+    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+        static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
 
@@ -326,7 +334,9 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(tmt_label=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(
+        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
+    )
 
 
 def convert_timstof_metadata(
@@ -557,9 +567,10 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
 def annotate_spectral_library(
     psms: pd.DataFrame,
+    fragmentation_method: str = "HCD",
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
-    fragmentation_method: str = "HCD",
+    custom_mods: Optional[Dict[str, float]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -574,10 +585,18 @@ def annotate_spectral_library(
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :param fragmentation_method: fragmentation method that was used
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol, fragmentation_method=fragmentation_method)
+    df_annotated_spectra = annotate_spectra(
+        un_annot_spectra=psms,
+        mass_tolerance=mass_tol,
+        unit_mass_tolerance=unit_mass_tol,
+        fragmentation_method=fragmentation_method,
+        custom_mods=custom_mods,
+    )
 
     ion_types = retrieve_ion_types(fragmentation_method)
     var_df = Spectra._gen_vars_df(ion_types)
