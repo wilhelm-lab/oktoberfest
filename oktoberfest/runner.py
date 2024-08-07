@@ -89,7 +89,12 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         try:
             search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
         except ValueError:
-            logger.exception(ValueError(f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']. If you're using local prediction, please ensure the model type is contained in the model file name."))
+            logger.exception(
+                ValueError(
+                    f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
+                    "If you're using local prediction, please ensure the model type is contained in the model file name."
+                )
+            )
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -540,10 +545,10 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
 
     if config.download_baseline_intensity_predictor:
         baseline_model_path = config.output / "data/dlomix/prosit_baseline_model.keras"
-        download_new_baseline_model=True
+        download_new_baseline_model = True
     else:
         baseline_model_path = Path(config.models["intensity"])
-        download_new_baseline_model=False
+        download_new_baseline_model = False
 
     wandb_kwargs: Dict[str, Any] = {}
     if config.use_wandb:

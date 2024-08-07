@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import anndata
 import numpy as np
@@ -18,12 +18,14 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .dlomix import DLomix
+
     PredictionInterface = Union[DLomix, Koina]
 else:
     PredictionInterface = Koina
 
 if importlib.util.find_spec("dlomix"):
     from .dlomix import DLomix
+
 
 class Predictor:
     """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""
@@ -53,10 +55,18 @@ class Predictor:
         )
 
     @classmethod
-    def from_dlomix(cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int, download: bool=False) -> Predictor:
+    def from_dlomix(
+        cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int, download: bool = False
+    ) -> Predictor:
         """Create DLomix predictor."""
         return Predictor(
-            DLomix(model_type=model_type, model_path=model_path, output_path=output_path, batch_size=batch_size, download=download)
+            DLomix(
+                model_type=model_type,
+                model_path=model_path,
+                output_path=output_path,
+                batch_size=batch_size,
+                download=download,
+            )
         )
 
     @classmethod
@@ -75,7 +85,13 @@ class Predictor:
         output_folder.mkdir(exist_ok=True)
 
         if model_name == "baseline":
-            return Predictor.from_dlomix(model_type=model_type, model_path=output_folder / "prosit_baseline_model.keras", output_path=output_folder, batch_size=config.batch_size, download=True)
+            return Predictor.from_dlomix(
+                model_type=model_type,
+                model_path=output_folder / "prosit_baseline_model.keras",
+                output_path=output_folder,
+                batch_size=config.batch_size,
+                download=True,
+            )
 
         model_path = Path(model_name)
         if model_path.exists():

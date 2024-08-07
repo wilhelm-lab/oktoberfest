@@ -5,7 +5,7 @@ import os
 import shutil
 import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -28,8 +28,7 @@ os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)
 
 import tensorflow as tf
-from dlomix.interface import load_keras_model, save_keras_model, process_dataset, download_model_from_github
-from dlomix.models import PrositIntensityPredictor
+from dlomix.interface import download_model_from_github, load_keras_model, process_dataset, save_keras_model
 from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -37,6 +36,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
+
 
 @contextlib.contextmanager
 def mute_stdout(ignore_warnings: bool = False):
@@ -54,6 +54,7 @@ def _download_baseline_model(model_path: Path) -> None:
     downloaded_model_path = Path(download_model_from_github())
     downloaded_model_path.rename(model_path)
 
+
 def refine_intensity_predictor(
     baseline_model_path: Path,
     spectra: List[Spectra],
@@ -63,7 +64,7 @@ def refine_intensity_predictor(
     model_name: str,
     download_new_baseline_model: bool = False,
     batch_size: int = 1024,
-    additional_columns: List[str] = [],
+    additional_columns: Optional[List[str]] = None,
     available_gpus: Optional[List[int]] = None,
     use_wandb: bool = False,
     wandb_project: Optional[str] = None,
@@ -112,7 +113,10 @@ def refine_intensity_predictor(
         logger.info(f"Found existing refined model at {model_path}, re-using it")
         return
 
-    additional_columns = [column_name.lower() for column_name in additional_columns]
+    if additional_columns:
+        additional_columns = [column_name.lower() for column_name in additional_columns]
+    else:
+        additional_columns = []
 
     logger.info("Pre-processing dataset for refinement learning")
     with mute_stdout(ignore_warnings=True):
@@ -133,7 +137,7 @@ def refine_intensity_predictor(
         use_wandb=use_wandb,
         wandb_project=wandb_project,
         wandb_tags=wandb_tags,
-        results_log=str(result_directory)
+        results_log=str(result_directory),
     )
 
     trainer = AutomaticRlTlTraining(config)
@@ -143,7 +147,7 @@ def refine_intensity_predictor(
 
 
 def create_dlomix_dataset(
-    spectra: List[Spectra], output_dir: Path, include_additional_columns: List[str] = []
+    spectra: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
@@ -175,10 +179,13 @@ def create_dlomix_dataset(
         return parquet_path, ion_types, modifications
 
     # Otherwise regenerate dataset because ion type metadata isn't stored in the Parquet file
-    include_additional_columns.extend(["RAW_FILE", "SCAN_NUMBER"])
+    if not include_additional_columns:
+        additional_columns = ["RAW_FILE", "SCAN_NUMBER"]
+    else:
+        additional_columns = include_additional_columns + ["RAW_FILE", "SCAN_NUMBER"]
     processed_data = pd.concat(
         [
-            spectrum.preprocess_for_machine_learning(include_additional_columns=include_additional_columns)
+            spectrum.preprocess_for_machine_learning(include_additional_columns=additional_columns)
             for spectrum in spectra
         ]
     )

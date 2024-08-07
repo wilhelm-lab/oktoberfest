@@ -368,6 +368,6 @@ class Spectra(anndata.AnnData):
                 if column_name.upper() in self.obs:
                     df[column_name.lower()] = self.obs[column_name.upper()]
                 else:
-                    logger.warning(f"Column '{column_name.upper()}' not present in spectrum, excluded from output")
+                    logger.warning(f"Column {column_name.upper()!r} not present in spectrum, excluded from output")
 
         return df

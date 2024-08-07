@@ -354,8 +354,8 @@ class Config:
 
     @property
     def download_baseline_intensity_predictor(self) -> bool:
-       """Whether to download a baseline intensity predictor from GitHub."""
-       return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
+        """Whether to download a baseline intensity predictor from GitHub."""
+        return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
 
     @property
     def refinement_learning_options(self) -> dict:
