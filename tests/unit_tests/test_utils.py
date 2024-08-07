@@ -42,12 +42,14 @@ class TestProcessStep(unittest.TestCase):
 class TestConfig(unittest.TestCase):
     """Test the Config class."""
 
-    def setUp(self):  # noqa: D102
-        self.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
-        self.temp_dir = Path(tempfile.mkdtemp())
+    @classmethod
+    def setUpClass(cls):  # noqa: D102
+        cls.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
+        cls.temp_dir = Path(tempfile.mkdtemp())
 
-    def tearDown(self):  # noqa: D102
-        shutil.rmtree(self.temp_dir)
+    @classmethod
+    def tearDownClass(cls):  # noqa: D102
+        shutil.rmtree(cls.temp_dir)
 
     def test_check_dlomix_installed(self):
         """Test if optional DLomix dependency is being checked."""
