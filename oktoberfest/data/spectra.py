@@ -266,7 +266,7 @@ class Spectra(anndata.AnnData):
         layer = self._resolve_layer_name(fragment_type)
         matrix = self.layers[layer]
 
-        return matrix, self._gen_column_names(fragment_type)
+        return matrix
 
     def write_as_hdf5(self, output_file: Union[str, Path]):
         """
