@@ -163,7 +163,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if library.obs["Fragmentation"].str.endswith("HCD").any():
+    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
         alignment_library = predictor.ce_calibration(
