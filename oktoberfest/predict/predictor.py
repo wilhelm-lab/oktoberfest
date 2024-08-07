@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
-import anndata
 import numpy as np
 import pandas as pd
 
@@ -92,7 +91,7 @@ class Predictor:
             download = False
         return Predictor.from_dlomix(model_type, model_path, output_folder, config.batch_size, download)
 
-    def predict_intensities(self, data: anndata.AnnData, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
+    def predict_intensities(self, data: Spectra, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -118,7 +117,7 @@ class Predictor:
                 chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
             )
 
-    def predict_rt(self, data: anndata.AnnData, **kwargs):
+    def predict_rt(self, data: Spectra, **kwargs):
         """
         Generate retention time predictions and add them to the provided data object.
 
