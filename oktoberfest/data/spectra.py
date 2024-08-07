@@ -245,7 +245,7 @@ class Spectra(anndata.AnnData):
         precursor_charges = self.obs.iloc[index][["PRECURSOR_CHARGE"]].values
         intensity_data = np.where(fragment_charges <= precursor_charges, intensity_data, -1)
         row_index = self.obs.index.get_indexer(index)[..., None]
-        # Change zeros to epislon to keep the info of invalid values
+        # Change zeros to epsilon to keep the info of invalid values
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_data[intensity_data == 0] = c.EPSILON
         intensity_data[intensity_data == -1] = 0.0
