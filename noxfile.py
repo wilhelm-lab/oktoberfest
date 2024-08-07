@@ -143,6 +143,7 @@ def mypy(session: Session) -> None:
 def tests(session: Session) -> None:
     """Run the test suite."""
     session.install(".")
+    session.run("pip", "install", "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc")
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
