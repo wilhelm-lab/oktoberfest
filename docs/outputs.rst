@@ -37,9 +37,9 @@ Files in the results directory
     +=======================================+==============================================================================================================================================================================================+
     | <spectra_file>_ce.txt                 | Contains the best collision energy according to the collision energy calibration where <spectra_file> is replaced with the name of the spectra file for which the calibration was performed  |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | myPrositLib.<csv|msp>                 | Contains the spectral library in either csv or msp format depending on what format was chosen                                                                                                |
+    | predicted_library.<csv|msp|dlib>      | Contains the spectral library in either spectronaut, msp, or dlib format depending on what format was chosen in the configuration file                                                       |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | prosit_input.csv	                    | Contains the peptide list including metadata needed for spectral library generation when providing a fasta file for in-silico digestion                                                      |
+    | peptides_internal.csv	                | Contains the peptide list including metadata needed for spectral library generation when providing a fasta file for in-silico digestion or a peptides list                                   |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
