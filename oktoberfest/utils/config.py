@@ -511,7 +511,7 @@ class Config:
     def _check_for_refinement_learning(self):
         if not self.predict_intensity_locally:
             raise ValueError(
-                "Refinement learning but not local intensity prediction requested. Koina models cannot be used for"
+                "Refinement learning but not local intensity prediction requested. Koina models cannot be used for "
                 "refinement learning."
             )
         if not Path(self.models["intensity"]).exists():
