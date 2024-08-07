@@ -439,8 +439,8 @@ class Koina:
         data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra],
         _async: bool = True,
         debug=False,
+        **kwargs
     ) -> Dict[str, np.ndarray]:
-        # TODO update docstring to include AnnData object instead of DF
         """
         Perform inference on the given data using the Koina model.
 
