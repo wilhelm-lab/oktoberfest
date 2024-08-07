@@ -83,10 +83,13 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
 
         # filter search results
         if config.predict_intensity_locally:
-            model_type = "prosit"
+            model_type = Path(config.models["intensity"]).stem
         else:
-            model_type = config.models["intensity"].lower()
-        search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
+            model_type = config.models["intensity"]
+        try:
+            search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
+        except ValueError:
+            logger.exception(ValueError(f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']. If you're using local prediction, please ensure the model type is contained in the model file name."))
 
         # split search results
         searchfiles_found = pp.split_search(
