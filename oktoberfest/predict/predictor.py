@@ -84,23 +84,13 @@ class Predictor:
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(exist_ok=True)
 
-        if model_name == "baseline":
-            return Predictor.from_dlomix(
-                model_type=model_type,
-                model_path=output_folder / "prosit_baseline_model.keras",
-                output_path=output_folder,
-                batch_size=config.batch_size,
-                download=True,
-            )
-
-        model_path = Path(model_name)
-        if model_path.exists():
-            logger.info(f"Loading pre-trained PrositIntensityPredictor from {model_path}")
-            return Predictor.from_dlomix(model_type, model_path, output_folder, config.batch_size)
+        if config.download_baseline_intensity_predictor:
+            model_path = (output_folder / "prosit_baseline_model.keras",)
+            download = (True,)
         else:
-            raise FileNotFoundError(f"Specified model path {model_name} does not exist, please check")
-
-        return
+            model_path = Path(model_name)
+            download = False
+        return Predictor.from_dlomix(model_type, model_path, output_folder, config.batch_size, download)
 
     def predict_intensities(self, data: anndata.AnnData, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
         """

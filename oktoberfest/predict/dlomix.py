@@ -51,6 +51,7 @@ def mute_stdout(ignore_warnings: bool = False):
 
 
 def _download_baseline_model(model_path: Path) -> None:
+    logger.info(f"Downloading baseline intensity predictor to {model_path}")
     downloaded_model_path = Path(download_model_from_github())
     downloaded_model_path.rename(model_path)
 

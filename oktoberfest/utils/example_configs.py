@@ -39,7 +39,6 @@ RESCORING_WITH_REFINEMENT = {
     "models": {"intensity": "baseline", "irt": "Prosit_2019_irt"},
     "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": True,
-    "localPredictionOptions": {},
     "refinementLearningOptions": {"batchSize": 1024},
     "thermoExe": "ThermoRawFileParser.exe",
     "numThreads": 1,

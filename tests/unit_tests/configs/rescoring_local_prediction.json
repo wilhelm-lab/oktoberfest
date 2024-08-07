@@ -14,7 +14,6 @@
     },
     "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": true,
-    "localPredictionOptions": {},
     "refinementLearningOptions": {},
     "numThreads": 4,
     "fdr_estimation_method": "percolator",

@@ -150,8 +150,6 @@ Applicable to local intensity prediction and transfer learning
    +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                    |                             Description                                                                                                                            |
    +==============================+====================================================================================================================================================================+
-   | localPredictionOptions       | Contains specific settings for predicting intensity locally. If not present, on-line intensity prediction using Koina will be performed.                           |
-   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | refinementLearningOptions    | Contains specific settings for local refinement learning of intensity predictor on provided spectra. If not present, no refinement learning will be performed.     |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     batchSize                | Defines batch size to use for training; default = 1024                                                                                                             |

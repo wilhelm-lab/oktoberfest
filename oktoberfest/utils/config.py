@@ -9,6 +9,8 @@ from typing import Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
+BASELINE_MODEL_KEYS = ["baseline", ""]
+
 
 class Config:
     """Read config file and get information from it."""
@@ -343,14 +345,13 @@ class Config:
     ######################################
 
     @property
-    def local_prediction_options(self) -> dict:
-        """Get local prediction parameter dictionary from config file."""
-        return self.data.get("localPredictionOptions", {})
-
-    @property
     def predict_intensity_locally(self) -> bool:
         """Whether to predict intensity locally or using Koina."""
-        return "localPredictionOptions" in self.data
+        return (
+            self.models["intensity"].is_in([BASELINE_MODEL_KEYS])
+            or self.models["intensity"].endswith(".keras")
+            or Path(self.models["intensity"].exists())
+        )
 
     @property
     def download_baseline_intensity_predictor(self) -> bool:
@@ -494,6 +495,13 @@ class Config:
                     )
 
     def _check_for_local_prediction(self):
+        if not self.models["intensity"].is_in([BASELINE_MODEL_KEYS]):
+            model_path = Path(self.models["intensity"])
+            if not model_path.exists():
+                raise FileNotFoundError(f"Model file {model_path} does not exist")
+            elif model_path.suffix != ".keras":
+                raise ValueError(f"Model file {model_path} exists, but is not a .keras file")
+
         if not importlib.util.find_spec("dlomix"):
             raise ModuleNotFoundError(
                 """Local prediction requested, but the DLomix package could not be found. Please verify that it has been
@@ -502,12 +510,12 @@ class Config:
 
     def _check_for_refinement_learning(self):
         if not self.predict_intensity_locally:
-            logger.warning(
-                """Refinement learning but not local intensity prediction requested. Koina models cannot be used for
-                refinement learning. Checking if provided intensity predictor exists locally."""
+            raise ValueError(
+                "Refinement learning but not local intensity prediction requested. Koina models cannot be used for"
+                "refinement learning."
             )
         if not Path(self.models["intensity"]).exists():
-            if self.models["intensity"].lower() not in ["baseline", ""]:
+            if self.models["intensity"].lower() not in BASELINE_MODEL_KEYS:
                 raise ValueError(
                     f"You requested the intensity model {self.models['intensity']}, but it is neither a path that exists"
                     "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"

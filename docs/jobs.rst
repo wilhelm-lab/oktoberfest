@@ -249,7 +249,6 @@ Example config file:
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
-        "localPredictionOptions": {},
         "refinementLearningOptions": {
             "batchSize": 1024
         },
