@@ -286,11 +286,11 @@ class Spectra(anndata.AnnData):
         """
         return cls(anndata.read_h5ad(str(input_file)))
 
-    def remove_decoys(self):
+    def remove_decoys(self) -> None:
         """Remove decoys in-place."""
         self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
 
-    def filter_by_score(self, threshold: float):
+    def filter_by_score(self, threshold: float) -> None:
         """Filter out peptides with Andromeda score below threshold in-place."""
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
