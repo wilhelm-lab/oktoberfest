@@ -37,8 +37,8 @@ class TestTMTProsit(unittest.TestCase):
         library_expected = Spectra.from_hdf5(Path(__file__).parent / "data" / "predictions" / "library_output.h5ad.gz")
 
         assert_almost_equal(
-            library.get_matrix(FragmentType.PRED)[0].toarray(),
-            library_expected.get_matrix(FragmentType.PRED)[0].toarray(),
+            library.get_matrix(FragmentType.PRED).toarray(),
+            library_expected.get_matrix(FragmentType.PRED).toarray(),
             decimal=6,
         )
         # explicitly set this to int64 as the default on windows is int32

@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple, Type, TypeVar, Union
+from typing import List, Optional, Type, TypeVar, Union
 
 import anndata
 import numpy as np
@@ -253,7 +253,7 @@ class Spectra(anndata.AnnData):
 
         # self.obs.iloc[index]["done"] = True
 
-    def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
+    def get_matrix(self, fragment_type: FragmentType) -> csr_matrix:
         """
         Get intensities sparse matrix from AnnData object.
 
@@ -266,7 +266,7 @@ class Spectra(anndata.AnnData):
         layer = self._resolve_layer_name(fragment_type)
         matrix = self.layers[layer]
 
-        return matrix, self._gen_column_names(fragment_type)  # , set(self.obs["FRAGMENTATION"]))
+        return matrix, self._gen_column_names(fragment_type)
 
     def write_as_hdf5(self, output_file: Union[str, Path]):
         """
@@ -308,15 +308,15 @@ class Spectra(anndata.AnnData):
         logger.debug(self.obs.columns)
 
         if "mz" in list(self.layers):
-            mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ)[0].toarray())
+            mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ).toarray())
             mz_cols.columns = self._gen_column_names(FragmentType.MZ)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, mz_cols], axis=1)
         if "raw_int" in list(self.layers):
-            raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW)[0].toarray())
+            raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW).toarray())
             raw_cols.columns = self._gen_column_names(FragmentType.RAW)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, raw_cols], axis=1)
         if "pred_int" in list(self.layers):
-            pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED)[0].toarray())
+            pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED).toarray())
             pred_cols.columns = self._gen_column_names(FragmentType.PRED)  # , set(self.obs["FRAGMENTATION"]))
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged

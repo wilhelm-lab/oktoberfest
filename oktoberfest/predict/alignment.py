@@ -65,7 +65,7 @@ def _alignment(alignment_library: Spectra):
 
     :param alignment_library: the library to perform the alignment on
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)[0]
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)[0]
+    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)
+    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)
     sm = SimilarityMetrics(pred_intensity, raw_intensity)
     alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
