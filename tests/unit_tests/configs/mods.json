@@ -8,7 +8,7 @@
         "spectra_type": "pkl",
         "custom_modifications": {
             "var_mods": {
-                "N(cit)": [7, 0.828, ""]
+                "N(cit)": [7, 0.828]
             }
         }
     },

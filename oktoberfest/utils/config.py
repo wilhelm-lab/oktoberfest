@@ -152,7 +152,7 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, Tuple[int, float, str]]]:
+    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
@@ -163,11 +163,11 @@ class Config:
 
         This function returs a dictionary with custom mod identifiers (keys), and a tuple of
         (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
-
         :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
             and optionally neutral losses
         """
-        return self.custom_modifications.get("static_mods", {})
+        mod_items = self.custom_modifications.get("static_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
     def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
@@ -176,11 +176,11 @@ class Config:
 
         This function returs a dictionary with custom mod identifiers (keys), and a tuple of
         (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
-
-        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+        :return: dictionary mapping var mod identifiers to a tuple containing unimod id, mass,
             and optionally neutral losses
         """
-        return self.custom_modifications.get("var_mods", {})
+        mod_items = self.custom_modifications.get("var_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
     def spectra(self) -> Path:
@@ -440,9 +440,9 @@ class Config:
         """
         custom_to_unimod = {}
         for k, v in self.var_mods.items():
-            custom_to_unimod[k] = v[0]
+            custom_to_unimod[str(k)] = int(v[0])
         for k, v in self.static_mods.items():
-            custom_to_unimod[k] = v[0]
+            custom_to_unimod[str(k)] = int(v[0])
         return custom_to_unimod
 
     def unimod_to_mass(self) -> Dict[str, float]:
@@ -455,9 +455,9 @@ class Config:
         :return: a dictionary mapping the UNIMOD Ids (keys) to the mass(value) of a given modification
         """
         unimod_to_mass = {}
-        for unimod_id, mass in self.var_mods.values():
+        for unimod_id, mass, _ in self.var_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
-        for unimod_id, mass in self.static_mods.values():
+        for unimod_id, mass, _ in self.static_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
 
