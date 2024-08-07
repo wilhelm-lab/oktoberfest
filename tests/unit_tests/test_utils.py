@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from oktoberfest.utils import Config, JobPool, ProcessStep
 
@@ -51,7 +52,9 @@ class TestConfig(unittest.TestCase):
     def tearDownClass(cls):  # noqa: D102
         shutil.rmtree(cls.temp_dir)
 
-    def test_check_dlomix_installed(self):
+    @patch("pathlib.Path.exists", return_value=True)
+    @patch.dict("sys.modules", {"dlomix": None})
+    def test_check_dlomix_installed(self, mock_exists):
         """Test if optional DLomix dependency is being checked."""
         conf = Config()
         conf.read(self.config_path)
