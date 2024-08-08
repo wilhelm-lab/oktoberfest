@@ -150,7 +150,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if library.obs["Fragmentation"].str.endswith("HCD").any():
+    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -266,7 +266,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 proteins=proteins,
             )
             library_file = config.output / "peptides_internal.csv"
-            internal_df.to_csv(internal_library_file, sep=",", index=None)
+            internal_df.to_csv(internal_library_file, sep=",", index=False)
             created_internal_step.mark_done()
         library_file = internal_library_file
 
@@ -555,6 +555,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="original",
         output_file=fdr_dir / spectra_file.with_suffix(".original.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )
@@ -562,6 +563,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="rescore",
         output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )
