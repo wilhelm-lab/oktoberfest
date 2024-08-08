@@ -181,19 +181,8 @@ def create_dlomix_dataset(
 
     # Otherwise regenerate dataset because ion type metadata isn't stored in the Parquet file
     if not include_additional_columns:
-        additional_columns = ["RAW_FILE", "SCAN_NUMBER"]
-    else:
-        additional_columns = include_additional_columns + ["RAW_FILE", "SCAN_NUMBER"]
-    processed_data = pd.concat(
-        [
-            spectrum.preprocess_for_machine_learning(include_additional_columns=additional_columns)
-            for spectrum in spectra
-        ]
-    )
-    if not parquet_path.exists():
-        logger.info(f"Saving DLomix dataset to {parquet_path}")
-        parquet.write_file(processed_data, parquet_path)
-
+        include_additional_columns = []
+    include_additional_columns += c.SHARED_DATA_COLUMNS
     modifications = sorted(
         list(
             {
