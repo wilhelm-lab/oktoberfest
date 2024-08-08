@@ -37,28 +37,24 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(specified_ion_types: Optional[List[str]] = None) -> pd.DataFrame:
+    def _gen_vars_df(ion_types: List[str] = c.IONS) -> pd.DataFrame:
         """
-        Creates Annotation dataframe for vars in AnnData object.
+        Create annotation dataframe for vars in AnnData object.
 
-        :param specified_ion_types: ion types that are expected to be in the spectra. If None defaults to y,b
-        :return: pd.Dataframe of Frgment Annotation
+        :param ion_types: ion types that are expected to be in the spectra
+        :return: pd.Dataframe of fragment annotations
         """
-        if not specified_ion_types:
-            specified_ion_types = ["y", "b"]
-
-        number_of_ion_types = len(specified_ion_types)
-        ion_nums = np.repeat(np.arange(1, 30, dtype=np.int32), 3 * number_of_ion_types)
-        ion_charge = np.tile(np.arange(1, 4, dtype=np.int32), 29 * number_of_ion_types)
-        temp_cols = []
-        for size in range(1, 30):
-            for type in specified_ion_types:
-                for charge in ["+1", "+2", "+3"]:
-                    temp_cols.append(f"{type}{size}{charge}")
-        ion_types = [frag[0] for frag in temp_cols]
-        var_df = pd.DataFrame({"ion": temp_cols, "num": ion_nums, "type": ion_types, "charge": ion_charge})
-        var_df = var_df.set_index("ion")
-        return var_df
+        df = pd.DataFrame([
+            {
+                "ion": f"{ion_type}{pos}+{charge}",
+                "num": pos,
+                "type": ion_type,
+                "charge": charge
+            }
+            for pos in c.POSITIONS for ion_type in ion_types for charge in c.CHARGES
+        ], dtype=np.int32)
+        df.set_index("ion", inplace=True)
+        return df
 
     @staticmethod
     def _gen_column_names(fragment_type: FragmentType) -> List[str]:
