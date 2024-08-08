@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
+from spectrum_fundamentals.fragments import generate_fragment_ion_annotations
 from scipy.sparse import csr_matrix, dok_matrix
 
 logger = logging.getLogger(__name__)
@@ -322,6 +323,7 @@ class Spectra(anndata.AnnData):
         filter_peptides: bool = False,
         include_intensities: bool = True,
         include_additional_columns: Optional[List[str]] = None,
+        ion_type_order: Optional[List[str]] = None
     ) -> pd.DataFrame:
         """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
 
@@ -348,16 +350,21 @@ class Spectra(anndata.AnnData):
 
         df = pd.DataFrame()
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
-        df["precursor_charge_onehot"] = list(np.eye(6, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
+        df["precursor_charge_onehot"] = list(np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
         df["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
         self.standardize_fragmentation_names()
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:
-            raw_int = self.layers["raw_int"].toarray()
-            raw_int[raw_int == 0] = -1
-            raw_int[raw_int == c.EPSILON] = 0
-            df["intensities_raw"] = list(raw_int)
+            intensities = self.to_df(layer=self._resolve_layer_name(FragmentType.RAW)).to_numpy()
+            intensities[intensities == 0] = -1
+            intensities[intensities == c.EPSILON] = 0
+
+            if ion_type_order:
+                fragment_ion_order = generate_fragment_ion_annotations(ion_type_order, order=("position", "ion_type", "charge"))
+                intensities = intensities[fragment_ion_order]
+
+            df["intensities_raw"] = list(intensities)
 
         if include_additional_columns:
             for column_name in include_additional_columns:

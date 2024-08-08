@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import spectrum_io.file.parquet as parquet
-from spectrum_fundamentals.constants import ALPHABET, ANNOTATION
+import spectrum_fundamentals.constants as c
 from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
@@ -35,7 +35,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 logger = logging.getLogger(__name__)
 
-ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*ANNOTATION))]
+ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
+OPTIMAL_ION_TYPE_ORDER = ['y', 'b', 'x', 'z', 'a', 'c']  # y > b > rest so that intensity predictor can re-use weights
 
 
 @contextlib.contextmanager
@@ -183,21 +184,35 @@ def create_dlomix_dataset(
     if not include_additional_columns:
         include_additional_columns = []
     include_additional_columns += c.SHARED_DATA_COLUMNS
+
+    # TODO fix custom modification parsing in fundamentals
     modifications = sorted(
         list(
             {
                 token
-                for peptide in parse_modstrings(processed_data["modified_sequence"].tolist(), ALPHABET)
+                for spectrum in spectra
+                for peptide in parse_modstrings(spectrum.obs["MODIFIED_SEQUENCE"].tolist(), c.ALPHABET)
                 for token in peptide
             }
         ),
-        key=lambda token: ALPHABET[token],
+        key=lambda token: c.ALPHABET[token],
     )
     logger.debug(f"Detected modifications in dataset: {modifications}")
     modification_file.write_text("\n".join(modifications))
-    ion_types = list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"].tolist()})
+
+    ion_types = sorted(list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"]}), key=lambda ion: OPTIMAL_ION_TYPE_ORDER.index(ion))
     logger.debug(f"Detected ion types in dataset: {ion_types}")
     ion_type_file.write_text("\n".join(ion_types))
+
+    processed_data = pd.concat(
+        [
+            spectrum.preprocess_for_machine_learning(ion_type_order=ion_types, include_additional_columns=include_additional_columns)
+            for spectrum in spectra
+        ]
+    )
+    if not parquet_path.exists():
+        logger.info(f"Saving DLomix dataset to {parquet_path}")
+        parquet.write_file(processed_data, parquet_path)
 
     return parquet_path, ion_types, modifications
 
@@ -257,8 +272,9 @@ class DLomix:
         # - solve glitching with multi-threading
         # - possibly write custom callback that only returns progress information so we can display it ourselves
         preds = self.model.predict(ds.tensor_inference_data)
+        fragment_ion_order = generate_fragment_ion_annotations(ion_types, order=("position", "ion_type", "charge"))
 
         if not keep_dataset:
             shutil.rmtree(self.output_path / dataset_name)
 
-        return {self.output_name: preds, "annotation": np.tile(np.array(ANNOTATIONS), (preds.shape[0], 1))}
+        return {self.output_name: preds, "annotation": fragment_ion_order}
