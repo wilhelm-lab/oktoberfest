@@ -102,6 +102,9 @@ source = ["oktoberfest"]
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:"
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
