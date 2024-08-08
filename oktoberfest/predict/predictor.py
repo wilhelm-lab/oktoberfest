@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .dlomix import DLomix
-
     PredictionInterface = Union[DLomix, Koina]
-else:
-    PredictionInterface = Koina
 
 if importlib.util.find_spec("dlomix"):
     from .dlomix import DLomix
+    PredictionInterface = Union[DLomix, Koina]
+else:
+    PredictionInterface = Koina
 
 
 class Predictor:
