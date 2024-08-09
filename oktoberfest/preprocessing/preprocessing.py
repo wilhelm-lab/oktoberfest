@@ -274,6 +274,8 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     library = filter_peptides_for_model(library, model)
     library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
+    library._standardize_fragmentation_names()
+
     return library
 
 

@@ -352,7 +352,6 @@ class Spectra(anndata.AnnData):
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
         df["precursor_charge_onehot"] = list(np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
         df["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
-        self.standardize_fragmentation_names()
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:
