@@ -288,7 +288,10 @@ class DLomix:
         # - solve glitching with multi-threading
         # - possibly write custom callback that only returns progress information so we can display it ourselves
         preds = self.model.predict(ds.tensor_inference_data)
-        fragment_ion_order = generate_fragment_ion_annotations(ion_types, order=("position", "ion_type", "charge"))
+        fragment_ion_order = [
+            format_fragment_ion_annotation(ann)
+            for ann in generate_fragment_ion_annotations(ion_types, order=("position", "ion_type", "charge"))
+        ]
 
         if not keep_dataset:
             shutil.rmtree(self.output_path / dataset_name)

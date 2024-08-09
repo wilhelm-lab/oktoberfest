@@ -45,15 +45,14 @@ class Spectra(anndata.AnnData):
         :param ion_types: ion types that are expected to be in the spectra
         :return: pd.Dataframe of fragment annotations
         """
-        df = pd.DataFrame([
-            {
-                "ion": f"{ion_type}{pos}+{charge}",
-                "num": pos,
-                "type": ion_type,
-                "charge": charge
-            }
-            for pos in c.POSITIONS for ion_type in ion_types for charge in c.CHARGES
-        ])
+        df = pd.DataFrame(
+            [
+                {"ion": f"{ion_type}{pos}+{charge}", "num": pos, "type": ion_type, "charge": charge}
+                for pos in c.POSITIONS
+                for ion_type in ion_types
+                for charge in c.CHARGES
+            ]
+        )
         df.set_index("ion", inplace=True)
         return df
 
@@ -323,7 +322,7 @@ class Spectra(anndata.AnnData):
         filter_peptides: bool = False,
         include_intensities: bool = True,
         include_additional_columns: Optional[List[str]] = None,
-        ion_type_order: Optional[List[str]] = None
+        ion_type_order: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
 
@@ -332,6 +331,7 @@ class Spectra(anndata.AnnData):
         :param include_additional_columns: Additional column names that are not required by DLomix to include in output.
             Capitalization does not matter - internal column names are all uppercase, whereas returned column names are
             all lowercase.
+        :param ion_type_order: Ion type order in which to save output intensity values.
 
         :return: Pandas DataFrame with column names and dtypes corresponding to those required by DLomix
             - modified_sequence (str)
@@ -350,7 +350,9 @@ class Spectra(anndata.AnnData):
 
         df = pd.DataFrame()
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]
-        df["precursor_charge_onehot"] = list(np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1])
+        df["precursor_charge_onehot"] = list(
+            np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[self.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        )
         df["collision_energy_aligned_normed"] = self.obs["COLLISION_ENERGY"]
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
@@ -360,7 +362,12 @@ class Spectra(anndata.AnnData):
             intensities[intensities == c.EPSILON] = 0
 
             if ion_type_order:
-                fragment_ion_order = generate_fragment_ion_annotations(ion_type_order, order=("position", "ion_type", "charge"))
+                fragment_ion_order = [
+                    format_fragment_ion_annotation(ann)
+                    for ann in generate_fragment_ion_annotations(
+                        ion_type_order, order=("position", "ion_type", "charge")
+                    )
+                ]
                 intensities = intensities[fragment_ion_order]
 
             df["intensities_raw"] = list(intensities.to_numpy())
