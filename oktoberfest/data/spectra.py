@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from spectrum_fundamentals.fragments import generate_fragment_ion_annotations
 from scipy.sparse import csr_matrix, dok_matrix
+from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(ion_types: List[str] = c.IONS) -> pd.DataFrame:
+    def _gen_vars_df(ion_types: List[str] = c.HCD_IONS) -> pd.DataFrame:
         """
         Create annotation dataframe for vars in AnnData object.
 
