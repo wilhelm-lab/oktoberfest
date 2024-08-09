@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
 import spectrum_io.file.parquet as parquet
-from spectrum_fundamentals.fragments import generate_fragment_ion_annotations
+from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
 from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
@@ -291,8 +291,9 @@ class DLomix:
             format_fragment_ion_annotation(ann)
             for ann in generate_fragment_ion_annotations(ion_types, order=("position", "ion_type", "charge"))
         ]
+        annotations = np.tile(np.array(fragment_ion_order, dtype=object), (preds.shape[0], 1))
 
         if not keep_dataset:
             shutil.rmtree(self.output_path / dataset_name)
 
-        return {self.output_name: preds, "annotation": fragment_ion_order}
+        return {self.output_name: preds, "annotation": annotations}
