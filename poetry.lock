@@ -1031,7 +1031,7 @@ wandb = ["wandb (>=0.15)"]
 type = "git"
 url = "git@github.com:wilhelm-lab/dlomix.git"
 reference = "feature/bmpc"
-resolved_reference = "7c3b398f3476f972adebd9d69abbd562d0f56a5b"
+resolved_reference = "ca14395a14d9d9a378183f4d95073dab59df92e1"
 
 [[package]]
 name = "dm-tree"
