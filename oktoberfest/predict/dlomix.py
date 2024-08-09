@@ -9,8 +9,9 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import spectrum_io.file.parquet as parquet
 import spectrum_fundamentals.constants as c
+import spectrum_io.file.parquet as parquet
+from spectrum_fundamentals.fragments import generate_fragment_ion_annotations
 from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
@@ -36,7 +37,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
-OPTIMAL_ION_TYPE_ORDER = ['y', 'b', 'x', 'z', 'a', 'c']  # y > b > rest so that intensity predictor can re-use weights
+OPTIMAL_ION_TYPE_ORDER = ["y", "b", "x", "z", "a", "c"]  # y > b > rest so that intensity predictor can re-use weights
 
 
 @contextlib.contextmanager
@@ -185,28 +186,42 @@ def create_dlomix_dataset(
         include_additional_columns = []
     include_additional_columns += c.SHARED_DATA_COLUMNS
 
+    alphabet = c.ALPHABET
+    val = [max(alphabet.values()) + 1]
+
     # TODO fix custom modification parsing in fundamentals
+    def get_alphabet_value(token, alphabet, val):
+        if token not in alphabet:
+            alphabet[token] = val[0]
+            val[0] += 1
+        return alphabet[token]
+
     modifications = sorted(
         list(
             {
                 token
                 for spectrum in spectra
-                for peptide in parse_modstrings(spectrum.obs["MODIFIED_SEQUENCE"].tolist(), c.ALPHABET)
+                for peptide in parse_modstrings(spectrum.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
                 for token in peptide
             }
         ),
-        key=lambda token: c.ALPHABET[token],
+        key=lambda token: get_alphabet_value(token, alphabet, val),
     )
     logger.debug(f"Detected modifications in dataset: {modifications}")
     modification_file.write_text("\n".join(modifications))
 
-    ion_types = sorted(list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"]}), key=lambda ion: OPTIMAL_ION_TYPE_ORDER.index(ion))
+    ion_types = sorted(
+        list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"]}),
+        key=lambda ion: OPTIMAL_ION_TYPE_ORDER.index(ion),
+    )
     logger.debug(f"Detected ion types in dataset: {ion_types}")
     ion_type_file.write_text("\n".join(ion_types))
 
     processed_data = pd.concat(
         [
-            spectrum.preprocess_for_machine_learning(ion_type_order=ion_types, include_additional_columns=include_additional_columns)
+            spectrum.preprocess_for_machine_learning(
+                ion_type_order=ion_types, include_additional_columns=include_additional_columns
+            )
             for spectrum in spectra
         ]
     )
@@ -249,6 +264,7 @@ class DLomix:
         :param data: spectral library to predict features for
         :param dataset_name: Name of the dataset for storing processed files for DLomix
         :param keep_dataset: Whether to keep or discard the pre-processed dataset after inference
+        :param kwargs: additional parameter
 
         :return: a dictionary containing predicted features (key: feature type) and a mask of the ion annotations of
             the predicted feature matrix (key: 'annotation')
