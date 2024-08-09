@@ -610,6 +610,7 @@ def annotate_spectral_library(
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.strings_to_categoricals()
+    aspec.standardize_fragmentation_names()
 
     logger.info("Finished annotating.")
 
