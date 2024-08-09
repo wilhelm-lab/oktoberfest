@@ -34,9 +34,9 @@ def generate_features(
     """
     perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
-        pred_intensities=library.get_matrix(FragmentType.PRED)[0],
-        true_intensities=library.get_matrix(FragmentType.RAW)[0],
-        mz=library.get_matrix(FragmentType.MZ)[0],
+        pred_intensities=library.get_matrix(FragmentType.PRED),
+        true_intensities=library.get_matrix(FragmentType.RAW),
+        mz=library.get_matrix(FragmentType.MZ),
         input_type=search_type,
         all_features_flag=all_features,
         regression_method=regression_method,

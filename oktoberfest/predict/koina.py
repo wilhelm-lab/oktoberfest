@@ -15,6 +15,8 @@ from tritonclient.grpc import (
     InferResult,
 )
 
+from ..data.spectra import Spectra
+
 logger = logging.getLogger(__name__)
 
 
@@ -433,10 +435,7 @@ class Koina:
             )
 
     def predict(
-        self,
-        data: Union[Dict[str, np.ndarray], pd.DataFrame],
-        _async: bool = True,
-        debug=False,
+        self, data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra], _async: bool = True, debug=False
     ) -> Dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
@@ -445,7 +444,7 @@ class Koina:
         choose to perform inference asynchronously (in parallel) or sequentially, depending on the value of the '_async'
         parameter. If asynchronous inference is selected, the method will return when all inference tasks are complete.
         Note: Ensure that the model and server are properly configured and that the input data matches the model's
-        nput requirements.
+        input requirements.
 
         :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
             and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
@@ -467,6 +466,8 @@ class Koina:
             }
             predictions = model.predict(input_data)
         """
+        if isinstance(data, Spectra):
+            data = data.obs
         if isinstance(data, pd.DataFrame):
             data = {
                 input_field: data[alternative_column_map[input_field]].to_numpy()

@@ -135,7 +135,7 @@ def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["oktoberfest", "tests", "docs/conf.py"]
     session.install(".")
-    session.install("mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs")
+    session.install("mypy", "pytest", "types-requests", "types-attrs")
     session.run("mypy", *args)
 
 
@@ -143,6 +143,11 @@ def mypy(session: Session) -> None:
 def tests(session: Session) -> None:
     """Run the test suite."""
     session.install(".")
+    session.run(
+        "pip",
+        "install",
+        "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@feature/add_new_iontypes",
+    )
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
