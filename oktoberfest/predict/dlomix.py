@@ -37,7 +37,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
-OPTIMAL_ION_TYPE_ORDER = ["y", "b", "x", "z", "a", "c"]  # y > b > rest so that intensity predictor can re-use weights
+OPTIMAL_ION_TYPE_ORDER = ["y", "b", "x", "z", "z●", "a", "c"]  # y > b > rest so that intensity predictor can re-use weights
 
 
 @contextlib.contextmanager
