@@ -5030,7 +5030,7 @@ scikit-learn = "^1.0"
 type = "git"
 url = "git@github.com:wilhelm-lab/spectrum_fundamentals.git"
 reference = "feature/add_new_iontypes"
-resolved_reference = "98cd7e4e572ca639009f183c636eaa1a9341ee27"
+resolved_reference = "30f90711df5deefe27298dfe52ad884e54479e0f"
 
 [[package]]
 name = "spectrum-io"
