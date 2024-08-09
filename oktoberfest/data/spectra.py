@@ -53,7 +53,7 @@ class Spectra(anndata.AnnData):
                 "charge": charge
             }
             for pos in c.POSITIONS for ion_type in ion_types for charge in c.CHARGES
-        ], dtype=np.int32)
+        ])
         df.set_index("ion", inplace=True)
         return df
 
