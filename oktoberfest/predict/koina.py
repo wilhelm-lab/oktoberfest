@@ -435,11 +435,7 @@ class Koina:
             )
 
     def predict(
-        self,
-        data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra],
-        _async: bool = True,
-        debug=False,
-        **kwargs
+        self, data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra], _async: bool = True, debug=False
     ) -> Dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
