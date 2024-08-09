@@ -355,7 +355,7 @@ class Spectra(anndata.AnnData):
         df["method_nbr"] = self.obs["FRAGMENTATION"].apply(lambda x: c.FRAGMENTATION_ENCODING[x])
 
         if include_intensities:
-            intensities = self.to_df(layer=self._resolve_layer_name(FragmentType.RAW)).to_numpy()
+            intensities = self.to_df(layer=self._resolve_layer_name(FragmentType.RAW))
             intensities[intensities == 0] = -1
             intensities[intensities == c.EPSILON] = 0
 
@@ -363,7 +363,7 @@ class Spectra(anndata.AnnData):
                 fragment_ion_order = generate_fragment_ion_annotations(ion_type_order, order=("position", "ion_type", "charge"))
                 intensities = intensities[fragment_ion_order]
 
-            df["intensities_raw"] = list(intensities)
+            df["intensities_raw"] = list(intensities.to_numpy())
 
         if include_additional_columns:
             for column_name in include_additional_columns:
