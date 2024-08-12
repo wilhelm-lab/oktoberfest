@@ -403,6 +403,11 @@ class Config:
         """Tags to use for WandB run."""
         return self.wandb_options.get("tags", [])
 
+    @property
+    def improve_further(self) -> bool:
+        """Whether to perform a third training phase for refinement learning."""
+        return self.refinement_learning_options.get("improveFurther", False)
+
     ########################
     # functions start here #
     ########################

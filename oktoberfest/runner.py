@@ -565,6 +565,7 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         batch_size=config.training_batch_size,
         additional_columns=additional_columns,
         available_gpus=config.available_gpus,
+        improve_further=config.improve_further,
         use_wandb=config.use_wandb,
         **wandb_kwargs,
     )

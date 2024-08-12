@@ -69,6 +69,7 @@ def refine_intensity_predictor(
     batch_size: int = 1024,
     additional_columns: Optional[List[str]] = None,
     available_gpus: Optional[List[int]] = None,
+    improve_further: bool = False,
     use_wandb: bool = False,
     wandb_project: Optional[str] = None,
     wandb_tags: Optional[List[str]] = None,
@@ -87,6 +88,7 @@ def refine_intensity_predictor(
     :param batch_size: Batch size to use for training
     :param additional_columns: Additional columns to keep in DLomix dataset for downstream analyis
     :param available_gpus: Indices of GPUs to use for training
+    :param improve_further: Whether to run an additional third training phase
     :param use_wandb: Whether to use WandB to log training
     :param wandb_project: Name of WandB project to save run to
     :param wandb_tags: Tags to assing to WandB run
@@ -137,6 +139,7 @@ def refine_intensity_predictor(
     config = AutomaticRlTlTrainingConfig(
         dataset=ds,
         baseline_model=baseline_model,
+        improve_further=improve_further,
         use_wandb=use_wandb,
         wandb_project=wandb_project,
         wandb_tags=wandb_tags,

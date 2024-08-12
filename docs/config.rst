@@ -158,6 +158,8 @@ Applicable to local intensity prediction and transfer learning
    +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     availableGpus            | Specifies indices of GPUs to set as visible to CUDA for training process. If not specified, all available GPUs will be used.                                       |
    +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     improveFurther           | Defines whether to perform an additional third training phase during refinement learning to further improve the predictor; default = False.                        |
+   +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     wandbOptions             | Contains specific settings for using WandB when doing refinement learning. If not present, WandB will not be used.                                                 |
    +------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |         project              | Project to save WandB run to; default = "DLomix_auto_RL_TL"                                                                                                        |
