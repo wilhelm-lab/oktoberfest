@@ -203,7 +203,7 @@ def create_dlomix_dataset(
     modification_file.write_text("\n".join(modifications))
 
     ion_types = sorted(
-        list({ion_type for spectra in library for ion_type in spectra.uns["ion_types"]}),
+        list({ion_type for spectra in libraries for ion_type in spectra.uns["ion_types"]}),
         key=lambda ion: OPTIMAL_ION_TYPE_ORDER.index(ion),
     )
     logger.debug(f"Detected ion types in dataset: {ion_types}")
