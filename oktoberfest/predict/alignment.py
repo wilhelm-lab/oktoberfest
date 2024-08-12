@@ -15,9 +15,9 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
-    This function creates an alignment DataFrame by removing decoy and HCD fragmented spectra
-    from the input library, selecting the top 1000 highest-scoring spectra, and repeating the
-    DataFrame for each collision energy (CE) in the given range.
+    This function creates an alignment DataFrame by removing decoys and non-HCD-fragmented spectra
+    from the input library, selecting the top 1000 (or 100, if <1000 are available) highest-scoring spectra, and
+    repeating the DataFrame for each collision energy (CE) in the given range.
 
     :param library: the library to be propagated
     :param ce_range: the min and max CE to be propagated for alignment in the dataframe
