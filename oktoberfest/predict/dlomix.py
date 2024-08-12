@@ -183,7 +183,7 @@ def create_dlomix_dataset(
         modification
         for spectra in libraries
         for peptide in parse_modstrings(spectra.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
-        for token in peptide
+        for modification in peptide
     }
     token = max(alphabet.values()) + 1
     for modification in modifications - set(alphabet):
