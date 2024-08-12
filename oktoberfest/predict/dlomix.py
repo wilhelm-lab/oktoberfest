@@ -179,26 +179,17 @@ def create_dlomix_dataset(
     include_additional_columns += c.SHARED_DATA_COLUMNS
 
     alphabet = c.ALPHABET
-    val = [max(alphabet.values()) + 1]
-
-    # TODO fix custom modification parsing in fundamentals
-    def get_alphabet_value(token, alphabet, val):
-        if token not in alphabet:
-            alphabet[token] = val[0]
-            val[0] += 1
-        return alphabet[token]
-
-    modifications = sorted(
-        list(
-            {
-                token
-                for spectra in libraries
-                for peptide in parse_modstrings(spectra.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
-                for token in peptide
-            }
-        ),
-        key=lambda token: get_alphabet_value(token, alphabet, val),
-    )
+    modifications = {
+        modification
+        for spectra in libraries
+        for peptide in parse_modstrings(spectra.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
+        for token in peptide
+    }
+    token = max(alphabet.values()) + 1
+    for modification in modifications - set(alphabet):
+        alphabet[modification] = token
+        token += 1
+    modifications = sorted(list(modifications), key=lambda modification: alphabet[modification])
     logger.debug(f"Detected modifications in dataset: {modifications}")
     modification_file.write_text("\n".join(modifications))
 
