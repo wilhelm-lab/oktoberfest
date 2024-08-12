@@ -81,10 +81,10 @@ def refine_intensity_predictor(
     :param data_directory: Directory to save processed dataset and refined model to. The Parquet and ion_type and
         modification metadata files for the processed dataset will be stored in `<output_directory>/<dataset_name>/`,
         and the refined model as `<output_directory>/<model_name>.keras`
-    :param result_directory: Directory to save CSV logs & report notebook to.
+    :param result_directory: Directory to save CSV logs & report notebook to
     :param dataset_name: Name of dataset
     :param model_name: Name of refined model
-    :param download_new_baseline_model: Whether to download a new baseline model from GitHub to the specified path.
+    :param download_new_baseline_model: Whether to download a new baseline model from GitHub to the specified path
     :param batch_size: Batch size to use for training
     :param additional_columns: Additional columns to keep in DLomix dataset for downstream analyis
     :param available_gpus: Indices of GPUs to use for training
@@ -153,7 +153,7 @@ def refine_intensity_predictor(
 
 
 def create_dlomix_dataset(
-    spectra: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
+    libraries: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
@@ -161,7 +161,7 @@ def create_dlomix_dataset(
         present in the dataset, then writes the dataset to `output_dir` as `processed_dataset.parquet` and the lists of
         ion types and modifications as `ion_types.txt` and `modifications.txt`.
 
-    :param spectra: Spectral libraries to include
+    :param libraries: Spectral libraries to include
     :param output_dir: Directory to save processed dataset to
     :param include_additional_columns: additional columns to keep in the dataset
 
@@ -203,8 +203,8 @@ def create_dlomix_dataset(
         list(
             {
                 token
-                for spectrum in spectra
-                for peptide in parse_modstrings(spectrum.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
+                for spectra in libraries
+                for peptide in parse_modstrings(spectra.obs["MODIFIED_SEQUENCE"].tolist(), alphabet)
                 for token in peptide
             }
         ),
@@ -214,7 +214,7 @@ def create_dlomix_dataset(
     modification_file.write_text("\n".join(modifications))
 
     ion_types = sorted(
-        list({ion_type for spectrum in spectra for ion_type in spectrum.uns["ion_types"]}),
+        list({ion_type for spectra in library for ion_type in spectra.uns["ion_types"]}),
         key=lambda ion: OPTIMAL_ION_TYPE_ORDER.index(ion),
     )
     logger.debug(f"Detected ion types in dataset: {ion_types}")
@@ -222,10 +222,10 @@ def create_dlomix_dataset(
 
     processed_data = pd.concat(
         [
-            spectrum.preprocess_for_machine_learning(
+            spectra.preprocess_for_machine_learning(
                 ion_type_order=ion_types, include_additional_columns=include_additional_columns
             )
-            for spectrum in spectra
+            for spectra in libraries
         ]
     )
     if not parquet_path.exists():
