@@ -30,7 +30,15 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
 
     if group_by_charge:
         hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
+
     top_hcd_targets = hcd_targets.head(top_n)
+
+    if top_hcd_targets.shape[0] < 1000:
+        logger.debug("Not enough matching spectra for alignment, taking top 100 instead")
+        top_n = 100
+        top_hcd_targets = top_hcd_targets.head(100)
+    if top_hcd_targets.shape[0] < 100:
+        raise ValueError("Fewer than 100 HCD-fragmented & non-decoy spectra contained")
 
     alignment_library = library[top_hcd_targets.index]
     alignment_library = Spectra(
