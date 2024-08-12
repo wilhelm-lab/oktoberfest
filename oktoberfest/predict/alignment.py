@@ -50,16 +50,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
     alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), top_n)
 
-    alignment_library.uns["ion_types"] = np.array(
-        list(
-            {
-                ion_type
-                for fragmentation_method in library.obs["FRAGMENTATION"].unique()
-                for ion_type in retrieve_ion_types(fragmentation_method)
-            }
-        ),
-        dtype=object,
-    )
+    alignment_library.uns["ion_types"] = library.uns["ion_types"]
 
     return alignment_library
 
