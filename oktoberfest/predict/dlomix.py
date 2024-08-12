@@ -186,8 +186,8 @@ def create_dlomix_dataset(
         for modification in peptide
     }
     token = max(alphabet.values()) + 1
-    for modification in modifications - set(alphabet):
-        alphabet[modification] = token
+    for new_modification in modifications - set(alphabet):
+        alphabet[new_modification] = token
         token += 1
     modifications = sorted(list(modifications), key=lambda modification: alphabet[modification])
     logger.debug(f"Detected modifications in dataset: {modifications}")
