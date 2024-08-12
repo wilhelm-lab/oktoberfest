@@ -15,6 +15,7 @@ from spectrum_fundamentals.fragments import format_fragment_ion_annotation, gene
 from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
+from oktoberfest.utils.logging import mute_stdout
 
 # TODO maybe move this to DLomix::interface::__init__.py?
 # Set some enviroment variables before importing TensorFlow.
@@ -38,18 +39,6 @@ logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
 OPTIMAL_ION_TYPE_ORDER = ["y", "b", "x", "z", "z_r", "a", "c"]  # y > b > rest so that intensity predictor can re-use weights
-
-
-@contextlib.contextmanager
-def mute_stdout(ignore_warnings: bool = False):
-    """Mute print statements and user warnings from DLomix."""
-    with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
-        if ignore_warnings:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                yield
-        else:
-            yield
 
 
 def _download_baseline_model(model_path: Path) -> None:
