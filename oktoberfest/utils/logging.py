@@ -2,6 +2,7 @@ import contextlib
 import os
 import warnings
 
+
 @contextlib.contextmanager
 def mute_stdout(ignore_warnings: bool = False):
     """Mute print statements and user warnings from packages that aren't properly handled."""

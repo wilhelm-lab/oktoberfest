@@ -23,6 +23,8 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     :param ce_range: the min and max CE to be propagated for alignment in the dataframe
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :return: a library that is modified according to the description above
+
+    :raises ValueError: if too few spectra are HCD-fragmented and not decoys
     """
     top_n = 1000
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")

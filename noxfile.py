@@ -146,7 +146,8 @@ def tests(session: Session) -> None:
     session.run(
         "pip",
         "install",
-        "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@feature/add_new_iontypes",
+        """dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc
+        spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@feature/add_new_iontypes""",
     )
     session.install("coverage[toml]", "pytest", "pygments")
     try:

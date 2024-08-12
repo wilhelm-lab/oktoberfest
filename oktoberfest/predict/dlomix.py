@@ -38,7 +38,15 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 logger = logging.getLogger(__name__)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
-OPTIMAL_ION_TYPE_ORDER = ["y", "b", "x", "z", "z_r", "a", "c"]  # y > b > rest so that intensity predictor can re-use weights
+OPTIMAL_ION_TYPE_ORDER = [
+    "y",
+    "b",
+    "x",
+    "z",
+    "z_r",
+    "a",
+    "c",
+]  # y > b > rest so that intensity predictor can re-use weights
 
 
 def _download_baseline_model(model_path: Path) -> None:
