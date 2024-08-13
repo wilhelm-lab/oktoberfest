@@ -166,13 +166,11 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data.loc[idx], **kwargs))
+            results.append(self._predictor.predict(data[idx], **kwargs))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
-    def ce_calibration(
-        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, model_name: str, **kwargs
-    ) -> Spectra:
+    def ce_calibration(self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, **kwargs) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
 
@@ -183,14 +181,12 @@ class Predictor:
         :param library: spectral library to perform CE calibration on
         :param ce_range: the min and max CE to be tested during calibration
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
-        :param model_name: The name of the requested prediction model. This is forwarded to the prediction method with
-            kwargs and checked here to determine if alphapept is used for further preprocessing.
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
         :return: a spectra object containing the spectral angle for each tested CE
         """
         alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
 
-        if "alphapept" in model_name.lower():
+        if "alphapept" in self.model_name.lower():
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
