@@ -319,7 +319,6 @@ class Config:
         """Get output format from the config file."""
         return self.spec_lib_options.get("collisionEnergy", 30)
 
-    # TODO separate this for DL & non-DL
     @property
     def batch_size(self) -> int:
         """Get output format from the config file."""
