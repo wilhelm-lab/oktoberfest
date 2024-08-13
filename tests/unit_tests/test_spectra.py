@@ -48,8 +48,8 @@ class TestSpectra(unittest.TestCase):
 
     def test_gen_vardf(self):
         """Test gen_vardf method."""
-        for ion_types in [c.HCD_IONS, c.ETD_IONS, c.ETCID_IONS, c.UVPD_IONS]:
-            with self.subTest(ion_types=ion_types):
+        for fragmentation_method, ion_types in c.FRAGMENTATION_TO_IONS_BY_PAIRS.items():
+            with self.subTest(fragmentation_method=fragmentation_method, ion_types=ion_types):
                 var_df = Spectra._gen_vars_df(ion_types=ion_types)
                 ion_type_annotations = generate_fragment_ion_annotations(
                     ion_types, order=("position", "ion_type", "charge")
