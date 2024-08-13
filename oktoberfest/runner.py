@@ -8,7 +8,7 @@ from functools import partial
 from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -170,7 +170,6 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             library,
             config.ce_range,
             use_ransac_model,
-            model_name="intensity",
             dataset_name=spectra_file.stem + "_ce_calibration",
         )
 
@@ -547,27 +546,15 @@ def _refinement_learn(spectra_files: List[Path], config: Config):
         baseline_model_path = Path(config.models["intensity"])
         download_new_baseline_model = False
 
-    wandb_kwargs: Dict[str, Any] = {}
-    if config.use_wandb:
-        wandb_kwargs["wandb_project"] = config.wandb_project
-        wandb_kwargs["wandb_tags"] = config.wandb_tags
-
-    additional_columns = ["SEQUENCE"] if config.include_original_sequences else []
-
     pr.dlomix.refine_intensity_predictor(
         baseline_model_path=baseline_model_path,
         libraries=libraries,
+        config=config,
         data_directory=config.output / "data/dlomix",
         result_directory=config.output / "results/dlomix",
         dataset_name="refinement_dataset",
         model_name="refined",
         download_new_baseline_model=download_new_baseline_model,
-        batch_size=config.training_batch_size,
-        additional_columns=additional_columns,
-        available_gpus=config.available_gpus,
-        improve_further=config.improve_further,
-        use_wandb=config.use_wandb,
-        **wandb_kwargs,
     )
 
     refinement_step.mark_done()

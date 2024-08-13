@@ -290,6 +290,11 @@ class Spectra(anndata.AnnData):
         """Filter out peptides with Andromeda score below threshold in-place."""
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
+    def remove_duplicates(self, num_duplicates: int) -> None:
+        """Filter out (peptide, charge, collision energy) duplicates if there's more than n_duplicates."""
+        # TODO
+        pass
+
     def standardize_fragmentation_names(self) -> None:
         """Replace non-abbreviated fragmentation method spellings in-place."""
         self.obs.replace({"FRAGMENTATION": {"electron transfer dissociation": "ETD"}}, inplace=True)
@@ -319,19 +324,21 @@ class Spectra(anndata.AnnData):
 
     def preprocess_for_machine_learning(
         self,
-        filter_peptides: bool = False,
         include_intensities: bool = True,
         include_additional_columns: Optional[List[str]] = None,
         ion_type_order: Optional[List[str]] = None,
+        andromeda_score_threshold: Optional[float] = None,
+        num_duplicates: Optional[int] = None,
     ) -> pd.DataFrame:
         """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
 
-        :param filter_peptides: Whether to filter peptides based on Andromeda score
         :param include_intensities: Whether to include intensity (label) column
         :param include_additional_columns: Additional column names that are not required by DLomix to include in output.
             Capitalization does not matter - internal column names are all uppercase, whereas returned column names are
             all lowercase.
         :param ion_type_order: Ion type order in which to save output intensity values.
+        :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+        :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
         :return: Pandas DataFrame with column names and dtypes corresponding to those required by DLomix
             - modified_sequence (str)
@@ -343,10 +350,11 @@ class Spectra(anndata.AnnData):
         """
         self.remove_decoys()
 
-        if filter_peptides:
-            logger.warning("Peptide filtering by score not implemented, including all peptides")
-            threshold = 0.0  # TODO actually set threshold
-            self.filter_by_score(threshold)
+        if andromeda_score_threshold:
+            self.filter_by_score(andromeda_score_threshold)
+
+        if num_duplicates:
+            self.remove_duplicates(num_duplicates)
 
         df = pd.DataFrame()
         df["modified_sequence"] = self.obs["MODIFIED_SEQUENCE"]

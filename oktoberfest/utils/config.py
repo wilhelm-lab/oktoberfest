@@ -379,11 +379,6 @@ class Config:
         return "refinementLearningOptions" in self.data
 
     @property
-    def available_gpus(self) -> List[int]:
-        """Indices of GPUS to set as visible for CUDA."""
-        return self.refinement_learning_options.get("availableGpus", [])
-
-    @property
     def use_wandb(self) -> bool:
         """Whether to use WandB for refinement learning training."""
         return "wandbOptions" in self.refinement_learning_options
@@ -407,6 +402,16 @@ class Config:
     def improve_further(self) -> bool:
         """Whether to perform a third training phase for refinement learning."""
         return self.refinement_learning_options.get("improveFurther", False)
+
+    @property
+    def andromeda_score_threshold(self) -> float:
+        """Andromeda score threshold for filtering refinement learning training data."""
+        return self.refinement_learning_options.get("andromedaScoreThreshold", 0.0)
+
+    @property
+    def num_duplicates(self) -> int:
+        """Number of (peptide, charge, collision energy) duplicates to allow in refinement learning training data."""
+        return self.refinement_learning_options.get("numDuplicates", 100)
 
     ########################
     # functions start here #

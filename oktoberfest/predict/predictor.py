@@ -17,21 +17,25 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .dlomix import DLomix
+
     PredictionInterface = Union[DLomix, Koina]
 
-if importlib.util.find_spec("dlomix"):
-    from .dlomix import DLomix
-    PredictionInterface = Union[DLomix, Koina]
 else:
-    PredictionInterface = Koina
+    if importlib.util.find_spec("dlomix"):
+        from .dlomix import DLomix
+
+        PredictionInterface = Union[DLomix, Koina]
+    else:
+        PredictionInterface = Koina
 
 
 class Predictor:
     """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""
 
-    def __init__(self, predictor: PredictionInterface):
+    def __init__(self, predictor: PredictionInterface, model_name: str):
         """Initialize from Koina or DLomix instance."""
         self._predictor = predictor
+        self.model_name = model_name
 
     @classmethod
     def from_koina(
@@ -50,12 +54,13 @@ class Predictor:
                 ssl=ssl,
                 targets=targets,
                 disable_progress_bar=disable_progress_bar,
-            )
+            ),
+            model_name=model_name,
         )
 
     @classmethod
     def from_dlomix(
-        cls, model_type: str, model_path: Optional[Path], output_path: Path, batch_size: int, download: bool = False
+        cls, model_type: str, model_path: Path, output_path: Path, batch_size: int, download: bool = False
     ) -> Predictor:
         """Create DLomix predictor."""
         return Predictor(
@@ -65,7 +70,8 @@ class Predictor:
                 output_path=output_path,
                 batch_size=batch_size,
                 download=download,
-            )
+            ),
+            model_name=model_path.stem,
         )
 
     @classmethod
@@ -81,7 +87,7 @@ class Predictor:
 
         # TODO actually pass the output folder through kwargs
         output_folder = config.output / "data/dlomix"
-        output_folder.mkdir(exist_ok=True)
+        output_folder.mkdir(parents=True, exist_ok=True)
 
         if config.download_baseline_intensity_predictor:
             model_path = output_folder / "prosit_baseline_model.keras"

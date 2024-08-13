@@ -1,20 +1,19 @@
-import contextlib
 import logging
 import multiprocessing as mp
 import os
 import shutil
-import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import anndata as ad
 import numpy as np
-import pandas as pd
 import spectrum_fundamentals.constants as c
 import spectrum_io.file.parquet as parquet
 from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
 from spectrum_fundamentals.mod_string import parse_modstrings
 
 from oktoberfest.data import Spectra
+from oktoberfest.utils import Config
 from oktoberfest.utils.logging import mute_stdout
 
 # TODO maybe move this to DLomix::interface::__init__.py?
@@ -30,12 +29,19 @@ os.environ["TF_NUM_INTRAOP_THREADS"] = str(n_threads)
 os.environ["TF_NUM_INTEROP_THREADS"] = str(n_threads)
 
 import tensorflow as tf
-from dlomix.interface import download_model_from_github, load_keras_model, process_dataset, save_keras_model
-from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
+
+with mute_stdout():
+    from dlomix.interface import download_model_from_github, load_keras_model, process_dataset, save_keras_model
+    from dlomix.refinement_transfer_learning.automatic_rl_tl import AutomaticRlTlTraining, AutomaticRlTlTrainingConfig
+
+gpus = tf.config.list_physical_devices("GPU")
+for device in gpus:
+    tf.config.experimental.set_memory_growth(device, True)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 logger = logging.getLogger(__name__)
+logging.getLogger("dlomix").setLevel(logging.INFO)
 
 ANNOTATIONS = [f"{ion_type}{pos}+{charge}".encode() for ion_type, charge, pos in list(zip(*c.ANNOTATION))]
 OPTIMAL_ION_TYPE_ORDER = [
@@ -57,24 +63,19 @@ def _download_baseline_model(model_path: Path) -> None:
 
 def refine_intensity_predictor(
     baseline_model_path: Path,
-    spectra: List[Spectra],
+    libraries: List[Spectra],
+    config: Config,
     data_directory: Path,
     result_directory: Path,
     dataset_name: str,
     model_name: str,
     download_new_baseline_model: bool = False,
-    batch_size: int = 1024,
-    additional_columns: Optional[List[str]] = None,
-    available_gpus: Optional[List[int]] = None,
-    improve_further: bool = False,
-    use_wandb: bool = False,
-    wandb_project: Optional[str] = None,
-    wandb_tags: Optional[List[str]] = None,
 ) -> None:
     """Perform refinement/transfer learning on a baseline intensity predictor.
 
     :param baseline_model_path: Path of baseline model to refine
-    :param spectra: Spectral libraries to use as training data for refinement
+    :param libraries: Spectral libraries to use as training data for refinement
+    :param config: Config containing refinement learning options
     :param data_directory: Directory to save processed dataset and refined model to. The Parquet and ion_type and
         modification metadata files for the processed dataset will be stored in `<output_directory>/<dataset_name>/`,
         and the refined model as `<output_directory>/<model_name>.keras`
@@ -82,13 +83,6 @@ def refine_intensity_predictor(
     :param dataset_name: Name of dataset
     :param model_name: Name of refined model
     :param download_new_baseline_model: Whether to download a new baseline model from GitHub to the specified path
-    :param batch_size: Batch size to use for training
-    :param additional_columns: Additional columns to keep in DLomix dataset for downstream analyis
-    :param available_gpus: Indices of GPUs to use for training
-    :param improve_further: Whether to run an additional third training phase
-    :param use_wandb: Whether to use WandB to log training
-    :param wandb_project: Name of WandB project to save run to
-    :param wandb_tags: Tags to assing to WandB run
     """
     gpus = tf.config.list_physical_devices("GPU")
     if len(gpus) == 0:
@@ -96,14 +90,15 @@ def refine_intensity_predictor(
             """TensorFlow could not detect GPU devices to use for refinement learning, so it will run on CPU and take
             much longer"""
         )
-    else:
-        for device in gpus:
-            tf.config.experimental.set_memory_growth(device, True)
-        if available_gpus:
-            tf.config.set_visible_devices([gpus[i] for i in available_gpus], "GPU")
+
+    additional_columns = ["SEQUENCE"] if config.include_original_sequences else []
 
     parquet_path, ion_types, modifications = create_dlomix_dataset(
-        spectra, data_directory / dataset_name, include_additional_columns=additional_columns
+        libraries,
+        data_directory / dataset_name,
+        include_additional_columns=additional_columns,
+        andromeda_score_threshold=config.andromeda_score_threshold,
+        num_duplicates=config.num_duplicates,
     )
 
     if download_new_baseline_model:
@@ -115,42 +110,40 @@ def refine_intensity_predictor(
         logger.info(f"Found existing refined model at {model_path}, re-using it")
         return
 
-    if additional_columns:
-        additional_columns = [column_name.lower() for column_name in additional_columns]
-    else:
-        additional_columns = []
-
     logger.info("Pre-processing dataset for refinement learning")
-    with mute_stdout(ignore_warnings=True):
-        ds = process_dataset(
-            str(parquet_path),
-            baseline_model,
-            ion_types=ion_types,
-            modifications=modifications,
-            label_column="intensities_raw",
-            val_ratio=0.2,
-            batch_size=batch_size,
-            additional_columns=additional_columns,
-        )
+    ds = process_dataset(
+        str(parquet_path),
+        baseline_model,
+        ion_types=ion_types,
+        modifications=modifications,
+        label_column="intensities_raw",
+        val_ratio=0.2,
+        batch_size=config.training_batch_size,
+        additional_columns=additional_columns,
+    )
 
-    config = AutomaticRlTlTrainingConfig(
+    training_config = AutomaticRlTlTrainingConfig(
         dataset=ds,
         baseline_model=baseline_model,
-        improve_further=improve_further,
-        use_wandb=use_wandb,
-        wandb_project=wandb_project,
-        wandb_tags=wandb_tags,
+        improve_further=config.improve_further,
+        use_wandb=config.use_wandb,
+        wandb_project=config.wandb_project,
+        wandb_tags=config.wandb_tags,
         results_log=str(result_directory),
     )
 
-    trainer = AutomaticRlTlTraining(config)
+    trainer = AutomaticRlTlTraining(training_config)
     refined_model = trainer.train()
 
     save_keras_model(refined_model, str(model_path))
 
 
 def create_dlomix_dataset(
-    libraries: List[Spectra], output_dir: Path, include_additional_columns: Optional[List[str]] = None
+    libraries: List[Spectra],
+    output_dir: Path,
+    include_additional_columns: Optional[List[str]] = None,
+    andromeda_score_threshold: Optional[float] = None,
+    num_duplicates: Optional[int] = None,
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
@@ -161,6 +154,8 @@ def create_dlomix_dataset(
     :param libraries: Spectral libraries to include
     :param output_dir: Directory to save processed dataset to
     :param include_additional_columns: additional columns to keep in the dataset
+    :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+    :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
     :returns:
         - path of saved Parquet file
@@ -208,14 +203,14 @@ def create_dlomix_dataset(
     logger.debug(f"Detected ion types in dataset: {ion_types}")
     ion_type_file.write_text("\n".join(ion_types))
 
-    processed_data = pd.concat(
-        [
-            spectra.preprocess_for_machine_learning(
-                ion_type_order=ion_types, include_additional_columns=include_additional_columns
-            )
-            for spectra in libraries
-        ]
+    all_data = Spectra(ad.concat([spectra for spectra in libraries]))
+    processed_data = all_data.preprocess_for_machine_learning(
+        ion_type_order=ion_types,
+        include_additional_columns=include_additional_columns,
+        andromeda_score_threshold=andromeda_score_threshold,
+        num_duplicates=num_duplicates,
     )
+
     if not parquet_path.exists():
         logger.info(f"Saving DLomix dataset to {parquet_path}")
         parquet.write_file(processed_data, parquet_path)
@@ -262,17 +257,16 @@ class DLomix:
         """
         # TODO reuse training dataset if doing transfer learning (load subset based on RAW_FILE column)
         parquet_path, ion_types, modifications = create_dlomix_dataset([data], self.output_path / dataset_name)
-        with mute_stdout(ignore_warnings=True):
-            ds = process_dataset(
-                str(parquet_path),
-                self.model,
-                ion_types=ion_types,
-                modifications=modifications,
-                label_column=None,
-                test_ratio=1,
-                val_ratio=0,
-                batch_size=self.batch_size,
-            )
+        ds = process_dataset(
+            str(parquet_path),
+            self.model,
+            ion_types=ion_types,
+            modifications=modifications,
+            label_column=None,
+            test_ratio=1,
+            val_ratio=0,
+            batch_size=self.batch_size,
+        )
 
         # TODO improve Keras progress bar:
         # - solve glitching with multi-threading
