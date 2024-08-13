@@ -110,6 +110,7 @@ def refine_intensity_predictor(
         logger.info(f"Found existing refined model at {model_path}, re-using it")
         return
 
+    additional_columns = [column.lower() for column in additional_columns]
     logger.info("Pre-processing dataset for refinement learning")
     ds = process_dataset(
         str(parquet_path),
