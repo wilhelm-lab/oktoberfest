@@ -1004,8 +1004,7 @@ version = "0.1.2"
 description = "Deep Learning for Proteomics"
 optional = true
 python-versions = "*"
-files = [
-]
+files = []
 develop = false
 
 [package.dependencies]
@@ -5008,8 +5007,7 @@ version = "0.7.3"
 description = "Fundamental functions, annotation pipeline and constants for oktoberfest"
 optional = false
 python-versions = ">=3.9.0,<3.11.0"
-files = [
-]
+files = []
 develop = false
 
 [package.dependencies]
@@ -6472,4 +6470,4 @@ dlomix = ["dlomix", "tensorflow"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "f27960aa091ee8be2935b5b8d6c07837e8df877b9d41752d3eb4b0630be35df5"
+content-hash = "7846ec4857956419a59c68084df96bcc3ab51105d5efbdfdc7c277b06f716917"
