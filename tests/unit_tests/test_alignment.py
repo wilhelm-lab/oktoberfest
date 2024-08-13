@@ -2,7 +2,8 @@ import unittest
 from pathlib import Path
 
 from oktoberfest.data import Spectra
-from oktoberfest.predict.alignment import _prepare_alignment_df, _alignment
+from oktoberfest.predict.alignment import _alignment, _prepare_alignment_df
+
 
 class TestAlignment(unittest.TestCase):
     """Test alignment utils."""
