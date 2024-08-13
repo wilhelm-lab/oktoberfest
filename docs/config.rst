@@ -119,7 +119,7 @@ Applicable to in-silico digestion
 ---------------------------------
 
 .. table::
-   :class: fixed-table
+   :class: fixed-table digest-config-table
 
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                                                                            |
@@ -145,7 +145,7 @@ Applicable to transfer/refinement learning
 --------------------------------------------------------------
 
 .. table::
-   :class: fixed-table local-prediction-config-table
+   :class: fixed-table lib-refinement-learning-config-table
 
    +---------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                       |                             Description                                                                                                                            |
