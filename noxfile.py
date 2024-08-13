@@ -30,7 +30,6 @@ nox.options.sessions = (
 
 git_dependencies = [
     "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc",
-    "spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@development",
 ]
 
 
