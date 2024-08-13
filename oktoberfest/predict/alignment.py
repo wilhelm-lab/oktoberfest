@@ -3,7 +3,6 @@ from typing import Tuple
 
 import anndata
 import numpy as np
-from spectrum_fundamentals.fragments import retrieve_ion_types
 from spectrum_fundamentals.metrics.similarity import SimilarityMetrics
 
 from ..data.spectra import FragmentType, Spectra
@@ -16,31 +15,24 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     Prepare an alignment DataFrame from the given Spectra library.
 
     This function creates an alignment DataFrame by removing decoys and non-HCD-fragmented spectra
-    from the input library, selecting the top 1000 (or 100, if <1000 are available) highest-scoring spectra, and
+    from the input library, selecting the top 1000 (or however many are available if <1000) highest-scoring spectra, and
     repeating the DataFrame for each collision energy (CE) in the given range.
 
     :param library: the library to be propagated
     :param ce_range: the min and max CE to be propagated for alignment in the dataframe
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :return: a library that is modified according to the description above
-
-    :raises ValueError: if too few spectra are HCD-fragmented and not decoys
     """
     top_n = 1000
-    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
-    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby("RAW_FILE")
 
     if group_by_charge:
-        hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
+        groups = ["RAW_FILE", "PRECURSOR_CHARGE"]
+    else:
+        groups = ["RAW_FILE"]
 
+    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
+    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
     top_hcd_targets = hcd_targets.head(top_n)
-
-    if top_hcd_targets.shape[0] < 1000:
-        logger.debug("Not enough matching spectra for alignment, taking top 100 instead")
-        top_n = 100
-        top_hcd_targets = top_hcd_targets.head(100)
-    if top_hcd_targets.shape[0] < 100:
-        raise ValueError("Fewer than 100 HCD-fragmented & non-decoy spectra contained")
 
     alignment_library = library[top_hcd_targets.index]
     alignment_library = Spectra(
@@ -50,7 +42,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     alignment_library.obs.reset_index(inplace=True)
 
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
-    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), top_n)
+    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), len(top_hcd_targets))
 
     alignment_library.uns["ion_types"] = library.uns["ion_types"]
 
