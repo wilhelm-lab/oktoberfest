@@ -29,7 +29,7 @@ matplotlib = "^3.6.3"
 mokapot = ">=0.9.1,<0.11.0"
 numpy = ">=1.20,<1.25"
 seaborn = ">=0.12.2,<0.14.0"
-spectrum_fundamentals = {git = "git@github.com:wilhelm-lab/spectrum_fundamentals.git", branch = "development"}
+spectrum_fundamentals = ">=0.7.3,<0.8.0"
 spectrum-io = ">=0.6.1,<0.7.0"
 tritonclient = {extras = ["grpc"], version = ">=2.47.0,<2.48"}
 
