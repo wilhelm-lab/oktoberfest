@@ -82,6 +82,8 @@ Applicable to rescoring
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | regressionMethod           | Regression method for curve fitting (mapping from predicted iRT values to experimental retention times); can be "spline", "lowess", or "logistic"; default = "spline"            |
    +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | use_feature_cols           | Additional columns to be used as percolator/mokapot input features; Can be "all" for all additional columns in provided internal search results or a list of columns names       |
+   +----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Applicable to spectral library generation
 -----------------------------------------
