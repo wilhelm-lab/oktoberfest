@@ -270,7 +270,7 @@ class Config:
     @property
     def use_feature_cols(self) -> Union[str, list]:
         """Get additional columns ("all" for all columns or list with column names) from the config file."""
-        return self.data.get("use_feature_cols", "none")
+        return self.data.get("add_feature_cols", "none")
 
     @property
     def all_features(self) -> bool:
