@@ -28,6 +28,16 @@ nox.options.sessions = (
     "docs-build",
 )
 
+git_dependencies = [
+    "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc",
+    "spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@development",
+]
+
+
+def install_git_dependencies(session: Session):
+    for dependency in git_dependencies:
+        session.run("pip", "install", dependency)
+
 
 def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
     """Activate virtualenv in hooks installed by pre-commit.
@@ -143,12 +153,7 @@ def mypy(session: Session) -> None:
 def tests(session: Session) -> None:
     """Run the test suite."""
     session.install(".")
-    session.run(
-        "pip",
-        "install",
-        """dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc
-        spectrum-fundamentals@git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@development""",
-    )
+    install_git_dependencies(session)
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
@@ -177,6 +182,7 @@ def coverage(session: Session) -> None:
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
     session.install(".")
+    install_git_dependencies(session)
     session.install("pytest", "typeguard", "pygments")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
