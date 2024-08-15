@@ -66,7 +66,10 @@ def generate_features(
         >>>                     server_url="koina.wilhelmlab.org:443",
         >>>                     ssl=True,
         >>>                     targets=["intensities", "annotation"])
-        >>> re.generate_features(library, search_type="original", regression_method="spline", output_file="./tests/doctests/output/original.tab")
+        >>> re.generate_features(library=library,
+        >>>                         search_type="original",
+        >>>                         regression_method="spline",
+        >>>                         output_file="./tests/doctests/output/original.tab")
     """
     perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
@@ -85,7 +88,7 @@ def merge_input(
     tab_files: List[Path],
     output_file=Union[str, Path],
 ):
-    """
+    r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
 
     The function takes a list of tab files and concatenates them before writing a combined tab file back to
@@ -146,8 +149,8 @@ def merge_input(
         >>>                           'RT': [62.33,51.23],
         >>>                           'iRT': [63.98,53.24],
         >>>                           'pred_RT': [59.16,50.76]})
-        >>> rescore_df1.to_csv("./tests/doctests/input/rescore1.tab",sep='\\t',index=False)
-        >>> rescore_df2.to_csv("./tests/doctests/input/rescore2.tab",sep='\\t',index=False)
+        >>> rescore_df1.to_csv("./tests/doctests/input/rescore1.tab",sep='\t',index=False)
+        >>> rescore_df2.to_csv("./tests/doctests/input/rescore2.tab",sep='\t',index=False)
         >>> tabfile1 = Path("./tests/doctests/input/rescore1.tab")
         >>> tabfile2 = Path("./tests/doctests/input/rescore2.tab")
         >>> filelist = [tabfile1,tabfile2]

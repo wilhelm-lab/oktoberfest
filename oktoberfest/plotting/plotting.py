@@ -62,7 +62,10 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
         >>>                         "score": [-0.1,-0.5,-0.5],
         >>>                         "q-value": [0.006,0.004,0.003],
         >>>                         "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
-        >>> pl.plot_score_distribution(target=target_df, decoy=decoy_df, level="psm", filename="./tests/doctests/output/score_distribution_plot.svg")
+        >>> pl.plot_score_distribution(target=target_df,
+        >>>                             decoy=decoy_df,
+        >>>                             level="psm",
+        >>>                             filename="./tests/doctests/output/score_distribution_plot.svg")
     """
     score_col, _, _, _ = _check_columns(target)
 
@@ -122,7 +125,12 @@ def joint_plot(
         >>>                                 "q-value": [0.007,0.005,0.002],
         >>>                                 "score": [-0.2,-0.7,-0.8],
         >>>                                 "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
-        >>> pl.joint_plot(prosit_target=target_df, prosit_decoy=decoy_df, andromeda_target=andromeda_target_df, andromeda_decoy=andromeda_decoy_df, level="psm", filename="./tests/doctests/output/joint_plot.svg")
+        >>> pl.joint_plot(prosit_target=target_df,
+        >>>                 prosit_decoy=decoy_df,
+        >>>                 andromeda_target=andromeda_target_df,
+        >>>                 andromeda_decoy=andromeda_decoy_df,
+        >>>                 level="psm",
+        >>>                 filename="./tests/doctests/output/joint_plot.svg")
     """
     score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
@@ -202,7 +210,10 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
         >>>                             "q-value": [0.006,0.004,0.003],
         >>>                             "score": [-0.1,-0.5,-0.5],
         >>>                             "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
-        >>> pl.plot_gain_loss(prosit_target=prosit_df, andromeda_target=andromeda_df, level="psm", filename="./tests/doctests/output/gain_loss_psm_plot.svg")
+        >>> pl.plot_gain_loss(prosit_target=prosit_df,
+        >>>                     andromeda_target=andromeda_df,
+        >>>                     level="psm",
+        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.svg")
     """
     _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
@@ -292,7 +303,7 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> import pandas as pd
         >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
         >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
-        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, "./tests/doctests/output/mean_sa_ce_plot.svg")
+        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.svg")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.scatterplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax)
@@ -358,7 +369,10 @@ def plot_pred_rt_vs_irt(
         >>>                         "q-value": [0.005,0.003,0.002],
         >>>                         "score": [0.7,0.4,0.5],
         >>>                         "peptide": ["TAIASPEK","LGLTKLQLH","EFAVEVLK"]})
-        >>> pl.plot_pred_rt_vs_irt(prosit_df=prosit_df, prosit_target=target_df, outpath="./tests/doctests/output/", suffix="pred_irt_vs_irt")
+        >>> pl.plot_pred_rt_vs_irt(prosit_df=prosit_df,
+        >>>                         prosit_target=target_df,
+        >>>                         outpath="./tests/doctests/output/",
+        >>>                         suffix="pred_irt_vs_irt")
     """
     _, qval_col, _, psm_col = _check_columns(prosit_target)
 
@@ -413,7 +427,10 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
         >>>                         "q-value": [0.006,0.004,0.003],
         >>>                         "score": [-0.1,-0.5,-0.5],
         >>>                         "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
-        >>> pl.plot_sa_distribution(prosit_df=prosit_df, target_df=target_df, decoy_df=decoy_df, filename="./tests/doctests/output/sa_distribution_plot.svg")
+        >>> pl.plot_sa_distribution(prosit_df=prosit_df,
+        >>>                         target_df=target_df,
+        >>>                         decoy_df=decoy_df,
+        >>>                         filename="./tests/doctests/output/sa_distribution_plot.svg")
     """
     _, _, _, psm_col = _check_columns(target_df)
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
