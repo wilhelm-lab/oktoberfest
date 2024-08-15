@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
-    """
+    r"""
     Generate a spectral library from a given input.
 
     This function reads an input file that follows the specifications provided in the usage section for
@@ -39,9 +39,14 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        library = pp.gen_lib("peptides.csv")
-        print(library)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> peptides_df = pd.DataFrame({'modified_sequence': ['KIIDRAITSL', 'KIEKLKVEL', 'KINQQKLKL', 'TYDDATKTFTVTE', 'ASPTQPIQL'],
+        >>>                             'collision_energy': [34, 35, 34, 34, 35],
+        >>>                             'precursor_charge': [2, 2, 3, 2, 1]})
+        >>> peptides_df.to_csv("./tests/doctests/input/peptides.csv", sep='\t',index=False)
+        >>> library = pp.gen_lib("./tests/doctests/input/peptides.csv")
+        >>> print(library)
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
@@ -84,12 +89,12 @@ def generate_metadata(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        metadata = pp.generate_metadata(peptides=["AAACRFVQ","RMPCHKPYL"],
-                                        collision_energy=[30,35],
-                                        precursor_charge=[1,2],
-                                        fragmentation=["HCD","HCD"])
-        print(metadata)
+        >>> from oktoberfest import preprocessing as pp
+        >>> metadata = pp.generate_metadata(peptides=["AAACRFVQ","RMPCHKPYL"],
+        >>>                                             collision_energy=[30,35],
+        >>>                                             precursor_charge=[1,2],
+        >>>                                             fragmentation=["HCD","HCD"])
+        >>> print(metadata)
     """
     if isinstance(collision_energy, int):
         collision_energy = [collision_energy]
@@ -127,7 +132,7 @@ def digest(
     min_length: int,
     max_length: int,
 ) -> Dict[str, List[str]]:
-    """
+    r"""
     Digest a given fasta file with specific settings.
 
     This function performs an in-silico digestion of a fasta file based on the provided settings.
@@ -150,16 +155,25 @@ def digest(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        digest_dict = pp.digest(fasta="peptides.fasta",
-                                digestion="full",
-                                missed_cleavages=2,
-                                db="concat",
-                                enzyme="trypsin",
-                                special_aas="KR",
-                                min_length=7,
-                                max_length=60)
-        print(digest_dict)
+        >>> from oktoberfest import preprocessing as pp
+        >>> peptides = [
+        >>>     (">Peptide1 Example peptide 1", "MKTIIALSYIFCLVFAD"),
+        >>>     (">Peptide2 Example peptide 2", "GILGFVFRTLTVPS"),
+        >>>     (">Peptide3 Example peptide 3", "LLGATCMFV")
+        >>> ]
+        >>> with open("./tests/doctests/input/peptides.fasta", "w") as file:
+        >>>     for header, sequence in peptides:
+        >>>         file.write(f"{header}\n")
+        >>>         file.write(f"{sequence}\n")
+        >>> digest_dict = pp.digest(fasta="./tests/doctests/input/peptides.fasta",
+        >>>                         digestion="full",
+        >>>                         missed_cleavages=2,
+        >>>                         db="concat",
+        >>>                         enzyme="trypsin",
+        >>>                         special_aas="KR",
+        >>>                         min_length=7,
+        >>>                         max_length=60)
+        >>> print(digest_dict)
     """
     return get_peptide_to_protein_map(
         fasta_file=fasta,
@@ -193,14 +207,14 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import pandas as pd
-        search_results = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
-                            "SEQUENCE": ["AAACRFVQ","RMPCHKPYL","TAIASPEK"],
-                            "PEPTIDE_LENGTH": [8,9,8],
-                            "PRECURSOR_CHARGE": [1,2,7]})
-        filtered_peptides = pp.filter_peptides_for_model(peptides=search_results, model="prosit")
-        print(filtered_peptides)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> search_results = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
+        >>>                     "SEQUENCE": ["AAACRFVQ","RMPCHKPYL","TAIASPEK"],
+        >>>                     "PEPTIDE_LENGTH": [8,9,8],
+        >>>                     "PRECURSOR_CHARGE": [1,2,7]})
+        >>> filtered_peptides = pp.filter_peptides_for_model(peptides=search_results, model="prosit")
+        >>> print(filtered_peptides)
     """
     if "prosit" in model.lower():
         filter_kwargs = {
@@ -246,14 +260,14 @@ def filter_peptides(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import pandas as pd
-        search_results = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
-                            "SEQUENCE": ["AAACRFVQ","RMPCHKPYL","TAIASPEK"],
-                            "PEPTIDE_LENGTH": [8,9,8],
-                            "PRECURSOR_CHARGE": [1,2,7]})
-        filtered_peptides = pp.filter_peptides(peptides=search_results, min_length=7, max_length=30, max_charge=6)
-        print(filtered_peptides)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> search_results = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
+        >>>                     "SEQUENCE": ["AAACRFVQ","RMPCHKPYL","TAIASPEK"],
+        >>>                     "PEPTIDE_LENGTH": [8,9,8],
+        >>>                     "PRECURSOR_CHARGE": [1,2,7]})
+        >>> filtered_peptides = pp.filter_peptides(peptides=search_results, min_length=7, max_length=30, max_charge=6)
+        >>> print(filtered_peptides)
     """
     if isinstance(peptides, AnnData):
         df = peptides.obs
@@ -292,14 +306,14 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import pandas as pd
-        meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
-                                "PRECURSOR_CHARGE": [1,2,4]})
-        var = Spectra._gen_vars_df()
-        peptide_library = Spectra(obs=meta_df, var=var)
-        processed_peptides = pp.process_and_filter_spectra_data(library=peptide_library, model="prosit")
-        print(processed_peptides)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
+        >>>                         "PRECURSOR_CHARGE": [1,2,4]})
+        >>> var = Spectra._gen_vars_df()
+        >>> peptide_library = Spectra(obs=meta_df, var=var)
+        >>> processed_peptides = pp.process_and_filter_spectra_data(library=peptide_library, model="prosit")
+        >>> print(processed_peptides)
     """
     # add fixed mods and translate to internal format
     library.obs["MODIFIED_SEQUENCE"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
@@ -337,9 +351,14 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        library = pp.load_search("search_results.csv")
-        print(library)
+        >>> from oktoberfest import preprocessing as pp
+        >>> search_results = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL","TAIASPEK"],
+        >>>                     "SEQUENCE": ["AAACRFVQ","RMPCHKPYL","TAIASPEK"],
+        >>>                     "PEPTIDE_LENGTH": [8,9,8],
+        >>>                     "PRECURSOR_CHARGE": [1,2,7]})
+        >>> search_results.to_csv("./tests/doctests/input/search_results.csv",index=False)
+        >>> library = pp.load_search("./tests/doctests/input/search_results.csv")
+        >>> print(library)
     """
     return csv.read_file(input_file)
 
@@ -350,7 +369,7 @@ def convert_search(
     tmt_label: str = "",
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
-    """
+    r"""
     Convert search results to Oktoberfest format.
 
     Given a path to a file or directory containing search results from supported search engines,
@@ -373,9 +392,70 @@ def convert_search(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        converted_results = pp.convert_search(input_path="search_results.mzml", search_engine="maxquant")
-        print(converted_results)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> msms = pd.DataFrame({'Raw file': ['GN20170722_SK_HLA_G0103_R1_01', 'GN20170722_SK_HLA_G0103_R2_02'],
+        >>> 'Scan number': [21329, 20501],
+        >>> 'Scan index': [18847, 17998],
+        >>> 'Sequence': ['AAAAVVSGPKRGRKKP', 'AAAAVVSGPKRGRKKP'],
+        >>> 'Length': [16, 16],
+        >>> 'Missed cleavages': ['', ''],
+        >>> 'Modifications': ['Unmodified', 'Unmodified'],
+        >>> 'Modified sequence': ['_AAAAVVSGPKRGRKKP_', '_AAAAVVSGPKRGRKKP_'],
+        >>> 'Oxidation (M) Probabilities': ['', ''],
+        >>> 'Oxidation (M) Score Diffs': ['', ''],
+        >>> 'Oxidation (M)': [0, 0],
+        >>> 'Proteins': ['', ''],
+        >>> 'Charge': [3, 3],
+        >>> 'Fragmentation': ['HCD', 'HCD'],
+        >>> 'Mass analyzer': ['FTMS', 'FTMS'],
+        >>> 'Type': ['MULTI-SECPEP', 'MULTI-SECPEP'],
+        >>> 'Scan event number': [9, 5],
+        >>> 'Isotope index': [2, 2],
+        >>> 'm/z': [531.66176, 531.66176],
+        >>> 'Mass': [1591.9634, 1591.9634],
+        >>> 'Mass Error [ppm]': [-2.1109999999999998, -1.1018],
+        >>> 'Simple Mass Error [ppm]': [1259.2803, 1259.2803],
+        >>> 'Retention time': [46.272, 46.388000000000005],
+        >>> 'PEP': [0.57389, 0.57389],
+        >>> 'Score': [7.9138, 4.7582],
+        >>> 'Delta score': [3.5652, 1.4401],
+        >>> 'Score diff': ['', ''],
+        >>> 'Localization prob': [1, 1],
+        >>> 'Combinatorics': [0, 0],
+        >>> 'PIF': [0, 0],
+        >>> 'Fraction of total spectrum': [0, 0],
+        >>> 'Base peak fraction': [0, 0],
+        >>> 'Precursor Full ScanNumber': [-1, -1],
+        >>> 'Precursor Intensity': [0, 0],
+        >>> 'Precursor Apex Fraction': [0, 0],
+        >>> 'Precursor Apex Offset': [0, 0],
+        >>> 'Precursor Apex Offset Time': [0, 0],
+        >>> 'Matches Intensities': ['y5;y10;y5-NH3;a2;b12(2+)', 'y5;y5-NH3;b12(2+)'],
+        >>> 'Mass Deviations [Da]': ['34666.4;2191.7;88570.6;2148.7;89073.6', '10544.1;36224.8;73327.7'],
+        >>> 'Mass Deviations [ppm]': ['0.008335659;-0.01799215;-0.002397317;-0.0004952438;-0.004926575',
+        >>>                             '0.009286639;-0.004650567;-0.002822918'],
+        >>> 'Masses': ['14.23987;-16.19888;-4.217963;-4.303209;-9.237617', '15.86446;-8.182414;-5.293158'],
+        >>> 'Number of Matches': [5, 3],
+        >>> 'Intensity coverage': [0.1016966, 0.1564349],
+        >>> 'Peak coverage': [0.04166667, 0.04477612],
+        >>> 'Neutral loss level': ['None', 'None'],
+        >>> 'ETD identification type': ['Unknown', 'Unknown'],
+        >>> 'Reverse': ['Unknown +', 'Unknown +'],
+        >>> 'All scores': ['7.913836;4.348669;4.097387', '4.758178;3.318045;2.968256'],
+        >>> 'All sequences': ['AAAAVVSGPKRGRKKP;GVVAKGALTPKLSPVVG;GVVPSLKPTLAGKAVVG',
+        >>>                     'AAAAVVSGPKRGRKKP;VMKLLRHDKLVQL;QEILRKILPLGELA'],
+        >>> 'All modified sequences': ['_AAAAVVSGPKRGRKKP_;_GVVAKGALTPKLSPVVG_;_GVVPSLKPTLAGKAVVG_',
+        >>>                             '_AAAAVVSGPKRGRKKP_;_VMKLLRHDKLVQL_;_QEILRKILPLGELA_'],
+        >>> 'id': [1378, 1379],
+        >>> 'Protein group IDs': ['42625', '42625'],
+        >>> 'Peptide ID': [533, 533],
+        >>> 'Mod. peptide ID': [537, 537],
+        >>> 'Evidence ID': [1075, 1076],
+        >>> 'Oxidation (M) site IDs': ['', '']})
+        >>> msms.to_csv("./tests/doctests/input/msms.txt",sep='\t',index=False)
+        >>> converted_results = pp.convert_search(input_path="./tests/doctests/input/", search_engine="maxquant")
+        >>> print(converted_results)
     """
     search_engine = search_engine.lower()
     search_result: Any
@@ -412,14 +492,6 @@ def convert_timstof_metadata(
     :raises ValueError: if an unsupported search engine was given
 
     :return: dataframe containing metadata that maps scan numbers to precursors
-
-    :Example:
-
-    .. code-block:: python
-
-        from oktoberfest import preprocessing as pp
-        metadata = pp.convert_timstof_metadata(input_path="File1.mzml", search_engine="maxquant")
-        print(metadata)
     """
     search_engine = search_engine.lower()
     if search_engine == "maxquant":
@@ -452,9 +524,48 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        paths = pp.list_sepctra(input_dir="/data/spectra", input_format="mzml")
-        print(paths)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import os
+        >>> # creating minimum viable example .mzml file
+        >>> filecontent = '''<?xml version="1.0" encoding="UTF-8"?>
+        >>> <mzML xmlns="http://example" version="1.1.0">
+        >>>   <cvList count="2">
+        >>>     <cv id="MS" fullName="Mass Spectrometry Ontology" version="4.1.0" URI="https://example"/>
+        >>>     <cv id="UO" fullName="Unit Ontology" version="1.23" URI="http://example"/>
+        >>>   </cvList>
+        >>>   <fileDescription>
+        >>>     <fileContent>
+        >>>       <cvParam cvRef="MS" accession="MS:1000579" name="MS1 spectrum"/>
+        >>>     </fileContent>
+        >>>   </fileDescription>
+        >>>   <referenceableParamGroupList count="1">
+        >>>     <referenceableParamGroup id="commonInstrumentParams">
+        >>>       <cvParam cvRef="MS" accession="MS:1000031" name="instrument model" value="Example Instrument"/>
+        >>>     </referenceableParamGroup>
+        >>>   </referenceableParamGroupList>
+        >>>   <run id="run1" defaultInstrumentConfigurationRef="IC1">
+        >>>     <spectrumList count="1">
+        >>>       <spectrum index="0" id="scan=1" defaultArrayLength="5">
+        >>>         <cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="1"/>
+        >>>         <binaryDataArrayList count="2">
+        >>>           <binaryDataArray encodedLength="20">
+        >>>             <cvParam cvRef="MS" accession="4" name="m/z" unitCvRef="MS" unitAccession="0" unitName="m/z"/>
+        >>>             <binary>...</binary>
+        >>>           </binaryDataArray>
+        >>>           <binaryDataArray encodedLength="20">
+        >>>             <cvParam cvRef="MS" accession="5" name="i" unitCvRef="MS" unitAccession="1" unitName="c"/>
+        >>>             <binary>...</binary>
+        >>>           </binaryDataArray>
+        >>>         </binaryDataArrayList>
+        >>>       </spectrum>
+        >>>     </spectrumList>
+        >>>   </run>
+        >>> </mzML>'''
+        >>> os.makedirs("./tests/doctests/input/spectra", exist_ok=True)
+        >>> with open("./tests/doctests/input/spectra/File1.mzml","w+") as f:
+        >>>     f.writelines(filecontent)
+        >>> paths = pp.list_spectra(input_dir="./tests/doctests/input/spectra/", input_format="mzml")
+        >>> print(paths)
     """
     if isinstance(input_dir, str):
         input_dir = Path(input_dir)
@@ -545,19 +656,19 @@ def split_search(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import pandas as pd
-        search_results = pd.DataFrame({"RAW_FILE": ["File1","File2"],
-                                    "SCAN_NUMBER": [5123,4012],
-                                    "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
-                                    "PRECURSOR_CHARGE": [1,2],
-                                    "SCAN_EVENT_NUMBER": [4,10],
-                                    "MASS": [1000.41,1589.1],
-                                    "SCORE": [3.64,5.45],
-                                    "REVERSE": [False,False],
-                                    "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
-                                    "PEPTIDE_LENGTH": [8,9]})
-        pp.split_search(search_results=search_results, output_dir="out/split_files")
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> search_results = pd.DataFrame({"RAW_FILE": ["File1","File2"],
+        >>>                             "SCAN_NUMBER": [5123,4012],
+        >>>                             "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                             "PRECURSOR_CHARGE": [1,2],
+        >>>                             "SCAN_EVENT_NUMBER": [4,10],
+        >>>                             "MASS": [1000.41,1589.1],
+        >>>                             "SCORE": [3.64,5.45],
+        >>>                             "REVERSE": [False,False],
+        >>>                             "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
+        >>>                             "PEPTIDE_LENGTH": [8,9]})
+        >>> pp.split_search(search_results=search_results, output_dir="./tests/doctests/output/")
     """
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
@@ -613,17 +724,17 @@ def split_timstof_metadata(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import pandas as pd
-        timstod_meta = pd.DataFrame({"RAW_FILE": ["220331_NHG_malignant_CLL_02_Tue39L243_17%_DDA_Rep3",
-                                        "220331_NHG_malignant_CLL_02_Tue39L243_17%_DDA_Rep4"],
-                                        "FRAME": [2733,2824],
-                                        "PRECURSOR": [2195,2299],
-                                        "SCAN_NUM_BEGIN": [1416,1488],
-                                        "SCAN_NUM_END": [1439,1511],
-                                        "COLLISION_ENERGY": [26.25,24.57],
-                                        "SCAN_NUMBER": [8646,4879]})
-        pp.split_timstof_metadata(timstof_metadata=timstod_meta, output_dir="out/metadata")
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> timstod_meta = pd.DataFrame({"RAW_FILE": ["220331_NHG_malignant_CLL_02_Tue39L243_17%_DDA_Rep3",
+        >>>                                 "220331_NHG_malignant_CLL_02_Tue39L243_17%_DDA_Rep4"],
+        >>>                                 "FRAME": [2733,2824],
+        >>>                                 "PRECURSOR": [2195,2299],
+        >>>                                 "SCAN_NUM_BEGIN": [1416,1488],
+        >>>                                 "SCAN_NUM_END": [1439,1511],
+        >>>                                 "COLLISION_ENERGY": [26.25,24.57],
+        >>>                                 "SCAN_NUMBER": [8646,4879]})
+        >>> pp.split_timstof_metadata(timstof_metadata=timstod_meta, output_dir="./tests/doctests/output/")
     """
     if isinstance(output_dir, str):
         output_dir = Path(output_dir)
@@ -668,31 +779,31 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        import numpy as np
-        import pandas as pd
-        search_results = pd.DataFrame({"RAW_FILE": ["File1","File2"],
-                                        "SCAN_NUMBER": [5123,4012],
-                                        "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
-                                        "PRECURSOR_CHARGE": [1,2],
-                                        "SCAN_EVENT_NUMBER": [4,10],
-                                        "MASS": [1000.41,1589.1],
-                                        "SCORE": [3.64,5.45],
-                                        "REVERSE": [False,False],
-                                        "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
-                                        "PEPTIDE_LENGTH": [8,9]})
-        spectra = pd.DataFrame({"RAW_FILE": ["File1","File2"],
-                                "SCAN_NUMBER": [5123,4012],
-                                "INTENSITIES": [np.random.rand(174),np.random.rand(174)],
-                                "MZ": [np.random.rand(174),np.random.rand(174)],
-                                "MZ_RANGE": ["100.0-385.0","100.0-402.0"],
-                                "RETENTION_TIME": [59.1, 110.42],
-                                "MASS_ANALYZER": ["FTMS","FTMS"],
-                                "FRAGMENTATION": ["HCD","HCD"],
-                                "COLLISION_ENERGY": [27,27],
-                                "INSTRUMENT_TYPES": ["Q Exactive Plus","Q Exactive Plus"]})
-        psms = pp.merge_spectra_and_peptides(spectra=spectra, search=search_results)
-        print(psms)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> search_results = pd.DataFrame({"RAW_FILE": ["File1","File2"],
+        >>>                                 "SCAN_NUMBER": [5123,4012],
+        >>>                                 "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                                 "PRECURSOR_CHARGE": [1,2],
+        >>>                                 "SCAN_EVENT_NUMBER": [4,10],
+        >>>                                 "MASS": [1000.41,1589.1],
+        >>>                                 "SCORE": [3.64,5.45],
+        >>>                                 "REVERSE": [False,False],
+        >>>                                 "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
+        >>>                                 "PEPTIDE_LENGTH": [8,9]})
+        >>> spectra = pd.DataFrame({"RAW_FILE": ["File1","File2"],
+        >>>                         "SCAN_NUMBER": [5123,4012],
+        >>>                         "INTENSITIES": [np.random.rand(174),np.random.rand(174)],
+        >>>                         "MZ": [np.random.rand(174),np.random.rand(174)],
+        >>>                         "MZ_RANGE": ["100.0-385.0","100.0-402.0"],
+        >>>                         "RETENTION_TIME": [59.1, 110.42],
+        >>>                         "MASS_ANALYZER": ["FTMS","FTMS"],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"],
+        >>>                         "COLLISION_ENERGY": [27,27],
+        >>>                         "INSTRUMENT_TYPES": ["Q Exactive Plus","Q Exactive Plus"]})
+        >>> psms = pp.merge_spectra_and_peptides(spectra=spectra, search=search_results)
+        >>> print(psms)
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
@@ -721,16 +832,18 @@ def annotate_spectral_library(
 
     .. code-block:: python
 
-        psms = pd.DataFrame({"RAW_FILE": ["File1","File2"],
-                            "SCAN_NUMBER": [5123,4012],
-                            "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
-                            "PRECURSOR_CHARGE": [1,2],
-                            "PEPTIDE_LENGTH": [8,9],
-                            "MASS_ANALYZER": ["FTMS","FTMS"],
-                            "INTENSITIES": [np.random.rand(174),np.random.rand(174)],
-                            "MZ": [np.random.rand(174),np.random.rand(174)]})
-        library = pp.annotate_spectral_library(psms=psms, mass_tol=15, unit_mass_tol="ppm")
-        print(library)
+        >>> from oktoberfest import preprocessing as pp
+        >>> import pandas as pd
+        >>> psms = pd.DataFrame({"RAW_FILE": ["File1","File2"],
+        >>>                     "SCAN_NUMBER": [5123,4012],
+        >>>                     "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                     "PRECURSOR_CHARGE": [1,2],
+        >>>                     "PEPTIDE_LENGTH": [8,9],
+        >>>                     "MASS_ANALYZER": ["FTMS","FTMS"],
+        >>>                     "INTENSITIES": [np.random.rand(174),np.random.rand(174)],
+        >>>                     "MZ": [np.random.rand(174),np.random.rand(174)]})
+        >>> library = pp.annotate_spectral_library(psms=psms, mass_tol=15, unit_mass_tol="ppm")
+        >>> print(library)
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
@@ -776,9 +889,45 @@ def load_spectra(
 
     .. code-block:: python
 
-        from oktoberfest import preprocessing as pp
-        spectra = pp.load_spectra(filenames=["File1.mzml","File2.mzml"], parser="pyteomics")
-        print(spectra)
+        >>> from oktoberfest import preprocessing as pp
+        >>> filecontent = '''<?xml version="1.0" encoding="UTF-8"?>
+        >>> <mzML xmlns="http://example" version="1.1.0">
+        >>>   <cvList count="2">
+        >>>     <cv id="MS" fullName="Mass Spectrometry Ontology" version="4.1.0" URI="https://example"/>
+        >>>     <cv id="UO" fullName="Unit Ontology" version="1.23" URI="http://example"/>
+        >>>   </cvList>
+        >>>   <fileDescription>
+        >>>     <fileContent>
+        >>>       <cvParam cvRef="MS" accession="MS:1000579" name="MS1 spectrum"/>
+        >>>     </fileContent>
+        >>>   </fileDescription>
+        >>>   <referenceableParamGroupList count="1">
+        >>>     <referenceableParamGroup id="commonInstrumentParams">
+        >>>       <cvParam cvRef="MS" accession="MS:1000031" name="instrument model" value="Example Instrument"/>
+        >>>     </referenceableParamGroup>
+        >>>   </referenceableParamGroupList>
+        >>>   <run id="run1" defaultInstrumentConfigurationRef="IC1">
+        >>>     <spectrumList count="1">
+        >>>       <spectrum index="0" id="scan=1" defaultArrayLength="5">
+        >>>         <cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="1"/>
+        >>>         <binaryDataArrayList count="2">
+        >>>           <binaryDataArray encodedLength="20">
+        >>>             <cvParam cvRef="MS" accession="4" name="m/z" unitCvRef="MS" unitAccession="0" unitName="m/z"/>
+        >>>             <binary>...</binary>
+        >>>           </binaryDataArray>
+        >>>           <binaryDataArray encodedLength="20">
+        >>>             <cvParam cvRef="MS" accession="5" name="i" unitCvRef="MS" unitAccession="1" unitName="c"/>
+        >>>             <binary>...</binary>
+        >>>           </binaryDataArray>
+        >>>         </binaryDataArrayList>
+        >>>       </spectrum>
+        >>>     </spectrumList>
+        >>>   </run>
+        >>> </mzML>'''
+        >>> with open("./tests/doctests/input/File1.mzml","w+") as f:
+        >>>     f.writelines(filecontent)
+        >>> spectra = pp.load_spectra(filenames=["./tests/doctests/input/File1.mzml"], parser="pyteomics")
+        >>> print(spectra)
     """
     if isinstance(filenames, (str, Path)):
         internal_filenames = [Path(filenames)]
@@ -818,13 +967,6 @@ def convert_raw_to_mzml(
     :param thermo_exe: Path to the executable of ThermoRawFileParser, default depends on the OS:
         for Windows, it is "ThermoRawFileParser.exe", while for Linux and MacOS, it is
         "/opt/compomics/ThermoRawFileParser.exe".
-
-    :Example:
-
-    .. code-block:: python
-
-        from oktoberfest import preprocessing as pp
-        pp.convert_raw_to_mzml(raw_file="File1.raw", output_file="File1.mzml", "/opt/compomics/ThermoRawFileParser.exe")
     """
     if thermo_exe is None:
         if "linux" in platform or platform == "darwin":
@@ -844,13 +986,6 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
 
     :param d_dir: Path to d folder with spectra to be converted to hdf format
     :param output_file: Path to the location where the converted spectra should be written to
-
-    :Example:
-
-    .. code-block:: python
-
-        from oktoberfest import preprocessing as pp
-        pp.convert_d_to_hdf(d_dir="/input/spectra.d", output_file="/out/spectra")
     """
     d_dir = Path(d_dir)
     output_file = Path(output_file)
