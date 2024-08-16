@@ -36,6 +36,7 @@ tritonclient = {extras = ["grpc"], version = ">=2.47.0,<2.48"}
 dlomix = {extras = ["rltl-report", "wandb"], git = "git@github.com:wilhelm-lab/dlomix.git", branch = "feature/bmpc", optional = true}
 tensorflow = {version = ">=2.13,<2.16", extras = ["and-cuda"], optional = true}
 wandb = {version = "^0.17.5", optional = true}
+koinapy = "^0.0.7"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.3"
