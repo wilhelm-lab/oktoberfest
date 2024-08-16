@@ -19,7 +19,8 @@
         "precursorCharge": [2, 3],
         "minIntensity": 5e-4,
         "batchsize": 10000,
-        "format": "msp"
+        "format": "msp",
+        "nrOx": 1
     },
     "fastaDigestOptions": {
         "fragmentation": "HCD",

@@ -48,14 +48,13 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     score_col, _, _, _ = _check_columns(target)
 
     plt.figure(figsize=(8, 6))
-    bins = np.linspace(-3, 2, 15)
+    bins = np.linspace(-3, 2, 15).tolist()
     plt.hist(target[score_col], bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
     plt.hist(decoy[score_col], bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Score")
     plt.legend(loc="upper right")
     plt.title(f"Score Distribution ({level.capitalize()})")
     plt.savefig(filename, dpi=300)
-    plt.plot()
     plt.close()
 
 
@@ -127,7 +126,6 @@ def joint_plot(
     jplot.ax_joint.set_xlabel("Score\n(search engine)")
     jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
-    plt.show()
     plt.close()
 
 
@@ -212,7 +210,6 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     legend_label = ["Common", "Gained", "Lost"]
     plt.legend(legend_label, ncol=1, bbox_to_anchor=([1.2, 0.5, 0, 0]), frameon=False)
     plt.savefig(filename, dpi=300, bbox_inches="tight")
-    plt.show()
     plt.close()
 
 
@@ -228,7 +225,6 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
     ax.axvline(x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()], color="red")
     plt.grid()
     plt.savefig(filename, dpi=300)
-    plt.plot()
     plt.close()
 
 
@@ -248,7 +244,6 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
     plt.xticks(rotation=90)
     plt.grid()
     plt.savefig(filename, dpi=300)
-    plt.plot()
     plt.close()
 
 
@@ -285,7 +280,6 @@ def plot_pred_rt_vs_irt(
         plt.legend(labels=("predicted iRT", "alignment"), loc="best", fancybox=True, shadow=True)
         plt.grid()
         plt.savefig(Path(outpath) / f"{rawfile}_{suffix}", dpi=300)
-        plt.plot()
         plt.close()
 
 
@@ -301,14 +295,13 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
     decoy = prosit_df.merge(decoy_df, how="inner", left_on="SpecId", right_on=psm_col)
     plt.figure(figsize=(8, 6))
-    bins = np.linspace(0, 1, 15)
+    bins = np.linspace(0, 1, 15).tolist()
     plt.hist(target.spectral_angle, bins, label="Targets", rwidth=0.5, color="#48AF00", alpha=1.0)
     plt.hist(decoy.spectral_angle, bins, label="Decoys", rwidth=0.5, color="#FE7312", alpha=0.7)
     plt.xlabel("Spectral angle", size=14)
     plt.title("Target vs Decoys Spectral Angle Distribution")
     plt.legend(loc="upper right")
     plt.savefig(filename, dpi=300)
-    plt.plot()
     plt.close()
 
 
@@ -355,14 +348,12 @@ def plot_all(data_dir: Path):
         "psm",
         data_dir / "original_target_vs_decoys_psm_bins.svg",
     )
-
     plot_sa_distribution(
         prosit_df,
         prosit_psms_target,
         prosit_psms_decoy,
         data_dir / "target_vs_decoys_sa_distribution.svg",
     )
-
     joint_plot(
         prosit_pep_target,
         prosit_pep_decoy,
@@ -379,6 +370,7 @@ def plot_all(data_dir: Path):
         "psm",
         data_dir / "rescore_original_joint_plot_psm.svg",
     )
+
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
 
@@ -386,12 +378,7 @@ def plot_all(data_dir: Path):
 
 
 def plot_ce_ransac_model(
-    sa_ce_df: pd.DataFrame,
-    filename: Path,
-    xlabel: str = "MASS",
-    ylabel: str = "delta collision enegery",
-    *args,
-    **kwargs,
+    sa_ce_df: pd.DataFrame, filename: Path, xlabel: str = "MASS", ylabel: str = "delta collision enegery", **kwargs
 ):
     """Generate plot (mass vs ce difference)."""
     df = sa_ce_df.reset_index()
@@ -401,5 +388,6 @@ def plot_ce_ransac_model(
     sns.regplot(
         data=df, x="MASS", y="delta_collision_energy", scatter=False, ci=None, line_kws={"linestyle": "--"}, ax=ax
     )
-    ax.set(xlabel=xlabel, ylabel=ylabel, *args, **kwargs)
+    ax.set(xlabel=xlabel, ylabel=ylabel, **kwargs)
     plt.savefig(filename, dpi=300)
+    plt.close()

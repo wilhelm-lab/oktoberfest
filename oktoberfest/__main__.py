@@ -2,7 +2,7 @@ import argparse
 
 from rich import traceback
 
-from oktoberfest import runner
+from oktoberfest import __version__, runner
 
 """triqler.__main__: executed when bootstrap directory is called as script."""
 
@@ -12,14 +12,22 @@ from oktoberfest import runner
 
 def _parse_args():
     """Parse search_dir and config_path arguments."""
-    apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    apars = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)  # , add_help=False)
 
+    # option_group = apars.add_argument_group("optional arguments")
+    # option_group.add_argument("-h", "--help", action="help", help="show this help message and exit")
+
+    apars.add_argument("-v", "--version", action="version", version=f"{__version__}")
     apars.add_argument(
+        "-c",
         "--config_path",
         default=None,
-        metavar="C",
-        help="""Path to config file in json format. \\
-                If this argument is not specified, we try to find and use a file called config.json in <search_dir>.""",
+        metavar="CONFIG",
+        required=True,
+        help=(
+            "Path to config file in json format."
+            "If this argument is not specified, we try to find and use a file called config.json in <search_dir>."
+        ),
     )
 
     args = apars.parse_args()
