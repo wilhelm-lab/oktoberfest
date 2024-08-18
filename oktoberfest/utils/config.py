@@ -364,12 +364,12 @@ class Config:
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if ("alphapept" not in int_model) and ("tmt" not in int_model):
+            if ("tmt" not in int_model) and ("ptm" not in int_model) and ("alphapept" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
+            if ("tmt" not in irt_model) and ("ptm" not in irt_model) and ("alphapept" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
