@@ -216,7 +216,7 @@ For rescoring tasks including quantification via picked-group-FDR, create a conf
     "inputs":{
         "search_results": "./txt/msms.txt",
         "search_results_type": "Maxquant",
-        "spectra": "./",,
+        "spectra": "./",
         "spectra_type": "raw",
         "library_input": "./*.fasta",
     },
@@ -241,7 +241,7 @@ For rescoring tasks including quantification via picked-group-FDR, create a conf
         "maxLength": 60,
         "enzyme": "asp-n",
         "specialAas": "D",
-        "db": "target",
+        "db": "target"
     },
 }
 
