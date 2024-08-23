@@ -163,6 +163,9 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
+    if config.do_refinement_learning:
+        # don't do CE calibration
+        return
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
@@ -492,7 +495,8 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
     aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
-    _get_best_ce(aspec, spectra_file, config)
+    if not config.do_refinement_learning:
+        _get_best_ce(aspec, spectra_file, config)
 
     aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
