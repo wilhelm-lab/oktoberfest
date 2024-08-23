@@ -91,7 +91,7 @@ def refine_intensity_predictor(
             much longer"""
         )
 
-    additional_columns = ["SEQUENCE", "MODIFIED_SEQUENCE"] if config.include_original_sequences else []
+    additional_columns = ["SEQUENCE"] if config.include_original_sequences else []
 
     parquet_path, ion_types, modifications = create_dlomix_dataset(
         libraries,
