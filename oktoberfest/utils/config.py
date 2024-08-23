@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from sys import platform
 from typing import List, Optional, Tuple, Union
@@ -84,7 +85,7 @@ class Config:
             return self.data["type"]
         else:
             raise ValueError("No job type specified in config file.")
-        
+
     @property
     def quantification(self) -> bool:
         """Get quantification flag for performing quantification using picked-group-fdr."""
@@ -334,14 +335,9 @@ class Config:
                 )
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
+
         if self.quantification:
-            path_stem = Path(self.search_results).parent
-            if self.search_results_type == "Maxquant" and not Path(path_stem / "evidence.txt").is_file():
-                raise AssertionError(
-                    f"You specified the search results as {self.search_results_type} but evidence.txt is not available "\
-                    f"at {path_stem / 'evidence.txt'}."
-                )
-            # TODO implement tests for other than MQ evidence.txt
+            self._check_search_engine()
 
         if "alphapept" in int_model:
             instrument_type = self.instrument_type
@@ -389,6 +385,38 @@ class Config:
                         f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
                         f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
                     )
+
+    def _check_search_engine(self):
+        if Path(self.search_results).is_file():
+            path_stem = Path(self.search_results).parent
+        else:
+            path_stem = Path(self.search_results)
+
+        if self.search_results_type == "maxquant" and not Path(path_stem / "evidence.txt").is_file():
+            raise AssertionError(
+                f"You specified the search results as {self.search_results_type} but evidence.txt is not available "
+                f"at {path_stem / 'evidence.txt'}."
+            )
+        elif self.search_results_type == "sage" and not Path(path_stem / "results.sage.tsv").is_file():
+            raise AssertionError(
+                f"You specified the search results as {self.search_results_type} for quantification, but "
+                f"results.sage.tsv is not available at {path_stem / 'results.sage.tsv'}."
+            )
+        elif self.search_results_type == "msfragger":
+            check = False
+            for _root, _dirs, files in os.walk(path_stem):
+                if "psm.tsv" in files:
+                    check = True
+            if not check:
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    "no psm.tsv file could be found in subdirectories"
+                )
+            elif not Path(path_stem / "combined_ion.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"combined_ion.tsv is not available  at {path_stem / 'combined_ion.tsv'}."
+                )
 
     def __init__(self):
         """Initialize config file data."""
