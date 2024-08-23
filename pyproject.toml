@@ -30,7 +30,8 @@ spectrum-io = ">=0.5.0,<0.6.0"
 mokapot = ">=0.9.1,<0.11.0"
 tritonclient = {extras = ["grpc"], version = ">=2.47.0,<2.48"}
 numpy = ">=1.20,<1.25"
-anndata = "^0.10.5.post1"
+anndata = "^0.10.5post1"
+picked_group_fdr = ">=0.7.1"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=6.2.3"
