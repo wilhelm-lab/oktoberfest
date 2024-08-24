@@ -327,6 +327,7 @@ class Spectra(anndata.AnnData):
         include_intensities: bool = True,
         include_additional_columns: Optional[List[str]] = None,
         ion_type_order: Optional[List[str]] = None,
+        remove_decoys: bool = False,
         andromeda_score_threshold: Optional[float] = None,
         num_duplicates: Optional[int] = None,
     ) -> pd.DataFrame:
@@ -337,6 +338,7 @@ class Spectra(anndata.AnnData):
             Capitalization does not matter - internal column names are all uppercase, whereas returned column names are
             all lowercase.
         :param ion_type_order: Ion type order in which to save output intensity values.
+        :param remove_decoys: Whether to remove decoys
         :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
         :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
@@ -348,7 +350,8 @@ class Spectra(anndata.AnnData):
             [- intensities_raw (list[float]) (if `include_intensities == True`)]
             [additional columns (if specified via `include_additional_columns`)]
         """
-        self.remove_decoys()
+        if remove_decoys:
+            self.remove_decoys()
 
         if andromeda_score_threshold:
             self.filter_by_score(andromeda_score_threshold)

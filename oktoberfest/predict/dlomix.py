@@ -102,6 +102,7 @@ def refine_intensity_predictor(
         libraries,
         data_directory / dataset_name,
         include_additional_columns=additional_columns,
+        remove_decoys=True,
         andromeda_score_threshold=config.andromeda_score_threshold,
         num_duplicates=config.num_duplicates,
     )
@@ -148,6 +149,7 @@ def create_dlomix_dataset(
     libraries: List[Spectra],
     output_dir: Path,
     include_additional_columns: Optional[List[str]] = None,
+    remove_decoys: bool = False,
     andromeda_score_threshold: Optional[float] = None,
     num_duplicates: Optional[int] = None,
 ) -> Tuple[Path, List[str], List[str]]:
@@ -160,6 +162,7 @@ def create_dlomix_dataset(
     :param libraries: Spectral libraries to include
     :param output_dir: Directory to save processed dataset to
     :param include_additional_columns: additional columns to keep in the dataset
+    :param remove_decoys: Whether to remove decoys from the dataset
     :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
     :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
@@ -213,6 +216,7 @@ def create_dlomix_dataset(
     processed_data = all_data.preprocess_for_machine_learning(
         ion_type_order=ion_types,
         include_additional_columns=include_additional_columns,
+        remove_decoys=remove_decoys,
         andromeda_score_threshold=andromeda_score_threshold,
         num_duplicates=num_duplicates,
     )
@@ -262,7 +266,7 @@ class DLomix:
 
         """
         # TODO reuse training dataset if doing transfer learning (load subset based on RAW_FILE column)
-        parquet_path, ion_types, modifications = create_dlomix_dataset([data], self.output_path / dataset_name)
+        parquet_path, ion_types, modifications = create_dlomix_dataset([data], self.output_path / dataset_name, remove_decoys=False)
         ds = process_dataset(
             str(parquet_path),
             self.model,
