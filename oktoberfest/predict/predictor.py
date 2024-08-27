@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from .dlomix import DLomix
 
-    PredictionInterface = Union[DLomix, Koina]
+    PredictionInterface = Optional[Union[DLomix, Koina]]
 
 else:
     if importlib.util.find_spec("dlomix"):
         from .dlomix import DLomix
 
-        PredictionInterface = Union[DLomix, Koina]
+        PredictionInterface = Optional[Union[DLomix, Koina]]
     else:
         PredictionInterface = Koina
 
@@ -78,6 +78,10 @@ class Predictor:
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
         model_name = config.models[model_type]
+
+        if model_type == "irt" and model_name == "zero_irt":
+            logger.info(f"Using zero predictions for iRT")
+            return Predictor(None, "zero_iRT")
 
         if model_type == "irt" or not config.predict_intensity_locally:
             logger.info(f"Using model {model_name} via Koina")
@@ -134,8 +138,11 @@ class Predictor:
             predictions in after retrieval from the server.
         :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
         """
-        pred_irts = self.predict_at_once(data=data.obs, **kwargs)
-        data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+        if self._predictor is None:
+            data.add_column(data.obs["RETENTION_TIME"], name="PREDICTED_IRT")
+        else:    
+            pred_irts = self.predict_at_once(data=data.obs, **kwargs)
+            data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
     def predict_at_once(self, data: Spectra, **kwargs) -> Dict[str, np.ndarray]:
         """
