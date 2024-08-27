@@ -2,30 +2,15 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+# from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
 
 
 class Config:
     """Read config file and get information from it."""
-
-    def __init__(self):
-        """Initialize config file data."""
-        self.data = {}
-
-    def read(self, config_path: Union[str, Path]):
-        """
-        Read config file.
-
-        :param config_path: path to config file as a string
-        """
-        logger.info(f"Reading configuration from {config_path}")
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
-        with open(config_path) as f:
-            self.data = json.load(f)
-        self.base_path = config_path.parent
 
     @property
     def num_threads(self) -> int:
@@ -56,41 +41,12 @@ class Config:
             return self.data["models"]
 
     @property
-    def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator)."""
-        if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"].lower()
-        else:
-            return "mokapot"
-
-    @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return ""."""
         if "tag" in self.data:
             return self.data["tag"].lower()
         else:
             return ""
-
-    @property
-    def all_features(self) -> bool:
-        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
-
-    @property
-    def curve_fitting_method(self) -> str:
-        """
-        Get regressionMethod flag.
-
-        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
-        The supported flags are "lowess", "spline", and "logistic".
-        If not provided in the config file, returns "spline" by default.
-
-        :return: a lowercase string representation of the regression method.
-        """
-        return self.data.get("regressionMethod", "spline").lower()
 
     @property
     def job_type(self) -> str:
@@ -103,19 +59,49 @@ class Config:
             raise ValueError("No job type specified in config file.")
 
     @property
-    def inputs(self) -> dict:
-        """Get inputs dictionary from the config file."""
-        return self.data.get("inputs", {})
-
-    @property
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
 
     @property
+    def fragmentation_method(self) -> str:
+        """Get fragmentation method from config file."""
+        return self.data.get("fragmentation_method", "HCD")
+
+    @property
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
+
+    @property
+    def output(self) -> Path:
+        """Get path to the output directory from the config file."""
+        # check if output is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return self.base_path / Path(self.data.get("output", "./"))
+
+    @property
+    def thermo_exe(self) -> Path:
+        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
+
+        def default_thermo():
+            if "linux" in platform or platform == "darwin":
+                return "/opt/compomics/ThermoRawFileParser.exe"
+            return "ThermoRawFileParser.exe"
+
+        return Path(self.data.get("thermoExe", default_thermo()))
+
+    ###########################
+    # these are input options #
+    ###########################
+
+    @property
+    def inputs(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("inputs", {})
 
     @property
     def search_results(self) -> Path:
@@ -137,6 +123,37 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
+    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+        """Get the custom modification dictionary from the config file."""
+        return self.inputs.get("custom_modifications", {})
+
+    @property
+    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom static modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("static_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
+
+    @property
+    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom variable modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping var mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("var_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
+
+    @property
     def spectra(self) -> Path:
         """Get path to spectra files from the config file."""
         # check if spectra is absolute and if not, append with the directory
@@ -148,7 +165,7 @@ class Config:
 
     @property
     def spectra_type(self) -> str:
-        """Get spectra type (.raw, .mzml, .pkl) from the config file."""
+        """Get spectra type (.raw, .mzml, .d, .hdf) from the config file."""
         return self.inputs.get("spectra_type", "raw").lower()
 
     @property
@@ -175,19 +192,16 @@ class Config:
             raise ValueError("No library input file type (fasta or peptides) specified in config file.")
 
     @property
-    def output_format(self) -> str:
-        """Get output format from the config file."""
-        return self.data.get("outputFormat", "").lower()
+    def instrument_type(self) -> Optional[str]:
+        """Get type of mass spectrometer from the config file (superseeds value read from from mzML)."""
+        _instrument_type = self.inputs.get("instrument_type")
+        if _instrument_type is None:
+            return None
+        return _instrument_type.upper()
 
-    @property
-    def output(self) -> Path:
-        """Get path to the output directory from the config file."""
-        # check if output is absolute and if not, append with the directory
-        # of the config file to resolve paths relative to the config location. This is
-        # required to make sure it always works no matter from which working directory
-        # oktoberfest is executed in case a relative path is provided, which would
-        # otherwise be relative to the working directory.
-        return self.base_path / Path(self.data.get("output", "./"))
+    #####################################
+    # these are fasta digestion options #
+    #####################################
 
     @property
     def fasta_digest_options(self) -> dict:
@@ -195,18 +209,12 @@ class Config:
         return self.data.get("fastaDigestOptions", {})
 
     @property
-    def fragmentation(self) -> str:
-        """Get fragmentation method from the config file (HCD or CID)."""
-        # check default
-        return self.fasta_digest_options.get("fragmentation", "").lower()
-
-    @property
     def digestion(self) -> str:
         """Get digestion mode (full, semi or none)."""
         return self.fasta_digest_options.get("digestion", "full").lower()
 
     @property
-    def cleavages(self) -> int:
+    def missed_cleavages(self) -> int:
         """Get number of allowed missed cleavages used in the search engine."""
         return self.fasta_digest_options.get("missedCleavages", 2)
 
@@ -235,16 +243,9 @@ class Config:
         """Target, decoy or concat (relevant if fasta file provided)."""
         return self.fasta_digest_options.get("db", "concat").lower()
 
-    @property
-    def thermo_exe(self) -> Path:
-        """Get the path to the ThermoRawFileParser executable. Returns "ThermoRawFileParser.exe" if not found."""
-
-        def default_thermo():
-            if "linux" in platform or platform == "darwin":
-                return "/opt/compomics/ThermoRawFileParser.exe"
-            return "ThermoRawFileParser.exe"
-
-        return Path(self.data.get("thermoExe", default_thermo()))
+    ##################################
+    # these are ce alignment options #
+    ##################################
 
     @property
     def ce_alignment_options(self) -> dict:
@@ -262,26 +263,214 @@ class Config:
         """Get whether or not to perform ce calibration using a ransac model."""
         return self.ce_alignment_options.get("use_ransac_model", False)
 
+    ###############################
+    # these are rescoring options #
+    ###############################
+
+    @property
+    def use_feature_cols(self) -> Union[str, list]:
+        """Get additional columns ("all" for all columns or list with column names) from the config file."""
+        return self.data.get("add_feature_cols", "none")
+
+    @property
+    def all_features(self) -> bool:
+        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
+        if "allFeatures" in self.data:
+            return self.data["allFeatures"]
+        else:
+            return False
+
+    @property
+    def curve_fitting_method(self) -> str:
+        """
+        Get regressionMethod flag.
+
+        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+        The supported flags are "lowess", "spline", and "logistic".
+        If not provided in the config file, returns "spline" by default.
+
+        :return: a lowercase string representation of the regression method.
+        """
+        return self.data.get("regressionMethod", "spline").lower()
+
+    @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
+
+    ######################################
+    # these are spectral library options #
+    ######################################
+
+    @property
+    def spec_lib_options(self) -> dict:
+        """Get inputs dictionary from the config file."""
+        return self.data.get("spectralLibraryOptions", {})
+
+    @property
+    def output_format(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("format", "msp").lower()
+
+    @property
+    def fragmentation(self) -> str:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("fragmentation", "").lower()
+
+    @property
+    def collision_energy(self) -> int:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("collisionEnergy", 30)
+
+    @property
+    def batch_size(self) -> int:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("batchsize", 10000)
+
+    @property
+    def min_intensity(self) -> float:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("minIntensity", 5e-4)
+
+    @property
+    def precursor_charge(self) -> List[int]:
+        """Get output format from the config file."""
+        return self.spec_lib_options.get("precursorCharge", [2, 3])
+
+    @property
+    def nr_ox(self) -> int:
+        """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
+        return self.spec_lib_options.get("nrOx", 1)
+
+    ########################
+    # functions start here #
+    ########################
+
     def check(self):
         """Validate the configuration."""
         # check tmt tag and models
+        int_model = self.models["intensity"].lower()
+        irt_model = self.models["irt"].lower()
         if self.tag == "":
-            if "tmt" in self.models["intensity"].lower():
+            if "tmt" in int_model:
                 raise AssertionError(
                     f"You requested the intensity model {self.models['intensity']} but provided no tag. Please check."
                 )
-            if "tmt" in self.models["irt"].lower():
+            if "tmt" in irt_model:
                 raise AssertionError(
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if "tmt" not in self.models["intensity"].lower():
+            if ("tmt" not in int_model) and ("ptm" not in int_model) and ("alphapept" not in int_model):
                 raise AssertionError(
-                    f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible."
-                    " Please check and use a TMT model instead."
+                    f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
+                    "Please check and use a TMT model instead."
                 )
-            if "tmt" not in self.models["irt"].lower():
+            if ("tmt" not in irt_model) and ("ptm" not in irt_model) and ("alphapept" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
                 )
+        if self.job_type == "SpectralLibraryGeneration":
+            self._check_for_speclib()
+
+        if "alphapept" in int_model:
+            instrument_type = self.instrument_type
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
+                raise ValueError(
+                    f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                    f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
+                    f"of {valid_alphapept_instrument_types}."
+                )
+
+    def _check_for_speclib(self):
+        if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
+            raise AssertionError(
+                f"You requested the intensity model {self.models['intensity']} but want to create a spectral library for HCD data. "
+                "Please check that the fragmentation method and the chosen model agree."
+            )
+        elif self.fragmentation == "cid" and self.models["intensity"].lower().endswith("hcd"):
+            raise AssertionError(
+                f"You requested the intensity model {self.models['intensity']} but want to create a spectral library for CID data. "
+                "Please check that the fragmentation method and the chosen model agree."
+            )
+        elif self.fragmentation == "":
+            model_end = self.models["intensity"].lower()[-3:]
+            if model_end == "hcd" or model_end == "cid":
+                logger.warning(
+                    f"No fragmentation method was specified. Assuming {model_end} fragmentation based on chosen intensity "
+                    f"model {self.models['intensity']}."
+                )
+            else:
+                raise AssertionError(
+                    f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
+                )
+        if "alphapept" in self.models["intensity"].lower():
+            instrument_type = self.instrument_type
+            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+            if instrument_type is None:
+                raise AssertionError(
+                    f"The chosen intensity model {self.models['intensity']} requires an instrument type. "
+                    f"Provide one of {valid_alphapept_instrument_types}."
+                )
+            else:
+                if instrument_type not in valid_alphapept_instrument_types:
+                    raise ValueError(
+                        f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                        f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
+                    )
+
+    def __init__(self):
+        """Initialize config file data."""
+        self.data = {}
+
+    def read(self, config_path: Union[str, Path]):
+        """
+        Read config file.
+
+        :param config_path: path to config file as a string
+        """
+        logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+        with open(config_path) as f:
+            self.data = json.load(f)
+        self.base_path = config_path.parent
+
+    def custom_to_unimod(self) -> Dict[str, int]:
+        """
+        Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+
+        :return: a dictionary mapping custom mod identifiers (keys) to the unimod id (values).
+        """
+        custom_to_unimod = {}
+        for k, v in self.var_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        for k, v in self.static_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        return custom_to_unimod
+
+    def unimod_to_mass(self) -> Dict[str, float]:
+        """
+        Map UNIMOD Id to its mass for all static and variable modifications.
+
+        This function maps the UNIMOD Id to its corresponding mass for each custom modifiction
+        provided in the static and variable modifications.
+
+        :return: a dictionary mapping the UNIMOD Ids (keys) to the mass(value) of a given modification
+        """
+        unimod_to_mass = {}
+        for unimod_id, mass, _ in self.var_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        for unimod_id, mass, _ in self.static_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        return unimod_to_mass
+
+    """
+    def custom_for_dlomix(self):
+        return list(parse_mods(self.custom_to_unimod()).values())
+    """

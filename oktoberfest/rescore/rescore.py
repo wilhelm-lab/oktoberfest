@@ -17,6 +17,7 @@ def generate_features(
     library: Spectra,
     search_type: str,
     output_file: Union[str, Path],
+    additional_columns: Union[str, list],
     all_features: bool = False,
     regression_method: str = "spline",
 ):
@@ -29,15 +30,17 @@ def generate_features(
     :param library: the library to perform feature generation on
     :param search_type: One of "original" and "rescore", which determines the generated features
     :param output_file: the location to the generated tab file to be used for percolator / mokapot
+    :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
     :param regression_method: The regression method to use for iRT alignment
     """
     perc_features = Percolator(
-        metadata=library.get_meta_data(),
+        metadata=library.get_meta_data().reset_index(drop=True),
         pred_intensities=library.get_matrix(FragmentType.PRED)[0],
         true_intensities=library.get_matrix(FragmentType.RAW)[0],
         mz=library.get_matrix(FragmentType.MZ)[0],
         input_type=search_type,
+        additional_columns=additional_columns,
         all_features_flag=all_features,
         regression_method=regression_method,
     )
@@ -178,12 +181,6 @@ def rescore_with_mokapot(
     mokapot_logger.addHandler(file_handler)
 
     np.random.seed(123)
-
-    df = pd.read_csv(input_file, sep="\t")
-
-    # TODO remove this if not necessary
-    df = df.rename(columns={"Protein": "Proteins"})
-    df.to_csv(input_file, sep="\t")
 
     psms = mokapot.read_pin(input_file)
     logger.info(f"Number of PSMs used for training: {len(psms)}")

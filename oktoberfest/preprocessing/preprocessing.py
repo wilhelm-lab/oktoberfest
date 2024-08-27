@@ -1,17 +1,22 @@
 import logging
+import re
+from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
+from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
-from spectrum_fundamentals.fragments import compute_peptide_mass
+from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
+from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
 from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, Sage
-from spectrum_io.spectral_library import digest as digest_io
+from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
 
@@ -33,68 +38,135 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     """
     library_df = csv.read_file(input_file)
     library_df.columns = library_df.columns.str.upper()
-    library = Spectra()
-    library.add_columns(library_df)
-    return library
+    if "PROTEINS" not in library_df.columns:
+        library_df["PROTEINS"] = "unknown"
+    var_df = Spectra._gen_vars_df()
+    spec = Spectra(obs=library_df, var=var_df)
+
+    spec.var_names = var_df.index
+    return spec
+
+
+def generate_metadata(
+    peptides: List[str],
+    collision_energy: Union[int, List[int]],
+    precursor_charge: Union[int, List[int]],
+    fragmentation: Union[str, List[str]],
+    nr_ox: int,
+    instrument_type: Optional[str] = None,
+    proteins: Optional[List[List[str]]] = None,
+) -> pd.DataFrame:
+    """
+    Create metadata about peptides for a spectral library.
+
+    This function generates a pandas DataFrame containing metadata for peptides in a spectral library.
+    Each row in the DataFrame represents a unique combination of a peptide, collision energy,
+    precursor charge, and fragmentation. If multiple collision energies, precursor charges, or fragmentations
+    are provided, the function creates all possible combinations for each peptide.
+    An optional protein list can be provided which has to have the same length as the number of peptides.
+
+    :param peptides: A list of peptides for which metadata is generated.
+    :param collision_energy: A list of collision energies corresponding to each peptide.
+    :param precursor_charge: A list of precursor charges corresponding to each peptide.
+    :param fragmentation: A list of fragmentation methods corresponding to each peptide.
+    :param nr_ox: Maximal number of allowed oxidations.
+    :param instrument_type: The type of mass spectrometeter. Only required when predicting intensities
+        with AlphaPept. Choose one of ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"].
+    :param proteins: An optional list of proteins associated with each peptide.
+        If provided, it must have the same length as the number of peptides.
+    :raises AssertionError: If the lengths of peptides and proteins is not the same.
+    :return: A DataFrame containing metadata with the columns "modified_peptide","collision_energy",
+        "precursor_charge","fragmentation" and an optional "proteins" column.
+    """
+    if isinstance(collision_energy, int):
+        collision_energy = [collision_energy]
+    if isinstance(precursor_charge, int):
+        precursor_charge = [precursor_charge]
+    if isinstance(fragmentation, str):
+        fragmentation = [fragmentation]
+
+    if proteins is not None and len(proteins) != len(peptides):
+        raise AssertionError("Number of proteins must match the number of peptides.")
+
+    combinations_product = product(peptides, collision_energy, precursor_charge, fragmentation)
+
+    metadata = pd.DataFrame(
+        combinations_product, columns=["modified_sequence", "collision_energy", "precursor_charge", "fragmentation"]
+    )
+    metadata["peptide_length"] = metadata["modified_sequence"].str.len()
+    metadata["instrument_types"] = instrument_type
+
+    if proteins is not None:
+        n_repeats = len(metadata) // len(proteins)
+        metadata["proteins"] = list(
+            chain.from_iterable([repeat(";".join(prot_list), n_repeats) for prot_list in proteins])
+        )
+    else:
+        metadata["proteins"] = "unknown"
+
+    modified_peptides = []
+    for _, row in metadata.iterrows():
+        peptide = row["modified_sequence"]
+        res = [i.start() for i in re.finditer("M", peptide)]
+        res.reverse()
+        for i in range(1, min(len(res), nr_ox) + 1):
+            possible_indices = list(combinations(res, i))
+            for index in possible_indices:
+                string_mod = peptide
+                for j in index:
+                    string_mod = string_mod[: j + 1] + "[UNIMOD:35]" + string_mod[j + 1 :]
+                new_row = row.copy()
+                new_row["modified_sequence"] = string_mod
+                modified_peptides.append(new_row)
+    metadata = pd.concat([metadata, pd.DataFrame(modified_peptides)], ignore_index=True)
+
+    return metadata
 
 
 def digest(
     fasta: Union[str, Path],
-    output: Union[str, Path],
-    fragmentation: str,
     digestion: str,
-    cleavages: int,
+    missed_cleavages: int,
     db: str,
     enzyme: str,
     special_aas: str,
     min_length: int,
     max_length: int,
-):
+) -> Dict[str, List[str]]:
     """
-    Perform an in-silico digest of a given fasta file.
+    Digest a given fasta file with specific settings.
 
-    This function takes sequences from a fasta file and performs digestion using a given
-    protease with specific settings before writing the resulting peptides to the given output file.
+    This function performs an in-silico digestion of a fasta file based on the provided settings.
+    It returns a dictionary that maps peptides to the list of associated protein IDs.
+
 
     :param fasta: Path to fasta file containing sequences to digest
-    :param output: Path to the output file containing the peptides
-    :param fragmentation: The fragmentation method to use, can be HCD / CID
-    :param digestion: TODO
-    :param cleavages: The number of allowed miscleaveages
+    :param digestion: The type of digestion, one of "full, "semi", "none"
+    :param missed_cleavages: The number of allowed miscleaveages
     :param db: The desired database to produce, can be target, decoy, or both
     :param enzyme: The protease to use for digestion TODO list available proteases
-    :param special_aas: Special aminoacids used for decoy generation, TODO when relevant
+    :param special_aas: List of aas to be swapped with preceding aa in reverse sequences.
+        This mimics the behaviour of MaxQuant when creating decoys.
     :param min_length: Minimal length of digested peptides
     :param max_length: Maximal length of digested peptides
+
+    :return: A Dictionary that maps peptides (keys) to a list of protein IDs (values).
     """
-    if isinstance(output, str):
-        output = Path(output)
-    cmd = [
-        "--fasta",
-        f"{fasta}",
-        "--prosit_input",
-        f"{output / 'prosit_input.csv'}",
-        "--fragmentation",
-        f"{fragmentation}",
-        "--digestion",
-        f"{digestion}",
-        "--cleavages",
-        f"{cleavages}",
-        "--db",
-        f"{db}",
-        "--enzyme",
-        f"{enzyme}",
-        "--special-aas",
-        f"{special_aas}",
-        "--min-length",
-        f"{min_length}",
-        "--max-length",
-        f"{max_length}",
-    ]
-    digest_io.main(cmd)
+    return get_peptide_to_protein_map(
+        fasta_file=fasta,
+        db=db,
+        min_len=min_length,
+        max_len=max_length,
+        enzyme=enzyme,
+        digestion=digestion,
+        miscleavages=missed_cleavages,
+        methionine_cleavage=True,
+        use_hash_key=False,
+        special_aas=special_aas,
+    )
 
 
-def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFrame:
+def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results to support a given peptide prediction model.
 
@@ -106,7 +178,7 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
 
     :raises ValueError: if an unsupported model is supplied
 
-    :return: The filtered dataframe to be used with the given model.
+    :return: The filtered dataframe or AnnData object to be used with the given model.
     """
     if "prosit" in model.lower():
         filter_kwargs = {
@@ -114,13 +186,27 @@ def filter_peptides_for_model(peptides: pd.DataFrame, model: str) -> pd.DataFram
             "max_length": 30,
             "max_charge": 6,
         }
+    elif "ms2pip" in model.lower():
+        filter_kwargs = {
+            "min_length": 2,
+            "max_length": 100,
+            "max_charge": 6,
+        }
+    elif "alphapept" in model.lower():
+        filter_kwargs = {
+            "min_length": 7,
+            "max_length": 35,
+            "max_charge": 4,
+        }
     else:
         raise ValueError(f"The model {model} is not known.")
 
     return filter_peptides(peptides, **filter_kwargs)
 
 
-def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, max_charge: int) -> pd.DataFrame:
+def filter_peptides(
+    peptides: Union[pd.DataFrame, AnnData], min_length: int, max_length: int, max_charge: int
+) -> Union[pd.DataFrame, AnnData]:
     """
     Filter search results using given constraints.
 
@@ -132,24 +218,26 @@ def filter_peptides(peptides: pd.DataFrame, min_length: int, max_length: int, ma
     :param max_length: The maximal length of a peptide to be retained
     :param max_charge: The maximal precursor charge of a peptide to be retained
 
-    :return: The filtered dataframe given the provided constraints.
+    :return: The filtered dataframe or AnnData object given the provided constraints.
     """
-    return peptides[
-        (peptides["PEPTIDE_LENGTH"] <= max_length)
-        & (peptides["PEPTIDE_LENGTH"] >= min_length)
-        & (peptides["PRECURSOR_CHARGE"] <= max_charge)
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~peptides["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~peptides["SEQUENCE"].str.contains("U"))
-    ]
+    if isinstance(peptides, AnnData):
+        df = peptides.obs
+    else:
+        df = peptides
+    peptide_filter = (
+        (df["PEPTIDE_LENGTH"] <= max_length)
+        & (df["PEPTIDE_LENGTH"] >= min_length)
+        & (df["PRECURSOR_CHARGE"] <= max_charge)
+        & (~df["SEQUENCE"].str.contains(r"B|\*|\.|O|U|X|Z"))
+    )
+    return peptides[peptide_filter.values]
 
 
 def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Optional[str] = None) -> Spectra:
     """
     Process and filter the spectra data in the given SpectralLibrary object.
 
-    This function applies various modifications and filters to the 'spectra_data' DataFrame
+    This function applies various modifications and filters to the obs DataFrame
     in the provided SpectralLibrary object. It modifies the 'MODIFIED_SEQUENCE' column,
     converts the 'MODIFIED_SEQUENCE' to internal format, extracts 'SEQUENCE', and filters
     out certain entries based on specific criteria. The specification of the internal file format can be found at
@@ -162,33 +250,32 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     :return: The processed and filtered Spectra object
     """
     # add fixed mods and translate to internal format
-    library.spectra_data["MODIFIED_SEQUENCE"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
+    library.obs["MODIFIED_SEQUENCE"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: "_" + x + "_")
 
     fixed_mods = {"C": "C[UNIMOD:4]"}
     if tmt_label is not None and tmt_label != "":
         unimod_tag = c.TMT_MODS[tmt_label]
         fixed_mods = {"C": "C[UNIMOD:4]", "^_": f"_{unimod_tag}-", "K": f"K{unimod_tag}"}
 
-    library.spectra_data["MODIFIED_SEQUENCE"] = maxquant_to_internal(
-        library.spectra_data["MODIFIED_SEQUENCE"], fixed_mods=fixed_mods
-    )
+    # we use this method since we expect the input to be similar to MQ in that fixed modifications are
+    # not written. This needs to be changed once we allow arbitrary modifications for the spectral library
+    # generation, not just a number of oxidations and fixed carbamidomethylation / + TMT.
+    library.obs["MODIFIED_SEQUENCE"] = maxquant_to_internal(library.obs["MODIFIED_SEQUENCE"], mods=fixed_mods)
 
     # get sequence and its length
-    library.spectra_data["SEQUENCE"] = internal_without_mods(library.spectra_data["MODIFIED_SEQUENCE"])
-    library.spectra_data["PEPTIDE_LENGTH"] = library.spectra_data["SEQUENCE"].apply(lambda x: len(x))
+    library.obs["SEQUENCE"] = internal_without_mods(library.obs["MODIFIED_SEQUENCE"])
+    library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    logger.info(f"No of sequences before Filtering is {len(library.spectra_data)}")
-    library.spectra_data = filter_peptides_for_model(library.spectra_data, model)
-    logger.info(f"No of sequences after Filtering is {len(library.spectra_data)}")
-
-    library.spectra_data["MASS"] = library.spectra_data["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
+    library = filter_peptides_for_model(library, model)
+    library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
 
 
-# CeCalibration
-def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
+def load_search(
+    input_file: Union[str, Path],
+) -> pd.DataFrame:
     """
     Load search results.
 
@@ -198,26 +285,37 @@ def load_search(input_file: Union[str, Path]) -> pd.DataFrame:
     :param input_file: Path to the file containing search results in the internal Oktoberfest format.
     :return: dataframe containing the search results.
     """
-    return csv.read_file(input_file)
+    search_results = csv.read_file(input_file)
+    return search_results
 
 
 def convert_search(
-    input_path: Union[str, Path], output_file: Union[str, Path], search_engine: str, tmt_label: str = ""
-):
+    input_path: Union[str, Path],
+    search_engine: str,
+    tmt_label: str = "",
+    custom_mods: Optional[Dict[str, int]] = None,
+    output_file: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
     """
     Convert search results to Oktoberfest format.
 
     Given a path to a file or directory containing search results from supported search engines,
-    the function parses, converts them to the internal format used by Oktoberfest and writes them
-    to a specified location. The specification of the internal file format can be found at :doc:`../../internal_format`.
+    the function parses, converts them to the internal format used by Oktoberfest and returns it as a dataframe.
+    If a path to an output file is provided, the converted results are also stored to the specified location.
+    The specification of the internal file format can be found at :doc:`../../internal_format`.
 
     :param input_path: Path to the directory or file containing the search results.
-    :param output_file: Path to the location where the converted search results should be written to.
     :param search_engine: The search engine used to produce the search results,
         currently supported are "Maxquant", "Mascot" and "MSFragger"
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
+    :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+        static and variable mods as keys. The values are the integer values of the respective unimod identifier
+    :param output_file: Optional path to the location where the converted search results should be written to.
+        If this is omitted, the results are not stored.
+
     :raises ValueError: if an unsupported search engine was given
+    :return: A dataframe containing the converted results.
     """
     search_engine = search_engine.lower()
     search_result: Any
@@ -232,37 +330,94 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    search_result(input_path).generate_internal(tmt_labeled=tmt_label, out_path=output_file)
+    return search_result(input_path).generate_internal(
+        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
+    )
 
 
-def list_spectra(input_dir: Union[str, Path], file_format: str) -> List[Path]:
+def convert_timstof_metadata(
+    input_path: Union[str, Path], search_engine: str, output_file: Optional[Union[str, Path]] = None
+) -> pd.DataFrame:
+    """
+    Convert metadata for timstof to Oktoberfest format.
+
+    Given a path to a directory containing search results from supported search engines,
+    the function parses, converts metadata relevant for timstof to the internal format used by Oktoberfest and
+    returns it as a dataframe.
+    If a path to an output file is provided, the converted results are also stored to the specified location.
+
+    :param input_path: Path to the directory or file containing the metadata.
+    :param search_engine: The search engine used to produce the search results,
+        currently supported is "Maxquant"
+    :param output_file: Optional path to the location where the converted metadata should be written to.
+        If this is omitted, the metadata are not stored.
+    :raises ValueError: if an unsupported search engine was given
+
+    :return: dataframe containing metadata that maps scan numbers to precursors
+    """
+    search_engine = search_engine.lower()
+    if search_engine == "maxquant":
+        metadata_df = MaxQuant(input_path).generate_internal_timstof_metadata()
+    else:
+        raise ValueError(f"Unsupported search engine provided for reading timstof metadata: {search_engine}")
+
+    return metadata_df
+
+
+def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
     """
     Return a list of all spectra files of a given format.
 
     Given an input directory, the function searches all files containing spectra and returns a list of paths pointing to the files.
     Files are included if the extension matches the provided format (case-insensitive).
     In case the input directory is a file, the function will check if it matches the format and return it wrapped in a list.
+    If the format is "d" and the input directory ends with ".d", the function will return the input directory wrapped in a list.
 
     :param input_dir: Path to the directory to scan for spectra files
-    :param file_format: Format of spectra files that match the file extension (case-insensitive), can be "mzML", "RAW" or "pkl".
+    :param input_format: Format of the input for the provided directory. This must match the file extension (mzml, raw, hdf) or
+        directory extension (d). Matching is case-insensitive.
     :raises NotADirectoryError: if the specified input directory does not exist
     :raises ValueError: if the specified file format is not supported
+    :raises AssertionError: if the provided input directory (d) does not match the provided format or if none of the
+        files within the provided input directory (mzml, raw, hdf) match the provided format
     :return: A list of paths to all spectra files found in the given directory
     """
     if isinstance(input_dir, str):
         input_dir = Path(input_dir)
     raw_files = []
 
-    if not file_format.lower() in ["mzml", "raw", "pkl"]:
-        raise ValueError(f"File format {file_format} unknown. Must be one of mzML, RAW or pkl.")
+    input_format = input_format.lower()
 
-    if input_dir.is_file() and input_dir.suffix.lower().endswith(file_format.lower()):
+    if input_format not in ["mzml", "raw", "hdf", "d"]:
+        raise ValueError(f"Input format {input_format} unknown. Must be one of mzml, raw, d, hdf.")
+
+    if input_dir.is_file() and input_dir.suffix.lower().endswith(input_format):
         raw_files.append(input_dir)
     elif input_dir.is_dir():
-        glob_pattern = _get_glob_pattern(file_format)
-        raw_files = list(input_dir.glob(glob_pattern))
+        if input_dir.suffix == ".d":
+            if input_format == "d":
+                raw_files = [input_dir]
+            else:
+                raise AssertionError(
+                    f"Provided a '.d' input directory but the provided input format is {input_format}. Please check."
+                )
+        else:
+            glob_pattern = _get_glob_pattern(input_format)
+            raw_files = list(input_dir.glob(glob_pattern))
     else:
         raise NotADirectoryError(f"{input_dir} does not exist.")
+
+    if not raw_files:
+        raise AssertionError(
+            f"There are no files / directories with the extension {input_format} in the provided input directory {input_dir}. "
+            "Please check."
+        )
+
+    if len(raw_files) > 1:
+        input_type_str = "directories" if input_format == "d" else "files"
+    else:
+        input_type_str = "directory" if input_format == "d" else "file"
+    logger.info(f"Found {len(raw_files)} {input_format} {input_type_str} in the spectra input directory.")
 
     return raw_files
 
@@ -279,14 +434,16 @@ def _get_glob_pattern(spectra_type: str) -> str:
         return "*.[rR][aA][wW]"
     elif spectra_type.lower() == "mzml":
         return "*.[mM][zZ][mM][lL]"
+    elif spectra_type.lower() == "hdf":
+        return "*.[hH][dD][fF]"
+    elif spectra_type.lower() == "d":
+        return "*.[dD]"
     else:
         raise ValueError(f"{spectra_type} is not supported as rawfile-type")
 
 
 def split_search(
-    search_results: pd.DataFrame,
-    output_dir: Union[str, Path],
-    filenames: Optional[List[str]] = None,
+    search_results: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
 ) -> List[str]:
     """
     Split search results by spectrum file.
@@ -322,7 +479,7 @@ def split_search(
     filenames_found = []
     for filename in filenames:
         output_file = (output_dir / filename).with_suffix(".rescore")
-        logger.info(f"Creating split msms.txt file {output_file}")
+        logger.info(f"Creating split search results file {output_file}")
         try:
             grouped_search_results.get_group(filename).to_csv(output_file)
             filenames_found.append(filename)
@@ -335,7 +492,57 @@ def split_search(
     return filenames_found
 
 
-def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> Spectra:
+def split_timstof_metadata(
+    timstof_metadata: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
+) -> List[str]:
+    """
+    Split timstof metadata by spectrum file.
+
+    Given a list of spectrum file names from which timstof metadata originate the provided timstof metadata are split
+    and filename specific csv files are written to the provided output directory. The provided file names need to
+    correspond to the spectrum file identifier in the "RAW_FILE" column of the provided timstof_metadata. The timstof
+    metadata need to be provided in internal format  #TODO provided documentation.
+    If the list of file names is not provided, all spectrum file identifiers are considered, otherwise only the
+    identifiers found in the list are taken into account for writing the individual csv files.
+    The output file names follow the convention <filename>.timsmeta.
+    If a file name is not found in the timstof metadata, it is ignored and a warning is printed.
+    The function returns a list of file names for which timstof metadata are available, removing the ones that were
+    ignored if a list of file names was provided.
+
+    :param timstof_metadata: timstof metadata in internal format
+    :param output_dir: directory in which to store individual csv files containing the timstof metadata for
+        individual filenames
+    :param filenames: optional list of spectrum filenames that should be considered. If not provided, all spectrum file
+        identifiers in the timstof metadata are considered.
+
+    :return: list of file names for which timstof metadata could be found
+    """
+    if isinstance(output_dir, str):
+        output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    if filenames is None:
+        filenames = timstof_metadata["RAW_FILE"].unique()
+
+    grouped_timstof_metadata = timstof_metadata.groupby("RAW_FILE")
+
+    filenames_found = []
+    for filename in filenames:
+        output_file = (output_dir / filename).with_suffix(".timsmeta")
+        logger.info(f"Creating split timstof metadata file {output_file}")
+        try:
+            grouped_timstof_metadata.get_group(filename).to_csv(output_file)
+            filenames_found.append(filename)
+        except KeyError:
+            logger.warning(
+                f"No timstof metadata could be found for the provided file name {filename}. "
+                "If this is not intended, please verify that the file names are written correctly in the "
+                f"timstof. {filename} is ignored."
+            )
+    return filenames_found
+
+
+def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> pd.DataFrame:
     """
     Merge peptides with spectra.
 
@@ -351,72 +558,110 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> S
     """
     logger.info("Merging rawfile and search result")
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
-    logger.info(f"There are {len(psms)} matched identifications")
-
-    library = Spectra()
-    library.add_columns(psms)
-
-    return library
+    return psms
 
 
-def annotate_spectral_library(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+def annotate_spectral_library(
+    psms: pd.DataFrame,
+    fragmentation_method: str = "HCD",
+    mass_tol: Optional[float] = None,
+    unit_mass_tol: Optional[str] = None,
+    custom_mods: Optional[Dict[str, float]] = None,
+) -> Spectra:
     """
-    Annotate spectral library with peaks and mass.
+    Annotate all specified ion peaks of given PSMs (Default b and y ions).
 
-    This function annotates a given spectral library with peak intensities and mass to charge ratio,
-    as well as the calculated monoisotopic mass of the precursor ion.
-    The additional information is added to the provided spectral library.
+    This function annotates the b any ion peaks of given psms by matching the mzs
+    of all peaks to the theoretical mzs and discards all other peaks. It also calculates
+    the theoretical monoisotopic mass of each b and y ion fragment.
+    The function thenr returns a Spectra object containing the mzs and intensities of
+    all b and y ions in charge states 1-3 and the additional metadata.
 
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
+    :param fragmentation_method: fragmentation method that was used
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+
+    :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
-    df_annotated_spectra = annotate_spectra(psms.spectra_data, mass_tol, unit_mass_tol)
+    df_annotated_spectra = annotate_spectra(
+        un_annot_spectra=psms,
+        mass_tolerance=mass_tol,
+        unit_mass_tolerance=unit_mass_tol,
+        fragmentation_method=fragmentation_method,
+        custom_mods=custom_mods,
+    )
+
+    ion_types = retrieve_ion_types(fragmentation_method)
+    var_df = Spectra._gen_vars_df(ion_types)
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.uns["ion_types"] = ion_types
+    aspec.add_intensities(
+        np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
+    )
+    aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
+    aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
+    aspec.strings_to_categoricals()
+
     logger.info("Finished annotating.")
-    psms.spectra_data.drop(columns=["INTENSITIES", "MZ"], inplace=True)  # TODO check if this is needed
-    psms.add_matrix(df_annotated_spectra["INTENSITIES"], FragmentType.RAW)
-    psms.add_matrix(df_annotated_spectra["MZ"], FragmentType.MZ)
-    psms.add_column(df_annotated_spectra["CALCULATED_MASS"].to_numpy(), "CALCULATED_MASS")
+
+    return aspec
 
 
-def load_spectra(filename: Union[str, Path], parser: str = "pyteomics") -> pd.DataFrame:
+def load_spectra(
+    filenames: Union[str, Path, List[Union[str, Path]]],
+    parser: str = "pyteomics",
+    tims_meta_file: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
     """
     Read spectra from a given file.
 
-    This function reads MS2 spectra from a given mzML or pkl file using a specified parser. The file ending
+    This function reads MS2 spectra from a given mzML or hdf file using a specified parser. The file ending
     is used to determine the correct parsing method.
 
-    :param filename: Path to mzML / pkl file containing MS2 spectra to be loaded.
+    :param filenames: Path(s) to files containing MS2 spectra. Filenames need to end in ".mzML" (case-insensitive).
+        For timstof data, a single hdf5 path ending in ".hdf" (case-insensitive) needs to be provided.
+        Multiple paths are not yet supported for timstof.
     :param parser: Name of the package to use for parsing the mzml file, can be "pyteomics" or "pymzml".
         Only used for parsing of mzML files.
-    :raises ValueError: if the filename does not end in either ".pkl" or ".mzML" (case-insensitive)
+    :param tims_meta_file: Optional path to timstof metadata file in internal format. This is only required
+        when loading timstof spectra and used for summation of spectra.
+    :raises TypeError: if not all filenames are provided as str or Path objects.
+    :raises ValueError: if the filename does not end in either ".hdf" or ".mzML" (case-insensitive)
+    :raises AssertionError: if no tims_meta_file was provided when loading timsTOF hdf data
     :return: measured spectra with metadata.
     """
-    if isinstance(filename, str):
-        filename = Path(filename)
+    if isinstance(filenames, (str, Path)):
+        internal_filenames = [Path(filenames)]
+    elif isinstance(filenames, list):
+        internal_filenames = [Path(filename) for filename in filenames]
+    else:
+        raise TypeError("Type of filenames not understood.")
 
-    format_ = filename.suffix.lower()
+    format_ = internal_filenames[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(
-            source=filename, package=parser, search_type=""
+            source=filenames, package=parser, search_type=""
         )  # TODO in spectrum_io, remove unnecessary argument
-    elif format_ == ".pkl":
-        results = pd.read_pickle(filename)
-        # TODO in spectrum-io in case median_RETENTION_TIME is still passed
-        # TODO also change name for ion mobility
-        results.rename(columns={"median_RETENTION_TIME": "RETENTION_TIME"}, inplace=True)
+    elif format_ == ".hdf":
+        if tims_meta_file is None:
+            raise AssertionError(
+                "Loading spectra from a timsTOF hdf file requires metadata provided by tims_meta_file."
+            )
+        results = read_and_aggregate_timstof(source=internal_filenames[0], tims_meta_file=Path(tims_meta_file))
         return results
 
     else:
-        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .pkl files are supported.")
+        raise ValueError(f"Unrecognized file format: {format_}. Only .mzML and .hdf files are supported.")
 
 
-def convert_spectra_to_mzml(
+def convert_raw_to_mzml(
     raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
 ):
     """
-    Convert spectra to mzML format.
+    Convert raw to mzML format.
 
     This function converts RAW files containing spectra from a mass spectrometry run into mzML format. The process
     makes use of ThermoRawFileParser and requires mono being installed if it is used on MacOS or linux.
@@ -432,7 +677,20 @@ def convert_spectra_to_mzml(
             thermo_exe = "/opt/compomics/ThermoRawFileParser.exe"
         else:
             thermo_exe = "ThermoRawFileParser.exe"
-    
+
     raw = ThermoRaw()
     raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
-   
+
+
+def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
+    """
+    Convert d to hdf format.
+
+    This function converts spectra within a d folder from a mass spectrometry run into hdf format.
+
+    :param d_dir: Path to d folder with spectra to be converted to hdf format
+    :param output_file: Path to the location where the converted spectra should be written to
+    """
+    d_dir = Path(d_dir)
+    output_file = Path(output_file)
+    convert_d_hdf(input_path=d_dir, output_path=output_file)

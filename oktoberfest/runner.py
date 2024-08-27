@@ -1,13 +1,20 @@
 import datetime
 import json
 import logging
+import pickle
+import sys
+import time
+from functools import partial
+from math import ceil
+from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import List, Type, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
+from tqdm.auto import tqdm
 
 from oktoberfest import __copyright__, __version__
 from oktoberfest import plotting as pl
@@ -15,10 +22,30 @@ from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
-from .data.spectra import FragmentType, Spectra
-from .utils import Config, JobPool, ProcessStep
+from .data.spectra import Spectra
+from .utils import Config, JobPool, ProcessStep, group_iterator
 
 logger = logging.getLogger(__name__)
+
+
+def _make_predictions_error_callback(failure_progress_tracker, failure_lock, error):
+    logger.error(
+        f"Prediction failed due to: {error} Batch will be missing from output file. "
+        "DO NOT STOP THIS RUN: The index of the batch is stored and your output file will be appended "
+        "by the missing batches if you rerun without changing your config file after this run is completed."
+    )
+    with failure_lock:
+        failure_progress_tracker.value += 1
+
+
+def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
+    predictions = {
+        **pr.predict_at_once(batch_df, model_name=int_model, **predict_kwargs),
+        **pr.predict_at_once(batch_df, model_name=irt_model, **predict_kwargs),
+    }
+    queue_out.put((predictions, batch_df))
+    with lock:
+        progress.value += 1
 
 
 def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
@@ -33,68 +60,97 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
             internal_search_file = msms_output / "msms.prosit"
             tmt_label = config.tag
 
-            pp.convert_search(
+            search_results = pp.convert_search(
                 input_path=config.search_results,
-                output_file=internal_search_file,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
+                custom_mods=config.custom_to_unimod(),
+                output_file=internal_search_file,
             )
+            if config.spectra_type.lower() in ["d", "hdf"]:
+                timstof_metadata = pp.convert_timstof_metadata(
+                    input_path=config.search_results,
+                    search_engine=config.search_results_type,
+                    output_file=msms_output / "tims_meta.csv",
+                )
         else:
             internal_search_file = config.search_results
-        search_results = pp.load_search(internal_search_file)
+            search_results = pp.load_search(internal_search_file)
+
+            # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
         # filter search results
         search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
 
         # split search results
-        filenames_found = pp.split_search(
+        searchfiles_found = pp.split_search(
             search_results=search_results,
             output_dir=config.output / "msms",
             filenames=[spectra_file.stem for spectra_file in spectra_files],
         )
+        # split timstof metadata
+        if config.spectra_type.lower() in ["d", "hdf"]:
+            _ = pp.split_timstof_metadata(
+                timstof_metadata=timstof_metadata,
+                output_dir=config.output / "msms",
+                filenames=searchfiles_found,
+            )
         preprocess_search_step.mark_done()
     else:
-        filenames_found = [msms_file.stem for msms_file in (config.output / "msms").glob("*rescore")]
-
+        searchfiles_found = [msms_file.stem for msms_file in (config.output / "msms").glob("*rescore")]
     spectra_files_to_return = []
     for spectra_file in spectra_files:
-        if spectra_file.stem in filenames_found:
+        if spectra_file.stem in searchfiles_found:
             spectra_files_to_return.append(spectra_file)
 
     return spectra_files_to_return
 
 
-def _annotate_and_get_library(spectra_file: Path, config: Config) -> Spectra:
+def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file: Optional[Path] = None) -> Spectra:
     data_dir = config.output / "data"
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
     if hdf5_path.is_file():
-        library = Spectra.from_hdf5(hdf5_path)
+        aspec = Spectra.from_hdf5(hdf5_path)
+        instrument_type = config.instrument_type
+        if instrument_type is not None and aspec.obs["INSTRUMENT_TYPES"].values[0] != instrument_type:
+            aspec.obs["INSTRUMENT_TYPES"] = instrument_type
+            aspec.write_as_hdf5(hdf5_path)
     else:
         spectra_dir = config.output / "spectra"
         spectra_dir.mkdir(exist_ok=True)
         format_ = spectra_file.suffix.lower()
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_spectra_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
-        elif format_ in [".mzml", ".pkl"]:
+            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+        elif format_ in [".mzml", ".hdf"]:
             file_to_load = spectra_file
         elif format_ == ".d":
-            raise NotImplementedError("Bruker file conversion will be available in spectrum-io v0.3.5")
-        spectra = pp.load_spectra(file_to_load)
+            file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
+            pp.convert_d_to_hdf(spectra_file, file_to_load)
+        spectra = pp.load_spectra(file_to_load, tims_meta_file=tims_meta_file)
+        config_instrument_type = config.instrument_type
+        if config_instrument_type is not None:
+            spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        pp.annotate_spectral_library(library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance)
-        library.write_as_hdf5(hdf5_path)  # write_metadata_annotation
+        aspec = pp.annotate_spectral_library(
+            psms=library,
+            mass_tol=config.mass_tolerance,
+            unit_mass_tol=config.unit_mass_tolerance,
+            fragmentation_method=config.fragmentation_method,
+            custom_mods=config.unimod_to_mass(),
+        )
+        aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
-    return library
+    return aspec
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.spectra_data["FRAGMENTATION"] == "HCD").any():
+    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -102,10 +158,11 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         }
         use_ransac_model = config.use_ransac_model
         alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
             calib_group = (
-                alignment_library.spectra_data.groupby(
+                alignment_library.obs.groupby(
                     by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
                 )["SPECTRAL_ANGLE"]
                 .mean()
@@ -130,31 +187,177 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     title=title,
                 )
 
-            delta_ce = ransac.predict(library.spectra_data[["MASS", "PRECURSOR_CHARGE"]])
-            library.spectra_data["COLLISION_ENERGY"] = np.maximum(
-                0, library.spectra_data["COLLISION_ENERGY"] + delta_ce
-            )
+            delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
+            library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
 
         else:
-            ce_alignment = alignment_library.spectra_data.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+
             best_ce = ce_alignment.idxmax()
             pl.plot_mean_sa_ce(
                 sa_ce_df=ce_alignment.to_frame().reset_index(),
                 filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
             )
             pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.spectra_data[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
+                sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
-            library.spectra_data["COLLISION_ENERGY"] = best_ce
+            library.obs["COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
+                f.close()
     else:
         best_ce = 35
-        library.spectra_data["COLLISION_ENERGY"] = best_ce
+        library.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
             f.write(str(best_ce))
+            f.close()
+
+
+def _speclib_from_digestion(config: Config) -> Spectra:
+    library_input_type = config.library_input_type
+    peptide_dict = None
+    library_file = config.library_input
+    if library_input_type == "fasta":
+        p2p_file = config.output / "peptide_to_proteins.csv"
+        digest_step = ProcessStep(config.output, "speclib_digested")
+        if not digest_step.is_done():
+            peptide_dict = pp.digest(
+                fasta=config.library_input,
+                digestion=config.digestion,
+                missed_cleavages=config.missed_cleavages,
+                db=config.db,
+                enzyme=config.enzyme,
+                special_aas=config.special_aas,
+                min_length=config.min_length,
+                max_length=config.max_length,
+            )
+            # Convert dictionary to DataFrame
+            p2p_df = pd.DataFrame(list(peptide_dict.items()), columns=["peptide", "proteins"])
+            p2p_df["proteins"] = p2p_df["proteins"].apply(lambda x: ";".join(x))
+            p2p_df.to_csv(p2p_file, index=False)
+            digest_step.mark_done()
+        library_input_type = "peptides"
+        library_file = p2p_file
+
+    if library_input_type == "peptides":
+        internal_library_file = config.output / "peptides_internal.csv"
+        created_internal_step = ProcessStep(config.output, "speclib_created_internal")
+        if not created_internal_step.is_done():
+            proteins = None
+
+            if peptide_dict is None:
+                p2p_df = pd.read_csv(library_file)
+                if "proteins" in p2p_df.columns:
+                    p2p_df["proteins"].fillna("unknown", inplace=True)
+                    proteins = p2p_df["proteins"].apply(lambda x: x.split(";")).to_list()
+                peptides = p2p_df["peptide"].to_list()
+            else:
+                peptides = list(peptide_dict.keys())
+                proteins = list(peptide_dict.values())
+            internal_df = pp.generate_metadata(
+                peptides=peptides,
+                collision_energy=config.collision_energy,
+                precursor_charge=config.precursor_charge,
+                fragmentation=config.fragmentation,
+                nr_ox=config.nr_ox,
+                instrument_type=config.instrument_type,
+                proteins=proteins,
+            )
+            library_file = config.output / "peptides_internal.csv"
+            internal_df.to_csv(internal_library_file, sep=",", index=False)
+            created_internal_step.mark_done()
+        library_file = internal_library_file
+
+    elif library_input_type == "internal":
+        pass
+    else:
+        raise ValueError(
+            f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides", or "internal".'
+        )
+    spec_library = pp.gen_lib(library_file)
+
+    pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")
+
+    data_dir = config.output / "data"
+    if not pp_and_filter_step.is_done():
+        data_dir.mkdir(exist_ok=True)
+        spec_library = pp.process_and_filter_spectra_data(
+            library=spec_library, model=config.models["intensity"], tmt_label=config.tag
+        )
+        spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
+        pp_and_filter_step.mark_done()
+    else:
+        spec_library = Spectra.from_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
+
+    return spec_library
+
+
+def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+    libfile_prefix = "predicted_library"
+    if output_format == "msp":
+        return MSP, results_path / f"{libfile_prefix}.msp"
+    elif output_format == "spectronaut":
+        return Spectronaut, results_path / f"{libfile_prefix}.csv"
+    elif output_format == "dlib":
+        return DLib, results_path / f"{libfile_prefix}.dlib"
+    else:
+        raise ValueError(f"{output_format} is not supported as spectral library type")
+
+
+def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batchsize: int, model: str):
+    if out_file.is_file():
+        if failed_batch_file.is_file():
+            with open(failed_batch_file, "rb") as fh:
+                batch_iterator = pickle.load(fh)
+            mode = "a"
+            logger.warning(
+                f"Found existing spectral library {out_file}. "
+                "Attempting to append missing batches from previous run..."
+            )
+        else:
+            logger.error(
+                f"A file {out_file} already exists but no information about missing batches "
+                "from a previous run could be found. Stopping to prevent corruption / data loss. "
+                "If this is intended, delete the file and rerun."
+            )
+            sys.exit(1)
+    else:
+        if "alphapept" in model.lower():
+            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
+        else:
+            batch_iterator = (
+                obs.index[i * batchsize : (i + 1) * batchsize].to_numpy() for i in range(ceil(len(obs) / batchsize))
+            )
+        mode = "w"
+
+    return list(batch_iterator), mode
+
+
+def _update(pbar: tqdm, postfix_values: Dict[str, int]):
+    total_val = sum(postfix_values.values())
+    if total_val > pbar.n:
+        pbar.set_postfix(**postfix_values)
+        pbar.n = total_val
+        pbar.refresh()
+
+
+def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]):
+    if n_failed > 0:
+        failed_batches = []
+        for i, result in enumerate(results):
+            try:
+                result.get()
+            except Exception:
+                failed_batches.append(i)
+        logger.error(
+            f"Prediction for {n_failed} / {i+1} batches failed. Check the log to find out why. "
+            "Then rerun without changing the config file to append only the missing batches to your output file."
+        )
+        with open(failed_batch_file, "wb") as fh:
+            pickle.dump(failed_batches, fh)
+        sys.exit(1)
 
 
 def generate_spectral_lib(config_path: Union[str, Path]):
@@ -163,91 +366,105 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
     # TODO full description
     :param config_path: path to config file
-    :raises ValueError: spectral library output format is not supported as spectral library type
     """
     config = Config()
     config.read(config_path)
-    library_input_type = config.library_input_type
 
-    if library_input_type == "fasta":
-        pp.digest(
-            fasta=config.library_input,
-            output=config.output,
-            fragmentation=config.fragmentation,
-            digestion=config.digestion,
-            cleavages=config.cleavages,
-            db=config.db,
-            enzyme=config.enzyme,
-            special_aas=config.special_aas,
-            min_length=config.min_length,
-            max_length=config.max_length,
-        )
-        library_file = config.output / "prosit_input.csv"
-    elif library_input_type == "peptides":
-        library_file = config.library_input
-    else:
-        raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta" or "peptides".')
-    spec_library = pp.gen_lib(library_file)
-    spec_library = pp.process_and_filter_spectra_data(
-        library=spec_library, model=config.models["intensity"], tmt_label=config.tag
-    )
-
-    no_of_spectra = len(spec_library.spectra_data)
-    no_of_sections = no_of_spectra // 7000
+    spec_library = _speclib_from_digestion(config)
 
     server_kwargs = {
         "server_url": config.prediction_server,
         "ssl": config.ssl,
+        "disable_progress_bar": True,
     }
 
-    spectral_library: Type[SpectralLibrary]
-    results_path = config.output / "results"
-    results_path.mkdir(exist_ok=True)
+    speclib_written_step = ProcessStep(config.output, "speclib_written")
+    if not speclib_written_step.is_done():
+        results_path = config.output / "results"
+        results_path.mkdir(exist_ok=True)
 
-    if config.output_format == "msp":
-        spectral_library = MSP
-        out_file = results_path / "myPrositLib.msp"
-    elif config.output_format == "spectronaut":
-        spectral_library = Spectronaut
-        out_file = results_path / "myPrositLib.csv"
-    elif config.output_format == "dlib":
-        spectral_library = DLib
-        out_file = results_path / "myPrositLib.dlib"
-    else:
-        raise ValueError(f"{config.output_format} is not supported as spectral library type")
+        batchsize = config.batch_size
+        failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
+        writer, out_file = _get_writer_and_output(results_path, config.output_format)
+        batches, mode = _get_batches_and_mode(
+            out_file, failed_batch_file, spec_library.obs, batchsize, config.models["intensity"]
+        )
+        speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
+        n_batches = len(batches)
 
-    if out_file.is_file():
-        out_file.unlink()
+        with Manager() as manager:
+            # setup
+            shared_queue = manager.Queue(maxsize=config.num_threads)
+            prediction_progress = manager.Value("i", 0)
+            prediction_failure_progress = manager.Value("i", 0)
+            writing_progress = manager.Value("i", 0)
 
-    for i in range(0, no_of_sections + 1):
-        spectra_div = Spectra()
-        if i < no_of_sections:
-            spectra_div.spectra_data = spec_library.spectra_data.iloc[i * 7000 : (i + 1) * 7000]
-            logger.info(f"Indices {i * 7000}, {(i + 1) * 7000}")
-        elif (i * 7000) < no_of_spectra:
-            spectra_div.spectra_data = spec_library.spectra_data.iloc[i * 7000 :]
-            logger.info(f"Last Batch from index {i * 7000}")
-            logger.info(f"Batch of size {len(spectra_div.spectra_data.index)}")
-        else:
-            break
+            lock = manager.Lock()
+            lock_failure = manager.Lock()
 
-        pred_intensities = pr.predict(spectra_div.spectra_data, model_name=config.models["intensity"], **server_kwargs)
-        pred_irts = pr.predict(spectra_div.spectra_data, model_name=config.models["irt"], **server_kwargs)
+            # Create a pool for producer processes
+            predictor_pool = pool.Pool(config.num_threads)
 
-        intensity_prediction_dict = {
-            "intensity": pred_intensities["intensities"],
-            "fragmentmz": pred_intensities["mz"],
-            "annotation": pr.parse_fragment_labels(
-                pred_intensities["annotation"],
-                spectra_div.spectra_data["PRECURSOR_CHARGE"].to_numpy()[:, None],
-                spectra_div.spectra_data["PEPTIDE_LENGTH"].to_numpy()[:, None],
-            ),
-        }
-        output_dict = {config.models["intensity"]: intensity_prediction_dict, config.models["irt"]: pred_irts["irt"]}
+            consumer_process = Process(
+                target=speclib.async_write,
+                args=(shared_queue, writing_progress, config.custom_to_unimod()),
+            )
 
-        out_lib = spectral_library(spectra_div.spectra_data, output_dict, out_file)
-        out_lib.prepare_spectrum()
-        out_lib.write()
+            try:
+                results = []
+                for batch in batches:
+                    result = predictor_pool.apply_async(
+                        _make_predictions,
+                        (
+                            config.models["intensity"],
+                            config.models["irt"],
+                            server_kwargs,
+                            shared_queue,
+                            prediction_progress,
+                            lock,
+                            spec_library.obs.loc[batch],
+                        ),
+                        error_callback=partial(
+                            _make_predictions_error_callback, prediction_failure_progress, lock_failure
+                        ),
+                    )
+                    results.append(result)
+                predictor_pool.close()
+
+                with tqdm(
+                    total=n_batches, desc="Writing library", postfix={"successful": 0, "missing": 0}
+                ) as writer_pbar:
+                    consumer_process.start()
+                    with tqdm(
+                        total=n_batches, desc="Getting predictions", postfix={"successful": 0, "failed": 0}
+                    ) as predictor_pbar:
+                        while predictor_pbar.n < n_batches:
+                            time.sleep(1)
+                            pr_fail_val = prediction_failure_progress.value
+                            _update(predictor_pbar, {"failed": pr_fail_val, "successful": prediction_progress.value})
+                            _update(writer_pbar, {"successful": writing_progress.value, "missing": pr_fail_val})
+                        shared_queue.put(None)  # signal the writer process, that it is done
+                        predictor_pool.join()  # properly await and terminate the pool
+
+                    while writer_pbar.n < n_batches:  # have to keep updating the writer pbar
+                        time.sleep(1)
+                        _update(
+                            writer_pbar,
+                            {"successful": writing_progress.value, "missing": prediction_failure_progress.value},
+                        )
+                    consumer_process.join()  # properly await the termination of the writer process
+
+                _check_write_failed_batch_file(failed_batch_file, prediction_failure_progress.value, results)
+
+            finally:
+                predictor_pool.terminate()
+                predictor_pool.join()
+                consumer_process.terminate()
+                consumer_process.join()
+
+        logger.info("Finished writing the library to disk")
+        failed_batch_file.unlink(missing_ok=True)
+        speclib_written_step.mark_done()
 
 
 def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
@@ -259,14 +476,17 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
             return library
         else:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
-    library = _annotate_and_get_library(spectra_file, config)
-    _get_best_ce(library, spectra_file, config)
+    tims_meta_file = None
+    if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
+        tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
+    aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
+    _get_best_ce(aspec, spectra_file, config)
 
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+    aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
     ce_calib_step.mark_done()
 
-    return library
+    return aspec
 
 
 def run_ce_calibration(
@@ -282,8 +502,7 @@ def run_ce_calibration(
     config.read(config_path)
 
     # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
 
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
@@ -307,23 +526,26 @@ def _calculate_features(spectra_file: Path, config: Config):
     if calc_feature_step.is_done():
         return
 
-    server_kwargs = {
-        "server_url": config.prediction_server,
-        "ssl": config.ssl,
-    }
+    predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
+    if not predict_step.is_done():
 
-    pred_intensities = pr.predict(
-        library.spectra_data,
-        model_name=config.models["intensity"],
-        targets=["intensities", "annotation"],
-        **server_kwargs,
-    )
-    pred_irts = pr.predict(library.spectra_data, model_name=config.models["irt"], **server_kwargs)
+        predict_kwargs = {
+            "server_url": config.prediction_server,
+            "ssl": config.ssl,
+        }
 
-    library.add_matrix(pd.Series(pred_intensities["intensities"].tolist(), name="intensities"), FragmentType.PRED)
-    library.add_column(pred_irts["irt"], name="PREDICTED_IRT")
+        if "alphapept" in config.models["intensity"].lower():
+            chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
+        else:
+            chunk_idx = None
+        pr.predict_intensities(
+            data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
+        )
 
-    library.write_pred_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+        pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
+
+        library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+        predict_step.mark_done()
 
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
@@ -333,6 +555,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="original",
         output_file=fdr_dir / spectra_file.with_suffix(".original.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )
@@ -340,6 +563,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="rescore",
         output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )
@@ -389,8 +613,7 @@ def run_rescoring(config_path: Union[str, Path]):
     config.read(config_path)
 
     # load spectra file names
-    spectra_files = pp.list_spectra(input_dir=config.spectra, file_format=config.spectra_type)
-    logger.info(f"Found {len(spectra_files)} files in the spectra directory.")
+    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
 
     proc_dir = config.output / "proc"
     proc_dir.mkdir(parents=True, exist_ok=True)
@@ -430,6 +653,7 @@ def run_rescoring(config_path: Union[str, Path]):
     _rescore(fdr_dir, config)
 
     # plotting
+    logger.info("Generating summary plots...")
     pl.plot_all(fdr_dir)
 
     logger.info("Finished rescoring.")
