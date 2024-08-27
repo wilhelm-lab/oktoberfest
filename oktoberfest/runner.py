@@ -650,7 +650,6 @@ def run_rescoring(config_path: Union[str, Path]):
     # plotting
     logger.info("Generating summary plots...")
     pl.plot_all(fdr_dir)
-
     logger.info("Finished rescoring.")
 
     if config.quantification:
