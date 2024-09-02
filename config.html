@@ -204,11 +204,11 @@
 <tr class="row-even"><td><p>fdr_estimation_method</p></td>
 <td><p>Method used for target / decoy separation and FDR estimation on PSM and peptide level: “percolator” or “mokapot”; default = “mokapot”</p></td>
 </tr>
-<tr class="row-odd"><td><p>allFeatures</p></td>
-<td><p>Defines whether all features should be used; can be True or False; default = False</p></td>
-</tr>
-<tr class="row-even"><td><p>regressionMethod</p></td>
+<tr class="row-odd"><td><p>regressionMethod</p></td>
 <td><p>Regression method for curve fitting (mapping from predicted iRT values to experimental retention times); can be “spline”, “lowess”, or “logistic”; default = “spline”</p></td>
+</tr>
+<tr class="row-even"><td><p>add_feature_cols</p></td>
+<td><p>Additional columns to be used as percolator/mokapot input features; Can be “all” for all additional columns in provided internal search results or a list of column names; default = “none”</p></td>
 </tr>
 </tbody>
 </table>

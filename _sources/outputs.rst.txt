@@ -39,7 +39,7 @@ Files in the results directory
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | predicted_library.<csv|msp|dlib>      | Contains the spectral library in either spectronaut, msp, or dlib format depending on what format was chosen in the configuration file                                                       |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | peptides_internal.csv	                | Contains the peptide list including metadata needed for spectral library generation when providing a fasta file for in-silico digestion or a peptides list                                   |
+    | peptides_internal.csv                 | Contains the peptide list including metadata needed for spectral library generation when providing a fasta file for in-silico digestion or a peptides list                                   |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 

@@ -104,7 +104,7 @@
 </div>
 <section id="internal-file-format-specification">
 <h2>Internal file format specification<a class="headerlink" href="#internal-file-format-specification" title="Link to this heading"></a></h2>
-<p>Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the file format specification.</p>
+<p>Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the basic file format specification. Additional columns can be added, which will be forwarded to percolator / mokapot if specified with the <a class="reference external" href="./config.html#applicable-to-rescoring">“add_feature_cols”</a> option.</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Column Header</p></th>
@@ -141,6 +141,9 @@
 </tr>
 <tr class="row-odd"><td><p>PEPTIDE_LENGTH</p></td>
 <td><p>Length of the unmodified peptide sequence</p></td>
+</tr>
+<tr class="row-even"><td><p>&lt;optional cols&gt;</p></td>
+<td><p>Optional additional feature columns forwarded directly to percolator / mokapot if specified in the config file using the “add_feature_cols” option. Columns must only contain valid floating point numbers.</p></td>
 </tr>
 </tbody>
 </table>
