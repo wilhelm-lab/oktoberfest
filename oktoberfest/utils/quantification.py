@@ -45,9 +45,7 @@ def apply_quant(config: Config) -> None:
             max_length=config.fasta_digest_options["maxLength"],
             cleavages=config.fasta_digest_options["missedCleavages"],
             special_aas=config.fasta_digest_options["specialAas"],
-            methionine_cleavage=True,  # default
-            db=config.fasta_digest_options["db"],
-            use_hash_key=True,  # default
+            fasta_contains_decoys=(True if config.fasta_digest_options["db"] == "target" else False),
         )
     ]
 
