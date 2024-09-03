@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+import pandas as pd
 
 from oktoberfest.utils import Config, JobPool, ProcessStep
 from oktoberfest.utils.quantification import apply_quant
@@ -61,15 +62,18 @@ class TestQuant(unittest.TestCase):
             "db": "target",
         }
         apply_quant(config)
+        compare = pd.read_csv("./tests/unit_tests/data/quantification/mq_proteinGroups.txt",sep="\t")
+        results = pd.read_csv("./tests/unit_tests/data/quantification/picked_group_fdr/rescore.proteinGroups.txt",sep="\t")
+        pd.testing.assert_frame_equal(results,compare)
 
     def test_picked_group_fdr_sage(self):
         """Testing picked_group_fdr quantification with sage search results."""
         config = Config
-        config.search_results = Path("./data/quantification/sage")
+        config.search_results = Path("./tests/unit_tests/data/quantification/sage")
         config.search_results_type = "sage"
-        config.output = Path("./data/quantification")
+        config.output = Path("./tests/unit_tests/data/quantification")
         config.fdr_estimation_method = "percolator"
-        config.library_input = Path("./data/quantification/iprg2016_with_labels.fasta")
+        config.library_input = Path("./tests/unit_tests/data/quantification/iprg2016_with_labels.fasta")
         config.fasta_digest_options = {
             "digestion": "full",
             "missedCleavages": 2,
@@ -85,11 +89,11 @@ class TestQuant(unittest.TestCase):
     def test_picked_group_fdr_fragpipe(self):
         """Testing picked_group_fdr quantification with msfragger search results."""
         config = Config
-        config.search_results = Path("./data/quantification/fragpipe")
+        config.search_results = Path("./tests/unit_tests/data/quantification/fragpipe")
         config.search_results_type = "msfragger"
-        config.output = Path("./data/quantification")
+        config.output = Path("./tests/unit_tests/data/quantification")
         config.fdr_estimation_method = "percolator"
-        config.library_input = Path("./data/quantification/iprg2016_with_labels.fasta")
+        config.library_input = Path("./tests/unit_tests/data/quantification/iprg2016_with_labels.fasta")
         config.fasta_digest_options = {
             "digestion": "full",
             "missedCleavages": 2,
