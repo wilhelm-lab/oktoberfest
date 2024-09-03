@@ -48,7 +48,7 @@ class TestQuant(unittest.TestCase):
         config.output = Path("./tests/unit_tests/data/quantification")
         config.fdr_estimation_method = "percolator"
         config.inputs = {
-            "library_input": Path("./tests/unit_tests/data/quantification/Homo_sapiens.GRCh38.pep.abinitio.fa")
+            "library_input": Path("./tests/unit_tests/data/quantification/example.fasta")
         }
         config.inputs["library_input"]
         config.fasta_digest_options = {
