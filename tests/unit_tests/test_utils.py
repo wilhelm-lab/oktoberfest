@@ -1,7 +1,8 @@
 import unittest
 from pathlib import Path
 
-from oktoberfest.utils import JobPool, ProcessStep
+from oktoberfest.utils import Config, JobPool, ProcessStep
+from oktoberfest.utils.quantification import apply_quant
 
 
 def add_one(i: int):
@@ -36,8 +37,65 @@ class TestProcessStep(unittest.TestCase):
         proc_step_file.unlink()
 
 
-# class TestQuant(unittest.TestCase):
-#     """Test the quantification done by calling picked-group-fdr"""
+class TestQuant(unittest.TestCase):
+    """Test the quantification done by calling picked-group-fdr."""
 
-#     def test_picked_group_fdr_quant(self):
-#         # requires small output of rescoring & small evidence.txt
+    def test_picked_group_fdr_maxquant(self):
+        """Testing picked_group_fdr quantification with msfragger search results."""
+        config = Config
+        config.search_results = Path("./tests/unit_tests/data/quantification/mq")
+        config.search_results_type = "maxquant"
+        config.output = Path("./tests/unit_tests/data/quantification")
+        config.fdr_estimation_method = "percolator"
+        config.inputs = {"library_input": Path("./tests/unit_tests/data/quantification/Homo_sapiens.GRCh38.pep.abinitio.fa")}
+        config.inputs["library_input"]
+        config.fasta_digest_options = {
+            "digestion": "full",
+            "missedCleavages": 2,
+            "minLength": 7,
+            "maxLength": 60,
+            "enzyme": "asp-n",
+            "specialAas": "D",
+            "db": "target",
+        }
+        apply_quant(config)
+
+    def test_picked_group_fdr_sage(self):
+        """Testing picked_group_fdr quantification with sage search results."""
+        config = Config
+        config.search_results = Path("./data/quantification/sage")
+        config.search_results_type = "sage"
+        config.output = Path("./data/quantification")
+        config.fdr_estimation_method = "percolator"
+        config.library_input = Path("./data/quantification/iprg2016_with_labels.fasta")
+        config.fasta_digest_options = {
+            "digestion": "full",
+            "missedCleavages": 2,
+            "minLength": 7,
+            "maxLength": 60,
+            "enzyme": "asp-n",
+            "specialAas": "D",
+            "db": "target",
+        }
+        # TODO add data for testing
+        # apply_quant(config)
+
+    def test_picked_group_fdr_fragpipe(self):
+        """Testing picked_group_fdr quantification with msfragger search results."""
+        config = Config
+        config.search_results = Path("./data/quantification/fragpipe")
+        config.search_results_type = "msfragger"
+        config.output = Path("./data/quantification")
+        config.fdr_estimation_method = "percolator"
+        config.library_input = Path("./data/quantification/iprg2016_with_labels.fasta")
+        config.fasta_digest_options = {
+            "digestion": "full",
+            "missedCleavages": 2,
+            "minLength": 7,
+            "maxLength": 60,
+            "enzyme": "asp-n",
+            "specialAas": "D",
+            "db": "target",
+        }
+        # TODO add data for testing
+        # apply_quant(config)
