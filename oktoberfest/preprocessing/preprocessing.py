@@ -99,7 +99,8 @@ def generate_metadata(
         >>> metadata = pp.generate_metadata(peptides=["AAACRFVQ","RMPCHKPYL"],
         >>>                                             collision_energy=[30,35],
         >>>                                             precursor_charge=[1,2],
-        >>>                                             fragmentation=["HCD","HCD"])
+        >>>                                             fragmentation=["HCD","HCD"],
+        >>>                                             nr_ox=1)
         >>> print(metadata)
     """
     if isinstance(collision_energy, int):

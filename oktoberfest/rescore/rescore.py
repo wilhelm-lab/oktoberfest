@@ -17,7 +17,7 @@ def generate_features(
     library: Spectra,
     search_type: str,
     output_file: Union[str, Path],
-    additional_columns: Union[str, list],
+    additional_columns: Union[str, list] = None,
     all_features: bool = False,
     regression_method: str = "spline",
 ):
