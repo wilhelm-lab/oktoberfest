@@ -219,41 +219,42 @@ The example config can be loaded and viewed using
 
 For rescoring tasks including quantification via picked-group-FDR, create a config file like this (so far only MaxQuant is supported):
 
-{
-    "type": "Rescoring",
-    "quantification": true,
-    "tag": "",
-    "inputs": {
-        "search_results": "mq_results/txt",
-        "search_results_type": "Maxquant",
-        "spectra": "./",
-        "spectra_type": "raw",
-        "library_input": "uniprot.fasta"
-    },
-    "output": "./out",
-    "models": {
-        "intensity": "Prosit_2020_intensity_HCD",
-        "irt": "Prosit_2019_irt"
-    },
-    "prediction_server": "koina.proteomicsdb.org:443",
-    "ssl": true,
-    "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
-    "numThreads": 1,
-    "fdr_estimation_method": "percolator",
-    "regressionMethod": "spline",
-    "allFeatures": False,
-    "massTolerance": 20,
-    "unitMassTolerance": "ppm",
-    "fastaDigestOptions": {
-        "digestion": "full",
-        "missedCleavages": 2,
-        "minLength": 7,
-        "maxLength": 60,
-        "enzyme": "trypsin",
-        "specialAas": "KR",
-        "db": "concat"
+.. code-block:: json
+
+    {
+        "type": "Rescoring",
+        "quantification": true,
+        "tag": "",
+        "inputs": {
+            "search_results": "mq_results/txt",
+            "search_results_type": "Maxquant",
+            "spectra": "./",
+            "spectra_type": "raw",
+            "library_input": "uniprot.fasta"
+        },
+        "output": "./out",
+        "models": {
+            "intensity": "Prosit_2020_intensity_HCD",
+            "irt": "Prosit_2019_irt"
+        },
+        "prediction_server": "koina.proteomicsdb.org:443",
+        "ssl": true,
+        "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
+        "numThreads": 1,
+        "fdr_estimation_method": "percolator",
+        "regressionMethod": "spline",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm",
+        "fastaDigestOptions": {
+            "digestion": "full",
+            "missedCleavages": 2,
+            "minLength": 7,
+            "maxLength": 60,
+            "enzyme": "trypsin",
+            "specialAas": "KR",
+            "db": "concat"
+        }
     }
-}
 
 
 The example config can be loaded and viewed using
