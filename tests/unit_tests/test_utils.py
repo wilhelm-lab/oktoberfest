@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+
 import pandas as pd
 
 from oktoberfest.utils import Config, JobPool, ProcessStep
@@ -48,9 +49,7 @@ class TestQuant(unittest.TestCase):
         config.search_results_type = "maxquant"
         config.output = Path("./tests/unit_tests/data/quantification")
         config.fdr_estimation_method = "percolator"
-        config.inputs = {
-            "library_input": Path("./tests/unit_tests/data/quantification/example.fasta")
-        }
+        config.inputs = {"library_input": Path("./tests/unit_tests/data/quantification/example.fasta")}
         config.inputs["library_input"]
         config.fasta_digest_options = {
             "digestion": "full",
@@ -62,9 +61,11 @@ class TestQuant(unittest.TestCase):
             "db": "target",
         }
         apply_quant(config)
-        compare = pd.read_csv("./tests/unit_tests/data/quantification/mq_proteinGroups.txt",sep="\t")
-        results = pd.read_csv("./tests/unit_tests/data/quantification/picked_group_fdr/rescore.proteinGroups.txt",sep="\t")
-        pd.testing.assert_frame_equal(results,compare)
+        compare = pd.read_csv("./tests/unit_tests/data/quantification/mq_proteinGroups.txt", sep="\t")
+        results = pd.read_csv(
+            "./tests/unit_tests/data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
+        )
+        pd.testing.assert_frame_equal(results, compare)
 
     def test_picked_group_fdr_sage(self):
         """Testing picked_group_fdr quantification with sage search results."""
