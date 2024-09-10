@@ -75,6 +75,10 @@ table.align-default {
     padding-left: 50px;
 }
 
+.rescore-config-table tbody tr:last-child td:first-child {
+    padding-left: 50px;
+}
+
 .date {
     font-size: 50%;
 }

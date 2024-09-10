@@ -71,7 +71,7 @@ Applicable to rescoring
 -----------------------
 
 .. table::
-   :class: fixed-table
+   :class: fixed-table rescore-config-rable
 
    +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                                                                                                       |
@@ -81,6 +81,12 @@ Applicable to rescoring
    | regressionMethod           | Regression method for curve fitting (mapping from predicted iRT values to experimental retention times); can be "spline", "lowess", or "logistic"; default = "spline"                         |
    +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | add_feature_cols           | Additional columns to be used as percolator/mokapot input features; Can be "all" for all additional columns in provided internal search results or a list of column names; default = "none"   |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | quantification             | (Optional) If True, run picked-group-FDR for quantification. This also requires in-silico digestion options (see "Applicable to in-silico digestion") and a fasta input.                      |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | inputs                     | Contains information about the fasta file (only needed if quantification is True).                                                                                                            |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     library_input          | Path to fasta file for in-silico digestion (also see the required parameters for in-silico digestion above)                                                                                   |
    +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Applicable to spectral library generation
