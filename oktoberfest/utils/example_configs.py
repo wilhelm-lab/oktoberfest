@@ -15,8 +15,8 @@ RESCORING = {
     "thermoExe": "ThermoRawFileParser.exe",
     "numThreads": 1,
     "fdr_estimation_method": "mokapot",
+    "add_feature_cols": "none",
     "regressionMethod": "spline",
-    "allFeatures": False,
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
     "ce_alignment_options": {

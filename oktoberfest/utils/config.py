@@ -41,41 +41,12 @@ class Config:
             return self.data["models"]
 
     @property
-    def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator)."""
-        if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"].lower()
-        else:
-            return "mokapot"
-
-    @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return ""."""
         if "tag" in self.data:
             return self.data["tag"].lower()
         else:
             return ""
-
-    @property
-    def all_features(self) -> bool:
-        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
-
-    @property
-    def curve_fitting_method(self) -> str:
-        """
-        Get regressionMethod flag.
-
-        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
-        The supported flags are "lowess", "spline", and "logistic".
-        If not provided in the config file, returns "spline" by default.
-
-        :return: a lowercase string representation of the regression method.
-        """
-        return self.data.get("regressionMethod", "spline").lower()
 
     @property
     def job_type(self) -> str:
@@ -292,6 +263,44 @@ class Config:
         """Get whether or not to perform ce calibration using a ransac model."""
         return self.ce_alignment_options.get("use_ransac_model", False)
 
+    ###############################
+    # these are rescoring options #
+    ###############################
+
+    @property
+    def use_feature_cols(self) -> Union[str, list]:
+        """Get additional columns ("all" for all columns or list with column names) from the config file."""
+        return self.data.get("add_feature_cols", "none")
+
+    @property
+    def all_features(self) -> bool:
+        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
+        if "allFeatures" in self.data:
+            return self.data["allFeatures"]
+        else:
+            return False
+
+    @property
+    def curve_fitting_method(self) -> str:
+        """
+        Get regressionMethod flag.
+
+        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+        The supported flags are "lowess", "spline", and "logistic".
+        If not provided in the config file, returns "spline" by default.
+
+        :return: a lowercase string representation of the regression method.
+        """
+        return self.data.get("regressionMethod", "spline").lower()
+
+    @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
+
     ######################################
     # these are spectral library options #
     ######################################
@@ -355,12 +364,12 @@ class Config:
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if ("alphapept" not in int_model) and ("tmt" not in int_model):
+            if ("tmt" not in int_model) and ("ptm" not in int_model) and ("alphapept" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
+            if ("tmt" not in irt_model) and ("ptm" not in irt_model) and ("alphapept" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."

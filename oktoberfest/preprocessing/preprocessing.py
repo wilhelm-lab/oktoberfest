@@ -288,12 +288,8 @@ def filter_peptides(
         (df["PEPTIDE_LENGTH"] <= max_length)
         & (df["PEPTIDE_LENGTH"] >= min_length)
         & (df["PRECURSOR_CHARGE"] <= max_charge)
-        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(ac\)"))
-        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\(Acetyl \(Protein N-term\)\)"))
-        & (~df["MODIFIED_SEQUENCE"].str.contains(r"\[UNIMOD\:21\]"))
-        & (~df["SEQUENCE"].str.contains(r"B|\*|\.|U|X|Z"))
+        & (~df["SEQUENCE"].str.contains(r"B|\*|\.|O|U|X|Z"))
     )
-
     return peptides[peptide_filter.values]
 
 

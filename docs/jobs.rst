@@ -195,7 +195,7 @@ Example config file:
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
         "fdr_estimation_method": "mokapot",
-        "allFeatures": false,
+        "add_feature_cols": "none",
         "regressionMethod": "spline",
         "ssl": true,
         "thermoExe": "ThermoRawFileParser.exe",
