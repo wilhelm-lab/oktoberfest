@@ -30,6 +30,27 @@ def predict_intensities(data: anndata.AnnData, chunk_idx: Optional[List[pd.Index
         For alphapept, this is required as padding is only performed within one batch, leading to
         different sizes of arrays between individual prediction batches that cannot be concatenated.
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest.data.spectra import Spectra
+        >>> from oktoberfest import predict as pr
+        >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+        >>> var = Spectra._gen_vars_df()
+        >>> library = Spectra(obs=meta_df, var=var)
+        >>> library.strings_to_categoricals()
+        >>> pr.predict_intensities(data=library,
+        >>>                         model_name="Prosit_2020_intensity_HCD",
+        >>>                         server_url="koina.wilhelmlab.org:443",
+        >>>                         ssl=True,
+        >>>                         targets=["intensities","annotation"])
+        >>> print(library.layers["pred_int"])
     """
     if chunk_idx is None:
         intensities = predict_at_once(data=data.obs, **kwargs)
@@ -51,6 +72,24 @@ def predict_rt(data: anndata.AnnData, **kwargs):
     :param data: Anndata object containing the data required for prediction and to store the
         predictions in after retrieval from the server.
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest.data.spectra import Spectra
+        >>> from oktoberfest import predict as pr
+        >>> import pandas as pd
+        >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+        >>> var = Spectra._gen_vars_df()
+        >>> library = Spectra(obs=meta_df, var=var)
+        >>> library.strings_to_categoricals()
+        >>> predict_rt(data=library, model_name="Prosit_2019_irt", server_url="koina.wilhelmlab.org:443", ssl=True)
+        >>> print(library.obs["PREDICTED_IRT"])
     """
     pred_irts = predict_at_once(data=data.obs, **kwargs)
     data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
@@ -79,6 +118,24 @@ def predict(
     :return: a dictionary with targets (keys) and predictions (values). If chunk indicies are
         provided, values for each target are a list of numpy array with a length equal to the number
         of chunks provided, else single numpy arrays.
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import predict as pr
+        >>> import pandas as pd
+        >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+        >>> predictions = pr.predict(data=meta_df,
+        >>>                         model_name="Prosit_2020_intensity_HCD",
+        >>>                         server_url="koina.wilhelmlab.org:443",
+        >>>                         ssl=True,
+        >>>                         targets=["intensities", "annotation"])
+        >>> print(predictions)
     """
     if chunk_idx is None:
         return predict_at_once(data, **kwargs)
@@ -97,6 +154,24 @@ def predict_at_once(data: pd.DataFrame, **kwargs) -> Dict[str, np.ndarray]:
     :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
     :return: a dictionary with targets (keys) and predictions (values)
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import predict as pr
+        >>> import pandas as pd
+        >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+        >>> predictions = pr.predict_at_once(data=meta_df,
+        >>>                                 model_name="Prosit_2020_intensity_HCD",
+        >>>                                 server_url="koina.wilhelmlab.org:443",
+        >>>                                 ssl=True,
+        >>>                                 targets=["intensities", "annotation"])
+        >>> print(predictions)
     """
     predictor = Koina(**kwargs)
     return predictor.predict(data)
@@ -119,6 +194,27 @@ def predict_in_chunks(data: pd.DataFrame, chunk_idx: List[pd.Index], **kwargs) -
 
     :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
         to the number of chunks provided.
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import predict as pr
+        >>> from oktoberfest.utils import group_iterator
+        >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
+        >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"],
+        >>>                         "PEPTIDE_LENGTH": [8,9]})
+        >>> idx = list(group_iterator(df=meta_df, group_by_column="PEPTIDE_LENGTH"))
+        >>> predictions = pr.predict_in_chunks(data=meta_df,
+        >>>                                 chunk_idx=idx,
+        >>>                                 model_name="Prosit_2020_intensity_HCD",
+        >>>                                 server_url="koina.wilhelmlab.org:443",
+        >>>                                 ssl=True,
+        >>>                                 targets=["intensities","annotation"])
+        >>> print(predictions)
     """
     predictor = Koina(**kwargs)
 
@@ -142,12 +238,18 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
     :return: a library that is modified according to the description above
     """
-    top_n = 1000
-    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
-    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby("RAW_FILE")
+    if len(library) < 1000:
+        top_n = len(library)
+    else:
+        top_n = 1000
 
     if group_by_charge:
-        hcd_targets = hcd_targets.groupby("PRECURSOR_CHARGE")
+        groups = ["RAW_FILE", "PRECURSOR_CHARGE"]
+    else:
+        groups = ["RAW_FILE"]
+
+    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
+    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
     top_hcd_targets = hcd_targets.head(top_n)
 
     alignment_library = library[top_hcd_targets.index]
@@ -158,7 +260,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_
     alignment_library.obs.reset_index(inplace=True)
 
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
-    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), top_n)
+    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), len(top_hcd_targets))
 
     return alignment_library
 
@@ -180,6 +282,36 @@ def ce_calibration(
         server_kwargs and checked here to determine if alphapept is used for further preprocessing.
     :param server_kwargs: Additional parameters that are forwarded to the prediction method
     :return: a spectra object containing the spectral angle for each tested CE
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest.data.spectra import FragmentType, Spectra
+        >>> from oktoberfest import predict as pr
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+        >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+        >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"],
+        >>>                         "REVERSE": [False,False],
+        >>>                         "SCORE": [0,0]})
+        >>> var = Spectra._gen_vars_df()
+        >>> library = Spectra(obs=meta_df, var=var)
+        >>> raw_intensities = np.random.rand(2,174)
+        >>> annotation = np.array([var.index,var.index])
+        >>> library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
+        >>> library.strings_to_categoricals()
+        >>> alignment_library = pr.ce_calibration(library=library,
+        >>>                                     ce_range=(15,30),
+        >>>                                     group_by_charge=False,
+        >>>                                     model_name="Prosit_2020_intensity_HCD",
+        >>>                                     server_url="koina.wilhelmlab.org:443",
+        >>>                                     ssl=True)
+        >>> print(alignment_library)
     """
     alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
 

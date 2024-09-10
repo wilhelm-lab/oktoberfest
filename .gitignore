@@ -150,3 +150,6 @@ tutorials/
 
 # example data
 data/
+
+# doctest IO files
+tests/doctests/

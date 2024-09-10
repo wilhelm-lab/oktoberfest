@@ -6,7 +6,7 @@ from numpy.testing import assert_almost_equal
 
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
-from oktoberfest.pr import predict_intensities, predict_rt
+from oktoberfest.predict import predict_intensities, predict_rt
 
 
 class TestTMTProsit(unittest.TestCase):

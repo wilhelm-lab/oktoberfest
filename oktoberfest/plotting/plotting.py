@@ -44,6 +44,28 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     :param decoy: mokapot / percolator decoy output
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: PSMId, score, q-value and peptide
+        >>> target_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F1-5-HARPQTTLR-2-6","F2-14-RVYDPASPQRR-2-5",
+        >>>                             "F1-12-FSTQDHAAAAIAK-2-2","F2-63-ISDPTSPLRTR-2-9","F1-16-ADHPLRTR-1-5"],
+        >>>                             "score": [-0.1,-0.5,-0.5,0.7,0.4,0.7],
+        >>>                             "q-value": [0.005,0.008,0.002,0.006,0.004,0.001],
+        >>>                             "peptide": ["TAIASPEK","HARPQTTLR","RVYDPASPQRR",
+        >>>                             "FSTQDHAAAAIAK","ISDPTSPLRTR","ADHPLRTR"]})
+        >>> decoy_df = pd.DataFrame({"PSMId": ["F1-11-KLYNANYIK-3-7","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                         "score": [-0.1,-0.5,-0.5],
+        >>>                         "q-value": [0.006,0.004,0.003],
+        >>>                         "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
+        >>> pl.plot_score_distribution(target=target_df,
+        >>>                             decoy=decoy_df,
+        >>>                             level="psm",
+        >>>                             filename="./tests/doctests/output/score_distribution_plot.svg")
     """
     score_col, _, _, _ = _check_columns(target)
 
@@ -77,6 +99,38 @@ def joint_plot(
     :param filename: the path to the location used for storing the plot
 
     :raises ValueError: if a wrong level is provided
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: PSMId, score, q-value and peptide
+        >>> target_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4",
+        >>>                         "F2-63-ISDPTSPLRTR-2-9","F1-16-ADHPLRTR-1-5","F2-4-YLNPLRTK-1-5"],
+        >>>                         "q-value": [0.005,0.008,0.002,0.006,0.004,0.001],
+        >>>                         "score": [-0.1,-0.5,-0.5,0.7,0.4,0.5],
+        >>>                         "peptide": ["TAIASPEK","LGLTKLQLH","EFAVEVLK","ISDPTSPLRTSR","ADHPLRTR","YLNPLRTK"]})
+        >>> decoy_df = pd.DataFrame({"PSMId": ["F1-11-KLYNANYIK-3-7","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                         "q-value": [0.006,0.004,0.003],
+        >>>                         "score": [-0.1,-0.5,-0.5],
+        >>>                         "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
+        >>> andromeda_target_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F2-59-LGLTKLQLH-3-9","F2-63-ISDPTSPLRTR-2-9",
+        >>>                                     "F1-16-ADHPLRTR-1-5","F2-4-YLNPLRTK-1-5"],
+        >>>                                     "q-value": [0.005,0.008,0.002,0.006,0.001],
+        >>>                                     "score": [-0.2,-0.8,0.5,0.3,0.4],
+        >>>                                     "peptide": ["TAIASPEK","LGLTKLQLH","ISDPTSPLRTSR","ADHPLRTR","YLNPLRTK"]})
+        >>> andromeda_decoy_df = pd.DataFrame({"PSMId": ["F1-11-KLYNANYIK-3-7","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                                 "q-value": [0.007,0.005,0.002],
+        >>>                                 "score": [-0.2,-0.7,-0.8],
+        >>>                                 "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
+        >>> pl.joint_plot(prosit_target=target_df,
+        >>>                 prosit_decoy=decoy_df,
+        >>>                 andromeda_target=andromeda_target_df,
+        >>>                 andromeda_decoy=andromeda_decoy_df,
+        >>>                 level="psm",
+        >>>                 filename="./tests/doctests/output/joint_plot.svg")
     """
     score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
@@ -124,7 +178,7 @@ def joint_plot(
 
     jplot.ax_joint.set_ylabel("Score\n(peptide property prediction)")
     jplot.ax_joint.set_xlabel("Score\n(search engine)")
-    jplot.fig.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
+    jplot.figure.suptitle(f"Score distribution ({level.capitalize()})", y=0.99)
     plt.savefig(filename, dpi=300)
     plt.close()
 
@@ -139,6 +193,27 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     :param filename: the path to the location used for storing the plot
 
     :raises ValueError: if a wrong level is provided
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: PSMId, score, q-value and peptide
+        >>> prosit_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4",
+        >>>                         "F2-63-ISDPTSPLRTR-2-9","F1-16-ADHPLRTR-1-5"],
+        >>>                         "q-value": [0.005,0.008,0.002,0.006,0.004],
+        >>>                         "score": [-0.1,-0.5,-0.5,0.7,0.4],
+        >>>                         "peptide": ["TAIASPEK","LGLTKLQLH","EFAVEVLK","ISDPTSPLRTSR","ADHPLRTR"]})
+        >>> andromeda_df = pd.DataFrame({"PSMId": ["F1-11-KLYNANYIK-3-7","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                             "q-value": [0.006,0.004,0.003],
+        >>>                             "score": [-0.1,-0.5,-0.5],
+        >>>                             "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
+        >>> pl.plot_gain_loss(prosit_target=prosit_df,
+        >>>                     andromeda_target=andromeda_df,
+        >>>                     level="psm",
+        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.svg")
     """
     _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
@@ -219,6 +294,16 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
 
     :param sa_ce_df: a dataframe containing the two columns "COLLISION_ENERGY", "SPECTRAL_ANGLE".
     :param filename: the path to the location used for storing the plot
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
+        >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
+        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.svg")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.scatterplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax)
@@ -234,6 +319,16 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
 
     :param sa_ce_df: a dataframe containing the two columns "COLLISION_ENERGY", "SPECTRAL_ANGLE".
     :param filename: the path to the location used for storing the plot
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
+        >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
+        >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.svg")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
@@ -257,6 +352,27 @@ def plot_pred_rt_vs_irt(
     :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
     :param outpath: the path to the location used for storing the plot without the filename
     :param suffix: the suffix of the filename, which will be prepended by the rawfile name
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: SpecId, RT, iRT and pred_RT
+        >>> prosit_df = pd.DataFrame({"SpecId": ["F1-15-TAIASPEK-1-5","F1-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                         "RT": np.array([28.1,56.54,83.7]),
+        >>>                         "iRT": np.array([25.21,54.76,82.88]),
+        >>>                         "pred_RT": np.array([32.23,60.01,99.11])})
+        >>> # Required columns: PSMId, score, q-value and peptide
+        >>> target_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F1-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                         "q-value": [0.005,0.003,0.002],
+        >>>                         "score": [0.7,0.4,0.5],
+        >>>                         "peptide": ["TAIASPEK","LGLTKLQLH","EFAVEVLK"]})
+        >>> pl.plot_pred_rt_vs_irt(prosit_df=prosit_df,
+        >>>                         prosit_target=target_df,
+        >>>                         outpath="./tests/doctests/output/",
+        >>>                         suffix="pred_irt_vs_irt")
     """
     _, qval_col, _, psm_col = _check_columns(prosit_target)
 
@@ -290,6 +406,31 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
     :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
     :param filename: the path to the location used for storing the plot
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import plotting as pl
+        >>> import pandas as pd
+        >>> # Required columns: SpecId and spectral_angle
+        >>> prosit_df = pd.DataFrame({"SpecId": ["F1-15-TAIASPEK-1-5","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4",
+        >>>                         "F2-63-ISDPTSPLRTR-2-9","F1-16-ADHPLRTR-1-5","F1-11-KLYNANYIK-3-7","F2-4-YLNPLRTK-1-5"],
+        >>>                         "spectral_angle": [0.6,0.2,0.3,0.6,0.4,0.2,0.5]})
+        >>> # Required columns: PSMId, score, q-value and peptide
+        >>> target_df = pd.DataFrame({"PSMId": ["F1-15-TAIASPEK-1-5","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4",
+        >>>                         "F2-63-ISDPTSPLRTR-2-9","F1-16-ADHPLRTR-1-5","F2-4-YLNPLRTK-1-5"],
+        >>>                         "q-value": [0.005,0.008,0.002,0.006,0.004,0.001],
+        >>>                         "score": [-0.1,-0.5,-0.5,0.7,0.4,0.5],
+        >>>                         "peptide": ["TAIASPEK","LGLTKLQLH","EFAVEVLK","ISDPTSPLRTSR","ADHPLRTR","YLNPLRTK"]})
+        >>> decoy_df = pd.DataFrame({"PSMId": ["F1-11-KLYNANYIK-3-7","F2-59-LGLTKLQLH-3-9","F1-24-EFAVEVLK-2-4"],
+        >>>                         "q-value": [0.006,0.004,0.003],
+        >>>                         "score": [-0.1,-0.5,-0.5],
+        >>>                         "peptide": ["KLYNANYIK","LGLTKLQLH","EFAVEVLK"]})
+        >>> pl.plot_sa_distribution(prosit_df=prosit_df,
+        >>>                         target_df=target_df,
+        >>>                         decoy_df=decoy_df,
+        >>>                         filename="./tests/doctests/output/sa_distribution_plot.svg")
     """
     _, _, _, psm_col = _check_columns(target_df)
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
@@ -310,7 +451,6 @@ def plot_all(data_dir: Path):
     Generate all plots after a rescoring run.
 
     :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot.
-
     """
     fdr_method = data_dir.stem
     prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
