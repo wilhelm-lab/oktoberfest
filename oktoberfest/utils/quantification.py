@@ -34,7 +34,7 @@ def apply_quant(config: Config) -> None:
     pg_fdr_dir.mkdir(exist_ok=True, parents=True)
 
     # reading fasta file paths from config
-    fasta_file = [str(config.inputs["library_input"])]
+    fasta_file = [str(config.library_input)]
 
     # read in digestion parameters from config
     digest_params_list = [

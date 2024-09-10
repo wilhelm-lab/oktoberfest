@@ -44,65 +44,79 @@ class TestQuant(unittest.TestCase):
 
     def test_picked_group_fdr_maxquant(self):
         """Testing picked_group_fdr quantification with msfragger search results."""
-        config = Config
-        config.search_results = Path("./tests/unit_tests/data/quantification/mq")
-        config.search_results_type = "maxquant"
-        config.output = Path("./tests/unit_tests/data/quantification")
-        config.fdr_estimation_method = "percolator"
-        config.inputs = {"library_input": Path("./tests/unit_tests/data/quantification/example.fasta")}
-        config.inputs["library_input"]
-        config.fasta_digest_options = {
-            "digestion": "full",
-            "missedCleavages": 2,
-            "minLength": 7,
-            "maxLength": 60,
-            "enzyme": "asp-n",
-            "specialAas": "D",
-            "db": "target",
+        config = Config()
+        config.data = {
+            "inputs": {
+                "search_results": Path("./data/quantification/mq"),
+                "search_results_type": "maxquant",
+                "library_input": Path("./data/quantification/example.fasta"),
+            },
+            "output": Path("./data/quantification"),
+            "fdr_estimation_method": "percolator",
+            "fastaDigestOptions": {
+                "digestion": "full",
+                "missedCleavages": 2,
+                "minLength": 7,
+                "maxLength": 60,
+                "enzyme": "asp-n",
+                "specialAas": "D",
+                "db": "target",
+            },
         }
+        config.base_path = Path(__file__).parent
         apply_quant(config)
-        compare = pd.read_csv("./tests/unit_tests/data/quantification/mq_proteinGroups.txt", sep="\t")
+        compare = pd.read_csv(Path(__file__).parent / "data/quantification/mq_proteinGroups.txt", sep="\t")
         results = pd.read_csv(
-            "./tests/unit_tests/data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
+            Path(__file__).parent / "data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
         )
         pd.testing.assert_frame_equal(results, compare)
 
     def test_picked_group_fdr_sage(self):
         """Testing picked_group_fdr quantification with sage search results."""
-        config = Config
-        config.search_results = Path("./tests/unit_tests/data/quantification/sage")
-        config.search_results_type = "sage"
-        config.output = Path("./tests/unit_tests/data/quantification")
-        config.fdr_estimation_method = "percolator"
-        config.library_input = Path("./tests/unit_tests/data/quantification/iprg2016_with_labels.fasta")
-        config.fasta_digest_options = {
-            "digestion": "full",
-            "missedCleavages": 2,
-            "minLength": 7,
-            "maxLength": 60,
-            "enzyme": "asp-n",
-            "specialAas": "D",
-            "db": "target",
+        config = Config()
+        config.data = {
+            "inputs": {
+                "search_results": Path("./data/quantification/sage"),
+                "search_results_type": "sage",
+                "library_input": Path("./data/quantification/iprg2016_with_labels.fasta"),
+            },
+            "output": Path("./data/quantification"),
+            "fdr_estimation_method": "percolator",
+            "fastaDigestOptions": {
+                "digestion": "full",
+                "missedCleavages": 2,
+                "minLength": 7,
+                "maxLength": 60,
+                "enzyme": "asp-n",
+                "specialAas": "D",
+                "db": "target",
+            },
         }
+        config.base_path = Path(__file__).parent
         # TODO add data for testing
         # apply_quant(config)
 
     def test_picked_group_fdr_fragpipe(self):
         """Testing picked_group_fdr quantification with msfragger search results."""
-        config = Config
-        config.search_results = Path("./tests/unit_tests/data/quantification/fragpipe")
-        config.search_results_type = "msfragger"
-        config.output = Path("./tests/unit_tests/data/quantification")
-        config.fdr_estimation_method = "percolator"
-        config.library_input = Path("./tests/unit_tests/data/quantification/iprg2016_with_labels.fasta")
-        config.fasta_digest_options = {
-            "digestion": "full",
-            "missedCleavages": 2,
-            "minLength": 7,
-            "maxLength": 60,
-            "enzyme": "asp-n",
-            "specialAas": "D",
-            "db": "target",
+        config = Config()
+        config.data = {
+            "inputs": {
+                "search_results": Path("./data/quantification/fragpipe"),
+                "search_results_type": "msfragger",
+                "library_input": Path("./data/quantification/iprg2016_with_labels.fasta"),
+            },
+            "output": Path("./data/quantification"),
+            "fdr_estimation_method": "percolator",
+            "fastaDigestOptions": {
+                "digestion": "full",
+                "missedCleavages": 2,
+                "minLength": 7,
+                "maxLength": 60,
+                "enzyme": "asp-n",
+                "specialAas": "D",
+                "db": "target",
+            },
         }
+        config.base_path = Path(__file__).parent
         # TODO add data for testing
         # apply_quant(config)
