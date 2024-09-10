@@ -1,14 +1,19 @@
+from __future__ import annotations
+
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
 
 import mokapot
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.percolator import Percolator
 
-from ..data import FragmentType, Spectra
+from ..data import FragmentType
+
+if TYPE_CHECKING:
+    from ..data import Spectra
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +21,8 @@ logger = logging.getLogger(__name__)
 def generate_features(
     library: Spectra,
     search_type: str,
-    output_file: Union[str, Path],
-    additional_columns: Union[str, list] = None,
+    output_file: str | Path,
+    additional_columns: str | list | None = None,
     all_features: bool = False,
     regression_method: str = "spline",
 ):
@@ -88,8 +93,8 @@ def generate_features(
 
 
 def merge_input(
-    tab_files: List[Path],
-    output_file=Union[str, Path],
+    tab_files: list[Path],
+    output_file: str | Path,
 ):
     r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
@@ -183,8 +188,8 @@ def merge_input(
 
 
 def rescore_with_percolator(
-    input_file: Union[str, Path],
-    output_folder: Optional[Union[str, Path]] = None,
+    input_file: str | Path,
+    output_folder: str | Path | None = None,
     num_threads: int = 3,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
@@ -239,8 +244,8 @@ def rescore_with_percolator(
 
 
 def rescore_with_mokapot(
-    input_file: Union[str, Path],
-    output_folder: Optional[Union[str, Path]] = None,
+    input_file: str | Path,
+    output_folder: str | Path | None = None,
     test_fdr: float = 0.01,
 ):
     """
