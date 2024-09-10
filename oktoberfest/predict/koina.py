@@ -159,7 +159,6 @@ class Koina:
             are added to list of output tensors to predict.
         :raises ValueError: If a target supplied is not a valid output name of the requested model.
         :raises InferenceServerException: If an exception occured while querying the server for model metadata.
-
         """
         try:
             model_outputs = self.client.get_model_metadata(self.model_name).outputs
@@ -320,14 +319,6 @@ class Koina:
 
         :raises NotImplementedError: If the keys in 'd1' and 'd2' do not match.
         :return: A dictionary containing merged arrays with the same keys as d1 and d2.
-
-        Example:
-        ```
-        dict1 = {"output1": np.array([1.0, 2.0, 3.0]), "output2": np.array([4.0, 5.0, 6.0])}
-        dict2 = {"output1": np.array([7.0, 8.0, 9.0]), "output2": np.array([10.0, 11.0, 12.0])}
-        merged_dict = model.__merge_array_dict(dict1, dict2)
-        print(merged_dict)
-        ```
         """
         if d1.keys() != d2.keys():
             raise NotImplementedError(f"Keys in dictionary need to be equal {d1.keys(), d2.keys()}")
@@ -349,15 +340,6 @@ class Koina:
         :raises NotImplementedError: If the keys of all dictionaries in the list do not match.
 
         :return: A dictionary containing merged arrays with the same keys as the dictionaries in the list.
-
-        Example::
-            dict_list = [
-                {"output1": np.array([1.0, 2.0, 3.0]), "output2": np.array([4.0, 5.0, 6.0])},
-                {"output1": np.array([7.0, 8.0, 9.0]), "output2": np.array([10.0, 11.0, 12.0])},
-                {"output1": np.array([13.0, 14.0, 15.0]), "output2": np.array([16.0, 17.0, 18.0])},
-            ]
-            merged_dict = model.__merge_list_dict_array(dict_list)
-            print(merged_dict)
         """
         tmp = [x.keys() for x in dict_list]
         if not np.all([tmp[0] == x for x in tmp]):
@@ -456,16 +438,20 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
 
-        Example::
-            model = Koina("Prosit_2019_intensity")
-            input_data = {
-                "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
-                "precursor_charges": np.array([2 for _ in range(size)]),
-                "collision_energies": np.array([20 for _ in range(size)]),
-                "fragmentation_types": np.array(["HCD" for _ in range(size)]),
-                "instrument_types": np.array(["QE" for _ in range(size)])
-            }
-            predictions = model.predict(input_data)
+        :Example:
+
+        .. code-block:: python
+
+            >>> model = Koina("Prosit_2019_intensity")
+            >>> size=5
+            >>> input_data = {
+            >>>     "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
+            >>>     "precursor_charges": np.array([2 for _ in range(size)]),
+            >>>     "collision_energies": np.array([20 for _ in range(size)]),
+            >>>     "fragmentation_types": np.array(["HCD" for _ in range(size)]),
+            >>>     "instrument_types": np.array(["QE" for _ in range(size)])
+            >>> }
+            >>> predictions = model.predict(input_data)
         """
         if isinstance(data, pd.DataFrame):
             data = {
