@@ -207,18 +207,28 @@ Example config file:
         }
     }
 
-For rescoring tasks including quantification via picked-group-FDR, create a config file like this (so far only MaxQuant case):
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.RESCORING
+    json.dumps(config, indent=4)
+
+
+For rescoring tasks including quantification via picked-group-FDR, create a config file like this (so far only MaxQuant is supported):
 
 {
     "type": "Rescoring",
-    "quantification": True,
+    "quantification": true,
     "tag": "",
-    "inputs":{
-        "search_results": "./txt/msms.txt",
+    "inputs": {
+        "search_results": "mq_results/txt",
         "search_results_type": "Maxquant",
         "spectra": "./",
         "spectra_type": "raw",
-        "library_input": "./*.fasta",
+        "library_input": "uniprot.fasta"
     },
     "output": "./out",
     "models": {
@@ -226,9 +236,9 @@ For rescoring tasks including quantification via picked-group-FDR, create a conf
         "irt": "Prosit_2019_irt"
     },
     "prediction_server": "koina.proteomicsdb.org:443",
-    "ssl": True,
+    "ssl": true,
     "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
-    "numThreads": 4,
+    "numThreads": 1,
     "fdr_estimation_method": "percolator",
     "regressionMethod": "spline",
     "allFeatures": False,
@@ -239,10 +249,10 @@ For rescoring tasks including quantification via picked-group-FDR, create a conf
         "missedCleavages": 2,
         "minLength": 7,
         "maxLength": 60,
-        "enzyme": "asp-n",
-        "specialAas": "D",
-        "db": "target"
-    },
+        "enzyme": "trypsin",
+        "specialAas": "KR",
+        "db": "concat"
+    }
 }
 
 
@@ -252,5 +262,5 @@ The example config can be loaded and viewed using
 
     import oktoberfest as ok
     import json
-    config = ok.utils.example_configs.RESCORING
+    config = ok.utils.example_configs.RESCORING_WITH_QUANT
     json.dumps(config, indent=4)
