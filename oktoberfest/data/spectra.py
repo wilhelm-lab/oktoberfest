@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import anndata
 import numpy as np
@@ -9,6 +11,9 @@ import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import csr_matrix, dok_matrix
+
+if TYPE_CHECKING:
+    from anndata.compat import Index
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +42,7 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(specified_ion_types: Optional[List[str]] = None) -> pd.DataFrame:
+    def _gen_vars_df(specified_ion_types: list[str] | None = None) -> pd.DataFrame:
         """
         Creates Annotation dataframe for vars in AnnData object.
 
@@ -61,7 +66,7 @@ class Spectra(anndata.AnnData):
         return var_df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType) -> List[str]:
+    def _gen_column_names(fragment_type: FragmentType) -> list[str]:
         """
         Get column names of the spectra data.
 
@@ -108,12 +113,12 @@ class Spectra(anndata.AnnData):
             layer = Spectra.MZ_LAYER_NAME
         return layer
 
-    def __getitem__(self, index: anndata._core.index.Index):
+    def __getitem__(self, index: Index):
         """Returns a sliced view of the object with this type to avoid returning AnnData instances when slicing."""
         oidx, vidx = self._normalize_indices(index)
         return Spectra(self, oidx=oidx, vidx=vidx, asview=True)
 
-    def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
+    def add_column(self, data: np.ndarray | pd.Series, name: str | None = None) -> None:
         """
         Add column to spectra data.
 
@@ -192,9 +197,9 @@ class Spectra(anndata.AnnData):
 
     def add_list_of_predicted_intensities(
         self,
-        intensities: List[np.ndarray],
-        annotations: List[np.ndarray],
-        chunk_indices: List[np.ndarray],
+        intensities: list[np.ndarray],
+        annotations: list[np.ndarray],
+        chunk_indices: list[np.ndarray],
     ):
         """
         Add chunks of predicted intensities and convert to sparse matrix.
@@ -253,7 +258,7 @@ class Spectra(anndata.AnnData):
 
         # self.obs.iloc[index]["done"] = True
 
-    def get_matrix(self, fragment_type: FragmentType) -> Tuple[csr_matrix, List[str]]:
+    def get_matrix(self, fragment_type: FragmentType) -> tuple[csr_matrix, list[str]]:
         """
         Get intensities sparse matrix from AnnData object.
 
@@ -268,7 +273,7 @@ class Spectra(anndata.AnnData):
 
         return matrix, self._gen_column_names(fragment_type)
 
-    def write_as_hdf5(self, output_file: Union[str, Path]):
+    def write_as_hdf5(self, output_file: str | Path):
         """
         Write spectra_data to hdf5 file.
 
@@ -277,7 +282,7 @@ class Spectra(anndata.AnnData):
         self.write(output_file, compression="gzip")
 
     @classmethod
-    def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
+    def from_hdf5(cls: type[SpectraT], input_file: str | Path) -> SpectraT:
         """
         Read from hdf5 file.
 
