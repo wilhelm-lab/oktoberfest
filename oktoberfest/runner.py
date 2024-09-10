@@ -64,6 +64,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
+                custom_mods=config.custom_to_unimod(),
                 output_file=internal_search_file,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
@@ -75,6 +76,7 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         else:
             internal_search_file = config.search_results
             search_results = pp.load_search(internal_search_file)
+
             # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
@@ -134,7 +136,11 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         aspec = pp.annotate_spectral_library(
-            library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+            psms=library,
+            mass_tol=config.mass_tolerance,
+            unit_mass_tol=config.unit_mass_tolerance,
+            fragmentation_method=config.fragmentation_method,
+            custom_mods=config.unimod_to_mass(),
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -144,7 +150,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if (library.obs["FRAGMENTATION"] == "HCD").any():
+    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -260,7 +266,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
                 proteins=proteins,
             )
             library_file = config.output / "peptides_internal.csv"
-            internal_df.to_csv(internal_library_file, sep=",", index=None)
+            internal_df.to_csv(internal_library_file, sep=",", index=False)
             created_internal_step.mark_done()
         library_file = internal_library_file
 
@@ -401,10 +407,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
             consumer_process = Process(
                 target=speclib.async_write,
-                args=(
-                    shared_queue,
-                    writing_progress,
-                ),
+                args=(shared_queue, writing_progress, config.custom_to_unimod()),
             )
 
             try:
@@ -552,6 +555,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="original",
         output_file=fdr_dir / spectra_file.with_suffix(".original.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )
@@ -559,6 +563,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         library=library,
         search_type="rescore",
         output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
+        additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
     )

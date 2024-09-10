@@ -3,7 +3,9 @@ import logging
 import os
 from pathlib import Path
 from sys import platform
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+# from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
 
@@ -40,41 +42,12 @@ class Config:
             return self.data["models"]
 
     @property
-    def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator)."""
-        if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"].lower()
-        else:
-            return "mokapot"
-
-    @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return ""."""
         if "tag" in self.data:
             return self.data["tag"].lower()
         else:
             return ""
-
-    @property
-    def all_features(self) -> bool:
-        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
-
-    @property
-    def curve_fitting_method(self) -> str:
-        """
-        Get regressionMethod flag.
-
-        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
-        The supported flags are "lowess", "spline", and "logistic".
-        If not provided in the config file, returns "spline" by default.
-
-        :return: a lowercase string representation of the regression method.
-        """
-        return self.data.get("regressionMethod", "spline").lower()
 
     @property
     def job_type(self) -> str:
@@ -95,6 +68,11 @@ class Config:
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
+
+    @property
+    def fragmentation_method(self) -> str:
+        """Get fragmentation method from config file."""
+        return self.data.get("fragmentation_method", "HCD")
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
@@ -149,6 +127,37 @@ class Config:
     def search_results_type(self) -> str:
         """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
         return self.inputs.get("search_results_type", "maxquant").lower()
+
+    @property
+    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+        """Get the custom modification dictionary from the config file."""
+        return self.inputs.get("custom_modifications", {})
+
+    @property
+    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom static modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping static mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("static_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
+
+    @property
+    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+        """
+        Get the custom variable modification information.
+
+        This function returs a dictionary with custom mod identifiers (keys), and a tuple of
+        (UNIMOD Id, modification mass delta, and optional neutral losses) (values).
+        :return: dictionary mapping var mod identifiers to a tuple containing unimod id, mass,
+            and optionally neutral losses
+        """
+        mod_items = self.custom_modifications.get("var_mods", {}).items()
+        return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
     def spectra(self) -> Path:
@@ -260,6 +269,44 @@ class Config:
         """Get whether or not to perform ce calibration using a ransac model."""
         return self.ce_alignment_options.get("use_ransac_model", False)
 
+    ###############################
+    # these are rescoring options #
+    ###############################
+
+    @property
+    def use_feature_cols(self) -> Union[str, list]:
+        """Get additional columns ("all" for all columns or list with column names) from the config file."""
+        return self.data.get("add_feature_cols", "none")
+
+    @property
+    def all_features(self) -> bool:
+        """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
+        if "allFeatures" in self.data:
+            return self.data["allFeatures"]
+        else:
+            return False
+
+    @property
+    def curve_fitting_method(self) -> str:
+        """
+        Get regressionMethod flag.
+
+        Reads the regressionMethod flag that is used to determine the method for retention time alignment.
+        The supported flags are "lowess", "spline", and "logistic".
+        If not provided in the config file, returns "spline" by default.
+
+        :return: a lowercase string representation of the regression method.
+        """
+        return self.data.get("regressionMethod", "spline").lower()
+
+    @property
+    def fdr_estimation_method(self) -> str:
+        """Get peptide detection method from the config file (mokapot or percolator)."""
+        if "fdr_estimation_method" in self.data:
+            return self.data["fdr_estimation_method"].lower()
+        else:
+            return "mokapot"
+
     ######################################
     # these are spectral library options #
     ######################################
@@ -323,12 +370,12 @@ class Config:
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if ("alphapept" not in int_model) and ("tmt" not in int_model):
+            if ("tmt" not in int_model) and ("ptm" not in int_model) and ("alphapept" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
+            if ("tmt" not in irt_model) and ("ptm" not in irt_model) and ("alphapept" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
@@ -450,3 +497,37 @@ class Config:
         with open(config_path) as f:
             self.data = json.load(f)
         self.base_path = config_path.parent
+
+    def custom_to_unimod(self) -> Dict[str, int]:
+        """
+        Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
+
+        :return: a dictionary mapping custom mod identifiers (keys) to the unimod id (values).
+        """
+        custom_to_unimod = {}
+        for k, v in self.var_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        for k, v in self.static_mods.items():
+            custom_to_unimod[str(k)] = int(v[0])
+        return custom_to_unimod
+
+    def unimod_to_mass(self) -> Dict[str, float]:
+        """
+        Map UNIMOD Id to its mass for all static and variable modifications.
+
+        This function maps the UNIMOD Id to its corresponding mass for each custom modifiction
+        provided in the static and variable modifications.
+
+        :return: a dictionary mapping the UNIMOD Ids (keys) to the mass(value) of a given modification
+        """
+        unimod_to_mass = {}
+        for unimod_id, mass, _ in self.var_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        for unimod_id, mass, _ in self.static_mods.values():
+            unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
+        return unimod_to_mass
+
+    """
+    def custom_for_dlomix(self):
+        return list(parse_mods(self.custom_to_unimod()).values())
+    """
