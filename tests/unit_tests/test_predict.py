@@ -121,7 +121,7 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test config constructor for Predictor with DLomix."""
         self.mock_config.predict_intensity_locally = True
         self.mock_config.download_baseline_intensity_predictor = False
-        self.mock_config.batch_size = 1024
+        self.mock_config.dlomix_inference_batch_size = 1024
         predictor = Predictor.from_config(self.mock_config, model_type=self.model_type)
         self.assertIsInstance(predictor._predictor, type(mock_dlomix.return_value))
         mock_dlomix.assert_called_once()
@@ -136,7 +136,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             model_type=self.model_type,
             model_path=self.data_dir / "dlomix/prosit_baseline_model.keras",
             output_path=self.data_dir / "dlomix",
-            batch_size=self.mock_config.batch_size,
+            batch_size=self.mock_config.dlomix_inference_batch_size,
             download=True,
         )
 

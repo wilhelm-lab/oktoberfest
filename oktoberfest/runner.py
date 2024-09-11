@@ -400,7 +400,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         results_path = config.output / "results"
         results_path.mkdir(exist_ok=True)
 
-        batch_size = config.batch_size
+        batch_size = config.speclib_generation_batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
@@ -583,7 +583,7 @@ def _calculate_features(spectra_file: Path, config: Config):
                 model_type="intensity",
                 model_path=config.output / "data/dlomix/refined.keras",
                 output_path=config.output / "data/dlomix/",
-                batch_size=config.batch_size,
+                batch_size=config.dlomix_inference_batch_size,
             )
         else:
             intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")

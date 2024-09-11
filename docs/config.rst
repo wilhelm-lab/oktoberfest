@@ -141,6 +141,18 @@ Applicable to in-silico digestion
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+Applicable to local intensity prediction
+----------------------------------------
+
+.. table::
+   :class: fixed-table
+
+    +--------------------------+---------------------------------------------------+
+    | Parameter                | Description                                       |
+    +==========================+===================================================+
+    | dlomixInferenceBatchSize | Batch size to use for local inference with DLomix |
+    +--------------------------+---------------------------------------------------+
+
 Applicable to transfer/refinement learning
 ------------------------------------------
 

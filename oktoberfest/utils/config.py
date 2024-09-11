@@ -329,9 +329,9 @@ class Config:
         return self.spec_lib_options.get("collisionEnergy", 30)
 
     @property
-    def batch_size(self) -> int:
+    def speclib_generation_batch_size(self) -> int:
         """Get output format from the config file."""
-        return self.spec_lib_options.get("batchsize", 1024)
+        return self.spec_lib_options.get("batchsize", 10000)
 
     @property
     def min_intensity(self) -> float:
@@ -365,6 +365,11 @@ class Config:
     def download_baseline_intensity_predictor(self) -> bool:
         """Whether to download a baseline intensity predictor from GitHub."""
         return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
+
+    @property
+    def dlomix_inference_batch_size(self) -> int:
+        """Batch size to use for local inference with DLomix."""
+        return self.data.get("dlomixInferenceBatchSize", 1024)
 
     @property
     def refinement_learning_options(self) -> dict:

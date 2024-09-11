@@ -99,7 +99,7 @@ class Predictor:
         else:
             model_path = Path(model_name)
             download = False
-        return Predictor.from_dlomix(model_type, model_path, output_folder, config.batch_size, download)
+        return Predictor.from_dlomix(model_type, model_path, output_folder, config.dlomix_inference_batch_size, download)
 
     def predict_intensities(self, data: Spectra, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
         """
@@ -140,7 +140,7 @@ class Predictor:
         """
         if self._predictor is None:
             data.add_column(data.obs["RETENTION_TIME"], name="PREDICTED_IRT")
-        else:    
+        else:
             pred_irts = self.predict_at_once(data=data.obs, **kwargs)
             data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
