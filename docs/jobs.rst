@@ -249,8 +249,15 @@ Example config file:
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
+        "dlomixInferenceBatchSize": 1024,
         "refinementLearningOptions": {
-            "batchSize": 1024
+            "batchSize": 1024,
+            "includeOriginalSequences": false,
+            "improveFurther": false,
+            "datasetFilteringOptions": {
+                "searchEngineScoreThreshold": 0,
+                "numDuplicates": 100
+            }
         },
         "fdr_estimation_method": "mokapot",
         "allFeatures": false,
