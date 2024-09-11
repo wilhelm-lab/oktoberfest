@@ -435,8 +435,8 @@ class Koina:
             )
 
     def predict(
-        self, data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra], _async: bool = True, debug=False, **kwargs
-    ) -> Dict[str, np.ndarray]:
+        self, data: Union[dict[str, np.ndarray], pd.DataFrame, Spectra], _async: bool = True, debug=False, **kwargs
+    ) -> dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
 
@@ -451,6 +451,7 @@ class Koina:
             in the column names.
         :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
         :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
+        :param kwargs: In place to catch keyword arguments for other predictor implementations.
 
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.

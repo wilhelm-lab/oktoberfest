@@ -34,6 +34,7 @@ git_dependencies = [
 
 
 def install_git_dependencies(session: Session):
+    """Manually install Git dependencies from URL."""
     for dependency in git_dependencies:
         session.run("pip", "install", dependency)
 

@@ -80,7 +80,7 @@ class Predictor:
         model_name = config.models[model_type]
 
         if model_type == "irt" and model_name == "zero_irt":
-            logger.info(f"Using zero predictions for iRT")
+            logger.info("Using zero predictions for iRT")
             return Predictor(None, "zero_iRT")
 
         if model_type == "irt" or not config.predict_intensity_locally:
@@ -99,7 +99,9 @@ class Predictor:
         else:
             model_path = Path(model_name)
             download = False
-        return Predictor.from_dlomix(model_type, model_path, output_folder, config.dlomix_inference_batch_size, download)
+        return Predictor.from_dlomix(
+            model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
+        )
 
     def predict_intensities(self, data: Spectra, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
         """
