@@ -348,9 +348,9 @@ class Config:
         """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
         return self.spec_lib_options.get("nrOx", 1)
 
-    ######################################
-    # these are local prediction options #
-    ######################################
+    #####################################################################
+    # these are local prediction / transfer&refinement learning options #
+    #####################################################################
 
     @property
     def predict_intensity_locally(self) -> bool:
