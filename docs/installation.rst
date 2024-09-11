@@ -107,7 +107,7 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
 
-For local prediction & refinement learning, instead install with the `[dlomix]` extra:
+For local prediction & refinement learning, you have to install Oktoberfest with the `dlomix` extra:
 
 .. code-block:: bash
 
