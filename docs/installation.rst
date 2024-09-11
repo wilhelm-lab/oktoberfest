@@ -44,7 +44,7 @@ This is a step-by-step guide for the manual installation of all mandatory and op
 Install Python
 ~~~~~~~~~~~~~~
 
-Oktoberfest requires python >=3.8 and <=3.11. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
+Oktoberfest requires python >=3.9 and <=3.11. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
 Follow the installation guide for your operating system, then create a new environment using
 
 .. code-block:: bash
