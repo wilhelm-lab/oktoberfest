@@ -1,7 +1,7 @@
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import mokapot
 import numpy as np
@@ -49,7 +49,7 @@ def generate_features(
 
 
 def merge_input(
-    tab_files: List[Path],
+    tab_files: list[Path],
     output_file=Union[str, Path],
 ):
     """

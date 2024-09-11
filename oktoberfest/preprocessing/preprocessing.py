@@ -3,7 +3,7 @@ import re
 from itertools import chain, combinations, product, repeat
 from pathlib import Path
 from sys import platform
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -48,13 +48,13 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
 
 
 def generate_metadata(
-    peptides: List[str],
-    collision_energy: Union[int, List[int]],
-    precursor_charge: Union[int, List[int]],
-    fragmentation: Union[str, List[str]],
+    peptides: list[str],
+    collision_energy: Union[int, list[int]],
+    precursor_charge: Union[int, list[int]],
+    fragmentation: Union[str, list[str]],
     nr_ox: int,
     instrument_type: Optional[str] = None,
-    proteins: Optional[List[List[str]]] = None,
+    proteins: Optional[list[list[str]]] = None,
 ) -> pd.DataFrame:
     """
     Create metadata about peptides for a spectral library.
@@ -132,7 +132,7 @@ def digest(
     special_aas: str,
     min_length: int,
     max_length: int,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     """
     Digest a given fasta file with specific settings.
 
@@ -293,7 +293,7 @@ def convert_search(
     input_path: Union[str, Path],
     search_engine: str,
     tmt_label: str = "",
-    custom_mods: Optional[Dict[str, int]] = None,
+    custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:
     """
@@ -364,7 +364,7 @@ def convert_timstof_metadata(
     return metadata_df
 
 
-def list_spectra(input_dir: Union[str, Path], input_format: str) -> List[Path]:
+def list_spectra(input_dir: Union[str, Path], input_format: str) -> list[Path]:
     """
     Return a list of all spectra files of a given format.
 
@@ -443,8 +443,8 @@ def _get_glob_pattern(spectra_type: str) -> str:
 
 
 def split_search(
-    search_results: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
-) -> List[str]:
+    search_results: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[list[str]] = None
+) -> list[str]:
     """
     Split search results by spectrum file.
 
@@ -493,8 +493,8 @@ def split_search(
 
 
 def split_timstof_metadata(
-    timstof_metadata: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[List[str]] = None
-) -> List[str]:
+    timstof_metadata: pd.DataFrame, output_dir: Union[str, Path], filenames: Optional[list[str]] = None
+) -> list[str]:
     """
     Split timstof metadata by spectrum file.
 
@@ -566,7 +566,7 @@ def annotate_spectral_library(
     fragmentation_method: str = "HCD",
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
-    custom_mods: Optional[Dict[str, float]] = None,
+    custom_mods: Optional[dict[str, float]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -611,7 +611,7 @@ def annotate_spectral_library(
 
 
 def load_spectra(
-    filenames: Union[str, Path, List[Union[str, Path]]],
+    filenames: Union[str, Path, list[Union[str, Path]]],
     parser: str = "pyteomics",
     tims_meta_file: Optional[Union[str, Path]] = None,
 ) -> pd.DataFrame:

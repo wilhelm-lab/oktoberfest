@@ -8,7 +8,7 @@ from functools import partial
 from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(predictors: Dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
+def _make_predictions(predictors: dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
     predictions = {
         output_name: output
         for predictor in predictors.values()
@@ -49,7 +49,7 @@ def _make_predictions(predictors: Dict[str, pr.Predictor], queue_out, progress, 
         progress.value += 1
 
 
-def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
+def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
     preprocess_search_step = ProcessStep(config.output, "preprocessing_search")
     if not preprocess_search_step.is_done():
         # load search results
@@ -311,7 +311,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
     return spec_library
 
 
-def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+def _get_writer_and_output(results_path: Path, output_format: str) -> tuple[type[SpectralLibrary], Path]:
     libfile_prefix = "predicted_library"
     if output_format == "msp":
         return MSP, results_path / f"{libfile_prefix}.msp"
@@ -352,7 +352,7 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
     return list(batch_iterator), mode
 
 
-def _update(pbar: tqdm, postfix_values: Dict[str, int]):
+def _update(pbar: tqdm, postfix_values: dict[str, int]):
     total_val = sum(postfix_values.values())
     if total_val > pbar.n:
         pbar.set_postfix(**postfix_values)
@@ -360,7 +360,7 @@ def _update(pbar: tqdm, postfix_values: Dict[str, int]):
         pbar.refresh()
 
 
-def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]):
+def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: list[pool.AsyncResult]):
     if n_failed > 0:
         failed_batches = []
         for i, result in enumerate(results):
@@ -536,7 +536,7 @@ def run_ce_calibration(
             _ce_calib(spectra_file, config)
 
 
-def _refinement_learn(spectra_files: List[Path], config: Config):
+def _refinement_learn(spectra_files: list[Path], config: Config):
     refinement_step = ProcessStep(config.output, "refinement_learning")
     if refinement_step.is_done():
         return

@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 from sys import platform
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 # from spectrum_io.search_result.search_results import parse_mods
 
@@ -126,12 +126,12 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+    def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def static_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom static modification information.
 
@@ -144,7 +144,7 @@ class Config:
         return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
-    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def var_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom variable modification information.
 
@@ -256,7 +256,7 @@ class Config:
         return self.data.get("ce_alignment_options", {})
 
     @property
-    def ce_range(self) -> Tuple[int, int]:
+    def ce_range(self) -> tuple[int, int]:
         """Get the min and max boundaries for the CE to be used for alignment."""
         min_ce, max_ce = self.ce_alignment_options.get("ce_range", (18, 50))
         return int(min_ce), int(max_ce)
@@ -339,7 +339,7 @@ class Config:
         return self.spec_lib_options.get("minIntensity", 5e-4)
 
     @property
-    def precursor_charge(self) -> List[int]:
+    def precursor_charge(self) -> list[int]:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
 
@@ -407,7 +407,7 @@ class Config:
         return self.wandb_options.get("project", "DLomix_auto_RL_TL")
 
     @property
-    def wandb_tags(self) -> List[str]:
+    def wandb_tags(self) -> list[str]:
         """Tags to use for WandB run."""
         return self.wandb_options.get("tags", [])
 
@@ -562,7 +562,7 @@ class Config:
             self.data = json.load(f)
         self.base_path = config_path.parent
 
-    def custom_to_unimod(self) -> Dict[str, int]:
+    def custom_to_unimod(self) -> dict[str, int]:
         """
         Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
 
@@ -575,7 +575,7 @@ class Config:
             custom_to_unimod[str(k)] = int(v[0])
         return custom_to_unimod
 
-    def unimod_to_mass(self) -> Dict[str, float]:
+    def unimod_to_mass(self) -> dict[str, float]:
         """
         Map UNIMOD Id to its mass for all static and variable modifications.
 

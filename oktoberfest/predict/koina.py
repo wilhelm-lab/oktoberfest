@@ -1,8 +1,9 @@
 import logging
 import time
 import warnings
+from collections.abc import Generator, KeysView
 from functools import partial
-from typing import Dict, Generator, KeysView, List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -32,17 +33,17 @@ alternative_column_map = {
 class Koina:
     """A class for interacting with Koina models for inference."""
 
-    model_inputs: Dict[str, str]
-    model_outputs: Dict[str, np.ndarray]
+    model_inputs: dict[str, str]
+    model_outputs: dict[str, np.ndarray]
     batch_size: int
-    _response_dict: Dict[int, Union[InferResult, InferenceServerException]]
+    _response_dict: dict[int, Union[InferResult, InferenceServerException]]
 
     def __init__(
         self,
         model_name: str,
         server_url: str = "koina.wilhelmlab.org:443",
         ssl: bool = True,
-        targets: Optional[List[str]] = None,
+        targets: Optional[list[str]] = None,
         disable_progress_bar: bool = False,
     ):
         """
@@ -148,7 +149,7 @@ class Koina:
         except InferenceServerException as e:
             raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
-    def __get_outputs(self, targets: Optional[List] = None):
+    def __get_outputs(self, targets: Optional[list] = None):
         """
         Retrieve the output names and datatypes for the model.
 
@@ -197,7 +198,7 @@ class Koina:
             raise InferenceServerException("Unknown error occured.", e.status(), e.debug_details()) from e
 
     @staticmethod
-    def __get_batch_outputs(names: KeysView[str]) -> List[InferRequestedOutput]:
+    def __get_batch_outputs(names: KeysView[str]) -> list[InferRequestedOutput]:
         """
         Create InferRequestedOutput objects for the given output names.
 
@@ -211,7 +212,7 @@ class Koina:
         """
         return [InferRequestedOutput(name) for name in names]
 
-    def __get_batch_inputs(self, data: Dict[str, np.ndarray]) -> List[InferInput]:
+    def __get_batch_inputs(self, data: dict[str, np.ndarray]) -> list[InferInput]:
         """
         Prepare a list of InferInput objects for the input data.
 
@@ -229,7 +230,7 @@ class Koina:
             batch_inputs[-1].set_data_from_numpy(data[iname].reshape(-1, 1).astype(self.type_convert[idtype]))
         return batch_inputs
 
-    def __extract_predictions(self, infer_result: InferResult) -> Dict[str, np.ndarray]:
+    def __extract_predictions(self, infer_result: InferResult) -> dict[str, np.ndarray]:
         """
         Extract the predictions from an inference result.
 
@@ -246,7 +247,7 @@ class Koina:
             predictions[oname] = infer_result.as_numpy(oname)
         return predictions
 
-    def __predict_batch(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def __predict_batch(self, data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Perform batch inference and return the predictions.
 
@@ -264,7 +265,7 @@ class Koina:
 
         return self.__extract_predictions(infer_result)
 
-    def __predict_sequential(self, data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def __predict_sequential(self, data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Perform sequential inference and return the predictions.
 
@@ -277,7 +278,7 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays representing
             the model's output.
         """
-        predictions: Dict[str, np.ndarray] = {}
+        predictions: dict[str, np.ndarray] = {}
         for data_batch in tqdm(self.__slice_dict(data, self.batchsize), desc="Getting predictions"):
             pred_batch = self.__predict_batch(data_batch)
             if predictions:
@@ -287,7 +288,7 @@ class Koina:
         return predictions
 
     @staticmethod
-    def __slice_dict(data: Dict[str, np.ndarray], batchsize: int) -> Generator[Dict[str, np.ndarray], None, None]:
+    def __slice_dict(data: dict[str, np.ndarray], batchsize: int) -> Generator[dict[str, np.ndarray], None, None]:
         """
         Slice the input data into batches of a specified batch size.
 
@@ -309,7 +310,7 @@ class Koina:
             yield dict_slice
 
     @staticmethod
-    def __merge_array_dict(d1: Dict[str, np.ndarray], d2: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def __merge_array_dict(d1: dict[str, np.ndarray], d2: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
         """
         Merge two dictionaries of arrays.
 
@@ -339,7 +340,7 @@ class Koina:
         return out
 
     @staticmethod
-    def __merge_list_dict_array(dict_list: List[Dict[str, np.ndarray]]) -> Dict[str, np.ndarray]:
+    def __merge_list_dict_array(dict_list: list[dict[str, np.ndarray]]) -> dict[str, np.ndarray]:
         """
         Merge a list of dictionaries of arrays.
 
@@ -371,7 +372,7 @@ class Koina:
 
     def __async_callback(
         self,
-        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
+        infer_results: dict[int, Union[dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
         result: Optional[InferResult],
         error: Optional[InferenceServerException],
@@ -396,8 +397,8 @@ class Koina:
 
     def __async_predict_batch(
         self,
-        data: Dict[str, np.ndarray],
-        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]],
+        data: dict[str, np.ndarray],
+        infer_results: dict[int, Union[dict[str, np.ndarray], InferenceServerException]],
         request_id: int,
         timeout: int = 60000,
         retries: int = 5,
@@ -479,7 +480,7 @@ class Koina:
         else:
             return self.__predict_sequential(data)
 
-    def __predict_async(self, data: Dict[str, np.ndarray], debug=False) -> Dict[str, np.ndarray]:
+    def __predict_async(self, data: dict[str, np.ndarray], debug=False) -> dict[str, np.ndarray]:
         """
         Perform asynchronous inference on the given data using the Koina model.
 
@@ -494,7 +495,7 @@ class Koina:
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
         """
-        infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]] = {}
+        infer_results: dict[int, Union[dict[str, np.ndarray], InferenceServerException]] = {}
         tasks = []
         for i, data_batch in enumerate(self.__slice_dict(data, self.batchsize)):
             tasks.append(self.__async_predict_batch(data_batch, infer_results, request_id=i, retries=3))
@@ -529,8 +530,8 @@ class Koina:
         return self.__handle_results(infer_results, debug)
 
     def __handle_results(
-        self, infer_results: Dict[int, Union[Dict[str, np.ndarray], InferenceServerException]], debug: bool
-    ) -> Dict[str, np.ndarray]:
+        self, infer_results: dict[int, Union[dict[str, np.ndarray], InferenceServerException]], debug: bool
+    ) -> dict[str, np.ndarray]:
         """
         Handles the results.
 

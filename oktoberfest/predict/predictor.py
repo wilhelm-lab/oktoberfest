@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -43,7 +43,7 @@ class Predictor:
         model_name: str,
         server_url: str = "koina.wilhelmlab.org:443",
         ssl: bool = True,
-        targets: Optional[List[str]] = None,
+        targets: Optional[list[str]] = None,
         disable_progress_bar: bool = False,
     ) -> Predictor:
         """Create Koina predictor."""
@@ -103,7 +103,7 @@ class Predictor:
             model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
         )
 
-    def predict_intensities(self, data: Spectra, chunk_idx: Optional[List[pd.Index]] = None, **kwargs):
+    def predict_intensities(self, data: Spectra, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -146,7 +146,7 @@ class Predictor:
             pred_irts = self.predict_at_once(data=data.obs, **kwargs)
             data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, **kwargs) -> Dict[str, np.ndarray]:
+    def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -161,7 +161,7 @@ class Predictor:
         """
         return self._predictor.predict(data, **kwargs)
 
-    def predict_in_chunks(self, data: Spectra, chunk_idx: List[pd.Index], **kwargs) -> Dict[str, List[np.ndarray]]:
+    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 

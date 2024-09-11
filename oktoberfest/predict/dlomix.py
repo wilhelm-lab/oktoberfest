@@ -3,7 +3,7 @@ import multiprocessing as mp
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import anndata as ad
 import numpy as np
@@ -63,7 +63,7 @@ def _download_baseline_model(model_path: Path) -> None:
 
 def refine_intensity_predictor(
     baseline_model_path: Path,
-    libraries: List[Spectra],
+    libraries: list[Spectra],
     config: Config,
     data_directory: Path,
     result_directory: Path,
@@ -146,13 +146,13 @@ def refine_intensity_predictor(
 
 
 def create_dlomix_dataset(
-    libraries: List[Spectra],
+    libraries: list[Spectra],
     output_dir: Path,
-    include_additional_columns: Optional[List[str]] = None,
+    include_additional_columns: Optional[list[str]] = None,
     remove_decoys: bool = False,
     search_engine_score_threshold: Optional[float] = None,
     num_duplicates: Optional[int] = None,
-) -> Tuple[Path, List[str], List[str]]:
+) -> tuple[Path, list[str], list[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
     Processes spectral libraries into DLomix-compatible format and detects fragment ion types and peptide modifications
