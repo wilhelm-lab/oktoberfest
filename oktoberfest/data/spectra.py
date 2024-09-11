@@ -292,8 +292,9 @@ class Spectra(anndata.AnnData):
 
     def remove_duplicates(self, num_duplicates: int) -> None:
         """Filter out (peptide, charge, collision energy) duplicates if there's more than n_duplicates."""
-        # TODO
-        pass
+        self.obs["duplicate_count"] = self.obs.groupby(["SEQUENCE", "PRECURSOR_CHARGE", "COLLISION_ENERGY"]).cumcount()
+        self.__dict__ = Spectra(self[self.obs["duplicate_count"] < num_duplicates].copy()).__dict__
+        self.obs.drop(columns="duplicate_count", inplace=True)
 
     def standardize_fragmentation_names(self) -> None:
         """Replace non-abbreviated fragmentation method spellings in-place."""
