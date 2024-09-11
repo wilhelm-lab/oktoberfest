@@ -9,7 +9,7 @@
     },
     "output": "../data/rescoring_out/",
     "models": {
-        "intensity": "../data/dlomix/baseline_model.keras",
+        "intensity": "baseline",
         "irt": "Prosit_2019_irt"
     },
     "prediction_server": "koina.wilhelmlab.org:443",
