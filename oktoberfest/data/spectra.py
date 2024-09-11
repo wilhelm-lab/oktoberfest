@@ -296,10 +296,6 @@ class Spectra(anndata.AnnData):
         self.__dict__ = Spectra(self[self.obs["duplicate_count"] < num_duplicates].copy()).__dict__
         self.obs.drop(columns="duplicate_count", inplace=True)
 
-    def standardize_fragmentation_names(self) -> None:
-        """Replace non-abbreviated fragmentation method spellings in-place."""
-        self.obs.replace({"FRAGMENTATION": {"electron transfer dissociation": "ETD"}}, inplace=True)
-
     def convert_to_df(self) -> pd.DataFrame:
         """
         Gives back spectra_data instance as a pandas Dataframe.
