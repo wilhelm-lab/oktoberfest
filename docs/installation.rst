@@ -74,7 +74,7 @@ There are multiple optional dependencies depending on job types. Detailed notes 
 **ThermoRawFileParser**
 `ThermoRawFileParser v1.4.3 <https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3>`_:
 For conversion of RAW to mzML format. Download and unpack the zip or tar.gz file. The default locations Oktoberfest expects the executable to be at `/opt/compomics/` (Linux/MacOS) or the folder from which you want to execute Oktoberfest (Windows).
-You do not need this package if you only ever provide mzML files. However, it is recommended let Oktoberfest convert RAW files for you, to ensure the mzML files are formatted in the way Oktoberfest expects it.
+You do not need this package if you only ever provide mzML files. However, it is recommended to let Oktoberfest convert RAW files for you, to ensure the mzML files are formatted in the way Oktoberfest expects it.
 
 **`mono`**
 For ThermoRawFileParser to work on Linux, you also need to ensure `mono` is installed using
