@@ -287,7 +287,7 @@ class Spectra(anndata.AnnData):
         self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
 
     def filter_by_score(self, threshold: float) -> None:
-        """Filter out peptides with Andromeda score below threshold in-place."""
+        """Filter out peptides with search engine score below threshold in-place."""
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
     def remove_duplicates(self, num_duplicates: int) -> None:
@@ -328,7 +328,7 @@ class Spectra(anndata.AnnData):
         include_additional_columns: Optional[List[str]] = None,
         ion_type_order: Optional[List[str]] = None,
         remove_decoys: bool = False,
-        andromeda_score_threshold: Optional[float] = None,
+        search_engine_score_threshold: Optional[float] = None,
         num_duplicates: Optional[int] = None,
     ) -> pd.DataFrame:
         """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
@@ -339,7 +339,7 @@ class Spectra(anndata.AnnData):
             all lowercase.
         :param ion_type_order: Ion type order in which to save output intensity values.
         :param remove_decoys: Whether to remove decoys
-        :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+        :param search_engine_score_threshold: Search engine score cutoff for peptides included in output
         :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
         :return: Pandas DataFrame with column names and dtypes corresponding to those required by DLomix
@@ -353,8 +353,8 @@ class Spectra(anndata.AnnData):
         if remove_decoys:
             self.remove_decoys()
 
-        if andromeda_score_threshold:
-            self.filter_by_score(andromeda_score_threshold)
+        if search_engine_score_threshold:
+            self.filter_by_score(search_engine_score_threshold)
 
         if num_duplicates:
             self.remove_duplicates(num_duplicates)

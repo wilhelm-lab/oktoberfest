@@ -412,9 +412,9 @@ class Config:
         return self.refinement_learning_options.get("improveFurther", False)
 
     @property
-    def andromeda_score_threshold(self) -> float:
-        """Andromeda score threshold for filtering refinement learning training data."""
-        return self.refinement_learning_options.get("andromedaScoreThreshold", 0.0)
+    def search_engine_score_threshold(self) -> float:
+        """Search engine score threshold for filtering refinement learning training data."""
+        return self.refinement_learning_options.get("searchEngineScoreThreshold", 0.0)
 
     @property
     def num_duplicates(self) -> int:

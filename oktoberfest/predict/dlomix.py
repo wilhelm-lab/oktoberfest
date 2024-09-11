@@ -103,7 +103,7 @@ def refine_intensity_predictor(
         data_directory / dataset_name,
         include_additional_columns=additional_columns,
         remove_decoys=True,
-        andromeda_score_threshold=config.andromeda_score_threshold,
+        search_engine_score_threshold=config.search_engine_score_threshold,
         num_duplicates=config.num_duplicates,
     )
 
@@ -150,7 +150,7 @@ def create_dlomix_dataset(
     output_dir: Path,
     include_additional_columns: Optional[List[str]] = None,
     remove_decoys: bool = False,
-    andromeda_score_threshold: Optional[float] = None,
+    search_engine_score_threshold_score_threshold: Optional[float] = None,
     num_duplicates: Optional[int] = None,
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
@@ -163,7 +163,7 @@ def create_dlomix_dataset(
     :param output_dir: Directory to save processed dataset to
     :param include_additional_columns: additional columns to keep in the dataset
     :param remove_decoys: Whether to remove decoys from the dataset
-    :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+    :param search_engine_score_threshold: Search engine score cutoff for peptides included in output
     :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
     :returns:
@@ -217,7 +217,7 @@ def create_dlomix_dataset(
         ion_type_order=ion_types,
         include_additional_columns=include_additional_columns,
         remove_decoys=remove_decoys,
-        andromeda_score_threshold=andromeda_score_threshold,
+        search_engine_score_threshold=search_engine_score_threshold,
         num_duplicates=num_duplicates,
     )
 
