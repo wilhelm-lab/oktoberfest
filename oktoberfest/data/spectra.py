@@ -310,15 +310,15 @@ class Spectra(anndata.AnnData):
 
         if "mz" in list(self.layers):
             mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ).toarray())
-            mz_cols.columns = self._gen_column_names(FragmentType.MZ)  # , set(self.obs["FRAGMENTATION"]))
+            mz_cols.columns = self._gen_column_names(FragmentType.MZ)
             df_merged = pd.concat([df_merged, mz_cols], axis=1)
         if "raw_int" in list(self.layers):
             raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW).toarray())
-            raw_cols.columns = self._gen_column_names(FragmentType.RAW)  # , set(self.obs["FRAGMENTATION"]))
+            raw_cols.columns = self._gen_column_names(FragmentType.RAW)
             df_merged = pd.concat([df_merged, raw_cols], axis=1)
         if "pred_int" in list(self.layers):
             pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED).toarray())
-            pred_cols.columns = self._gen_column_names(FragmentType.PRED)  # , set(self.obs["FRAGMENTATION"]))
+            pred_cols.columns = self._gen_column_names(FragmentType.PRED)
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
 
