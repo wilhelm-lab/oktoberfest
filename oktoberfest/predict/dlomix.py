@@ -150,7 +150,7 @@ def create_dlomix_dataset(
     output_dir: Path,
     include_additional_columns: Optional[List[str]] = None,
     remove_decoys: bool = False,
-    search_engine_score_threshold_score_threshold: Optional[float] = None,
+    search_engine_score_threshold: Optional[float] = None,
     num_duplicates: Optional[int] = None,
 ) -> Tuple[Path, List[str], List[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
