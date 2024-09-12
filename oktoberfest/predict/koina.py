@@ -58,7 +58,7 @@ class Koina(_KoinaGRPC):
             data = data.obs
         if isinstance(data, pd.DataFrame):
             data = {
-                input_field: data[alternative_column_map[input_field]].to_numpy()
+                input_field: data[[alternative_column_map[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
         return super().predict(inputs=data, **kwargs)
