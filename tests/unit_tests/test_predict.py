@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal
 
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
-from oktoberfest.pr import DLomix, Koina, Predictor
+from oktoberfest.pr import Koina, Predictor
 from oktoberfest.utils import Config
 
 DATA_PATH = Path(__file__).parent / "data"

@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import logging
+import os
 from pathlib import Path
 from sys import platform
 from typing import Optional, Union
@@ -60,6 +61,11 @@ class Config:
             return self.data["type"]
         else:
             raise ValueError("No job type specified in config file.")
+
+    @property
+    def quantification(self) -> bool:
+        """Get quantification flag for performing quantification using picked-group-fdr."""
+        return self.data.get("quantification", False)
 
     @property
     def mass_tolerance(self) -> Optional[float]:
@@ -446,6 +452,10 @@ class Config:
         if self.do_refinement_learning:
             self._check_for_refinement_learning()
 
+        if self.quantification:
+            self._check_quantification()
+            self._check_fasta()
+
     def _check_tmt(self):
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
@@ -544,6 +554,53 @@ class Config:
                     "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"
                     "for refinement learning."
                 )
+
+    def _find_file_in_subd(self, directory: Path, filename: str):
+        for _, _, files in os.walk(directory):
+            if filename in files:
+                return True
+        return False
+
+    def _check_quantification(self):
+        if Path(self.search_results).is_file():
+            path_stem = Path(self.search_results).parent
+        else:
+            path_stem = Path(self.search_results)
+
+        if self.search_results_type == "maxquant" and not Path(path_stem / "evidence.txt").is_file():
+            raise AssertionError(
+                f"You specified the search results as {self.search_results_type} but evidence.txt is not available "
+                f"at {path_stem / 'evidence.txt'}."
+            )
+        elif self.search_results_type == "sage":
+            if not Path(path_stem / "results.sage.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"results.sage.tsv is not available at {path_stem / 'results.sage.tsv'}."
+                )
+            elif not Path(path_stem / "lfq.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"lfq.tsv is not available at {path_stem / 'lfq.tsv'}."
+                )
+        elif self.search_results_type == "msfragger":
+            if not self._find_file_in_subd(path_stem, "psm.tsv"):
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    "no psm.tsv files could be found in subdirectories."
+                )
+            elif not Path(path_stem / "combined_ion.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"combined_ion.tsv is not available  at {path_stem / 'combined_ion.tsv'}."
+                )
+
+    def _check_fasta(self):
+        if not self.library_input_type.lower() == "fasta":
+            raise AssertionError(
+                f"The specified library input type is set to {self.library_input_type}. "
+                "For quantification a fasta file is needed."
+            )
 
     def __init__(self):
         """Initialize config file data."""

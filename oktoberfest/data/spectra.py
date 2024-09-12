@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypeVar
 
 import anndata
 import numpy as np
@@ -10,6 +12,9 @@ import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import csr_matrix, dok_matrix
 from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
+
+if TYPE_CHECKING:
+    from anndata.compat import Index
 
 logger = logging.getLogger(__name__)
 
@@ -104,12 +109,12 @@ class Spectra(anndata.AnnData):
             layer = Spectra.MZ_LAYER_NAME
         return layer
 
-    def __getitem__(self, index: anndata._core.index.Index):
+    def __getitem__(self, index: Index):
         """Returns a sliced view of the object with this type to avoid returning AnnData instances when slicing."""
         oidx, vidx = self._normalize_indices(index)
         return Spectra(self, oidx=oidx, vidx=vidx, asview=True)
 
-    def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
+    def add_column(self, data: np.ndarray | pd.Series, name: str | None = None) -> None:
         """
         Add column to spectra data.
 
@@ -264,7 +269,7 @@ class Spectra(anndata.AnnData):
 
         return matrix
 
-    def write_as_hdf5(self, output_file: Union[str, Path]):
+    def write_as_hdf5(self, output_file: str | Path):
         """
         Write spectra_data to hdf5 file.
 
@@ -273,7 +278,7 @@ class Spectra(anndata.AnnData):
         self.write(output_file, compression="gzip")
 
     @classmethod
-    def from_hdf5(cls: type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
+    def from_hdf5(cls: type[SpectraT], input_file: str | Path) -> SpectraT:
         """
         Read from hdf5 file.
 

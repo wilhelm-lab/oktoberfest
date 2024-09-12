@@ -119,6 +119,28 @@ class Predictor:
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
         :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest.data.spectra import Spectra
+            >>> from oktoberfest import predict as pr
+            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> library.strings_to_categoricals()
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> intensity_predictor.predict_intensities(data=library)
+            >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
             intensities = self.predict_at_once(data=data, **kwargs)
@@ -139,6 +161,28 @@ class Predictor:
         :param data: Anndata object containing the data required for prediction and to store the
             predictions in after retrieval from the server.
         :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest.data.spectra import Spectra
+            >>> from oktoberfest import predict as pr
+            >>> import pandas as pd
+            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> library.strings_to_categoricals()
+            >>> irt_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2019_irt",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True)
+            >>> irt_predictor.predict_rt(data=library)
+            >>> print(library.obs["PREDICTED_IRT"])
         """
         if self._predictor is None:
             data.add_column(data.obs["RETENTION_TIME"], name="PREDICTED_IRT")
@@ -158,6 +202,27 @@ class Predictor:
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest import predict as pr
+            >>> import pandas as pd
+            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> predictions = intensity_predictor.predict_at_once(data=library)
+            >>> print(predictions)
         """
         return self._predictor.predict(data, **kwargs)
 
@@ -178,6 +243,29 @@ class Predictor:
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
             to the number of chunks provided.
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest import predict as pr
+            >>> from oktoberfest.utils import group_iterator
+            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"],
+            >>>                         "PEPTIDE_LENGTH": [8,9]})
+            >>> idx = list(group_iterator(df=meta_df, group_by_column="PEPTIDE_LENGTH"))
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library)
+            >>> print(predictions)
         """
         results = []
         for idx in chunk_idx:
@@ -198,6 +286,36 @@ class Predictor:
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
         :return: a spectra object containing the spectral angle for each tested CE
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest.data.spectra import FragmentType, Spectra
+            >>> from oktoberfest import predict as pr
+            >>> import pandas as pd
+            >>> import numpy as np
+            >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+            >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+            >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"],
+            >>>                         "REVERSE": [False,False],
+            >>>                         "SCORE": [0,0]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> raw_intensities = np.random.rand(2,174)
+            >>> annotation = np.array([var.index,var.index])
+            >>> library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
+            >>> library.strings_to_categoricals()
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
+            >>> print(alignment_library)
         """
         alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
 
