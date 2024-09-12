@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal
 
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
-from oktoberfest.pr import DLomix, Koina, Predictor
+from oktoberfest.pr import Koina, Predictor
 from oktoberfest.utils import Config
 
 DATA_PATH = Path(__file__).parent / "data"
@@ -30,7 +30,7 @@ class TestTMTProsit(unittest.TestCase):
             model_name="Prosit_2020_intensity_TMT",
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
-            targets=["intensities", "annotation"],
+            # targets=["intensities", "annotation"],
         )
         intensity_predictor.predict_intensities(data=library)
 
@@ -121,7 +121,7 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test config constructor for Predictor with DLomix."""
         self.mock_config.predict_intensity_locally = True
         self.mock_config.download_baseline_intensity_predictor = False
-        self.mock_config.batch_size = 1024
+        self.mock_config.dlomix_inference_batch_size = 1024
         predictor = Predictor.from_config(self.mock_config, model_type=self.model_type)
         self.assertIsInstance(predictor._predictor, type(mock_dlomix.return_value))
         mock_dlomix.assert_called_once()
@@ -136,7 +136,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             model_type=self.model_type,
             model_path=self.data_dir / "dlomix/prosit_baseline_model.keras",
             output_path=self.data_dir / "dlomix",
-            batch_size=self.mock_config.batch_size,
+            batch_size=self.mock_config.dlomix_inference_batch_size,
             download=True,
         )
 

@@ -1,9 +1,10 @@
 import importlib.util
 import json
 import logging
+import os
 from pathlib import Path
 from sys import platform
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 # from spectrum_io.search_result.search_results import parse_mods
 
@@ -60,6 +61,11 @@ class Config:
             return self.data["type"]
         else:
             raise ValueError("No job type specified in config file.")
+
+    @property
+    def quantification(self) -> bool:
+        """Get quantification flag for performing quantification using picked-group-fdr."""
+        return self.data.get("quantification", False)
 
     @property
     def mass_tolerance(self) -> Optional[float]:
@@ -126,12 +132,12 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+    def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def static_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom static modification information.
 
@@ -144,7 +150,7 @@ class Config:
         return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
-    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def var_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom variable modification information.
 
@@ -256,7 +262,7 @@ class Config:
         return self.data.get("ce_alignment_options", {})
 
     @property
-    def ce_range(self) -> Tuple[int, int]:
+    def ce_range(self) -> tuple[int, int]:
         """Get the min and max boundaries for the CE to be used for alignment."""
         min_ce, max_ce = self.ce_alignment_options.get("ce_range", (18, 50))
         return int(min_ce), int(max_ce)
@@ -329,9 +335,9 @@ class Config:
         return self.spec_lib_options.get("collisionEnergy", 30)
 
     @property
-    def batch_size(self) -> int:
+    def speclib_generation_batch_size(self) -> int:
         """Get output format from the config file."""
-        return self.spec_lib_options.get("batchsize", 1024)
+        return self.spec_lib_options.get("batchsize", 10000)
 
     @property
     def min_intensity(self) -> float:
@@ -339,7 +345,7 @@ class Config:
         return self.spec_lib_options.get("minIntensity", 5e-4)
 
     @property
-    def precursor_charge(self) -> List[int]:
+    def precursor_charge(self) -> list[int]:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
 
@@ -348,9 +354,9 @@ class Config:
         """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
         return self.spec_lib_options.get("nrOx", 1)
 
-    ######################################
-    # these are local prediction options #
-    ######################################
+    #####################################################################
+    # these are local prediction / transfer&refinement learning options #
+    #####################################################################
 
     @property
     def predict_intensity_locally(self) -> bool:
@@ -365,6 +371,11 @@ class Config:
     def download_baseline_intensity_predictor(self) -> bool:
         """Whether to download a baseline intensity predictor from GitHub."""
         return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
+
+    @property
+    def dlomix_inference_batch_size(self) -> int:
+        """Batch size to use for local inference with DLomix."""
+        return self.data.get("dlomixInferenceBatchSize", 1024)
 
     @property
     def refinement_learning_options(self) -> dict:
@@ -402,7 +413,7 @@ class Config:
         return self.wandb_options.get("project", "DLomix_auto_RL_TL")
 
     @property
-    def wandb_tags(self) -> List[str]:
+    def wandb_tags(self) -> list[str]:
         """Tags to use for WandB run."""
         return self.wandb_options.get("tags", [])
 
@@ -412,9 +423,9 @@ class Config:
         return self.refinement_learning_options.get("improveFurther", False)
 
     @property
-    def andromeda_score_threshold(self) -> float:
-        """Andromeda score threshold for filtering refinement learning training data."""
-        return self.refinement_learning_options.get("andromedaScoreThreshold", 0.0)
+    def search_engine_score_threshold(self) -> float:
+        """Search engine score threshold for filtering refinement learning training data."""
+        return self.refinement_learning_options.get("searchEngineScoreThreshold", 0.0)
 
     @property
     def num_duplicates(self) -> int:
@@ -441,6 +452,10 @@ class Config:
         if self.do_refinement_learning:
             self._check_for_refinement_learning()
 
+        if self.quantification:
+            self._check_quantification()
+            self._check_fasta()
+
     def _check_tmt(self):
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
@@ -454,12 +469,12 @@ class Config:
                     f"You requested the irt model {self.models['irt']} but provided no tag. Please check."
                 )
         else:
-            if ("alphapept" not in int_model) and ("tmt" not in int_model):
+            if ("tmt" not in int_model) and ("ptm" not in int_model) and ("alphapept" not in int_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen intensity model {self.models['intensity']} is incompatible. "
                     "Please check and use a TMT model instead."
                 )
-            if ("alphapept" not in irt_model) and ("tmt" not in irt_model):
+            if ("tmt" not in irt_model) and ("ptm" not in irt_model) and ("alphapept" not in irt_model):
                 raise AssertionError(
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
@@ -540,6 +555,53 @@ class Config:
                     "for refinement learning."
                 )
 
+    def _find_file_in_subd(self, directory: Path, filename: str):
+        for _, _, files in os.walk(directory):
+            if filename in files:
+                return True
+        return False
+
+    def _check_quantification(self):
+        if Path(self.search_results).is_file():
+            path_stem = Path(self.search_results).parent
+        else:
+            path_stem = Path(self.search_results)
+
+        if self.search_results_type == "maxquant" and not Path(path_stem / "evidence.txt").is_file():
+            raise AssertionError(
+                f"You specified the search results as {self.search_results_type} but evidence.txt is not available "
+                f"at {path_stem / 'evidence.txt'}."
+            )
+        elif self.search_results_type == "sage":
+            if not Path(path_stem / "results.sage.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"results.sage.tsv is not available at {path_stem / 'results.sage.tsv'}."
+                )
+            elif not Path(path_stem / "lfq.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"lfq.tsv is not available at {path_stem / 'lfq.tsv'}."
+                )
+        elif self.search_results_type == "msfragger":
+            if not self._find_file_in_subd(path_stem, "psm.tsv"):
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    "no psm.tsv files could be found in subdirectories."
+                )
+            elif not Path(path_stem / "combined_ion.tsv").is_file():
+                raise AssertionError(
+                    f"You specified the search results as {self.search_results_type} for quantification, but "
+                    f"combined_ion.tsv is not available  at {path_stem / 'combined_ion.tsv'}."
+                )
+
+    def _check_fasta(self):
+        if not self.library_input_type.lower() == "fasta":
+            raise AssertionError(
+                f"The specified library input type is set to {self.library_input_type}. "
+                "For quantification a fasta file is needed."
+            )
+
     def __init__(self):
         """Initialize config file data."""
         self.data = {}
@@ -557,7 +619,7 @@ class Config:
             self.data = json.load(f)
         self.base_path = config_path.parent
 
-    def custom_to_unimod(self) -> Dict[str, int]:
+    def custom_to_unimod(self) -> dict[str, int]:
         """
         Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
 
@@ -570,7 +632,7 @@ class Config:
             custom_to_unimod[str(k)] = int(v[0])
         return custom_to_unimod
 
-    def unimod_to_mass(self) -> Dict[str, float]:
+    def unimod_to_mass(self) -> dict[str, float]:
         """
         Map UNIMOD Id to its mass for all static and variable modifications.
 

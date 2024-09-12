@@ -3,7 +3,7 @@ import multiprocessing as mp
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import anndata as ad
 import numpy as np
@@ -63,7 +63,7 @@ def _download_baseline_model(model_path: Path) -> None:
 
 def refine_intensity_predictor(
     baseline_model_path: Path,
-    libraries: List[Spectra],
+    libraries: list[Spectra],
     config: Config,
     data_directory: Path,
     result_directory: Path,
@@ -91,13 +91,19 @@ def refine_intensity_predictor(
             much longer"""
         )
 
-    additional_columns = ["SEQUENCE"] if config.include_original_sequences else []
+    if config.include_original_sequences:
+        for library in libraries:
+            library.obs["MODIFIED_SEQUENCE_RAW"] = library.obs["MODIFIED_SEQUENCE"]
+            additional_columns = ["SEQUENCE", "MODIFIED_SEQUENCE_RAW"]
+    else:
+        additional_columns = []
 
     parquet_path, ion_types, modifications = create_dlomix_dataset(
         libraries,
         data_directory / dataset_name,
         include_additional_columns=additional_columns,
-        andromeda_score_threshold=config.andromeda_score_threshold,
+        remove_decoys=True,
+        search_engine_score_threshold=config.search_engine_score_threshold,
         num_duplicates=config.num_duplicates,
     )
 
@@ -140,12 +146,13 @@ def refine_intensity_predictor(
 
 
 def create_dlomix_dataset(
-    libraries: List[Spectra],
+    libraries: list[Spectra],
     output_dir: Path,
-    include_additional_columns: Optional[List[str]] = None,
-    andromeda_score_threshold: Optional[float] = None,
+    include_additional_columns: Optional[list[str]] = None,
+    remove_decoys: bool = False,
+    search_engine_score_threshold: Optional[float] = None,
     num_duplicates: Optional[int] = None,
-) -> Tuple[Path, List[str], List[str]]:
+) -> tuple[Path, list[str], list[str]]:
     """Transform one or multiple spectra into Parquet file that can be used by DLomix.
 
     Processes spectral libraries into DLomix-compatible format and detects fragment ion types and peptide modifications
@@ -155,7 +162,8 @@ def create_dlomix_dataset(
     :param libraries: Spectral libraries to include
     :param output_dir: Directory to save processed dataset to
     :param include_additional_columns: additional columns to keep in the dataset
-    :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+    :param remove_decoys: Whether to remove decoys from the dataset
+    :param search_engine_score_threshold: Search engine score cutoff for peptides included in output
     :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
     :returns:
@@ -208,7 +216,8 @@ def create_dlomix_dataset(
     processed_data = all_data.preprocess_for_machine_learning(
         ion_type_order=ion_types,
         include_additional_columns=include_additional_columns,
-        andromeda_score_threshold=andromeda_score_threshold,
+        remove_decoys=remove_decoys,
+        search_engine_score_threshold=search_engine_score_threshold,
         num_duplicates=num_duplicates,
     )
 
@@ -245,19 +254,22 @@ class DLomix:
             _download_baseline_model(model_path)
         self.model = load_keras_model(str(model_path))
 
-    def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> Dict[str, np.ndarray]:
+    def predict(self, data: Spectra, dataset_name: str, keep_dataset: bool = True, **kwargs) -> dict[str, np.ndarray]:
         """Create predictions for dataset using Keras model.
 
         :param data: spectral library to predict features for
         :param dataset_name: Name of the dataset for storing processed files for DLomix
         :param keep_dataset: Whether to keep or discard the pre-processed dataset after inference
+        :param kwargs: In place to catch keyword arguments for other predictor implementations.
 
         :return: a dictionary containing predicted features (key: feature type) and a mask of the ion annotations of
             the predicted feature matrix (key: 'annotation')
 
         """
         # TODO reuse training dataset if doing transfer learning (load subset based on RAW_FILE column)
-        parquet_path, ion_types, modifications = create_dlomix_dataset([data], self.output_path / dataset_name)
+        parquet_path, ion_types, modifications = create_dlomix_dataset(
+            [data], self.output_path / dataset_name, remove_decoys=False
+        )
         ds = process_dataset(
             str(parquet_path),
             self.model,

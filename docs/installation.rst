@@ -44,7 +44,7 @@ This is a step-by-step guide for the manual installation of all mandatory and op
 Install Python
 ~~~~~~~~~~~~~~
 
-Oktoberfest requires python >=3.8 and <=3.11. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
+Oktoberfest requires python >=3.9 and <=3.11. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
 Follow the installation guide for your operating system, then create a new environment using
 
 .. code-block:: bash
@@ -74,7 +74,7 @@ There are multiple optional dependencies depending on job types. Detailed notes 
 **ThermoRawFileParser**
 `ThermoRawFileParser v1.4.3 <https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3>`_:
 For conversion of RAW to mzML format. Download and unpack the zip or tar.gz file. The default locations Oktoberfest expects the executable to be at `/opt/compomics/` (Linux/MacOS) or the folder from which you want to execute Oktoberfest (Windows).
-You do not need this package if you only ever provide mzML files. However, it is recommended let Oktoberfest convert RAW files for you, to ensure the mzML files are formatted in the way Oktoberfest expects it.
+You do not need this package if you only ever provide mzML files. However, it is recommended to let Oktoberfest convert RAW files for you, to ensure the mzML files are formatted in the way Oktoberfest expects it.
 
 **`mono`**
 For ThermoRawFileParser to work on Linux, you also need to ensure `mono` is installed using
@@ -107,7 +107,7 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
 
-For local prediction & refinement learning, instead install with the `[dlomix]` extra:
+For local prediction & refinement learning, you have to install Oktoberfest with the `dlomix` extra:
 
 .. code-block:: bash
 

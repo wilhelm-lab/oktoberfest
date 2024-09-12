@@ -1,5 +1,4 @@
 import logging
-from typing import Tuple
 
 import anndata
 import numpy as np
@@ -10,7 +9,7 @@ from ..data.spectra import FragmentType, Spectra
 logger = logging.getLogger(__name__)
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: Tuple[int, int], group_by_charge: bool = False) -> Spectra:
+def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_charge: bool = False) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 

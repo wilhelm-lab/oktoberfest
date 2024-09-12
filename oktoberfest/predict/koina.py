@@ -1,13 +1,17 @@
-import logging
-from typing import Dict, Union
+from __future__ import annotations
 
-import numpy as np
+import logging
+from typing import TYPE_CHECKING
+
 import pandas as pd
 from koinapy.grpc import Koina as _KoinaGRPC
 
 from ..data.spectra import Spectra
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 alternative_column_map = {
@@ -22,7 +26,7 @@ alternative_column_map = {
 class Koina(_KoinaGRPC):
     """Extension of the Koina GRPC class in koinapy, to add required logic for Oktoberfest."""
 
-    def predict(self, data: Union[Dict[str, np.ndarray], pd.DataFrame, Spectra], **kwargs) -> Dict[str, np.ndarray]:
+    def predict(self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs) -> dict[str, np.ndarray]:
         """
         Perform inference on the given data using the Koina model.
 

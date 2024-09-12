@@ -219,8 +219,58 @@ The example config can be loaded and viewed using
     config = ok.utils.example_configs.RESCORING
     json.dumps(config, indent=4)
 
+
+For rescoring tasks including quantification via picked-group-FDR, create a config file like this (so far only MaxQuant is supported):
+
+.. code-block:: json
+
+    {
+        "type": "Rescoring",
+        "quantification": true,
+        "tag": "",
+        "inputs": {
+            "search_results": "mq_results/txt",
+            "search_results_type": "Maxquant",
+            "spectra": "./",
+            "spectra_type": "raw",
+            "library_input": "uniprot.fasta"
+        },
+        "output": "./out",
+        "models": {
+            "intensity": "Prosit_2020_intensity_HCD",
+            "irt": "Prosit_2019_irt"
+        },
+        "prediction_server": "koina.proteomicsdb.org:443",
+        "ssl": true,
+        "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
+        "numThreads": 1,
+        "fdr_estimation_method": "percolator",
+        "regressionMethod": "spline",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm",
+        "fastaDigestOptions": {
+            "digestion": "full",
+            "missedCleavages": 2,
+            "minLength": 7,
+            "maxLength": 60,
+            "enzyme": "trypsin",
+            "specialAas": "KR",
+            "db": "concat"
+        }
+    }
+
+
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.RESCORING_WITH_QUANT
+    json.dumps(config, indent=4)
+
 b) with refinement
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Same as rescoring without refinement, but in addition a new intensity predictor will be trained from a baseline model using off-line reinforcement learning on the provided spectra.
 The refined intensity predictor will be used along an on-line retention time predictor to generate inputs for rescoring.
@@ -249,8 +299,15 @@ Example config file:
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
+        "dlomixInferenceBatchSize": 1024,
         "refinementLearningOptions": {
-            "batchSize": 1024
+            "batchSize": 1024,
+            "includeOriginalSequences": false,
+            "improveFurther": false,
+            "datasetFilteringOptions": {
+                "searchEngineScoreThreshold": 0,
+                "numDuplicates": 100
+            }
         },
         "fdr_estimation_method": "mokapot",
         "allFeatures": false,

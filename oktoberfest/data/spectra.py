@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypeVar
 
 import anndata
 import numpy as np
@@ -10,6 +12,9 @@ import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import csr_matrix, dok_matrix
 from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
+
+if TYPE_CHECKING:
+    from anndata.compat import Index
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +43,7 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(ion_types: List[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"]) -> pd.DataFrame:
+    def _gen_vars_df(ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"]) -> pd.DataFrame:
         """
         Create annotation dataframe for vars in AnnData object.
 
@@ -57,7 +62,7 @@ class Spectra(anndata.AnnData):
         return df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType) -> List[str]:
+    def _gen_column_names(fragment_type: FragmentType) -> list[str]:
         """
         Get column names of the spectra data.
 
@@ -104,12 +109,12 @@ class Spectra(anndata.AnnData):
             layer = Spectra.MZ_LAYER_NAME
         return layer
 
-    def __getitem__(self, index: anndata._core.index.Index):
+    def __getitem__(self, index: Index):
         """Returns a sliced view of the object with this type to avoid returning AnnData instances when slicing."""
         oidx, vidx = self._normalize_indices(index)
         return Spectra(self, oidx=oidx, vidx=vidx, asview=True)
 
-    def add_column(self, data: Union[np.ndarray, pd.Series], name: Optional[str] = None) -> None:
+    def add_column(self, data: np.ndarray | pd.Series, name: str | None = None) -> None:
         """
         Add column to spectra data.
 
@@ -188,9 +193,9 @@ class Spectra(anndata.AnnData):
 
     def add_list_of_predicted_intensities(
         self,
-        intensities: List[np.ndarray],
-        annotations: List[np.ndarray],
-        chunk_indices: List[np.ndarray],
+        intensities: list[np.ndarray],
+        annotations: list[np.ndarray],
+        chunk_indices: list[np.ndarray],
     ):
         """
         Add chunks of predicted intensities and convert to sparse matrix.
@@ -264,7 +269,7 @@ class Spectra(anndata.AnnData):
 
         return matrix
 
-    def write_as_hdf5(self, output_file: Union[str, Path]):
+    def write_as_hdf5(self, output_file: str | Path):
         """
         Write spectra_data to hdf5 file.
 
@@ -273,7 +278,7 @@ class Spectra(anndata.AnnData):
         self.write(output_file, compression="gzip")
 
     @classmethod
-    def from_hdf5(cls: Type[SpectraT], input_file: Union[str, Path]) -> SpectraT:
+    def from_hdf5(cls: type[SpectraT], input_file: str | Path) -> SpectraT:
         """
         Read from hdf5 file.
 
@@ -287,17 +292,14 @@ class Spectra(anndata.AnnData):
         self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
 
     def filter_by_score(self, threshold: float) -> None:
-        """Filter out peptides with Andromeda score below threshold in-place."""
+        """Filter out peptides with search engine score below threshold in-place."""
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
     def remove_duplicates(self, num_duplicates: int) -> None:
         """Filter out (peptide, charge, collision energy) duplicates if there's more than n_duplicates."""
-        # TODO
-        pass
-
-    def standardize_fragmentation_names(self) -> None:
-        """Replace non-abbreviated fragmentation method spellings in-place."""
-        self.obs.replace({"FRAGMENTATION": {"electron transfer dissociation": "ETD"}}, inplace=True)
+        self.obs["duplicate_count"] = self.obs.groupby(["SEQUENCE", "PRECURSOR_CHARGE", "COLLISION_ENERGY"]).cumcount()
+        self.__dict__ = Spectra(self[self.obs["duplicate_count"] < num_duplicates].copy()).__dict__
+        self.obs.drop(columns="duplicate_count", inplace=True)
 
     def convert_to_df(self) -> pd.DataFrame:
         """
@@ -310,24 +312,25 @@ class Spectra(anndata.AnnData):
 
         if "mz" in list(self.layers):
             mz_cols = pd.DataFrame(self.get_matrix(FragmentType.MZ).toarray())
-            mz_cols.columns = self._gen_column_names(FragmentType.MZ)  # , set(self.obs["FRAGMENTATION"]))
+            mz_cols.columns = self._gen_column_names(FragmentType.MZ)
             df_merged = pd.concat([df_merged, mz_cols], axis=1)
         if "raw_int" in list(self.layers):
             raw_cols = pd.DataFrame(self.get_matrix(FragmentType.RAW).toarray())
-            raw_cols.columns = self._gen_column_names(FragmentType.RAW)  # , set(self.obs["FRAGMENTATION"]))
+            raw_cols.columns = self._gen_column_names(FragmentType.RAW)
             df_merged = pd.concat([df_merged, raw_cols], axis=1)
         if "pred_int" in list(self.layers):
             pred_cols = pd.DataFrame(self.get_matrix(FragmentType.PRED).toarray())
-            pred_cols.columns = self._gen_column_names(FragmentType.PRED)  # , set(self.obs["FRAGMENTATION"]))
+            pred_cols.columns = self._gen_column_names(FragmentType.PRED)
             df_merged = pd.concat([df_merged, pred_cols], axis=1)
         return df_merged
 
     def preprocess_for_machine_learning(
         self,
         include_intensities: bool = True,
-        include_additional_columns: Optional[List[str]] = None,
-        ion_type_order: Optional[List[str]] = None,
-        andromeda_score_threshold: Optional[float] = None,
+        include_additional_columns: Optional[list[str]] = None,
+        ion_type_order: Optional[list[str]] = None,
+        remove_decoys: bool = False,
+        search_engine_score_threshold: Optional[float] = None,
         num_duplicates: Optional[int] = None,
     ) -> pd.DataFrame:
         """Filter and preprocess for machine learning applications and transform into a Parquet-serializable dataframe.
@@ -337,7 +340,8 @@ class Spectra(anndata.AnnData):
             Capitalization does not matter - internal column names are all uppercase, whereas returned column names are
             all lowercase.
         :param ion_type_order: Ion type order in which to save output intensity values.
-        :param andromeda_score_threshold: Andromeda score cutoff for peptides included in output
+        :param remove_decoys: Whether to remove decoys
+        :param search_engine_score_threshold: Search engine score cutoff for peptides included in output
         :param num_duplicates: Number of (sequence, charge, collision energy) duplicates to keep in output
 
         :return: Pandas DataFrame with column names and dtypes corresponding to those required by DLomix
@@ -348,10 +352,11 @@ class Spectra(anndata.AnnData):
             [- intensities_raw (list[float]) (if `include_intensities == True`)]
             [additional columns (if specified via `include_additional_columns`)]
         """
-        self.remove_decoys()
+        if remove_decoys:
+            self.remove_decoys()
 
-        if andromeda_score_threshold:
-            self.filter_by_score(andromeda_score_threshold)
+        if search_engine_score_threshold:
+            self.filter_by_score(search_engine_score_threshold)
 
         if num_duplicates:
             self.remove_duplicates(num_duplicates)

@@ -1,9 +1,9 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import pandas as pd
 
 
-def group_iterator(df: pd.DataFrame, group_by_column: Union[str, List[str]], max_batch_size: Optional[int] = None):
+def group_iterator(df: pd.DataFrame, group_by_column: Union[str, list[str]], max_batch_size: Optional[int] = None):
     """
     Returns an index iterator producing chunks for each group of a given max size.
 
