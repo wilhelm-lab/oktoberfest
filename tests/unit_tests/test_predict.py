@@ -147,7 +147,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             return_value={"intensities": self.intensities, "annotation": self.ion_annotations}
         )
         predictor.predict_intensities(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra.obs)
         self.mock_spectra.add_intensities.assert_called_once_with(
             self.intensities, self.ion_annotations, fragment_type=FragmentType.PRED
         )
@@ -182,8 +182,8 @@ class TestPredictorBehavioral(unittest.TestCase):
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
         result = {"intensities": self.intensities, "annotation": self.ion_annotations}
         predictor._predictor.predict = MagicMock(return_value=result)
-        output = predictor.predict_at_once(self.mock_spectra)
-        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
+        output = predictor.predict_at_once(self.mock_spectra.obs)
+        predictor._predictor.predict.assert_called_once_with(self.mock_spectra.obs)
         self.assertEqual(output, result)
 
     def test_predict_in_chunks(self):
@@ -196,7 +196,7 @@ class TestPredictorBehavioral(unittest.TestCase):
                 {"intensities": self.intensities, "annotation": self.ion_annotations},
             ]
         )
-        output = predictor.predict_in_chunks(self.mock_spectra, chunk_idx=self.chunk_idx)
+        output = predictor.predict_in_chunks(self.mock_spectra.obs, chunk_idx=self.chunk_idx)
         self.assertEqual(
             output,
             {

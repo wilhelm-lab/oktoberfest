@@ -112,12 +112,12 @@ class Predictor:
         """
         Generate intensity predictions and add them to the provided data object.
 
-        This function takes a dataframe containing information about PSMs and predicts intensities. The configuration
+        This function takes a Spectra object containing information about PSMs and predicts intensities. The configuration
         of Koina/DLomix is set using the kwargs. The function either predicts everything at once by concatenating all
         prediction results into single numpy arrays, or returns a list of individual numpy arrays, following the
         indices provided by optionally provided chunks of the dataframe.
 
-        :param data: Anndata object containing the required data for prediction and to store the
+        :param data: Spectra object containing the required data for prediction and to store the
             predictions in after retrieval from the server.
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
             e.g. if padding should be avoided when predicting peptides of different length.
@@ -148,7 +148,7 @@ class Predictor:
             >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data, **kwargs)
+            intensities = self.predict_at_once(data=data.obs, **kwargs)
             data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
         else:
             chunked_intensities = self.predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
@@ -160,10 +160,10 @@ class Predictor:
         """
         Generate retention time predictions and add them to the provided data object.
 
-        This function takes a dataframe containing information about PSMs and predicts retention times. The
+        This function takes a Spectra object containing information about PSMs and predicts retention times. The
         configuration of Koina/DLomix is set using the kwargs.
 
-        :param data: Anndata object containing the data required for prediction and to store the
+        :param data: Spectra object containing the data required for prediction and to store the
             predictions in after retrieval from the server.
         :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
 
@@ -192,7 +192,7 @@ class Predictor:
         pred_irts = self.predict_at_once(data=data.obs, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -200,7 +200,7 @@ class Predictor:
         configuration of Koina/DLomix is set using the kwargs.
         See the Koina or DLomix predict functions for details. TODO, link this properly.
 
-        :param data: Dataframe containing the data for the prediction.
+        :param data: dataframe containing the data for the prediction.
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
@@ -228,7 +228,7 @@ class Predictor:
         """
         return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(self, data: pd.DataFrame, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 
@@ -271,7 +271,7 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
+            results.append(self._predictor.predict(data.loc[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
