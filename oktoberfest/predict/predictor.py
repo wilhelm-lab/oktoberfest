@@ -266,7 +266,7 @@ class Predictor:
             >>>                         server_url="koina.wilhelmlab.org:443",
             >>>                         ssl=True,
             >>>                         targets=["intensities", "annotation"])
-            >>> predictions = intensity_predictor.predict_in_chunks(data=library)
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
         results = []

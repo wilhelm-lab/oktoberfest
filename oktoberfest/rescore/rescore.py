@@ -68,11 +68,11 @@ def generate_features(
         >>> library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
         >>> library.add_mzs(mzs, FragmentType.MZ)
         >>> library.strings_to_categoricals()
-        >>> pr.predict_intensities(data=library,
-        >>>                     model_name="Prosit_2020_intensity_HCD",
-        >>>                     server_url="koina.wilhelmlab.org:443",
-        >>>                     ssl=True,
-        >>>                     targets=["intensities", "annotation"])
+        >>> intensity_predictor = pr.Predictor.from_koina(
+        >>>                         model_name="Prosit_2020_intensity_HCD",
+        >>>                         server_url="koina.wilhelmlab.org:443",
+        >>>                         ssl=True,
+        >>> intensity_predictor.predict_intensities(data=library)
         >>> re.generate_features(library=library,
         >>>                         search_type="original",
         >>>                         regression_method="spline",
