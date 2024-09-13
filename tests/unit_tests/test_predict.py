@@ -30,7 +30,7 @@ class TestTMTProsit(unittest.TestCase):
             model_name="Prosit_2020_intensity_TMT",
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
-            targets=["intensities", "annotation"],
+            # targets=["intensities", "annotation"],
         )
         intensity_predictor.predict_intensities(data=library)
 

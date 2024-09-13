@@ -2427,6 +2427,22 @@ files = [
 ]
 
 [[package]]
+name = "koinapy"
+version = "0.0.7"
+description = "Python client to communicate with Koina."
+optional = false
+python-versions = "<3.13,>=3.8"
+files = [
+    {file = "koinapy-0.0.7-py3-none-any.whl", hash = "sha256:2c76de08f70ada30f28cbdbe51ac04c2a8853b015e356c7d530559194db90632"},
+    {file = "koinapy-0.0.7.tar.gz", hash = "sha256:62796fb2efbd933012b10fec8a665e3a61a1b1a3dcb6afda427da54f0aac8ee8"},
+]
+
+[package.dependencies]
+pandas = "*"
+tqdm = "*"
+tritonclient = {version = ">=2.23,<2.41 || >2.41", extras = ["grpc"], markers = "python_version >= \"3.8\" and python_version < \"3.11\""}
+
+[[package]]
 name = "libclang"
 version = "18.1.1"
 description = "Clang Python Bindings, mirrored from the official LLVM repo: https://github.com/llvm/llvm-project/tree/main/clang/bindings/python, to make the installation process easier."
@@ -6245,14 +6261,14 @@ threadpoolctl = ">=3.1.0,<4.0.0"
 
 [[package]]
 name = "tritonclient"
-version = "2.47.0"
+version = "2.49.0"
 description = "Python client library and utilities for communicating with Triton Inference Server"
 optional = false
 python-versions = "*"
 files = [
-    {file = "tritonclient-2.47.0-py3-none-any.whl", hash = "sha256:a731aebceb69e9d0508fef1dd4e703730b70b4dd5ab283d9d836823897a0561b"},
-    {file = "tritonclient-2.47.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:754ab373a45306be0c45afbcde06838179d04561694f6d15e138530153aee581"},
-    {file = "tritonclient-2.47.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5500ef5637ac3ed7ceeac3740ca28fc6acb94473cc49b261a86dc4cb55267179"},
+    {file = "tritonclient-2.49.0-py3-none-any.whl", hash = "sha256:8715c8f82061e9e2d85242c903e72e68c070c6845c0334fa88fc9f44a1904e77"},
+    {file = "tritonclient-2.49.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:e7b40ba11056c93da434bc8a8b302c0a337489923a0a747c5d313314baa26db3"},
+    {file = "tritonclient-2.49.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:cc2350bbb6c2df4fab958435a29b7bb437693732bca72a4d658b0400d9f524e6"},
 ]
 
 [package.dependencies]
@@ -7073,4 +7089,4 @@ dlomix = ["dlomix", "tensorflow"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "027e0d7685638d75f1fa6a1b4c9f522b59c7be1999ef98150882b34cb7b59d60"
+content-hash = "2648532d4651f82963ee5936884e52e09f6a4e63ff480dd03038a3d7c52a9b38"

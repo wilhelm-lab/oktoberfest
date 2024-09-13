@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -44,7 +45,6 @@ class Predictor:
         server_url: str = "koina.wilhelmlab.org:443",
         ssl: bool = True,
         targets: Optional[list[str]] = None,
-        disable_progress_bar: bool = False,
     ) -> Predictor:
         """Create Koina predictor."""
         return Predictor(
@@ -53,7 +53,6 @@ class Predictor:
                 server_url=server_url,
                 ssl=ssl,
                 targets=targets,
-                disable_progress_bar=disable_progress_bar,
             ),
             model_name=model_name,
         )
@@ -102,6 +101,17 @@ class Predictor:
         return Predictor.from_dlomix(
             model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
         )
+
+    def _filter_kwargs(self, **kwargs) -> dict[str, Any]:
+        """
+        Get only arguments accepted by predictor implementation's predict() method from arbitrary set of kwargs.
+
+        :param kwargs: Set of keyword arguments
+
+        :return: Filtered set of keyword arguments
+        """
+        signature = inspect.signature(self._predictor.predict)
+        return {key: value for key, value in kwargs.items() if key in signature.parameters}
 
     def predict_intensities(self, data: Spectra, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
         """
@@ -224,7 +234,7 @@ class Predictor:
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
-        return self._predictor.predict(data, **kwargs)
+        return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
     def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
         """
@@ -269,7 +279,7 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data[idx], **kwargs))
+            results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 

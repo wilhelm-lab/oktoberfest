@@ -391,7 +391,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     spec_library = _speclib_from_digestion(config)
 
     predictors = {
-        model_key: pr.Predictor.from_config(config, model_type=model_key, disable_progress_bar=True)
+        model_key: pr.Predictor.from_config(config, model_type=model_key)
         for model_key in config.models
     }
 
