@@ -39,7 +39,6 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
 
 
 def _make_predictions(config, queue_out, progress, lock, batch_df):
-    print("depp")
     predictors = {model_key: pr.Predictor.from_config(config, model_type=model_key) for model_key in config.models}
     predictions = {
         output_name: output

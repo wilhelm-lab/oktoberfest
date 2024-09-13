@@ -258,15 +258,15 @@ class Predictor:
             >>>                         "PRECURSOR_CHARGE": [1,2],
             >>>                         "FRAGMENTATION": ["HCD","HCD"],
             >>>                         "PEPTIDE_LENGTH": [8,9]})
-            >>> idx = list(group_iterator(df=meta_df, group_by_column="PEPTIDE_LENGTH"))
             >>> var = Spectra._gen_vars_df()
             >>> library = Spectra(obs=meta_df, var=var)
+            >>> idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
             >>>                         ssl=True,
             >>>                         targets=["intensities", "annotation"])
-            >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library.obs, chunk_idx=idx)
             >>> print(predictions)
         """
         results = []
