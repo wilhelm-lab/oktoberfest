@@ -31,7 +31,7 @@ class TestTMTProsit(unittest.TestCase):
             server_url="koina.wilhelmlab.org:443",
             ssl=True,
         )
-        intensity_predictor.predict_intensities(data=Spectra(library))
+        intensity_predictor.predict_intensities(data=library)
 
         irt_predictor = Predictor.from_koina(
             model_name="Prosit_2020_irt_TMT",
