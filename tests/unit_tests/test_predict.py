@@ -32,7 +32,7 @@ class TestTMTProsit(unittest.TestCase):
             ssl=True,
             # targets=["intensities", "annotation"],
         )
-        intensity_predictor.predict_intensities(data=library)
+        intensity_predictor.predict_intensities(data=Spectra(library))
 
         irt_predictor = Predictor.from_koina(
             model_name="Prosit_2020_irt_TMT",
