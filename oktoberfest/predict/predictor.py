@@ -13,21 +13,16 @@ from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
 from .alignment import _alignment, _prepare_alignment_df
 from .koina import Koina
+from .utils import ZeroPredictor
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING or importlib.util.find_spec("dlomix"):
     from .dlomix import DLomix
 
-    PredictionInterface = Optional[Union[DLomix, Koina]]
-
+    PredictionInterface = Union[DLomix, Koina, ZeroPredictor]
 else:
-    if importlib.util.find_spec("dlomix"):
-        from .dlomix import DLomix
-
-        PredictionInterface = Optional[Union[DLomix, Koina]]
-    else:
-        PredictionInterface = Koina
+    PredictionInterface = Union[Koina, ZeroPredictor]
 
 
 class Predictor:
@@ -80,7 +75,7 @@ class Predictor:
 
         if model_type == "irt" and model_name == "zero_irt":
             logger.info("Using zero predictions for iRT")
-            return Predictor(None, "zero_iRT")
+            return Predictor(ZeroPredictor(), "zero_iRT")
 
         if model_type == "irt" or not config.predict_intensity_locally:
             logger.info(f"Using model {model_name} via Koina")
@@ -194,11 +189,8 @@ class Predictor:
             >>> irt_predictor.predict_rt(data=library)
             >>> print(library.obs["PREDICTED_IRT"])
         """
-        if self._predictor is None:
-            data.add_column(data.obs["RETENTION_TIME"], name="PREDICTED_IRT")
-        else:
-            pred_irts = self.predict_at_once(data=data.obs, **kwargs)
-            data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+        pred_irts = self.predict_at_once(data=data.obs, **kwargs)
+        data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
     def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
         """
