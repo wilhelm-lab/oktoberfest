@@ -38,7 +38,9 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(predictors: dict[str, pr.Predictor], queue_out, progress, lock, batch_df):
+def _make_predictions(config, queue_out, progress, lock, batch_df):
+    print("depp")
+    predictors = {model_key: pr.Predictor.from_config(config, model_type=model_key) for model_key in config.models}
     predictions = {
         output_name: output
         for predictor in predictors.values()
@@ -390,8 +392,6 @@ def generate_spectral_lib(config_path: Union[str, Path]):
 
     spec_library = _speclib_from_digestion(config)
 
-    predictors = {model_key: pr.Predictor.from_config(config, model_type=model_key) for model_key in config.models}
-
     speclib_written_step = ProcessStep(config.output, "speclib_written")
     if not speclib_written_step.is_done():
         results_path = config.output / "results"
@@ -430,7 +430,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                     result = predictor_pool.apply_async(
                         _make_predictions,
                         (
-                            predictors,
+                            config,
                             shared_queue,
                             prediction_progress,
                             lock,
