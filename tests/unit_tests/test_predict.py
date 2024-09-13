@@ -234,16 +234,16 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test CE calibration with alphapept predictor."""
         mock_prepare_alignment_df.return_value = self.mock_spectra
         self.mock_spectra.obs = pd.DataFrame({"PEPTIDE_LENGTH": [9, 11, 8, 9, 11, 8]})
-        predictor = Predictor(self.mock_koina, model_name=self.model_name)
+        predictor = Predictor(self.mock_koina, model_name="AlphaPept_ms2_generic")
         predictor.predict_intensities = MagicMock()
         alignment_library = predictor.ce_calibration(
-            library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, model_name="alphapept"
+            library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
         )
         mock_prepare_alignment_df.assert_called_once_with(
             self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
         )
         predictor.predict_intensities.assert_called_once_with(
-            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False, model_name="alphapept"
+            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False
         )
         mock_alignment.assert_called_once_with(self.mock_spectra)
         self.assertEqual(alignment_library, self.mock_spectra)
