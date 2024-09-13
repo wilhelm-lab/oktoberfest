@@ -43,7 +43,7 @@ def _make_predictions(config, queue_out, progress, lock, batch_df):
     predictions = {
         output_name: output
         for predictor in predictors.values()
-        for output_name, output in predictor.predict_at_once(batch_df).items()
+        for output_name, output in predictor._predictor.predict(batch_df).items()
     }
     queue_out.put((predictions, batch_df))
     with lock:

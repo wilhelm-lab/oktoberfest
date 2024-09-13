@@ -23,6 +23,7 @@ if TYPE_CHECKING or importlib.util.find_spec("dlomix"):
     PredictionInterface = Union[DLomix, Koina, ZeroPredictor]
 else:
     PredictionInterface = Union[Koina, ZeroPredictor]
+    DLomix = None
 
 
 class Predictor:
@@ -148,10 +149,10 @@ class Predictor:
             >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data.obs, **kwargs)
+            intensities = self.predict_at_once(data=data, **kwargs)
             data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
         else:
-            chunked_intensities = self.predict_in_chunks(data=data.obs, chunk_idx=chunk_idx, **kwargs)
+            chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, **kwargs)
             data.add_list_of_predicted_intensities(
                 chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
             )
@@ -189,10 +190,46 @@ class Predictor:
             >>> irt_predictor.predict_rt(data=library)
             >>> print(library.obs["PREDICTED_IRT"])
         """
-        pred_irts = self.predict_at_once(data=data.obs, **kwargs)
+        pred_irts = self.predict_at_once(data=data, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
+        """
+        Retrieve and return predictions in one go.
+
+        This function takes a Spectra object containing information about PSMs and predicts peptide properties. The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
+
+        :param data: Spectra containing the data for the prediction.
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+
+        :return: a dictionary with targets (keys) and predictions (values)
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest import predict as pr
+            >>> import pandas as pd
+            >>> # Required columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> predictions = intensity_predictor.predict_at_once(data=library)
+            >>> print(predictions)
+        """
+        return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
+
+    def _predict_at_once_df(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -211,7 +248,7 @@ class Predictor:
 
             >>> from oktoberfest import predict as pr
             >>> import pandas as pd
-            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
+            >>> # Required columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE and FRAGMENTATION
             >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
             >>>                         "COLLISION_ENERGY": [30,35],
             >>>                         "PRECURSOR_CHARGE": [1,2],
@@ -228,15 +265,15 @@ class Predictor:
         """
         return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-    def predict_in_chunks(self, data: pd.DataFrame, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 
-        This function takes a dataframe containing information about PSMs and predicts peptide properties.The
+        This function takes a Spectra object containing information about PSMs and predicts peptide properties.The
         configuration of Koina/DLomix is set using the kwargs.
         See the Koina or DLomix predict functions for details. TODO, link this properly.
 
-        :param data: Dataframe containing the data for the prediction.
+        :param data: Spectra object containing the data for the prediction.
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
@@ -252,7 +289,7 @@ class Predictor:
 
             >>> from oktoberfest import predict as pr
             >>> from oktoberfest.utils import group_iterator
-            >>> # Requiered columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
+            >>> # Required columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
             >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
             >>>                         "COLLISION_ENERGY": [30,35],
             >>>                         "PRECURSOR_CHARGE": [1,2],
@@ -266,12 +303,12 @@ class Predictor:
             >>>                         server_url="koina.wilhelmlab.org:443",
             >>>                         ssl=True,
             >>>                         targets=["intensities", "annotation"])
-            >>> predictions = intensity_predictor.predict_in_chunks(data=library.obs, chunk_idx=idx)
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data.loc[idx], **self._filter_kwargs(**kwargs)))
+            results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
