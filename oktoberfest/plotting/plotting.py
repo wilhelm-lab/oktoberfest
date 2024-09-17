@@ -384,8 +384,14 @@ def plot_pred_rt_vs_irt(
     for rawfile in targets["rawfile"].unique():
         fig, ax = plt.subplots(figsize=(8, 8))
         data = targets[targets["rawfile"] == rawfile]
-        both = np.vstack([data["predicted iRT"], data["experimental RT"]])
-        kernel = stats.gaussian_kde(both)(both)
+
+        if (data["predicted iRT"] == data["experimental RT"]).all():
+            # this can now happen if we skip the iRT prediction as we then use a perfect prediction as replacement
+            kernel = np.zeros(data.shape[0])
+        else:
+            both = np.vstack([data["predicted iRT"], data["experimental RT"]])
+            kernel = stats.gaussian_kde(both)(both)
+
         sns.scatterplot(
             data=data, x="predicted iRT", y="experimental RT", label="predicted iRT", c=kernel, ax=ax, linewidth=0
         )

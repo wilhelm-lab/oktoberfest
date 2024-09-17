@@ -68,11 +68,11 @@ def generate_features(
         >>> library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
         >>> library.add_mzs(mzs, FragmentType.MZ)
         >>> library.strings_to_categoricals()
-        >>> pr.predict_intensities(data=library,
-        >>>                     model_name="Prosit_2020_intensity_HCD",
-        >>>                     server_url="koina.wilhelmlab.org:443",
-        >>>                     ssl=True,
-        >>>                     targets=["intensities", "annotation"])
+        >>> intensity_predictor = pr.Predictor.from_koina(
+        >>>                         model_name="Prosit_2020_intensity_HCD",
+        >>>                         server_url="koina.wilhelmlab.org:443",
+        >>>                         ssl=True,
+        >>> intensity_predictor.predict_intensities(data=library)
         >>> re.generate_features(library=library,
         >>>                         search_type="original",
         >>>                         regression_method="spline",
@@ -80,9 +80,9 @@ def generate_features(
     """
     perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
-        pred_intensities=library.get_matrix(FragmentType.PRED)[0],
-        true_intensities=library.get_matrix(FragmentType.RAW)[0],
-        mz=library.get_matrix(FragmentType.MZ)[0],
+        pred_intensities=library.get_matrix(FragmentType.PRED),
+        true_intensities=library.get_matrix(FragmentType.RAW),
+        mz=library.get_matrix(FragmentType.MZ),
         input_type=search_type,
         additional_columns=additional_columns,
         all_features_flag=all_features,

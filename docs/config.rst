@@ -1,7 +1,7 @@
 Configuration
 =============
 
-The following provides an overview of all available flags in the configuration file to use the high level API and run jobs. Parameters may be applicable to more than one job type and are collected within indivdual tables.
+The following provides an overview of all available flags in the configuration file to use the high-level API and run jobs. Parameters may be applicable to more than one job type and are collected within indivdual tables.
 
 Always applicable
 -----------------
@@ -18,7 +18,7 @@ Always applicable
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | models                     | Contains information about the used models for peptide property prediction (see following 2 nested parameters)                                                                                                                                                                             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     intensity              | Name of the model used for fragment intensity prediction                                                                                                                                                                                                                                   |
+   |     intensity              | Name or path of the model used for fragment intensity prediction                                                                                                                                                                                                                           |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     irt                    | Name of the model used for indexed retention time prediction                                                                                                                                                                                                                               |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -146,3 +146,45 @@ Applicable to in-silico digestion
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     db                     | Defines whether the digestion should contain only targets, only decoys or both (concatenated); can be "target", "decoy" or "concat"; default = "concat"            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Applicable to local intensity prediction
+----------------------------------------
+
+.. table::
+   :class: fixed-table
+
+    +--------------------------+---------------------------------------------------+
+    | Parameter                | Description                                       |
+    +==========================+===================================================+
+    | dlomixInferenceBatchSize | Batch size to use for local inference with DLomix |
+    +--------------------------+---------------------------------------------------+
+
+Applicable to transfer/refinement learning
+------------------------------------------
+
+.. table::
+   :class: fixed-table lib-refinement-learning-config-table
+
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | Parameter                          |                             Description                                                                                                                            |
+   +====================================+====================================================================================================================================================================+
+   | refinementLearningOptions          | Contains specific settings for local refinement learning of intensity predictor on provided spectra. If not present, no refinement learning will be performed.     |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     batchSize                      | Defines batch size to use for training; default = 1024                                                                                                             |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     includeOriginalSequences       | Defines whether unmodified peptide sequences should be kept in processed DLomix dataset for downstream analysis; default = False                                   |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     improveFurther                 | Defines whether to perform an additional third training phase during refinement learning to further improve the predictor; default = False.                        |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     wandbOptions                   | Contains specific settings for using WandB when doing refinement learning. If not present, WandB will not be used.                                                 |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         project                    | Project to save WandB run to; default = "DLomix_auto_RL_TL"                                                                                                        |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         targets                    | Tags to use for WandB run; default = None                                                                                                                          |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     datasetFilteringOptions        | Contains specific settings for filtering the refinement/transfer learning dataset. If not provided, will only remove decoys.                                       |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         searchEngineScoreThreshold | Threshold for included peptides, everything below will be discarded.                                                                                               |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |         numDuplicates              | Number of (peptide, charge, collision energy) duplicates to include.                                                                                               |
+   +------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

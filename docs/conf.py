@@ -33,6 +33,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx.ext.intersphinx",
     "sphinx_click",
+    "sphinx.ext.autosectionlabel",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -250,3 +251,6 @@ def modurl(qualname):
 # and there’s no way to insert filters into those templates
 # so we have to modify the default filters
 DEFAULT_FILTERS["modurl"] = modurl
+
+# -- Options for autosectionlabel mappings -----------------------------
+autosectionlabel_prefix_document = True

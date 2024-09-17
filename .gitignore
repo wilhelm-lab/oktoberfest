@@ -151,5 +151,8 @@ tutorials/
 # example data
 data/
 
+# Machine learning artifacts
+wandb/
+
 # doctest IO files
 tests/doctests/

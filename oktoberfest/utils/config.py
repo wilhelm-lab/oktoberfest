@@ -1,13 +1,16 @@
+import importlib.util
 import json
 import logging
 import os
 from pathlib import Path
 from sys import platform
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 # from spectrum_io.search_result.search_results import parse_mods
 
 logger = logging.getLogger(__name__)
+
+BASELINE_MODEL_KEYS = ["baseline", ""]
 
 
 class Config:
@@ -21,12 +24,12 @@ class Config:
     @property
     def prediction_server(self) -> str:
         """Get prosit server from the config file."""
-        return self.data["prediction_server"]
+        return self.data.get("prediction_server", "koina.wilhelmlab.org:443")
 
     @property
     def ssl(self) -> bool:
         """Get ssl flag for prediction server."""
-        return self.data.get("ssl", False)
+        return self.data.get("ssl", True)
 
     @property
     def models(self) -> dict:
@@ -129,12 +132,12 @@ class Config:
         return self.inputs.get("search_results_type", "maxquant").lower()
 
     @property
-    def custom_modifications(self) -> Dict[str, Dict[str, List[Union[int, float, str]]]]:
+    def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
         """Get the custom modification dictionary from the config file."""
         return self.inputs.get("custom_modifications", {})
 
     @property
-    def static_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def static_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom static modification information.
 
@@ -147,7 +150,7 @@ class Config:
         return {str(k): (int(v[0]), float(v[1]), str(v[2]) if len(v) >= 3 else "") for k, v in mod_items}
 
     @property
-    def var_mods(self) -> Dict[str, Tuple[int, float, str]]:
+    def var_mods(self) -> dict[str, tuple[int, float, str]]:
         """
         Get the custom variable modification information.
 
@@ -259,7 +262,7 @@ class Config:
         return self.data.get("ce_alignment_options", {})
 
     @property
-    def ce_range(self) -> Tuple[int, int]:
+    def ce_range(self) -> tuple[int, int]:
         """Get the min and max boundaries for the CE to be used for alignment."""
         min_ce, max_ce = self.ce_alignment_options.get("ce_range", (18, 50))
         return int(min_ce), int(max_ce)
@@ -332,7 +335,7 @@ class Config:
         return self.spec_lib_options.get("collisionEnergy", 30)
 
     @property
-    def batch_size(self) -> int:
+    def speclib_generation_batch_size(self) -> int:
         """Get output format from the config file."""
         return self.spec_lib_options.get("batchsize", 10000)
 
@@ -342,7 +345,7 @@ class Config:
         return self.spec_lib_options.get("minIntensity", 5e-4)
 
     @property
-    def precursor_charge(self) -> List[int]:
+    def precursor_charge(self) -> list[int]:
         """Get output format from the config file."""
         return self.spec_lib_options.get("precursorCharge", [2, 3])
 
@@ -351,13 +354,109 @@ class Config:
         """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
         return self.spec_lib_options.get("nrOx", 1)
 
+    #####################################################################
+    # these are local prediction / transfer&refinement learning options #
+    #####################################################################
+
+    @property
+    def predict_intensity_locally(self) -> bool:
+        """Whether to predict intensity locally or using Koina."""
+        return (
+            self.models["intensity"] in BASELINE_MODEL_KEYS
+            or self.models["intensity"].endswith(".keras")
+            or Path(self.models["intensity"]).exists()
+        )
+
+    @property
+    def download_baseline_intensity_predictor(self) -> bool:
+        """Whether to download a baseline intensity predictor from GitHub."""
+        return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
+
+    @property
+    def dlomix_inference_batch_size(self) -> int:
+        """Batch size to use for local inference with DLomix."""
+        return self.data.get("dlomixInferenceBatchSize", 1024)
+
+    @property
+    def refinement_learning_options(self) -> dict:
+        """Get refinement learning parameter dictionary from config file."""
+        return self.data.get("refinementLearningOptions", {})
+
+    @property
+    def include_original_sequences(self) -> bool:
+        """Whether to keep unmodified peptide sequences in processed dataset."""
+        return self.refinement_learning_options.get("includeOriginalSequences", False)
+
+    @property
+    def training_batch_size(self) -> int:
+        """Batch size to use for refinement learning."""
+        return self.refinement_learning_options.get("batchSize", 1024)
+
+    @property
+    def do_refinement_learning(self) -> bool:
+        """Whether to do refinement learning for intensity predictor."""
+        return "refinementLearningOptions" in self.data
+
+    @property
+    def use_wandb(self) -> bool:
+        """Whether to use WandB for refinement learning training."""
+        return "wandbOptions" in self.refinement_learning_options
+
+    @property
+    def wandb_options(self) -> dict:
+        """Get WandB options from config file."""
+        return self.refinement_learning_options.get("wandbOptions", {})
+
+    @property
+    def wandb_project(self) -> str:
+        """Project to save WandB run to."""
+        return self.wandb_options.get("project", "DLomix_auto_RL_TL")
+
+    @property
+    def wandb_tags(self) -> list[str]:
+        """Tags to use for WandB run."""
+        return self.wandb_options.get("tags", [])
+
+    @property
+    def improve_further(self) -> bool:
+        """Whether to perform a third training phase for refinement learning."""
+        return self.refinement_learning_options.get("improveFurther", False)
+
+    @property
+    def search_engine_score_threshold(self) -> float:
+        """Search engine score threshold for filtering refinement learning training data."""
+        return self.refinement_learning_options.get("searchEngineScoreThreshold", 0.0)
+
+    @property
+    def num_duplicates(self) -> int:
+        """Number of (peptide, charge, collision energy) duplicates to allow in refinement learning training data."""
+        return self.refinement_learning_options.get("numDuplicates", 100)
+
     ########################
     # functions start here #
     ########################
 
     def check(self):
         """Validate the configuration."""
-        # check tmt tag and models
+        self._check_tmt()
+
+        if self.job_type == "SpectralLibraryGeneration":
+            self._check_for_speclib()
+
+        if "alphapept" in self.models["intensity"].lower():
+            self._check_for_alphapept()
+
+        if self.predict_intensity_locally:
+            self._check_for_local_prediction()
+
+        if self.do_refinement_learning:
+            self._check_for_refinement_learning()
+
+        if self.quantification:
+            self._check_quantification()
+            self._check_fasta()
+
+    def _check_tmt(self):
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
         if self.tag == "":
@@ -380,22 +479,16 @@ class Config:
                     f"You specified the tag {self.tag} but the chosen irt model {self.models['irt']} is incompatible."
                     " Please check and use a TMT model instead."
                 )
-        if self.job_type == "SpectralLibraryGeneration":
-            self._check_for_speclib()
 
-        if self.quantification:
-            self._check_quantification()
-            self._check_fasta()
-
-        if "alphapept" in int_model:
-            instrument_type = self.instrument_type
-            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
-            if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
-                raise ValueError(
-                    f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
-                    f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
-                    f"of {valid_alphapept_instrument_types}."
-                )
+    def _check_for_alphapept(self):
+        instrument_type = self.instrument_type
+        valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
+        if instrument_type is not None and instrument_type not in valid_alphapept_instrument_types:
+            raise ValueError(
+                f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
+                f"{instrument_type}. Either let Oktoberfest read the instrument type from the mzML file, or provide one "
+                f"of {valid_alphapept_instrument_types}."
+            )
 
     def _check_for_speclib(self):
         if self.fragmentation == "hcd" and self.models["intensity"].lower().endswith("cid"):
@@ -433,6 +526,34 @@ class Config:
                         f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
                         f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
                     )
+
+    def _check_for_local_prediction(self):
+        if not self.models["intensity"] in BASELINE_MODEL_KEYS:
+            model_path = Path(self.models["intensity"])
+            if not model_path.exists():
+                raise FileNotFoundError(f"Model file {model_path} does not exist")
+            elif model_path.suffix != ".keras":
+                raise ValueError(f"Model file {model_path} exists, but is not a .keras file")
+
+        if not importlib.util.find_spec("dlomix"):
+            raise ModuleNotFoundError(
+                """Local prediction requested, but the DLomix package could not be found. Please verify that it has been
+                installed as an optional dependency."""
+            )
+
+    def _check_for_refinement_learning(self):
+        if not self.predict_intensity_locally:
+            raise ValueError(
+                "Refinement learning but not local intensity prediction requested. Koina models cannot be used for "
+                "refinement learning."
+            )
+        if not Path(self.models["intensity"]).exists():
+            if self.models["intensity"].lower() not in BASELINE_MODEL_KEYS:
+                raise ValueError(
+                    f"You requested the intensity model {self.models['intensity']}, but it is neither a path that exists"
+                    "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"
+                    "for refinement learning."
+                )
 
     def _find_file_in_subd(self, directory: Path, filename: str):
         for _, _, files in os.walk(directory):
@@ -498,7 +619,7 @@ class Config:
             self.data = json.load(f)
         self.base_path = config_path.parent
 
-    def custom_to_unimod(self) -> Dict[str, int]:
+    def custom_to_unimod(self) -> dict[str, int]:
         """
         Parse modifications to dict with custom identifier and UNIMOD integer for internal processing.
 
@@ -511,7 +632,7 @@ class Config:
             custom_to_unimod[str(k)] = int(v[0])
         return custom_to_unimod
 
-    def unimod_to_mass(self) -> Dict[str, float]:
+    def unimod_to_mass(self) -> dict[str, float]:
         """
         Map UNIMOD Id to its mass for all static and variable modifications.
 

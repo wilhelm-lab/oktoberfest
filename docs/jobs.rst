@@ -1,7 +1,7 @@
 Running Oktoberfest
 ===================
 
-This documentation provides an overview of the high level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
+This documentation provides an overview of the high-level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
 
 
 Executing a job
@@ -157,6 +157,9 @@ The example config can be loaded and viewed using
 C. Rescoring
 ------------
 
+a) without refinement
+~~~~~~~~~~~~~~~~~~~~~
+
 This task rescores an existing search result using features generated from peptide property prediction.
 Oktoberfest will:
 
@@ -264,4 +267,66 @@ The example config can be loaded and viewed using
     import oktoberfest as ok
     import json
     config = ok.utils.example_configs.RESCORING_WITH_QUANT
+    json.dumps(config, indent=4)
+
+b) with refinement
+~~~~~~~~~~~~~~~~~~
+
+Same as rescoring without refinement, but in addition a new intensity predictor will be trained from a baseline model using off-line reinforcement learning on the provided spectra.
+The refined intensity predictor will be used along an on-line retention time predictor to generate inputs for rescoring.
+
+.. note::
+    You can either provide a baseline predictor yourself, or download a pre-trained one from GitHub automatically.
+
+Example config file:
+
+.. code-block:: json
+
+    {
+        "type": "Rescoring",
+        "tag": "",
+        "output": "./out",
+        "inputs": {
+            "search_results": "./msms.txt",
+            "search_results_type": "Maxquant",
+            "spectra": "./",
+            "spectra_type": "raw",
+            "instrument_type": "QE"
+        },
+        "models": {
+            "intensity": "baseline",
+            "irt": "Prosit_2019_irt"
+        },
+        "prediction_server": "koina.wilhelmlab.org:443",
+        "numThreads": 1,
+        "dlomixInferenceBatchSize": 1024,
+        "refinementLearningOptions": {
+            "batchSize": 1024,
+            "includeOriginalSequences": false,
+            "improveFurther": false,
+            "datasetFilteringOptions": {
+                "searchEngineScoreThreshold": 0,
+                "numDuplicates": 100
+            }
+        },
+        "fdr_estimation_method": "mokapot",
+        "allFeatures": false,
+        "regressionMethod": "spline",
+        "ssl": true,
+        "thermoExe": "ThermoRawFileParser.exe",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm",
+        "ce_alignment_options": {
+            "ce_range": [19,50],
+            "use_ransac_model": false
+        }
+    }
+
+The example config can be loaded and viewed using
+
+.. code-block:: python
+
+    import oktoberfest as ok
+    import json
+    config = ok.utils.example_configs.RESCORING_WITH_REFINEMENT
     json.dumps(config, indent=4)
