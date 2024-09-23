@@ -61,13 +61,16 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
             tmt_label = config.tag
-
+            ptm_unimods = config.ptm_unimod_id
+            ptm_sites = config.ptm_possible_sites
             search_results = pp.convert_search(
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
                 custom_mods=config.custom_to_unimod(),
                 output_file=internal_search_file,
+                ptm_unimod_ids = ptm_unimods,
+                ptm_sites = ptm_sites,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
                 timstof_metadata = pp.convert_timstof_metadata(
@@ -149,12 +152,14 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
+        annotate_neutral_loss = config.ptm_use_neutral_loss
         aspec = pp.annotate_spectral_library(
             psms=library,
             mass_tol=config.mass_tolerance,
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
             custom_mods=config.unimod_to_mass(),
+            annotate_neutral_loss = annotate_neutral_loss
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 

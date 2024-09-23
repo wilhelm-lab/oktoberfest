@@ -396,6 +396,8 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
+    ptm_unimod_id: Optional[int] = 0,
+    ptm_sites: Optional[list] = []
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -503,7 +505,8 @@ def convert_search(
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
     return search_result(input_path).generate_internal(
-        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
+        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods, ptm_unimod_id=ptm_unimod_id,
+        ptm_sites=ptm_sites
     )
 
 
@@ -850,6 +853,7 @@ def annotate_spectral_library(
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
+    annotate_neutral_loss: Optional[bool] = False
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -892,6 +896,7 @@ def annotate_spectral_library(
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
         custom_mods=custom_mods,
+        
     )
 
     ion_types = retrieve_ion_types(fragmentation_method)
