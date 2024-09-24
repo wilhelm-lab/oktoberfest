@@ -69,8 +69,8 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
                 tmt_label=tmt_label,
                 custom_mods=config.custom_to_unimod(),
                 output_file=internal_search_file,
-                ptm_unimod_ids = ptm_unimods,
-                ptm_sites = ptm_sites,
+                ptm_unimod_id=ptm_unimods,
+                ptm_sites=ptm_sites,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
                 timstof_metadata = pp.convert_timstof_metadata(
@@ -159,7 +159,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
             custom_mods=config.unimod_to_mass(),
-            annotate_neutral_loss = annotate_neutral_loss
+            annotate_neutral_loss=annotate_neutral_loss,
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 

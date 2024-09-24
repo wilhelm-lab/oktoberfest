@@ -353,7 +353,7 @@ class Config:
     def nr_ox(self) -> int:
         """Get the maximum number of oxidations allowed on M residues in peptides during spectral library generation."""
         return self.spec_lib_options.get("nrOx", 1)
-    
+
     ###########################
     # these are PTM localization options #
     ###########################
@@ -367,7 +367,7 @@ class Config:
     def ptm_localization_options(self) -> dict:
         """Get ptm localization dictionary from the config file."""
         return self.data.get("ptmLocalizationOptions", {})
-    
+
     @property
     def ptm_unimod_id(self) -> int:
         """Get the unimod id required for localization."""
@@ -378,7 +378,7 @@ class Config:
     def ptm_possible_sites(self) -> list:
         """Get which sites ptm can exist on."""
         return self.ptm_localization_options.get("possible_sites", [])
-    
+
     @property
     def ptm_use_neutral_loss(self) -> bool:
         """Get neutral loss flag to indicate whether to add a score for this or not."""
