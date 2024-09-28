@@ -913,6 +913,8 @@ def annotate_spectral_library(
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
+    aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
+    aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")

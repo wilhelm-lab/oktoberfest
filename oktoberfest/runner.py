@@ -567,7 +567,6 @@ def _refinement_learn(spectra_files: list[Path], config: Config):
 
 def _calculate_features(spectra_file: Path, config: Config):
     library = _ce_calib(spectra_file, config)
-
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
     if calc_feature_step.is_done():
         return
@@ -602,7 +601,8 @@ def _calculate_features(spectra_file: Path, config: Config):
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
     fdr_dir.mkdir(exist_ok=True)
-
+    add_neutral_loss_features = config.ptm_use_neutral_loss
+    remove_miss_cleavage_features = ("R" in config.ptm_possible_sites) or ("K" in config.ptm_possible_sites)
     re.generate_features(
         library=library,
         search_type="original",
@@ -618,6 +618,8 @@ def _calculate_features(spectra_file: Path, config: Config):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
+        add_neutral_loss_features=add_neutral_loss_features,
+        remove_miss_cleavage_features=remove_miss_cleavage_features,
     )
 
     calc_feature_step.mark_done()
@@ -639,8 +641,13 @@ def _rescore(fdr_dir: Path, config: Config):
             re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
             rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-            rescore_prosit_step.mark_done()
+            logger.info("Start percolator rescoring")
+            logger.info(config.ptm_localization)
+            if config.ptm_localization:
+                _ptm_localization_rescore(fdr_dir, config)
+            else:
+                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+                rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
@@ -652,6 +659,43 @@ def _rescore(fdr_dir: Path, config: Config):
         raise ValueError(
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
+
+
+def _ptm_localization_rescore(fdr_dir: Path, config: Config):
+    """
+     Helper function for running percolator to do PTM localization.
+
+    :param fdr_dir: the output directory
+    :param config: the configuration object
+    """
+    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+    unimod_id = config.ptm_unimod_id
+    df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
+    df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
+    df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
+    df_rescore.drop(columns=["id"], inplace=True)
+    df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+    new_rescore_dir = fdr_dir / "localize_mod"
+    new_rescore_dir.mkdir(parents=True, exist_ok=True)
+
+    if unimod_id == 7:
+        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
+        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
+        df_rescore_psms_targets = df_rescore_psms_targets[
+            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms_decoys = df_rescore_psms_decoys[
+            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
+        df_rescore_psms = df_rescore_psms[["PSMId"]]
+        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
+        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
+        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
+        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+    else:
+        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
 
 
 def run_rescoring(config_path: Union[str, Path]):
@@ -722,7 +766,8 @@ def run_rescoring(config_path: Union[str, Path]):
 
     # plotting
     logger.info("Generating summary plots...")
-    pl.plot_all(fdr_dir)
+    if not config.ptm_localization:
+        pl.plot_all(fdr_dir)
     logger.info("Finished rescoring.")
 
     if config.quantification:

@@ -361,7 +361,7 @@ class Config:
     @property
     def ptm_localization(self) -> bool:
         """Get ptm localization flag from the config file."""
-        return self.spec_lib_options.get("ptm_localization", False)
+        return self.data.get("ptm_localization", False)
 
     @property
     def ptm_localization_options(self) -> dict:
