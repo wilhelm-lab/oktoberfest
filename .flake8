@@ -8,5 +8,6 @@ per-file-ignores =
 	tests/*:S101
 	**/__init__.py:F401,F403
     	docs/conf.py:S404,S607,S603
-	oktoberfest/runner.py:S301,S403
+	oktoberfest/runner.py:C901,S301,S403
+    oktoberfest/predict/dlomix.py:E402
 docstring_style = sphinx

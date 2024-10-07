@@ -1,14 +1,19 @@
+from __future__ import annotations
+
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING
 
 import mokapot
 import numpy as np
 import pandas as pd
 from spectrum_fundamentals.metrics.percolator import Percolator
 
-from ..data import FragmentType, Spectra
+from ..data import FragmentType
+
+if TYPE_CHECKING:
+    from ..data import Spectra
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +21,12 @@ logger = logging.getLogger(__name__)
 def generate_features(
     library: Spectra,
     search_type: str,
-    output_file: Union[str, Path],
-    additional_columns: Union[str, list],
+    output_file: str | Path,
+    additional_columns: str | list | None = None,
     all_features: bool = False,
     regression_method: str = "spline",
+    add_neutral_loss_features: bool = False,
+    remove_miss_cleavage_features: bool = False,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -33,26 +40,69 @@ def generate_features(
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
     :param regression_method: The regression method to use for iRT alignment
+    :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
+    :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import rescore as re
+        >>> from oktoberfest import predict as pr
+        >>> from oktoberfest.data import Spectra, FragmentType
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, SEQUENCE, CALCULATED_MASS, SCAN_NUMBER,
+        >>> # COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+        >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+        >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+        >>>                         "SEQUENCE": ["AAACRFVQ","RMPCHKPYL"],
+        >>>                         "CALCULATED_MASS": [1000,4000],
+        >>>                         "SCAN_NUMBER": [1,2],
+        >>>                         "COLLISION_ENERGY": [30,35],
+        >>>                         "PRECURSOR_CHARGE": [1,2],
+        >>>                         "FRAGMENTATION": ["HCD","HCD"],
+        >>>                         "REVERSE": [False,False],
+        >>>                         "SCORE": [0,0]})
+        >>> var = Spectra._gen_vars_df()
+        >>> library = Spectra(obs=meta_df, var=var)
+        >>> raw_intensities = np.random.rand(2,174)
+        >>> mzs = np.random.rand(2,174)*1000
+        >>> annotation = np.array([var.index,var.index])
+        >>> library.add_intensities(raw_intensities, annotation, FragmentType.RAW)
+        >>> library.add_mzs(mzs, FragmentType.MZ)
+        >>> library.strings_to_categoricals()
+        >>> intensity_predictor = pr.Predictor.from_koina(
+        >>>                         model_name="Prosit_2020_intensity_HCD",
+        >>>                         server_url="koina.wilhelmlab.org:443",
+        >>>                         ssl=True,
+        >>> intensity_predictor.predict_intensities(data=library)
+        >>> re.generate_features(library=library,
+        >>>                         search_type="original",
+        >>>                         regression_method="spline",
+        >>>                         output_file="./tests/doctests/output/original.tab")
     """
     perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
-        pred_intensities=library.get_matrix(FragmentType.PRED)[0],
-        true_intensities=library.get_matrix(FragmentType.RAW)[0],
-        mz=library.get_matrix(FragmentType.MZ)[0],
+        pred_intensities=library.get_matrix(FragmentType.PRED),
+        true_intensities=library.get_matrix(FragmentType.RAW),
+        mz=library.get_matrix(FragmentType.MZ),
         input_type=search_type,
         additional_columns=additional_columns,
         all_features_flag=all_features,
         regression_method=regression_method,
+        neutral_loss_flag=add_neutral_loss_features,
+        drop_miss_cleavage_flag=remove_miss_cleavage_features,
     )
     perc_features.calc()
     perc_features.write_to_file(str(output_file))
 
 
 def merge_input(
-    tab_files: List[Path],
-    output_file=Union[str, Path],
+    tab_files: list[Path],
+    output_file: str | Path,
 ):
-    """
+    r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
 
     The function takes a list of tab files and concatenates them before writing a combined tab file back to
@@ -63,6 +113,62 @@ def merge_input(
 
     :param tab_files: list of paths pointing to the individual tab files to be concatenated
     :param output_file: path to the generated output tab file
+
+    :Example:
+
+    .. code-block:: python
+
+        >>> from oktoberfest import rescore as re
+        >>> from pathlib import Path
+        >>> import pandas as pd
+        >>> rescore_df1 = pd.DataFrame({'SpecId': ["F1-81-AAAAAAALQAK-2-5","F1-15-VGVFQHGK-3-2"],
+        >>>                           'Label': [1,0],
+        >>>                           'ScanNr': [81,15],
+        >>>                           'filename': ["F1","F1"],
+        >>>                           'CID': [0,0],
+        >>>                           'Charge1': [0,0],
+        >>>                           'Charge2': [1,0],
+        >>>                           'Charge3': [0,1],
+        >>>                           'Charge4': [0,0],
+        >>>                           'Charge5': [0,0],
+        >>>                           'Charge6': [0,0],
+        >>>                           'HCD': [1,1],
+        >>>                           'KR': [1,1],
+        >>>                           'Mass': [1402.18,1103.54],
+        >>>                           'spectral_angle': [0.71,0.23],
+        >>>                           'sequence_length': [11,8],
+        >>>                           'Peptide': ["_.AAAAAAALQAK._","_.VGVFQHGK._"],
+        >>>                           'Proteins': ["AAAAAAALQAK","VGVFQHGK"],
+        >>>                           'RT': [64.79,57.84],
+        >>>                           'iRT': [65.99,56.22],
+        >>>                           'pred_RT': [58.86,55.34]})
+        >>> rescore_df2 = pd.DataFrame({'SpecId': ["F2-13-AEAEQEKDQLR-1-11","F2-27-TGFLEQLK-2-7"],
+        >>>                           'Label': [1,0],
+        >>>                           'ScanNr': [13,27],
+        >>>                           'filename': ["F2","F2"],
+        >>>                           'CID': [0,0],
+        >>>                           'Charge1': [1,0],
+        >>>                           'Charge2': [0,1],
+        >>>                           'Charge3': [0,0],
+        >>>                           'Charge4': [0,0],
+        >>>                           'Charge5': [0,0],
+        >>>                           'Charge6': [0,0],
+        >>>                           'HCD': [1,1],
+        >>>                           'KR': [2,1],
+        >>>                           'Mass': [1202.43,1009.14],
+        >>>                           'spectral_angle': [0.55,0.12],
+        >>>                           'sequence_length': [11,8],
+        >>>                           'Peptide': ["_.AEAEQEKDQLR._","_.TGFLEQLK._"],
+        >>>                           'Proteins': ["AEAEQEKDQLR","TGFLEQLK"],
+        >>>                           'RT': [62.33,51.23],
+        >>>                           'iRT': [63.98,53.24],
+        >>>                           'pred_RT': [59.16,50.76]})
+        >>> rescore_df1.to_csv("./tests/doctests/input/rescore1.tab",sep='\t',index=False)
+        >>> rescore_df2.to_csv("./tests/doctests/input/rescore2.tab",sep='\t',index=False)
+        >>> tabfile1 = Path("./tests/doctests/input/rescore1.tab")
+        >>> tabfile2 = Path("./tests/doctests/input/rescore2.tab")
+        >>> filelist = [tabfile1,tabfile2]
+        >>> re.merge_input(tab_files=filelist, output_file="./tests/doctests/output/merged_rescore.tab")
     """
     with open(output_file, "wb") as fout:
         first = True
@@ -88,8 +194,8 @@ def merge_input(
 
 
 def rescore_with_percolator(
-    input_file: Union[str, Path],
-    output_folder: Optional[Union[str, Path]] = None,
+    input_file: str | Path,
+    output_folder: str | Path | None = None,
     num_threads: int = 3,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
@@ -144,8 +250,8 @@ def rescore_with_percolator(
 
 
 def rescore_with_mokapot(
-    input_file: Union[str, Path],
-    output_folder: Optional[Union[str, Path]] = None,
+    input_file: str | Path,
+    output_folder: str | Path | None = None,
     test_fdr: float = 0.01,
 ):
     """

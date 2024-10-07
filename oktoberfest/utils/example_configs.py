@@ -25,6 +25,70 @@ RESCORING = {
     },
 }
 
+RESCORING_WITH_QUANT = {
+    "type": "Rescoring",
+    "quantification": True,
+    "tag": "",
+    "inputs": {
+        "search_results": "mq_results/txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "library_input": "uniprot.fasta",
+    },
+    "output": "./out",
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt",
+    },
+    "prediction_server": "koina.proteomicsdb.org:443",
+    "ssl": True,
+    "thermoExe": "/opt/compomics/ThermoRawFileParser1.4.3/ThermoRawFileParser.exe",
+    "numThreads": 1,
+    "fdr_estimation_method": "percolator",
+    "regressionMethod": "spline",
+    "allFeatures": False,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "fastaDigestOptions": {
+        "digestion": "full",
+        "missedCleavages": 2,
+        "minLength": 7,
+        "maxLength": 60,
+        "enzyme": "trypsin",
+        "specialAas": "KR",
+        "db": "concat",
+    },
+}
+
+RESCORING_WITH_REFINEMENT = {
+    "type": "Rescoring",
+    "tag": "",
+    "inputs": {
+        "search_results": "msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "instrument_type": "QE",
+    },
+    "output": "./out",
+    "models": {"intensity": "baseline", "irt": "Prosit_2019_irt"},
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": True,
+    "refinementLearningOptions": {"batchSize": 1024},
+    "thermoExe": "ThermoRawFileParser.exe",
+    "numThreads": 1,
+    "fdr_estimation_method": "mokapot",
+    "regressionMethod": "spline",
+    "allFeatures": False,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": (19, 50),
+        "use_ransac_model": False,
+    },
+}
+
 CECALIB = {
     "type": "CollisionEnergyCalibration",
     "tag": "",

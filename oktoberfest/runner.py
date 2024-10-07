@@ -8,7 +8,7 @@ from functools import partial
 from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
-from .utils import Config, JobPool, ProcessStep, group_iterator
+from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +38,19 @@ def _make_predictions_error_callback(failure_progress_tracker, failure_lock, err
         failure_progress_tracker.value += 1
 
 
-def _make_predictions(int_model, irt_model, predict_kwargs, queue_out, progress, lock, batch_df):
+def _make_predictions(config, queue_out, progress, lock, batch_df):
+    predictors = {model_key: pr.Predictor.from_config(config, model_type=model_key) for model_key in config.models}
     predictions = {
-        **pr.predict_at_once(batch_df, model_name=int_model, **predict_kwargs),
-        **pr.predict_at_once(batch_df, model_name=irt_model, **predict_kwargs),
+        output_name: output
+        for predictor in predictors.values()
+        for output_name, output in predictor._predictor.predict(batch_df).items()
     }
     queue_out.put((predictions, batch_df))
     with lock:
         progress.value += 1
 
 
-def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
+def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
     preprocess_search_step = ProcessStep(config.output, "preprocessing_search")
     if not preprocess_search_step.is_done():
         # load search results
@@ -59,13 +61,16 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
             tmt_label = config.tag
-
+            ptm_unimods = config.ptm_unimod_id
+            ptm_sites = config.ptm_possible_sites
             search_results = pp.convert_search(
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
                 tmt_label=tmt_label,
                 custom_mods=config.custom_to_unimod(),
                 output_file=internal_search_file,
+                ptm_unimod_id=ptm_unimods,
+                ptm_sites=ptm_sites,
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
                 timstof_metadata = pp.convert_timstof_metadata(
@@ -81,7 +86,19 @@ def _preprocess(spectra_files: List[Path], config: Config) -> List[Path]:
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
 
         # filter search results
-        search_results = pp.filter_peptides_for_model(peptides=search_results, model=config.models["intensity"])
+        if config.predict_intensity_locally:
+            model_type = Path(config.models["intensity"]).stem
+        else:
+            model_type = config.models["intensity"]
+        try:
+            search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
+        except ValueError:
+            logger.exception(
+                ValueError(
+                    f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
+                    "If you're using local prediction, please ensure the model type is contained in the model file name."
+                )
+            )
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -135,12 +152,14 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
+        annotate_neutral_loss = config.ptm_use_neutral_loss
         aspec = pp.annotate_spectral_library(
             psms=library,
             mass_tol=config.mass_tolerance,
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
             custom_mods=config.unimod_to_mass(),
+            annotate_neutral_loss=annotate_neutral_loss,
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -150,14 +169,18 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
+    if config.do_refinement_learning:
+        # don't do CE calibration
+        return
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
-        server_kwargs = {
-            "server_url": config.prediction_server,
-            "ssl": config.ssl,
-            "model_name": config.models["intensity"],
-        }
         use_ransac_model = config.use_ransac_model
-        alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, **server_kwargs)
+        predictor = pr.Predictor.from_config(config, model_type="intensity")
+        alignment_library = predictor.ce_calibration(
+            library,
+            config.ce_range,
+            use_ransac_model,
+            dataset_name=spectra_file.stem + "_ce_calibration",
+        )
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
@@ -294,7 +317,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
     return spec_library
 
 
-def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type[SpectralLibrary], Path]:
+def _get_writer_and_output(results_path: Path, output_format: str) -> tuple[type[SpectralLibrary], Path]:
     libfile_prefix = "predicted_library"
     if output_format == "msp":
         return MSP, results_path / f"{libfile_prefix}.msp"
@@ -306,7 +329,7 @@ def _get_writer_and_output(results_path: Path, output_format: str) -> Tuple[Type
         raise ValueError(f"{output_format} is not supported as spectral library type")
 
 
-def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batchsize: int, model: str):
+def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataFrame, batch_size: int, model: str):
     if out_file.is_file():
         if failed_batch_file.is_file():
             with open(failed_batch_file, "rb") as fh:
@@ -325,17 +348,17 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
             sys.exit(1)
     else:
         if "alphapept" in model.lower():
-            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batchsize)
+            batch_iterator = group_iterator(df=obs, group_by_column="PEPTIDE_LENGTH", max_batch_size=batch_size)
         else:
             batch_iterator = (
-                obs.index[i * batchsize : (i + 1) * batchsize].to_numpy() for i in range(ceil(len(obs) / batchsize))
+                obs.index[i * batch_size : (i + 1) * batch_size].to_numpy() for i in range(ceil(len(obs) / batch_size))
             )
         mode = "w"
 
     return list(batch_iterator), mode
 
 
-def _update(pbar: tqdm, postfix_values: Dict[str, int]):
+def _update(pbar: tqdm, postfix_values: dict[str, int]):
     total_val = sum(postfix_values.values())
     if total_val > pbar.n:
         pbar.set_postfix(**postfix_values)
@@ -343,7 +366,7 @@ def _update(pbar: tqdm, postfix_values: Dict[str, int]):
         pbar.refresh()
 
 
-def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: List[pool.AsyncResult]):
+def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: list[pool.AsyncResult]):
     if n_failed > 0:
         failed_batches = []
         for i, result in enumerate(results):
@@ -369,25 +392,20 @@ def generate_spectral_lib(config_path: Union[str, Path]):
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     spec_library = _speclib_from_digestion(config)
-
-    server_kwargs = {
-        "server_url": config.prediction_server,
-        "ssl": config.ssl,
-        "disable_progress_bar": True,
-    }
 
     speclib_written_step = ProcessStep(config.output, "speclib_written")
     if not speclib_written_step.is_done():
         results_path = config.output / "results"
         results_path.mkdir(exist_ok=True)
 
-        batchsize = config.batch_size
+        batch_size = config.speclib_generation_batch_size
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
-            out_file, failed_batch_file, spec_library.obs, batchsize, config.models["intensity"]
+            out_file, failed_batch_file, spec_library.obs, batch_size, config.models["intensity"]
         )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
@@ -416,9 +434,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
                     result = predictor_pool.apply_async(
                         _make_predictions,
                         (
-                            config.models["intensity"],
-                            config.models["irt"],
-                            server_kwargs,
+                            config,
                             shared_queue,
                             prediction_progress,
                             lock,
@@ -480,7 +496,8 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
     aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
-    _get_best_ce(aspec, spectra_file, config)
+    if not config.do_refinement_learning:
+        _get_best_ce(aspec, spectra_file, config)
 
     aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
@@ -500,6 +517,7 @@ def run_ce_calibration(
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     # load spectra file names
     spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
@@ -519,9 +537,36 @@ def run_ce_calibration(
             _ce_calib(spectra_file, config)
 
 
+def _refinement_learn(spectra_files: list[Path], config: Config):
+    refinement_step = ProcessStep(config.output, "refinement_learning")
+    if refinement_step.is_done():
+        return
+
+    libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
+
+    if config.download_baseline_intensity_predictor:
+        baseline_model_path = config.output / "data/dlomix/prosit_baseline_model.keras"
+        download_new_baseline_model = True
+    else:
+        baseline_model_path = Path(config.models["intensity"])
+        download_new_baseline_model = False
+
+    pr.dlomix.refine_intensity_predictor(
+        baseline_model_path=baseline_model_path,
+        libraries=libraries,
+        config=config,
+        data_directory=config.output / "data/dlomix",
+        result_directory=config.output / "results/dlomix",
+        dataset_name="refinement_dataset",
+        model_name="refined",
+        download_new_baseline_model=download_new_baseline_model,
+    )
+
+    refinement_step.mark_done()
+
+
 def _calculate_features(spectra_file: Path, config: Config):
     library = _ce_calib(spectra_file, config)
-
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
     if calc_feature_step.is_done():
         return
@@ -529,20 +574,26 @@ def _calculate_features(spectra_file: Path, config: Config):
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
 
-        predict_kwargs = {
-            "server_url": config.prediction_server,
-            "ssl": config.ssl,
-        }
-
         if "alphapept" in config.models["intensity"].lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        pr.predict_intensities(
-            data=library, chunk_idx=chunk_idx, model_name=config.models["intensity"], **predict_kwargs
+        if config.do_refinement_learning:
+            intensity_predictor = pr.Predictor.from_dlomix(
+                model_type="intensity",
+                model_path=config.output / "data/dlomix/refined.keras",
+                output_path=config.output / "data/dlomix/",
+                batch_size=config.dlomix_inference_batch_size,
+            )
+        else:
+            intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
+
+        intensity_predictor.predict_intensities(
+            data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
         )
 
-        pr.predict_rt(data=library, model_name=config.models["irt"], **predict_kwargs)
+        irt_predictor = pr.Predictor.from_config(config, model_type="irt")
+        irt_predictor.predict_rt(data=library)
 
         library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
         predict_step.mark_done()
@@ -550,7 +601,8 @@ def _calculate_features(spectra_file: Path, config: Config):
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
     fdr_dir.mkdir(exist_ok=True)
-
+    add_neutral_loss_features = config.ptm_use_neutral_loss
+    remove_miss_cleavage_features = ("R" in config.ptm_possible_sites) or ("K" in config.ptm_possible_sites)
     re.generate_features(
         library=library,
         search_type="original",
@@ -566,6 +618,8 @@ def _calculate_features(spectra_file: Path, config: Config):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
+        add_neutral_loss_features=add_neutral_loss_features,
+        remove_miss_cleavage_features=remove_miss_cleavage_features,
     )
 
     calc_feature_step.mark_done()
@@ -587,8 +641,13 @@ def _rescore(fdr_dir: Path, config: Config):
             re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
             rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-            rescore_prosit_step.mark_done()
+            logger.info("Start percolator rescoring")
+            logger.info(config.ptm_localization)
+            if config.ptm_localization:
+                _ptm_localization_rescore(fdr_dir, config)
+            else:
+                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+                rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
@@ -602,6 +661,43 @@ def _rescore(fdr_dir: Path, config: Config):
         )
 
 
+def _ptm_localization_rescore(fdr_dir: Path, config: Config):
+    """
+     Helper function for running percolator to do PTM localization.
+
+    :param fdr_dir: the output directory
+    :param config: the configuration object
+    """
+    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+    unimod_id = config.ptm_unimod_id
+    df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
+    df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
+    df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
+    df_rescore.drop(columns=["id"], inplace=True)
+    df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+    new_rescore_dir = fdr_dir / "localize_mod"
+    new_rescore_dir.mkdir(parents=True, exist_ok=True)
+
+    if unimod_id == 7:
+        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
+        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
+        df_rescore_psms_targets = df_rescore_psms_targets[
+            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms_decoys = df_rescore_psms_decoys[
+            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
+        df_rescore_psms = df_rescore_psms[["PSMId"]]
+        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
+        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
+        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
+        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+    else:
+        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
+
+
 def run_rescoring(config_path: Union[str, Path]):
     """
     Create a ReScore object and run the rescoring.
@@ -611,6 +707,7 @@ def run_rescoring(config_path: Union[str, Path]):
     """
     config = Config()
     config.read(config_path)
+    config.check()
 
     # load spectra file names
     spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
@@ -619,6 +716,21 @@ def run_rescoring(config_path: Union[str, Path]):
     proc_dir.mkdir(parents=True, exist_ok=True)
 
     spectra_files = _preprocess(spectra_files, config)
+
+    # TODO is this the most elegant way to multi-thread CE calibration before running refinement learning?
+    # Should we store the returned libraries and pass them to _calculate_features and _refinement_learn instead of
+    # _ce_calib returning cached outputs?
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for spectra_file in spectra_files:
+            _ = processing_pool.apply_async(_ce_calib, [spectra_file, config])
+        processing_pool.check_pool()
+    else:
+        for spectra_file in spectra_files:
+            _ = _ce_calib(spectra_file, config)
+
+    if config.do_refinement_learning:
+        _refinement_learn(spectra_files, config)
 
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)
@@ -654,9 +766,15 @@ def run_rescoring(config_path: Union[str, Path]):
 
     # plotting
     logger.info("Generating summary plots...")
-    pl.plot_all(fdr_dir)
-
+    if not config.ptm_localization:
+        pl.plot_all(fdr_dir)
     logger.info("Finished rescoring.")
+
+    if config.quantification:
+        logger.info("Starting quantification")
+        # method contains picked-group-FDR call
+        apply_quant(config)
+        logger.info("Finished quantification")
 
 
 def run_job(config_path: Union[str, Path]):
