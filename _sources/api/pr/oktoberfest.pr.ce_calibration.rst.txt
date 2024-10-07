@@ -1,8 +1,0 @@
-﻿:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predict.py#L166-L192
-
-oktoberfest.pr.ce\_calibration
-==============================
-
-.. currentmodule:: oktoberfest.pr
-
-.. autofunction:: ce_calibration

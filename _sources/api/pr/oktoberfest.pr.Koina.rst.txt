@@ -1,0 +1,32 @@
+﻿oktoberfest.pr.Koina
+====================
+
+.. currentmodule:: oktoberfest.pr
+
+.. autoclass:: Koina
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Koina.__init__
+      ~Koina.predict
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Koina.response_dict
+      ~Koina.model_inputs
+      ~Koina.model_outputs
+      ~Koina.batch_size
+   
+   

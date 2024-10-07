@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Generated outputs &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+  <title>Generated outputs &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,7 +16,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="_static/documentation_options.js?v=486e5634"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -112,19 +112,22 @@
 <tr class="row-even"><td><p>data/</p></td>
 <td><p>Contains hdf5 files that combine search results, annotated spectra, metadata in &lt;spectra_file&gt;.mzML.hdf5 and predictions in &lt;spectra_file&gt;.mzML.pred.hdf5 where &lt;spectra_file&gt; is replaced with the specific name of the RAW file for which information is stored. The files are updated and store the progress of the current job and enable skipping specific steps when rerunning a job.</p></td>
 </tr>
-<tr class="row-odd"><td><p>msms/</p></td>
+<tr class="row-odd"><td><p>data/dlomix</p></td>
+<td><p>Contains spectra processed for usage in machine learning applications with DLomix: preprocessed datasets in Parquet format, as well as lists of ion types and modifications in them in plain text format.</p></td>
+</tr>
+<tr class="row-even"><td><p>msms/</p></td>
 <td><p>Contains combined msms.prosit and separated search results in &lt;spectra_file&gt;.prosit where &lt;spectra_file&gt; is replaced with the spectra file name for which search results are stored. The files are stored in the <a class="reference external" href="./internal_format.html">internal format</a>  and are created as part of preprocessing search results from supported search engines. If a file is present, preprocessing is skipped when rerunning a job.</p></td>
 </tr>
-<tr class="row-even"><td><p>spectra/</p></td>
+<tr class="row-odd"><td><p>spectra/</p></td>
 <td><p>Contains spectra files in mzML / hdf format (&lt;spectra_file&gt;.[mzML,hdf] where &lt;spectra_file&gt; is replaced with the specific name of the RAW file / .d folder that was converted). If spectra are provided in mzML / hdf format already, they will not show up in this folder and conversion is skipped when (re)running a job.</p></td>
 </tr>
-<tr class="row-odd"><td><p>proc/</p></td>
+<tr class="row-even"><td><p>proc/</p></td>
 <td><p>Contains information on successful job steps in &lt;job_step&gt;.done where &lt;job_step&gt; is replaced by the specfic job step completed. If a file is present, the specific step will be skipped when rerunning a job.</p></td>
 </tr>
-<tr class="row-even"><td><p>results/</p></td>
+<tr class="row-odd"><td><p>results/</p></td>
 <td><p>Contains all results of a specific job. See below results table for an overview of all files stored in this directory.</p></td>
 </tr>
-<tr class="row-odd"><td><p>results/mokapot/
+<tr class="row-even"><td><p>results/mokapot/
 results/percolator/</p></td>
 <td><p>Subdirectory in results/ containing all inputs for running percolator / mokapot (depending on which is used) and the corresponding results and summary plots. See below percolator / mokapot table for details on the files in this directory.</p></td>
 </tr>

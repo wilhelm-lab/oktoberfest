@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.re.generate_features &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>oktoberfest.re.generate_features &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,14 +16,14 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/documentation_options.js?v=486e5634"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="oktoberfest.re.merge_input" href="oktoberfest.re.merge_input.html" />
-    <link rel="prev" title="oktoberfest.pr.predict_in_chunks" href="../pr/oktoberfest.pr.predict_in_chunks.html" /> 
+    <link rel="prev" title="oktoberfest.pr.Koina" href="../pr/oktoberfest.pr.Koina.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -55,7 +55,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="../../API.html#general">General</a><ul class="current">
 <li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.re.generate_features</a></li>
@@ -91,7 +91,7 @@
       <li class="breadcrumb-item active">oktoberfest.re.generate_features</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L16-L48" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L21-L98" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -103,22 +103,62 @@
 <h1>oktoberfest.re.generate_features<a class="headerlink" href="#oktoberfest-re-generate-features" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.re.generate_features">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">generate_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">library</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regression_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spline'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.generate_features" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">generate_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">library</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regression_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spline'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_neutral_loss_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_miss_cleavage_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.generate_features" title="Link to this definition"></a></dt>
 <dd><p>Generate features to be used for percolator or mokapot target decoy separation.</p>
 <p>The function calculates a range of metrics and features on the provided library for the chosen
 fdr estimation method, then writes the input tab file to the chosen output file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>library</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></span>) – the library to perform feature generation on</p></li>
-<li><p><strong>search_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – One of “original” and “rescore”, which determines the generated features</p></li>
-<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – the location to the generated tab file to be used for percolator / mokapot</p></li>
-<li><p><strong>additional_columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>]</span>) – additional columns supplied in the search results to be used as features (either a list or “all”)</p></li>
-<li><p><strong>all_features</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – whether to use all features or only the standard set TODO</p></li>
-<li><p><strong>regression_method</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The regression method to use for iRT alignment</p></li>
+<li><p><strong>library</strong> (<span class="sphinx_autodoc_typehints-type">Spectra</span>) – the library to perform feature generation on</p></li>
+<li><p><strong>search_type</strong> (<span class="sphinx_autodoc_typehints-type">str</span>) – One of “original” and “rescore”, which determines the generated features</p></li>
+<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type">str | Path</span>) – the location to the generated tab file to be used for percolator / mokapot</p></li>
+<li><p><strong>additional_columns</strong> (<span class="sphinx_autodoc_typehints-type">str | list | None</span>) – additional columns supplied in the search results to be used as features (either a list or “all”)</p></li>
+<li><p><strong>all_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – whether to use all features or only the standard set TODO</p></li>
+<li><p><strong>regression_method</strong> (<span class="sphinx_autodoc_typehints-type">str</span>) – The regression method to use for iRT alignment</p></li>
+<li><p><strong>add_neutral_loss_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – Flag to indicate whether to add neutral loss features to percolator or not</p></li>
+<li><p><strong>remove_miss_cleavage_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – Flag to indicate whether to remove miss cleavage features from percolator or not</p></li>
 </ul>
 </dd>
+<dt class="field-even">Example<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">rescore</span> <span class="k">as</span> <span class="n">re</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">predict</span> <span class="k">as</span> <span class="n">pr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest.data</span> <span class="kn">import</span> <span class="n">Spectra</span><span class="p">,</span> <span class="n">FragmentType</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Required columns: RAW_FILE, MODIFIED_SEQUENCE, SEQUENCE, CALCULATED_MASS, SCAN_NUMBER,</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">meta_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;RAW_FILE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;File1&quot;</span><span class="p">,</span><span class="s2">&quot;File1&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;MODIFIED_SEQUENCE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AAAC[UNIMOD:4]RFVQ&quot;</span><span class="p">,</span><span class="s2">&quot;RM[UNIMOD:35]PC[UNIMOD:4]HKPYL&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;SEQUENCE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AAACRFVQ&quot;</span><span class="p">,</span><span class="s2">&quot;RMPCHKPYL&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;CALCULATED_MASS&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1000</span><span class="p">,</span><span class="mi">4000</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;SCAN_NUMBER&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;COLLISION_ENERGY&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">30</span><span class="p">,</span><span class="mi">35</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;PRECURSOR_CHARGE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;FRAGMENTATION&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;HCD&quot;</span><span class="p">,</span><span class="s2">&quot;HCD&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;REVERSE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span><span class="kc">False</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="s2">&quot;SCORE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">var</span> <span class="o">=</span> <span class="n">Spectra</span><span class="o">.</span><span class="n">_gen_vars_df</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">library</span> <span class="o">=</span> <span class="n">Spectra</span><span class="p">(</span><span class="n">obs</span><span class="o">=</span><span class="n">meta_df</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">raw_intensities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">174</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mzs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">174</span><span class="p">)</span><span class="o">*</span><span class="mi">1000</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">annotation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">,</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">library</span><span class="o">.</span><span class="n">add_intensities</span><span class="p">(</span><span class="n">raw_intensities</span><span class="p">,</span> <span class="n">annotation</span><span class="p">,</span> <span class="n">FragmentType</span><span class="o">.</span><span class="n">RAW</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">library</span><span class="o">.</span><span class="n">add_mzs</span><span class="p">(</span><span class="n">mzs</span><span class="p">,</span> <span class="n">FragmentType</span><span class="o">.</span><span class="n">MZ</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">library</span><span class="o">.</span><span class="n">strings_to_categoricals</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">intensity_predictor</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">Predictor</span><span class="o">.</span><span class="n">from_koina</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;Prosit_2020_intensity_HCD&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">server_url</span><span class="o">=</span><span class="s2">&quot;koina.wilhelmlab.org:443&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">ssl</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">intensity_predictor</span><span class="o">.</span><span class="n">predict_intensities</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">library</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">re</span><span class="o">.</span><span class="n">generate_features</span><span class="p">(</span><span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">search_type</span><span class="o">=</span><span class="s2">&quot;original&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">regression_method</span><span class="o">=</span><span class="s2">&quot;spline&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                        <span class="n">output_file</span><span class="o">=</span><span class="s2">&quot;./tests/doctests/output/original.tab&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
@@ -127,7 +167,7 @@ fdr estimation method, then writes the input tab file to the chosen output file.
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../pr/oktoberfest.pr.predict_in_chunks.html" class="btn btn-neutral float-left" title="oktoberfest.pr.predict_in_chunks" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../pr/oktoberfest.pr.Koina.html" class="btn btn-neutral float-left" title="oktoberfest.pr.Koina" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="oktoberfest.re.merge_input.html" class="btn btn-neutral float-right" title="oktoberfest.re.merge_input" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

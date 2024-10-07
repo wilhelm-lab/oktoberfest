@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.re.merge_input &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>oktoberfest.re.merge_input &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,7 +16,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/documentation_options.js?v=486e5634"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -55,7 +55,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="../../API.html#general">General</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.generate_features.html">oktoberfest.re.generate_features</a></li>
@@ -91,7 +91,7 @@
       <li class="breadcrumb-item active">oktoberfest.re.merge_input</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L51-L87" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L101-L193" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -103,7 +103,7 @@
 <h1>oktoberfest.re.merge_input<a class="headerlink" href="#oktoberfest-re-merge-input" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.re.merge_input">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">merge_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tab_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">typing.Union[str,</span> <span class="pre">pathlib.Path]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.merge_input" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">merge_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tab_files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.merge_input" title="Link to this definition"></a></dt>
 <dd><p>Merge spectra file identifier specific tab files into one large file for combined percolation.</p>
 <p>The function takes a list of tab files and concatenates them before writing a combined tab file back to
 the chosen output file location.</p>
@@ -112,11 +112,66 @@ the chosen output file location.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>tab_files</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – list of paths pointing to the individual tab files to be concatenated</p></li>
-<li><p><strong>output_file</strong> – path to the generated output tab file</p></li>
+<li><p><strong>tab_files</strong> (<span class="sphinx_autodoc_typehints-type">list[Path]</span>) – list of paths pointing to the individual tab files to be concatenated</p></li>
+<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type">str | Path</span>) – path to the generated output tab file</p></li>
 </ul>
 </dd>
+<dt class="field-even">Example<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">rescore</span> <span class="k">as</span> <span class="n">re</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rescore_df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;SpecId&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;F1-81-AAAAAAALQAK-2-5&quot;</span><span class="p">,</span><span class="s2">&quot;F1-15-VGVFQHGK-3-2&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Label&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;ScanNr&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">81</span><span class="p">,</span><span class="mi">15</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;filename&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;F1&quot;</span><span class="p">,</span><span class="s2">&quot;F1&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;CID&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge3&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge4&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge5&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge6&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;HCD&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;KR&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Mass&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1402.18</span><span class="p">,</span><span class="mf">1103.54</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;spectral_angle&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.71</span><span class="p">,</span><span class="mf">0.23</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;sequence_length&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span><span class="mi">8</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;_.AAAAAAALQAK._&quot;</span><span class="p">,</span><span class="s2">&quot;_.VGVFQHGK._&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Proteins&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AAAAAAALQAK&quot;</span><span class="p">,</span><span class="s2">&quot;VGVFQHGK&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;RT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">64.79</span><span class="p">,</span><span class="mf">57.84</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;iRT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">65.99</span><span class="p">,</span><span class="mf">56.22</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;pred_RT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">58.86</span><span class="p">,</span><span class="mf">55.34</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rescore_df2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;SpecId&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;F2-13-AEAEQEKDQLR-1-11&quot;</span><span class="p">,</span><span class="s2">&quot;F2-27-TGFLEQLK-2-7&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Label&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;ScanNr&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">13</span><span class="p">,</span><span class="mi">27</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;filename&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;F2&quot;</span><span class="p">,</span><span class="s2">&quot;F2&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;CID&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge1&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge2&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge3&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge4&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge5&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Charge6&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;HCD&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;KR&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Mass&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1202.43</span><span class="p">,</span><span class="mf">1009.14</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;spectral_angle&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.55</span><span class="p">,</span><span class="mf">0.12</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;sequence_length&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">11</span><span class="p">,</span><span class="mi">8</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;_.AEAEQEKDQLR._&quot;</span><span class="p">,</span><span class="s2">&quot;_.TGFLEQLK._&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;Proteins&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AEAEQEKDQLR&quot;</span><span class="p">,</span><span class="s2">&quot;TGFLEQLK&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;RT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">62.33</span><span class="p">,</span><span class="mf">51.23</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;iRT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">63.98</span><span class="p">,</span><span class="mf">53.24</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                          <span class="s1">&#39;pred_RT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">59.16</span><span class="p">,</span><span class="mf">50.76</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rescore_df1</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;./tests/doctests/input/rescore1.tab&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rescore_df2</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;./tests/doctests/input/rescore2.tab&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tabfile1</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./tests/doctests/input/rescore1.tab&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tabfile2</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./tests/doctests/input/rescore2.tab&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filelist</span> <span class="o">=</span> <span class="p">[</span><span class="n">tabfile1</span><span class="p">,</span><span class="n">tabfile2</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">re</span><span class="o">.</span><span class="n">merge_input</span><span class="p">(</span><span class="n">tab_files</span><span class="o">=</span><span class="n">filelist</span><span class="p">,</span> <span class="n">output_file</span><span class="o">=</span><span class="s2">&quot;./tests/doctests/output/merged_rescore.tab&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

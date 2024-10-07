@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.convert_search &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>oktoberfest.pp.convert_search &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,7 +16,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/documentation_options.js?v=486e5634"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -55,28 +55,21 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.generate_metadata.html">oktoberfest.pp.generate_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_raw_to_mzml.html">oktoberfest.pp.convert_raw_to_mzml</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_d_to_hdf.html">oktoberfest.pp.convert_d_to_hdf</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.convert_search</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.convert_search"><code class="docutils literal notranslate"><span class="pre">convert_search()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#generating-libraries">Generating libraries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#spectra-preprocessing">Spectra preprocessing</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#peptide-preprocessing">Peptide preprocessing</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pp.convert_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a></li>
 </ul>
@@ -103,7 +96,7 @@
       <li class="breadcrumb-item active">oktoberfest.pp.convert_search</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L292-L335" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L393-L514" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -115,7 +108,7 @@
 <h1>oktoberfest.pp.convert_search<a class="headerlink" href="#oktoberfest-pp-convert-search" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.pp.convert_search">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">convert_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_engine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmt_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_mods</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.convert_search" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pp.</span></span><span class="sig-name descname"><span class="pre">convert_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_engine</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tmt_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">custom_mods</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ptm_unimod_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ptm_sites</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pp.convert_search" title="Link to this definition"></a></dt>
 <dd><p>Convert search results to Oktoberfest format.</p>
 <p>Given a path to a file or directory containing search results from supported search engines,
 the function parses, converts them to the internal format used by Oktoberfest and returns it as a dataframe.
@@ -124,27 +117,97 @@ The specification of the internal file format can be found at <a class="referenc
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>input_path</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – Path to the directory or file containing the search results.</p></li>
-<li><p><strong>search_engine</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The search engine used to produce the search results,
+<li><p><strong>input_path</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>]</span>) – Path to the directory or file containing the search results.</p></li>
+<li><p><strong>search_engine</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The search engine used to produce the search results,
 currently supported are “Maxquant”, “Mascot” and “MSFragger”</p></li>
-<li><p><strong>tmt_label</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Optional tmt-label to consider when processing peptides. If given, the corresponding
+<li><p><strong>tmt_label</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – Optional tmt-label to consider when processing peptides. If given, the corresponding
 fixed modification for the N-terminus and lysin will be added</p></li>
-<li><p><strong>custom_mods</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
+<li><p><strong>custom_mods</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
 static and variable mods as keys. The values are the integer values of the respective unimod identifier</p></li>
-<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.12)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]</span>) – Optional path to the location where the converted search results should be written to.
+<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]</span>) – Optional path to the location where the converted search results should be written to.
 If this is omitted, the results are not stored.</p></li>
+<li><p><strong>ptm_unimod_id</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]</span>) – unimod id used for site localization</p></li>
+<li><p><strong>ptm_sites</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>]</span>) – possible sites that the ptm can exist on</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.12)"><strong>ValueError</strong></a> – if an unsupported search engine was given</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.13)"><strong>ValueError</strong></a> – if an unsupported search engine was given</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A dataframe containing the converted results.</p>
 </dd>
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">preprocessing</span> <span class="k">as</span> <span class="n">pp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">msms</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;Raw file&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;GN20170722_SK_HLA_G0103_R1_01&#39;</span><span class="p">,</span> <span class="s1">&#39;GN20170722_SK_HLA_G0103_R2_02&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Scan number&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">21329</span><span class="p">,</span> <span class="mi">20501</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Scan index&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">18847</span><span class="p">,</span> <span class="mi">17998</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Sequence&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;AAAAVVSGPKRGRKKP&#39;</span><span class="p">,</span> <span class="s1">&#39;AAAAVVSGPKRGRKKP&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Length&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Missed cleavages&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Modifications&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Unmodified&#39;</span><span class="p">,</span> <span class="s1">&#39;Unmodified&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Modified sequence&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;_AAAAVVSGPKRGRKKP_&#39;</span><span class="p">,</span> <span class="s1">&#39;_AAAAVVSGPKRGRKKP_&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Oxidation (M) Probabilities&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Oxidation (M) Score Diffs&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Oxidation (M)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Proteins&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Charge&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Fragmentation&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;HCD&#39;</span><span class="p">,</span> <span class="s1">&#39;HCD&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mass analyzer&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;FTMS&#39;</span><span class="p">,</span> <span class="s1">&#39;FTMS&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;MULTI-SECPEP&#39;</span><span class="p">,</span> <span class="s1">&#39;MULTI-SECPEP&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Scan event number&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Isotope index&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;m/z&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">531.66176</span><span class="p">,</span> <span class="mf">531.66176</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mass&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1591.9634</span><span class="p">,</span> <span class="mf">1591.9634</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mass Error [ppm]&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mf">2.1109999999999998</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.1018</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Simple Mass Error [ppm]&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1259.2803</span><span class="p">,</span> <span class="mf">1259.2803</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Retention time&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">46.272</span><span class="p">,</span> <span class="mf">46.388000000000005</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;PEP&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.57389</span><span class="p">,</span> <span class="mf">0.57389</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Score&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">7.9138</span><span class="p">,</span> <span class="mf">4.7582</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Delta score&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">3.5652</span><span class="p">,</span> <span class="mf">1.4401</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Score diff&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Localization prob&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Combinatorics&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;PIF&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Fraction of total spectrum&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Base peak fraction&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Precursor Full ScanNumber&#39;</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Precursor Intensity&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Precursor Apex Fraction&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Precursor Apex Offset&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Precursor Apex Offset Time&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Matches Intensities&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;y5;y10;y5-NH3;a2;b12(2+)&#39;</span><span class="p">,</span> <span class="s1">&#39;y5;y5-NH3;b12(2+)&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mass Deviations [Da]&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;34666.4;2191.7;88570.6;2148.7;89073.6&#39;</span><span class="p">,</span> <span class="s1">&#39;10544.1;36224.8;73327.7&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mass Deviations [ppm]&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;0.008335659;-0.01799215;-0.002397317;-0.0004952438;-0.004926575&#39;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                            <span class="s1">&#39;0.009286639;-0.004650567;-0.002822918&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Masses&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;14.23987;-16.19888;-4.217963;-4.303209;-9.237617&#39;</span><span class="p">,</span> <span class="s1">&#39;15.86446;-8.182414;-5.293158&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Number of Matches&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Intensity coverage&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1016966</span><span class="p">,</span> <span class="mf">0.1564349</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Peak coverage&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.04166667</span><span class="p">,</span> <span class="mf">0.04477612</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Neutral loss level&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;ETD identification type&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Unknown&#39;</span><span class="p">,</span> <span class="s1">&#39;Unknown&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Reverse&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Unknown +&#39;</span><span class="p">,</span> <span class="s1">&#39;Unknown +&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;All scores&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;7.913836;4.348669;4.097387&#39;</span><span class="p">,</span> <span class="s1">&#39;4.758178;3.318045;2.968256&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;All sequences&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;AAAAVVSGPKRGRKKP;GVVAKGALTPKLSPVVG;GVVPSLKPTLAGKAVVG&#39;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="s1">&#39;AAAAVVSGPKRGRKKP;VMKLLRHDKLVQL;QEILRKILPLGELA&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;All modified sequences&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;_AAAAVVSGPKRGRKKP_;_GVVAKGALTPKLSPVVG_;_GVVPSLKPTLAGKAVVG_&#39;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>                            <span class="s1">&#39;_AAAAVVSGPKRGRKKP_;_VMKLLRHDKLVQL_;_QEILRKILPLGELA_&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1378</span><span class="p">,</span> <span class="mi">1379</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Protein group IDs&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;42625&#39;</span><span class="p">,</span> <span class="s1">&#39;42625&#39;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Peptide ID&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">533</span><span class="p">,</span> <span class="mi">533</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Mod. peptide ID&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">537</span><span class="p">,</span> <span class="mi">537</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Evidence ID&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1075</span><span class="p">,</span> <span class="mi">1076</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s1">&#39;Oxidation (M) site IDs&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">msms</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;./tests/doctests/input/msms.txt&quot;</span><span class="p">,</span><span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">converted_results</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="n">convert_search</span><span class="p">(</span><span class="n">input_path</span><span class="o">=</span><span class="s2">&quot;./tests/doctests/input/&quot;</span><span class="p">,</span> <span class="n">search_engine</span><span class="o">=</span><span class="s2">&quot;maxquant&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">converted_results</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

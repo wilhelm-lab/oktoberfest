@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.generate_metadata &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>oktoberfest.pp.generate_metadata &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,7 +16,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/documentation_options.js?v=486e5634"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -55,28 +55,19 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.generate_metadata</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.generate_metadata"><code class="docutils literal notranslate"><span class="pre">generate_metadata()</span></code></a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#generating-libraries">Generating libraries</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pp.generate_metadata</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_raw_to_mzml.html">oktoberfest.pp.convert_raw_to_mzml</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_d_to_hdf.html">oktoberfest.pp.convert_d_to_hdf</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides.html">oktoberfest.pp.filter_peptides</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#spectra-preprocessing">Spectra preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#peptide-preprocessing">Peptide preprocessing</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a></li>
 </ul>
@@ -103,7 +94,7 @@
       <li class="breadcrumb-item active">oktoberfest.pp.generate_metadata</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L50-L123" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L63-L148" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -125,28 +116,39 @@ An optional protein list can be provided which has to have the same length as th
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>peptides</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – A list of peptides for which metadata is generated.</p></li>
-<li><p><strong>collision_energy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – A list of collision energies corresponding to each peptide.</p></li>
-<li><p><strong>precursor_charge</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – A list of precursor charges corresponding to each peptide.</p></li>
-<li><p><strong>fragmentation</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span>) – A list of fragmentation methods corresponding to each peptide.</p></li>
-<li><p><strong>nr_ox</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Maximal number of allowed oxidations.</p></li>
-<li><p><strong>instrument_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The type of mass spectrometeter. Only required when predicting intensities
+<li><p><strong>peptides</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – A list of peptides for which metadata is generated.</p></li>
+<li><p><strong>collision_energy</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – A list of collision energies corresponding to each peptide.</p></li>
+<li><p><strong>precursor_charge</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]]</span>) – A list of precursor charges corresponding to each peptide.</p></li>
+<li><p><strong>fragmentation</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span>) – A list of fragmentation methods corresponding to each peptide.</p></li>
+<li><p><strong>nr_ox</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – Maximal number of allowed oxidations.</p></li>
+<li><p><strong>instrument_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]</span>) – The type of mass spectrometeter. Only required when predicting intensities
 with AlphaPept. Choose one of [“QE”, “LUMOS”, “TIMSTOF”, “SCIEXTOF”].</p></li>
-<li><p><strong>proteins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]]</span>) – An optional list of proteins associated with each peptide.
+<li><p><strong>proteins</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]]</span>) – An optional list of proteins associated with each peptide.
 If provided, it must have the same length as the number of peptides.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#AssertionError" title="(in Python v3.12)"><strong>AssertionError</strong></a> – If the lengths of peptides and proteins is not the same.</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#AssertionError" title="(in Python v3.13)"><strong>AssertionError</strong></a> – If the lengths of peptides and proteins is not the same.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a></span></p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A DataFrame containing metadata with the columns “modified_peptide”,”collision_energy”,
 “precursor_charge”,”fragmentation” and an optional “proteins” column.</p>
 </dd>
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">preprocessing</span> <span class="k">as</span> <span class="n">pp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">metadata</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="n">generate_metadata</span><span class="p">(</span><span class="n">peptides</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;AAACRFVQ&quot;</span><span class="p">,</span><span class="s2">&quot;RMPCHKPYL&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                                            <span class="n">collision_energy</span><span class="o">=</span><span class="p">[</span><span class="mi">30</span><span class="p">,</span><span class="mi">35</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                                            <span class="n">precursor_charge</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                                            <span class="n">fragmentation</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;HCD&quot;</span><span class="p">,</span><span class="s2">&quot;HCD&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                                            <span class="n">nr_ox</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

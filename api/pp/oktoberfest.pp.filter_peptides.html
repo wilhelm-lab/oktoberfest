@@ -4,10 +4,10 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pp.filter_peptides &mdash; Oktoberfest 0.7.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>oktoberfest.pp.filter_peptides &mdash; Oktoberfest 0.8.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=993e6716" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=4ce200a9" />
 
   
   <!--[if lt IE 9]>
@@ -16,7 +16,7 @@
   
         <script src="../../_static/jquery.js?v=5d32c60e"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../../_static/documentation_options.js?v=fe7df9b0"></script>
+        <script src="../../_static/documentation_options.js?v=486e5634"></script>
         <script src="../../_static/doctools.js?v=9a2dae69"></script>
         <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -39,7 +39,7 @@
               <img src="../../_static/Oktoberfest.svg" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                0.7.0
+                0.8.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -55,28 +55,21 @@
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.digest.html">oktoberfest.pp.digest</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.generate_metadata.html">oktoberfest.pp.generate_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.gen_lib.html">oktoberfest.pp.gen_lib</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.merge_spectra_and_peptides.html">oktoberfest.pp.merge_spectra_and_peptides</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.annotate_spectral_library.html">oktoberfest.pp.annotate_spectral_library</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.list_spectra.html">oktoberfest.pp.list_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_raw_to_mzml.html">oktoberfest.pp.convert_raw_to_mzml</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_d_to_hdf.html">oktoberfest.pp.convert_d_to_hdf</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_spectra.html">oktoberfest.pp.load_spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pp.filter_peptides</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pp.filter_peptides"><code class="docutils literal notranslate"><span class="pre">filter_peptides()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#generating-libraries">Generating libraries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../API.html#spectra-preprocessing">Spectra preprocessing</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#peptide-preprocessing">Peptide preprocessing</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.convert_search.html">oktoberfest.pp.convert_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.load_search.html">oktoberfest.pp.load_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.split_search.html">oktoberfest.pp.split_search</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.convert_timstof_metadata.html">oktoberfest.pp.convert_timstof_metadata</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.split_timstof_metadata.html">oktoberfest.pp.split_timstof_metadata</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pp.filter_peptides</a></li>
+<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pp.filter_peptides_for_model.html">oktoberfest.pp.filter_peptides_for_model</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a></li>
 </ul>
@@ -103,7 +96,7 @@
       <li class="breadcrumb-item active">oktoberfest.pp.filter_peptides</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L207-L233" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/preprocessing/preprocessing.py#L269-L308" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -122,19 +115,31 @@ unsupported special aminoacids, and unsupported modifications.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>peptides</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>, <a class="reference external" href="https://anndata.readthedocs.io/en/stable/generated/anndata.AnnData.html#anndata.AnnData" title="(in anndata v0.1.dev50+gf48f515)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code></a>]</span>) – Dataframe containing search results to be filtered</p></li>
-<li><p><strong>min_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The minimal length of a peptide to be retained</p></li>
-<li><p><strong>max_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The maximal length of a peptide to be retained</p></li>
-<li><p><strong>max_charge</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The maximal precursor charge of a peptide to be retained</p></li>
+<li><p><strong>peptides</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>, <a class="reference external" href="https://anndata.readthedocs.io/en/stable/generated/anndata.AnnData.html#anndata.AnnData" title="(in anndata v0.1.dev50+gf48f515)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code></a>]</span>) – Dataframe containing search results to be filtered</p></li>
+<li><p><strong>min_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The minimal length of a peptide to be retained</p></li>
+<li><p><strong>max_length</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The maximal length of a peptide to be retained</p></li>
+<li><p><strong>max_charge</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></span>) – The maximal precursor charge of a peptide to be retained</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.12)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>, <a class="reference external" href="https://anndata.readthedocs.io/en/stable/generated/anndata.AnnData.html#anndata.AnnData" title="(in anndata v0.1.dev50+gf48f515)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code></a>]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></a>, <a class="reference external" href="https://anndata.readthedocs.io/en/stable/generated/anndata.AnnData.html#anndata.AnnData" title="(in anndata v0.1.dev50+gf48f515)"><code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code></a>]</span></p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The filtered dataframe or AnnData object given the provided constraints.</p>
 </dd>
+<dt class="field-even">Example<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">preprocessing</span> <span class="k">as</span> <span class="n">pp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">search_results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;MODIFIED_SEQUENCE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AAAC[UNIMOD:4]RFVQ&quot;</span><span class="p">,</span><span class="s2">&quot;RM[UNIMOD:35]PC[UNIMOD:4]HKPYL&quot;</span><span class="p">,</span><span class="s2">&quot;TAIASPEK&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="s2">&quot;SEQUENCE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;AAACRFVQ&quot;</span><span class="p">,</span><span class="s2">&quot;RMPCHKPYL&quot;</span><span class="p">,</span><span class="s2">&quot;TAIASPEK&quot;</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="s2">&quot;PEPTIDE_LENGTH&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="mi">9</span><span class="p">,</span><span class="mi">8</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>                    <span class="s2">&quot;PRECURSOR_CHARGE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">7</span><span class="p">]})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">filtered_peptides</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="n">filter_peptides</span><span class="p">(</span><span class="n">peptides</span><span class="o">=</span><span class="n">search_results</span><span class="p">,</span> <span class="n">min_length</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">max_charge</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">filtered_peptides</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
