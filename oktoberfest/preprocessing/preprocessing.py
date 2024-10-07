@@ -396,6 +396,8 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
+    ptm_unimod_id: Optional[int] = 0,
+    ptm_sites: Optional[list] = None,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -414,7 +416,8 @@ def convert_search(
         static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
-
+    :param ptm_unimod_id: unimod id used for site localization
+    :param ptm_sites: possible sites that the ptm can exist on
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -503,7 +506,11 @@ def convert_search(
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
     return search_result(input_path).generate_internal(
-        tmt_label=tmt_label, out_path=output_file, custom_mods=custom_mods
+        tmt_label=tmt_label,
+        out_path=output_file,
+        custom_mods=custom_mods,
+        ptm_unimod_id=ptm_unimod_id,
+        ptm_sites=ptm_sites,
     )
 
 
@@ -850,6 +857,7 @@ def annotate_spectral_library(
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
+    annotate_neutral_loss: Optional[bool] = False,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -865,6 +873,7 @@ def annotate_spectral_library(
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :param fragmentation_method: fragmentation method that was used
     :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+    :param annotate_neutral_loss: flag to indicate whether to annotate neutral loss peaks or not
 
     :return: Spectra object containing the annotated b and y ion peaks including metadata
 
@@ -892,6 +901,7 @@ def annotate_spectral_library(
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
         custom_mods=custom_mods,
+        annotate_neutral_loss=annotate_neutral_loss,
     )
 
     ion_types = retrieve_ion_types(fragmentation_method)
@@ -903,6 +913,8 @@ def annotate_spectral_library(
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
+    aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
+    aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")

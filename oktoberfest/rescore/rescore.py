@@ -25,6 +25,8 @@ def generate_features(
     additional_columns: str | list | None = None,
     all_features: bool = False,
     regression_method: str = "spline",
+    add_neutral_loss_features: bool = False,
+    remove_miss_cleavage_features: bool = False,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -38,6 +40,8 @@ def generate_features(
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
     :param regression_method: The regression method to use for iRT alignment
+    :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
+    :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
 
     :Example:
 
@@ -87,6 +91,8 @@ def generate_features(
         additional_columns=additional_columns,
         all_features_flag=all_features,
         regression_method=regression_method,
+        neutral_loss_flag=add_neutral_loss_features,
+        drop_miss_cleavage_flag=remove_miss_cleavage_features,
     )
     perc_features.calc()
     perc_features.write_to_file(str(output_file))
