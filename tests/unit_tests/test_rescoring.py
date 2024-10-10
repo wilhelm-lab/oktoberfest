@@ -10,8 +10,8 @@ from oktoberfest.data import Spectra
 class TestRescoring(unittest.TestCase):
     """Test class for rescoring functions."""
 
-    """def test_generate_features(self):
-        Test feature generation with internal results and additional columns.
+    def test_generate_features(self):
+        """Test feature generation with internal results and additional columns."""
         # load test library containing 100 psms
         library = Spectra.from_hdf5(Path(__file__).parent / "data" / "library" / "library100.hdf5")
 
@@ -52,4 +52,4 @@ class TestRescoring(unittest.TestCase):
         )
         expected_list = pd.read_csv(Path(__file__).parent / "data" / "library" / "expected_rescore_list.tab", sep="\t")
         created_list = pd.read_csv(Path(__file__).parent / "data" / "library" / "rescore_list.tab", sep="\t")
-        pd.testing.assert_frame_equal(expected_list, created_list)"""
+        pd.testing.assert_frame_equal(expected_list, created_list)
