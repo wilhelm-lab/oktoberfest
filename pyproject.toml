@@ -33,9 +33,9 @@ spectrum_fundamentals = ">=0.7.4,<0.8.0"
 spectrum-io = ">=0.6.3,<0.7.0"
 picked_group_fdr = ">=0.7.1"
 
-dlomix = {extras = ["rltl-report", "wandb"], url="https://github.com/wilhelm-lab/dlomix/tarball/feature/bmpc", optional = true}
-tensorflow = {version = ">=2.13,<2.16", extras = ["and-cuda"], optional = true}
-wandb = {version = "^0.17.5", optional = true}
+#dlomix = {extras = ["rltl-report", "wandb"], url="https://github.com/wilhelm-lab/dlomix/tarball/feature/bmpc", optional = true}
+#tensorflow = {version = ">=2.13,<2.16", extras = ["and-cuda"], optional = true}
+#wandb = {version = "^0.17.5", optional = true}
 koinapy = "^0.0.7"
 
 [tool.poetry.dev-dependencies]
@@ -73,8 +73,8 @@ oktoberfest = "oktoberfest.__main__:main"
 [tool.poetry.group.dev.dependencies]
 sphinx-autodoc-typehints = ">=1.24,<3.0"
 
-[tool.poetry.extras]
-dlomix = ["dlomix", "tensorflow"]
+#[tool.poetry.extras]
+#dlomix = ["dlomix", "tensorflow"]
 
 [tool.black]
 line-length = 120
