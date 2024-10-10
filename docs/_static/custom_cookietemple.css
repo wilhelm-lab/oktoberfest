@@ -75,6 +75,10 @@ table.align-default {
     padding-left: 50px;
 }
 
+.ptm-config-table tbody tr:not(:first-child) td:nth-child(1) {
+    padding-left: 50px;
+}
+
 .lib-refinement-learning-config-table
     tbody
     tr:nth-child(n + 2):nth-child(-n + 5)
