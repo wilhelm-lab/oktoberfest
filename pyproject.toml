@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.8.0"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.8.1"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
 authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
@@ -29,7 +29,7 @@ matplotlib = "^3.6.3"
 mokapot = ">=0.9.1,<0.11.0"
 numpy = ">=1.20,<1.25"
 seaborn = ">=0.12.2,<0.14.0"
-spectrum_fundamentals = ">=0.7.4,<0.8.0"
+spectrum-fundamentals = ">=0.7.7,<0.8.0"
 spectrum-io = ">=0.6.3,<0.7.0"
 picked_group_fdr = ">=0.7.1"
 
