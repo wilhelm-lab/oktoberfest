@@ -104,13 +104,13 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "array-api-compat"
-version = "1.7.1"
+version = "1.9"
 description = "A wrapper around NumPy and other array libraries to make them compatible with the Array API standard"
 optional = false
 python-versions = "*"
 files = [
-    {file = "array_api_compat-1.7.1-py3-none-any.whl", hash = "sha256:6974f51775972f39edbca39e08f1c2e43c51401c093a0fea5ac7159875095d8a"},
-    {file = "array_api_compat-1.7.1.tar.gz", hash = "sha256:b6b37294cd1da2f9d9040c543d2d4c3d7a81615953d59811431ee4bf15647c3b"},
+    {file = "array_api_compat-1.9-py3-none-any.whl", hash = "sha256:76db63c2d2461ba0e86b920c8b087f0a1617eb14de3ec29fe6811eeecad9c5e8"},
+    {file = "array_api_compat-1.9.tar.gz", hash = "sha256:8fb35f2895822b1cc6618449efd84aa76dcea1ab96940304f869663fd6a0dcd8"},
 ]
 
 [package.extras]
@@ -3569,7 +3569,7 @@ pyteomics = ">=4.3.3,<5.0.0"
 PyYAML = ">=5.4.1"
 rich = ">=10.3.0"
 sortedcontainers = ">=2.4.0,<3.0.0"
-spectrum-fundamentals = ">=0.7.7,<0.8.0"
+spectrum-fundamentals = ">=0.7.4,<0.8.0"
 
 [[package]]
 name = "sphinx"
@@ -4311,4 +4311,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "c45ed0535a861b71a5c68f658238a422312e12f07068e08fbf496aad277a5e0d"
+content-hash = "33fd22ff5c8862c275a1f3d7f9c754fd1306b1e0497541fa608a81060805698b"
