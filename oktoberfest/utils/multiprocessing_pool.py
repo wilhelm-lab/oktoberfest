@@ -40,7 +40,7 @@ class JobPool:
             res_len = len(self.results)
             with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
                 for res in self.results:
-                    outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
+                    outputs.append(res.get(timeout=10000000))  # 10000 seconds = ~3 hours
                     progress.update(1)
 
             self.pool.close()

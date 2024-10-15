@@ -109,6 +109,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
     data_dir = config.output / "data"
     data_dir.mkdir(exist_ok=True)
     hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
+    print(hdf5_path)
     if hdf5_path.is_file():
         aspec = Spectra.from_hdf5(hdf5_path)
     else:
@@ -143,6 +144,13 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
     if ((library.obs["FRAGMENTATION"] == "HCD") & (library.obs["REVERSE"] == False)).any():
+        best_ce = 27
+        library.obs["COLLISION_ENERGY"] = best_ce
+
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            f.write(str(best_ce))
+            f.close()
+        """
         server_kwargs = {
             "server_url": config.prediction_server,
             "ssl": config.ssl,
@@ -184,7 +192,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
 
             delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
             library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
-
+            
         else:
             ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
 
@@ -201,6 +209,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
                 f.close()
+        """
     else:
         best_ce = 35
         library.obs["COLLISION_ENERGY"] = best_ce
@@ -641,21 +650,21 @@ def xl_preprocessing_plot_unique_xl(featrures_dir: Path, mokapot_csms: pd.DataFr
     mokapot_csms.loc[~swap_mask, "max_seq"] = mokapot_csms["base_pep_b"]
     mokapot_uniq_xls = mokapot_csms.drop_duplicates(subset=["min_seq", "max_seq"])
     xl_between_or_self(mokapot_uniq_xls, "mokapot score")
-    mokapot_uniq_xls_true = mokapot_uniq_xls[mokapot_uniq_xls["label"] == True]
+    mokapot_uniq_xls_target = mokapot_uniq_xls[mokapot_uniq_xls["label"] == True]
     mokapot_uniq_xls_decoy = mokapot_uniq_xls[mokapot_uniq_xls["label"] == False]
     if original_or_rescore == "original":
         if percolator_or_mokapot == "percolator":
-            mokapot_uniq_xls_true.to_csv(featrures_dir + "/original.percolator.peptides.txt", sep="\t", index=False)
+            mokapot_uniq_xls_target.to_csv(featrures_dir + "/original.percolator.peptides.txt", sep="\t", index=False)
             mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/original.percolator.decoy.peptides.txt", sep="\t", index=False)
         else:
-            mokapot_uniq_xls_true.to_csv(featrures_dir + "/original.mokapot.peptides.txt", sep="\t", index=False)
+            mokapot_uniq_xls_target.to_csv(featrures_dir + "/original.mokapot.peptides.txt", sep="\t", index=False)
             mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/original.mokapot.decoy.peptides.txt", sep="\t", index=False)
     else:
         if percolator_or_mokapot == "percolator":
-            mokapot_uniq_xls_true.to_csv(featrures_dir + "/rescore.percolator.peptides.txt", sep="\t", index=False)
+            mokapot_uniq_xls_target.to_csv(featrures_dir + "/rescore.percolator.peptides.txt", sep="\t", index=False)
             mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/rescore.percolator.decoy.peptides.txt", sep="\t", index=False)
         else:
-            mokapot_uniq_xls_true.to_csv(featrures_dir + "/rescore.mokapot.peptides.txt", sep="\t", index=False)
+            mokapot_uniq_xls_target.to_csv(featrures_dir + "/rescore.mokapot.peptides.txt", sep="\t", index=False)
             mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/rescore.mokapot.decoy.peptides.txt", sep="\t", index=False)
 
 
@@ -670,10 +679,13 @@ def xl_preprocessing_plot_csm(featrures_dir: Path, mokapot_csms: pd.DataFrame, o
         "q-value",
         "q-value_a",
         "q-value_b",
+        "score_a",
+        "score_b",
         "fdr_group_a",
         "proteinIds_b",
     ]
-    mokapot_csms.to_csv("/cmnfs/data/proteomics/XL/Ribosome/mokapot_csms_2.csv")
+    print("salaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaam")
+    print(mokapot_csms.columns.tolist())
     mokapot_csms = mokapot_csms[columns_to_keep_mokapot]
     mokapot_csms = mokapot_csms.rename(
         columns={
@@ -687,23 +699,25 @@ def xl_preprocessing_plot_csm(featrures_dir: Path, mokapot_csms: pd.DataFrame, o
     )
     mokapot_csms["is_target"] = mokapot_csms["label"]
     mokapot_csms["label"] = mokapot_csms["label"].replace({"TT": True, "TD": False, "DD": False})
-    mokapot_csms_true = mokapot_csms[mokapot_csms["label"] == True]
-    mokapot_csms_true.to_csv("/cmnfs/data/proteomics/XL/Ribosome/mokapot_csms_true.csv")
+    mokapot_csms.to_csv("/cmnfs/proj/prosit/xl/mokapot_csms.csv", index=False)
+    print(mokapot_csms.columns.tolist())
+    mokapot_csms_target = mokapot_csms[mokapot_csms["label"] == True]
+    
 
     mokapot_csms_decoy = mokapot_csms[mokapot_csms["label"] == False]
     if original_or_rescore == "original":
         if percolator_or_mokapot == "percolator":
-            mokapot_csms_true.to_csv(featrures_dir + "/original.percolator.psms.txt", sep="\t", index=False)
+            mokapot_csms_target.to_csv(featrures_dir + "/original.percolator.psms.txt", sep="\t", index=False)
             mokapot_csms_decoy.to_csv(featrures_dir + "/original.percolator.decoy.psms.txt", sep="\t", index=False)
         else:
-            mokapot_csms_true.to_csv(featrures_dir + "/original.mokapot.psms.txt", sep="\t", index=False)
+            mokapot_csms_target.to_csv(featrures_dir + "/original.mokapot.psms.txt", sep="\t", index=False)
             mokapot_csms_decoy.to_csv(featrures_dir + "/original.mokapot.decoy.psms.txt", sep="\t", index=False)
     else:
         if percolator_or_mokapot == "percolator":
-            mokapot_csms_true.to_csv(featrures_dir + "/rescore.percolator.psms.txt", sep="\t", index=False)
+            mokapot_csms_target.to_csv(featrures_dir + "/rescore.percolator.psms.txt", sep="\t", index=False)
             mokapot_csms_decoy.to_csv(featrures_dir + "/rescore.percolator.decoy.psms.txt", sep="\t", index=False)
         else:
-            mokapot_csms_true.to_csv(featrures_dir + "/rescore.mokapot.psms.txt", sep="\t", index=False)
+            mokapot_csms_target.to_csv(featrures_dir + "/rescore.mokapot.psms.txt", sep="\t", index=False)
             mokapot_csms_decoy.to_csv(featrures_dir + "/rescore.mokapot.decoy.psms.txt", sep="\t", index=False)
 
 
@@ -740,6 +754,8 @@ def xl_psm_to_csm(featrures_dir: Path, original_or_rescore: str, percolator_or_m
             psm_id = "SpecId"
             
     split_data = target_psms[psm_id].str.rsplit("-", n=13, expand=True)
+    target_psms.to_csv("/cmnfs/data/proteomics/XL/juri_lab/MycoEcoliRaw/test/target_psms.csv", sep="\t", index=False)
+    split_data.to_csv("/cmnfs/data/proteomics/XL/juri_lab/MycoEcoliRaw/test/split_data.csv", sep="\t", index=False)
     new_columns = [
         "raw_file",
         "scan_number",
@@ -781,7 +797,6 @@ def xl_psm_to_csm(featrures_dir: Path, original_or_rescore: str, percolator_or_m
     mokapot_csms["mokapot score"] = mokapot_csms.apply(min_score, axis=1)
     mokapot_csms["label"] = mokapot_csms.apply(get_label, axis=1)
     mokapot_csms.rename(columns={'fdr_group_b': 'fdr_group'}, inplace=True)
-    mokapot_csms.to_csv("/cmnfs/data/proteomics/XL/Ribosome/mokapot_csms_5.csv")
     return mokapot_csms
 
 
@@ -973,6 +988,10 @@ def run_rescoring(config_path: Union[str, Path]):
 
     # rescoring
     if "xl" in config.models["intensity"].lower():  # xl-psm-level
+        rescore_tab_file = pd.read_csv(str(fdr_dir) + "/rescore.tab", sep="\t")
+        rescore_tab_file.to_csv(str(fdr_dir) + "/rescore_csm.tab", sep="\t")
+        original_tab_file = pd.read_csv(str(fdr_dir) + "/original.tab", sep="\t")
+        original_tab_file.to_csv(str(fdr_dir) + "/original_csm.tab", sep="\t")
         input_mokapot_psm_rescore = prepare_rescore_xl_psm_level(str(fdr_dir), "rescore")
         input_mokapot_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
         input_mokapot_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")

@@ -247,6 +247,7 @@ class Spectra(anndata.AnnData):
         :param input_file: path to input file
         :return: a spectra instance
         """
+        
         return cls(anndata.read_h5ad(str(input_file)))
 
     def convert_to_df(self) -> pd.DataFrame:

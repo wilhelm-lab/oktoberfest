@@ -375,9 +375,17 @@ class Koina:
             merged_dict = model.__merge_list_dict_array(dict_list)
             print(merged_dict)
         """
+        if not dict_list:
+            return {}  # Return an empty dictionary if dict_list is empty
+
         tmp = [x.keys() for x in dict_list]
+
+        if not tmp or not tmp[0]:
+            return {}  # Return an empty dictionary if tmp is empty or its first element is empty
+
         if not np.all([tmp[0] == x for x in tmp]):
             raise NotImplementedError(f"Keys of all dictionaries in the list need to be equal {tmp}")
+
         out = {}
         for k in tmp[0]:
             out[k] = np.concatenate([x[k] for x in dict_list])
@@ -609,13 +617,14 @@ class Koina:
             infer_results_to_return = [infer_results[i] for i in range(len(infer_results))]
             return self.__merge_list_dict_array(infer_results_to_return)
         except AttributeError:
-            for res in infer_results.values():
-                if isinstance(res, InferenceServerException):
+            exceptions = [res for res in infer_results.values() if isinstance(res, InferenceServerException)]
+            if exceptions:
+                for res in exceptions:
                     warnings.warn(res.message(), stacklevel=1)
-            else:
                 raise InferenceServerException(
                     """
                     At least one request failed. Check the error message above and try again.
                     To get a list of responses run koina.predict(..., debug = True), then call koina.response_dict
                     """
                 ) from None
+
