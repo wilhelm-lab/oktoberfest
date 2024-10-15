@@ -51,6 +51,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+./unit_tests/data/quantification
 
 # Translations
 *.mo
@@ -143,9 +144,13 @@ hash.file
 
 
 # output files in tutorials folder
-tutorials/
-!tutorials/Oktoberfest Tutorial.ipynb
-!tutorials/Oktoberfest_workshop.ipynb
+!tutorials/*.ipynb
 
 # example data
 data/
+
+# Machine learning artifacts
+wandb/
+
+# doctest IO files
+tests/doctests/

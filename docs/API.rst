@@ -20,6 +20,7 @@ Preprocessing: :code:`pp`
 .. currentmodule:: oktoberfest
 
 Generating libraries
+~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp
@@ -31,6 +32,7 @@ Generating libraries
    pp.annotate_spectral_library
 
 Spectra preprocessing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp
@@ -42,6 +44,7 @@ Spectra preprocessing
 
 
 Peptide preprocessing
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
    :toctree: api/pp
@@ -57,29 +60,43 @@ Peptide preprocessing
 
 Predicting: :code:`pr`
 ----------------------
+.. TODO
+    add full class documentation through autosummary
 
 .. module:: oktoberfest.pr
 
 .. currentmodule:: oktoberfest
 
-All things predictions
+Access to functions that interface either a Koina server to retrieve predictions from various prediction models, or DLomix to serve & refinement-learn pre-trained models locally.
+
+High-level prediction runner
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :recursive:
+    :toctree: api/pr
+
+    pr.Predictor
 
 Koina interface
 ~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: api/pr
+    :recursive:
+    :toctree: api/pr
 
-   pr.predict
+    pr.Koina
 
-Postprocessing koina response
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+DLomix interface
+~~~~~~~~~~~~~~~~
 
 .. autosummary::
-   :toctree: api/pr
+    :recursive:
+    :toctree: api/pr
 
-   pr.parse_fragment_labels
-
+    pr.DLomix
+    pr.create_dlomix_dataset
+    pr.refine_intensity_predictor
 
 Rescoring: :code:`re`
 ---------------------

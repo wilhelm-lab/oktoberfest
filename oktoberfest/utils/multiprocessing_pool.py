@@ -4,7 +4,6 @@ import sys
 import traceback
 import warnings
 from multiprocessing import Pool, pool
-from typing import List
 
 from tqdm.auto import tqdm
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 class JobPool:
     """JobPool class for multiprocessing."""
 
-    results: List[pool.AsyncResult]
+    results: list[pool.AsyncResult]
     warning_filter: str
     pool: pool.Pool
 

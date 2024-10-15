@@ -48,6 +48,10 @@ table.align-default {
     padding-left: 50px;
 }
 
+.main-config-table tbody tr:nth-child(n + 7):nth-child(-n + 7) td:nth-child(1) {
+    padding-left: 50px;
+}
+
 .lib-rescore-config-table
     tbody
     tr:nth-child(n + 2):nth-child(-n + 5)
@@ -63,11 +67,38 @@ table.align-default {
     padding-left: 50px;
 }
 
-.lib-config-table tbody tr:nth-last-child(-n + 6) td:nth-child(1) {
+.lib-config-table tbody tr:nth-last-child(-n + 7) td:nth-child(1) {
     padding-left: 50px;
 }
 
 .digest-config-table tbody tr:not(:first-child) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.ptm-config-table tbody tr:nth-last-child(-n + 3) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-refinement-learning-config-table
+    tbody
+    tr:nth-child(n + 2):nth-child(-n + 5)
+    td:nth-child(1),
+.lib-refinement-learning-config-table tbody tr:nth-child(8) td:nth-child(1) {
+    padding-left: 50px;
+}
+
+.lib-refinement-learning-config-table
+    tbody
+    tr:nth-child(n + 6):nth-child(-n + 7)
+    td:nth-child(1),
+.lib-refinement-learning-config-table
+    tbody
+    tr:nth-child(n + 9):nth-child(-n + 10)
+    td:nth-child(1) {
+    padding-left: 100px;
+}
+
+.rescore-config-table tbody tr:last-child td:first-child {
     padding-left: 50px;
 }
 
