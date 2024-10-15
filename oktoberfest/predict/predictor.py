@@ -109,7 +109,7 @@ class Predictor:
         signature = inspect.signature(self._predictor.predict)
         return {key: value for key, value in kwargs.items() if key in signature.parameters}
 
-    def predict_intensities(self, data: Spectra, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
+    def predict_intensities(self, data: Spectra, xl: bool = False, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -149,10 +149,10 @@ class Predictor:
             >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data, **kwargs)
+            intensities = self.predict_at_once(data=data, xl=xl **kwargs)
             data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
         else:
-            chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, **kwargs)
+            chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
             data.add_list_of_predicted_intensities(
                 chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
             )
@@ -193,7 +193,7 @@ class Predictor:
         pred_irts = self.predict_at_once(data=data, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(self, data: Spectra, xl: bool = False, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -227,7 +227,12 @@ class Predictor:
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
-        return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
+        if xl:
+            return self._predictor.predict_xl(data, **self._filter_kwargs(**kwargs))
+        else:
+            return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
+
+        
 
     def _predict_at_once_df(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
@@ -265,7 +270,7 @@ class Predictor:
         """
         return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 
@@ -308,11 +313,14 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
+            if xl:
+                results.append(self._predictor.predict_xl(data[idx], **self._filter_kwargs(**kwargs)))
+            else:
+                results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
-    def ce_calibration(self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, **kwargs) -> Spectra:
+    def ce_calibration(self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, xl: bool = False, **kwargs) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
 
@@ -356,12 +364,13 @@ class Predictor:
             >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
             >>> print(alignment_library)
         """
-        alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
+
+        alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
 
         if "alphapept" in self.model_name.lower():
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, **kwargs)
-        _alignment(alignment_library)
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, xl=xl **kwargs)
+        _alignment(alignment_library, xl=xl)
         return alignment_library
