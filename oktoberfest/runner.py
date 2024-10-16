@@ -183,18 +183,9 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     
 
         if "xl" in config.models["intensity"].lower():
-            alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, xl=True, dataset_name=spectra_file.stem + "_ce_calibration",)
+            alignment_library =  predictor.ce_calibration(library, config.ce_range, use_ransac_model, xl=True, dataset_name=spectra_file.stem + "_ce_calibration",)
         else:
-            alignment_library = pr.ce_calibration(library, config.ce_range, use_ransac_model, dataset_name=spectra_file.stem + "_ce_calibration",)
-
-        
-        predictor = pr.Predictor.from_config(config, model_type="intensity")
-        alignment_library = predictor.ce_calibration(
-            library,
-            config.ce_range,
-            use_ransac_model,
-            dataset_name=spectra_file.stem + "_ce_calibration",
-        )
+            alignment_library =  predictor.ce_calibration(library, config.ce_range, use_ransac_model, dataset_name=spectra_file.stem + "_ce_calibration",)
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
@@ -602,19 +593,19 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
             )
         else:
             intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
-
         if xl:
+            print("XL!!!!!!!!!!!!!!!!!!!!CACLFEATURE")
             intensity_predictor.predict_intensities(
-            data=library, xl=True, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
-        )
+                data=library, xl=True, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
+            )
             
             library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
             predict_step.mark_done()
 
         else:
             intensity_predictor.predict_intensities(
-            data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
-        )
+                data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
+            )
             
             irt_predictor = pr.Predictor.from_config(config, model_type="irt")
             irt_predictor.predict_rt(data=library)
@@ -668,15 +659,12 @@ def _rescore(fdr_dir: Path, config: Config, xl : bool = False):
             re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl = xl)
             rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl = xl)
-            rescore_prosit_step.mark_done()
-            logger.info("Start percolator rescoring")
             logger.info(config.ptm_localization)
             if config.ptm_localization:
                 _ptm_localization_rescore(fdr_dir, config)
             else:
-                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-                rescore_prosit_step.mark_done()
+                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
+            rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl = xl)
@@ -1114,6 +1102,7 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
+                print("XL!!!!!!!!!!!!!!!!!!!! RUNNER")
                 processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True)
             else:
                 processing_pool.apply_async(_calculate_features, [spectra_file, config])
@@ -1121,6 +1110,7 @@ def run_rescoring(config_path: Union[str, Path]):
     else:
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
+                print("XL!!!!!!!!!!!!!!!!!!!!")
                 _calculate_features(spectra_file, config, xl=True)
             else:
                 _calculate_features(spectra_file, config)

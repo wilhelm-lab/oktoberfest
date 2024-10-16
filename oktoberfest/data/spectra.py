@@ -230,13 +230,41 @@ class Spectra(anndata.AnnData):
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
 
+        annotation_cleaned = np.array([s.decode('utf-8') if isinstance(s, bytes) else str(s) for s in annotation[0]])
+        annotation_cleaned = np.where(annotation_cleaned == 'None', 'no_fragment', annotation_cleaned)
+        annotation_cleaned = np.where(annotation_cleaned == None, 'no_fragment', annotation_cleaned) 
+
+
         annotation_to_index = {annot: index for index, annot in enumerate(self.var_names)}
-        col_index = np.vectorize(annotation_to_index.get)(annotation[0].astype(str))
+        print(annotation_to_index)
+        print("Original Annotation:", annotation[0])
+        print("Cleaned Annotation:", annotation_cleaned)
+
+        col_index = np.vectorize(annotation_to_index.get)(annotation_cleaned.astype(str))
+
+       
         sparse_intensity_matrix = dok_matrix(self.shape)
         sparse_intensity_matrix[:, col_index] = intensities
 
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = csr_matrix(sparse_intensity_matrix)
+
+    def add_intensities_without_mapping(self, intensities: np.ndarray, fragment_type: FragmentType):
+        """
+        Add predicted intensities and convert to sparse matrix.
+
+        This function takes a numpy array, containing intensities.
+        The intensitz arraz is aexpected to have the same shape as this object and will be added to
+        the respective lazer without checking the order of fragment annotations.
+
+        :param intensities: intensity numpy array to add with shapes (n x m)
+        :param fragment_type: the type of intensities to add. Can be FragmentType.RAW or FragmentType.PRED.
+        """
+        intensities[intensities == 0] = c.EPSILON
+        intensities[intensities == -1] = 0.0
+        
+        layer = self._resolve_layer_name(fragment_type)
+        self.layers[layer] = csr_matrix(intensities)
 
     def add_list_of_predicted_intensities(
         self,

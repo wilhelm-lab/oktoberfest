@@ -531,18 +531,25 @@ def convert_search(
     search_result: Any
     if search_engine == "maxquant":
         search_result = MaxQuant
+        xl = False
     elif search_engine == "msfragger":
         search_result = MSFragger
+        xl = False
     elif search_engine == "mascot":
         search_result = Mascot
+        xl = False
     elif search_engine == "sage":
         search_result = Sage
+        xl = False
     elif search_engine == "xisearch":
         search_result = Xisearch
+        xl = True
     elif search_engine == "scout":
         search_result = Scout
+        xl = True
     elif search_engine == "msamanda":
         search_result = MSAmanda
+        xl = False
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
@@ -552,6 +559,7 @@ def convert_search(
         custom_mods=custom_mods,
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
+        xl=xl,
     )
 
 
@@ -978,10 +986,14 @@ def annotate_spectral_library_xl(psms: Spectra, mass_tol: Optional[float] = None
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(xl=True))
-    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES_A"]), FragmentType.RAW_A)
-    aspec.add_matrix(np.stack(df_annotated_spectra["INTENSITIES_B"]), FragmentType.RAW_B)
-    aspec.add_matrix(np.stack(df_annotated_spectra["MZ_A"]), FragmentType.MZ_A)
-    aspec.add_matrix(np.stack(df_annotated_spectra["MZ_B"]), FragmentType.MZ_B)
+    aspec.add_intensities(
+        np.stack(df_annotated_spectra["INTENSITIES_A"]), aspec.var_names.values[None, ...], FragmentType.RAW_A
+    )
+    aspec.add_intensities(
+        np.stack(df_annotated_spectra["INTENSITIES_B"]), aspec.var_names.values[None, ...], FragmentType.RAW_B
+    )
+    aspec.add_mzs(np.stack(df_annotated_spectra["MZ_A"]), FragmentType.MZ_A)
+    aspec.add_mzs(np.stack(df_annotated_spectra["MZ_B"]), FragmentType.MZ_B)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS_A"].values, "CALCULATED_MASS_A")
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS_B"].values, "CALCULATED_MASS_B")
 

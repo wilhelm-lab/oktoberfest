@@ -31,7 +31,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
         groups = ["RAW_FILE"]
 
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
-    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups
+    hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
     top_hcd_targets = hcd_targets.head(top_n)
     
     alignment_library = library[top_hcd_targets.index]
@@ -42,7 +42,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
     alignment_library.obs.reset_index(inplace=True)
 
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
-    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), len(top_hcd_targets)
+    alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), len(top_hcd_targets))
                                                           
     # alignment_library.uns["ion_types"] = library.uns["ion_types"]
 

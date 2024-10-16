@@ -87,7 +87,7 @@ def generate_features(
     if xl:
         pred_a = library.get_matrix(FragmentType.PRED_A)
         pred_b = library.get_matrix(FragmentType.PRED_B)
-        raw_a = library.get_matrix(FragmentType.RAW_A)[
+        raw_a = library.get_matrix(FragmentType.RAW_A)
         raw_b = library.get_matrix(FragmentType.RAW_B)
         mz_a = library.get_matrix(FragmentType.MZ_A)
         mz_b = library.get_matrix(FragmentType.MZ_B)

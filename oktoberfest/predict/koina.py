@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import copy
 import logging
 from typing import TYPE_CHECKING
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import numpy as np
+    from typing import Tuple, Dict
 
 
 alternative_column_map = {
@@ -81,17 +82,9 @@ class Koina(_KoinaGRPC):
                 input_field: data[[alternative_column_map[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
-        if _async:
-            return self.__predict_async(data, debug=debug)
-        else:
-            return self.__predict_sequential(data)
+        return super().predict(inputs=data, **kwargs)
 
-    def predict_xl(
-        self,
-        data: Union[Dict[str, np.ndarray], pd.DataFrame],
-        _async: bool = True,
-        debug=False,
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    def predict_xl(self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
         """
         Perform inference on the xl data using the Koina model.
 
@@ -104,13 +97,11 @@ class Koina(_KoinaGRPC):
         :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
             and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
             in the column names.
-        :param _async: If True, perform asynchronous inference; if False, perform sequential inference. Defaults to True.
-        :param debug: If True and using _async mode, store raw InferResult / InferServerException dictionary for later analysis.
+         :param kwargs: Additional params that are forwarded to super().predict
 
-        :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
-            representing the model's output.
+        :return: TODO
 
-        Example::
+        Example:: TODO
             model = Koina("Prosit_2019_intensity")
             input_data = {
                 "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
@@ -121,18 +112,17 @@ class Koina(_KoinaGRPC):
             }
             predictions = model.predict(input_data)
         """
+        if isinstance(data, Spectra):
+            data = data.obs
         if isinstance(data, pd.DataFrame):
-            data_1 = {
-                input_field: data[alternative_column_map_xl[input_field]].to_numpy()
+            data = {
+                input_field: data[[alternative_column_map_xl[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
-            data_2 = {
-                input_field: data[alternative_column_map_xl_switched[input_field]].to_numpy()
-                for input_field in self.model_inputs.keys()
-            }
-        if _async:
-            return self.__predict_async(data_1, debug=debug), self.__predict_async(data_2, debug=debug)
-        else:
-            return self.__predict_sequential(data_1), self.__predict_sequential(data_2)
-
-   
+            prediction_ab = super().predict(inputs=data, debug = True, **kwargs)
+            temp_field = data["peptide_sequences_1"].copy()
+            data["peptide_sequences_1"] = data["peptide_sequences_2"]
+            data["peptide_sequences_2"] = temp_field
+            prediction_ba = super().predict(inputs=data, debug = True, **kwargs)
+            
+            return prediction_ab, prediction_ba

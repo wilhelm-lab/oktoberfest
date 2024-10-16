@@ -149,14 +149,31 @@ class Predictor:
             >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data, xl=xl **kwargs)
-            data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
+            if xl:
+                intensities_a, intensities_b  = self.predict_at_once(data=data, xl=xl, **kwargs)
+                #print(intensities_a["annotation"][0])
+                data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
+                data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)   
+            else:
+                intensities = self.predict_at_once(data=data, xl=xl, **kwargs)
+                data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
+
         else:
-            chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
-            data.add_list_of_predicted_intensities(
+            if xl:
+                chunked_intensities_a, chunked_intensities_b  = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                data.add_list_of_predicted_intensities(
+                chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
+            )
+                data.add_list_of_predicted_intensities(
+                chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
+            )
+            else:
+                chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                data.add_list_of_predicted_intensities(
                 chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
             )
 
+   
     def predict_rt(self, data: Spectra, **kwargs):
         """
         Generate retention time predictions and add them to the provided data object.
@@ -371,6 +388,7 @@ class Predictor:
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, xl=xl **kwargs)
+        print("XL!!!!!!!!!!!!!!!!!!!!")
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, xl=xl, **kwargs)
         _alignment(alignment_library, xl=xl)
         return alignment_library
