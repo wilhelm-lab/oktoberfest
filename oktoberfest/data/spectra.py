@@ -229,20 +229,9 @@ class Spectra(anndata.AnnData):
         """
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
-
-        annotation_cleaned = np.array([s.decode('utf-8') if isinstance(s, bytes) else str(s) for s in annotation[0]])
-        annotation_cleaned = np.where(annotation_cleaned == 'None', 'no_fragment', annotation_cleaned)
-        annotation_cleaned = np.where(annotation_cleaned == None, 'no_fragment', annotation_cleaned) 
-
-
+        
         annotation_to_index = {annot: index for index, annot in enumerate(self.var_names)}
-        print(annotation_to_index)
-        print("Original Annotation:", annotation[0])
-        print("Cleaned Annotation:", annotation_cleaned)
-
-        col_index = np.vectorize(annotation_to_index.get)(annotation_cleaned.astype(str))
-
-       
+        col_index = np.vectorize(annotation_to_index.get)(annotation[0].astype(str))
         sparse_intensity_matrix = dok_matrix(self.shape)
         sparse_intensity_matrix[:, col_index] = intensities
 

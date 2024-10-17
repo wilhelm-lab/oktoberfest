@@ -594,7 +594,6 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
         else:
             intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
         if xl:
-            print("XL!!!!!!!!!!!!!!!!!!!!CACLFEATURE")
             intensity_predictor.predict_intensities(
                 data=library, xl=True, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
             )
@@ -695,86 +694,23 @@ def xl_fdr(df: pd.DataFrame, score: str) -> pd.DataFrame:
     df = df.drop(["TD_sum", "DD_sum", "TT_sum"], axis=1)
     return df
 
-
 def xl_between_or_self(df: pd.DataFrame, score: str) -> pd.DataFrame:
-    mokapot_csms_rescore_between =df[df["fdr_group"]=="between"] 
-    mokapot_csms_rescore_self =df[df["fdr_group"]=="self"] 
-    mokapot_csms_rescore_between= xl_fdr(mokapot_csms_rescore_between, score=score)
-    mokapot_csms_rescore_self= xl_fdr(mokapot_csms_rescore_self, score=score)
-    mokapot_csms_rescore = pd.concat([mokapot_csms_rescore_between, mokapot_csms_rescore_self], axis=0)
-    return mokapot_csms_rescore
+    df_csms_between =df[df["fdr_group"]=="between"] 
+    df_csms_self =df[df["fdr_group"]=="self"] 
+    df_csms_between= xl_fdr(df_csms_between, score=score)
+    df_csms_self= xl_fdr(df_csms_self, score=score)
+    df_csms = pd.concat([df_csms_between, df_csms_self], axis=0)
+    return df_csms
 
 
-def xl_preprocessing_plot_unique_xl(featrures_dir: Path, mokapot_csms: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str):
-    mokapot_csms["is_target"] = mokapot_csms["label"]
-    mokapot_csms.to_csv("/cmnfs/data/proteomics/XL/Ribosome/mokapot_csms.csv")
-    columns_to_keep_mokapot = [
-        "PSMId_a",
-        "label",
-        "is_target",
-        "scan_number_a",
-        "filename_a",
-        "peptide_a",
-        "mokapot score",
-        "q-value",
-        "q-value_a",
-        "q-value_b",
-        "proteinIds_b",
-        "mod_pep_a_b",
-        "fdr_group_a",
-        "mod_pep_b_b",
-    ]
-    mokapot_csms = mokapot_csms[columns_to_keep_mokapot]
-
-    mokapot_csms = mokapot_csms.rename(
-        columns={
-            "PSMId_a": "SpecId",
-            "scan_number_a": "ScanNr",
-            "filename_a": "filename",
-            "peptide_a": "Peptide",
-            "proteinIds_b": "Proteins",
-            "mod_pep_a_b": "mod_pep_a",
-            "fdr_group_a": "fdr_group",
-            "mod_pep_b_b": "mod_pep_b",
-        }
-    )
-    mokapot_csms["label"] = mokapot_csms["label"].replace({"TT": True, "TD": False, "DD": False})
-    mokapot_csms["base_pep_a"] = mokapot_csms["mod_pep_a"].str.replace(r"\[.*?\]", "", regex=True)
-    mokapot_csms["base_pep_b"] = mokapot_csms["mod_pep_b"].str.replace(r"\[.*?\]", "", regex=True)
-    mokapot_csms = mokapot_csms.sort_values(by="mokapot score", ascending=False)
-    swap_mask = mokapot_csms["base_pep_a"] > mokapot_csms["base_pep_b"]
-    mokapot_csms.loc[swap_mask, "min_seq"] = mokapot_csms["base_pep_b"]
-    mokapot_csms.loc[swap_mask, "max_seq"] = mokapot_csms["base_pep_a"]
-    mokapot_csms.loc[~swap_mask, "min_seq"] = mokapot_csms["base_pep_a"]
-    mokapot_csms.loc[~swap_mask, "max_seq"] = mokapot_csms["base_pep_b"]
-    mokapot_uniq_xls = mokapot_csms.drop_duplicates(subset=["min_seq", "max_seq"])
-    xl_between_or_self(mokapot_uniq_xls, "mokapot score")
-    mokapot_uniq_xls_target = mokapot_uniq_xls[mokapot_uniq_xls["label"] == True]
-    mokapot_uniq_xls_decoy = mokapot_uniq_xls[mokapot_uniq_xls["label"] == False]
-    if original_or_rescore == "original":
-        if percolator_or_mokapot == "percolator":
-            mokapot_uniq_xls_target.to_csv(featrures_dir + "/original.percolator.peptides.txt", sep="\t", index=False)
-            mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/original.percolator.decoy.peptides.txt", sep="\t", index=False)
-        else:
-            mokapot_uniq_xls_target.to_csv(featrures_dir + "/original.mokapot.peptides.txt", sep="\t", index=False)
-            mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/original.mokapot.decoy.peptides.txt", sep="\t", index=False)
-    else:
-        if percolator_or_mokapot == "percolator":
-            mokapot_uniq_xls_target.to_csv(featrures_dir + "/rescore.percolator.peptides.txt", sep="\t", index=False)
-            mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/rescore.percolator.decoy.peptides.txt", sep="\t", index=False)
-        else:
-            mokapot_uniq_xls_target.to_csv(featrures_dir + "/rescore.mokapot.peptides.txt", sep="\t", index=False)
-            mokapot_uniq_xls_decoy.to_csv(featrures_dir + "/rescore.mokapot.decoy.peptides.txt", sep="\t", index=False)
-
-
-def xl_preprocessing_plot_csm(featrures_dir: Path, mokapot_csms: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str ):
-    columns_to_keep_mokapot = [
+def xl_preprocessing_plot_csm(featrures_dir: Path, df: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str ):
+    columns_to_keep = [
         "PSMId_a",
         "label",
         "scan_number_a",
         "filename_a",
         "peptide_a",
-        "mokapot score",
+        "score",
         "q-value",
         "q-value_a",
         "q-value_b",
@@ -783,8 +719,8 @@ def xl_preprocessing_plot_csm(featrures_dir: Path, mokapot_csms: pd.DataFrame, o
         "fdr_group_a",
         "proteinIds_b",
     ]
-    mokapot_csms = mokapot_csms[columns_to_keep_mokapot]
-    mokapot_csms = mokapot_csms.rename(
+    df = df[columns_to_keep]
+    df = df.rename(
         columns={
             "PSMId_a": "SpecId",
             "scan_number_a": "ScanNr",
@@ -794,27 +730,26 @@ def xl_preprocessing_plot_csm(featrures_dir: Path, mokapot_csms: pd.DataFrame, o
             "proteinIds_b": "Proteins",
         }
     )
-    mokapot_csms["is_target"] = mokapot_csms["label"]
-    mokapot_csms["label"] = mokapot_csms["label"].replace({"TT": True, "TD": False, "DD": False})
-    mokapot_csms.to_csv("/cmnfs/proj/prosit/xl/mokapot_csms.csv", index=False)
-    mokapot_csms_target = mokapot_csms[mokapot_csms["label"] == True]
+    df["is_target"] = df["label"]
+    df["label"] = df["label"].replace({"TT": True, "TD": False, "DD": False})
+    df_target = df[df["label"] == True]
     
 
-    mokapot_csms_decoy = mokapot_csms[mokapot_csms["label"] == False]
+    df_decoy = df[df["label"] == False]
     if original_or_rescore == "original":
         if percolator_or_mokapot == "percolator":
-            mokapot_csms_target.to_csv(featrures_dir + "/original.percolator.psms.txt", sep="\t", index=False)
-            mokapot_csms_decoy.to_csv(featrures_dir + "/original.percolator.decoy.psms.txt", sep="\t", index=False)
+            df_target.to_csv(featrures_dir + "/original.percolator.csms.txt", sep="\t", index=False)
+            df_decoy.to_csv(featrures_dir + "/original.percolator.decoy.csms.txt", sep="\t", index=False)
         else:
-            mokapot_csms_target.to_csv(featrures_dir + "/original.mokapot.psms.txt", sep="\t", index=False)
-            mokapot_csms_decoy.to_csv(featrures_dir + "/original.mokapot.decoy.psms.txt", sep="\t", index=False)
+            df_target.to_csv(featrures_dir + "/original.mokapot.csms.txt", sep="\t", index=False)
+            df_decoy.to_csv(featrures_dir + "/original.mokapot.decoy.csms.txt", sep="\t", index=False)
     else:
         if percolator_or_mokapot == "percolator":
-            mokapot_csms_target.to_csv(featrures_dir + "/rescore.percolator.psms.txt", sep="\t", index=False)
-            mokapot_csms_decoy.to_csv(featrures_dir + "/rescore.percolator.decoy.psms.txt", sep="\t", index=False)
+            df_target.to_csv(featrures_dir + "/rescore.percolator.csms.txt", sep="\t", index=False)
+            df_decoy.to_csv(featrures_dir + "/rescore.percolator.decoy.csms.txt", sep="\t", index=False)
         else:
-            mokapot_csms_target.to_csv(featrures_dir + "/rescore.mokapot.psms.txt", sep="\t", index=False)
-            mokapot_csms_decoy.to_csv(featrures_dir + "/rescore.mokapot.decoy.psms.txt", sep="\t", index=False)
+            df_target.to_csv(featrures_dir + "/rescore.mokapot.csms.txt", sep="\t", index=False)
+            df_decoy.to_csv(featrures_dir + "/rescore.mokapot.decoy.csms.txt", sep="\t", index=False)
 
 
 def xl_psm_to_csm(featrures_dir: Path, original_or_rescore: str, percolator_or_mokapot: str):
@@ -870,28 +805,28 @@ def xl_psm_to_csm(featrures_dir: Path, original_or_rescore: str, percolator_or_m
     split_data = decoy_psms[psm_id].str.rsplit("-", n=13, expand=True)
     split_data.columns = new_columns
     df_psm_decoy = pd.concat([decoy_psms, split_data], axis=1)
-    df_mokapot = pd.concat([df_psm_decoy, df_psm_target], axis=0)
-    df_mokapot[
+    df_psm = pd.concat([df_psm_decoy, df_psm_target], axis=0)
+    df_psm[
         [
             "index_csm",
             "_",
             "which_pep",
         ]
-    ] = df_mokapot[
+    ] = df_psm[
         "index"
     ].str.split("_", expand=True)
-    df_mokapot.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
-    df_pep_1 = df_mokapot[df_mokapot["which_pep"] == "1"].copy()
-    df_pep_2 = df_mokapot[df_mokapot["which_pep"] == "2"].copy()
+    df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
+    df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
+    df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
     df_pep_1.drop(columns=["which_pep"], inplace=True)
     df_pep_2.drop(columns=["which_pep"], inplace=True)
     df_pep_1.columns = [col + "_a" if col != "index_csm" else col for col in df_pep_1.columns]
     df_pep_2.columns = [col + "_b" if col != "index_csm" else col for col in df_pep_2.columns]
-    mokapot_csms = pd.merge(df_pep_1, df_pep_2, on="index_csm")
-    mokapot_csms["mokapot score"] = mokapot_csms.apply(min_score, axis=1)
-    mokapot_csms["label"] = mokapot_csms.apply(get_label, axis=1)
-    mokapot_csms.rename(columns={'fdr_group_b': 'fdr_group'}, inplace=True)
-    return mokapot_csms
+    df_csm = pd.merge(df_pep_1, df_pep_2, on="index_csm")
+    df_csm["score"] = df_csm.apply(min_score, axis=1)
+    df_csm["label"] = df_csm.apply(get_label, axis=1)
+    df_csm.rename(columns={'fdr_group_b': 'fdr_group'}, inplace=True)
+    return df_csm
 
 
 def prepare_rescore_xl_psm_level(featrures_dir: Path, original_or_rescore: str):
@@ -921,6 +856,10 @@ def prepare_rescore_xl_psm_level(featrures_dir: Path, original_or_rescore: str):
         "link_pos_p1",
         "linked_aa_p1",
         "mods_p1",
+        "sequence_p1",
+        "sequence_p2",
+        "start_pos_p1",
+        "start_pos_p2",
         "mod_pos_p1",
         "aa_len_p2",
         "link_pos_p2",
@@ -1023,9 +962,9 @@ def prepare_rescore_xl_psm_level(featrures_dir: Path, original_or_rescore: str):
     # change ExpMass of rescore_tab_file_a
     max_ExpMass = rescore_tab_file_a["ExpMass"].max()
     rescore_tab_file_b["ExpMass"] += max_ExpMass
-    input_mokapot_psm = pd.concat([rescore_tab_file_a, rescore_tab_file_b], axis=0, ignore_index=True)
-    input_mokapot_psm["Proteins"].fillna("unknown", inplace=True)
-    return input_mokapot_psm
+    input_psm_rescore = pd.concat([rescore_tab_file_a, rescore_tab_file_b], axis=0, ignore_index=True)
+    input_psm_rescore["Proteins"].fillna("unknown", inplace=True)
+    return input_psm_rescore
 
 def _ptm_localization_rescore(fdr_dir: Path, config: Config):
     """
@@ -1063,6 +1002,105 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
     else:
         re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
 
+def input_xifdr(fdr_dir: Path, xisearch_or_scout: str):
+    """
+      function to generate xiFDR input.
+
+    :param fdr_dir: the output directory
+    :param xisearch_or_scout: applied search engine 
+    """
+    def convert_percolator_output(df: pd.DataFrame):
+        df['SpecId_raw_name_scan'] = df['SpecId'].str.extract(r'^([^-]+-[^-]+)')
+        split_data = df["SpecId"].str.split("-", n=13, expand=True)
+        new_columns = [
+            "raw_file",
+            "scan_number",
+            "mod_pep_a",
+            "mod_pep_b",
+            "charge",
+            "decoy_p1",
+            "is_decoy_p1",
+            "decoy_p2",
+            "is_decoy_p2",
+            "fdr_group",
+            "base_sequence_p1",
+            "base_sequence_p2",
+            "index",
+        ]
+        split_data.columns = new_columns
+        df = pd.concat([df, split_data], axis=1)
+        df.drop(columns=["index", "decoy_p1", "decoy_p2"], inplace=True)
+        df['SpecId'] = df['SpecId'].str.split('-decoy_p1').str[0]
+        df = df.reset_index()
+        df['protein_p1'] = df['Proteins'].apply(lambda x: x.split('_p2_')[0].split('p1_')[1])
+        df['protein_p2'] = df['Proteins'].apply(lambda x: x.split('_p2_')[1])
+        return df
+    
+    def input_columns_xiFDR(df: pd.DataFrame, input_type: str):
+        new_column_names = {
+        'run_name': 'run',
+        'scan_number': 'scan',
+        'sequence_p1': 'peptide1',
+        'sequence_p2': 'peptide2',
+        'link_pos_p1': 'peptide link 1',
+        'link_pos_p2': 'peptide link 2',
+        'is_decoy_p1': 'is decoy 1',
+        'is_decoy_p2': 'is decoy 2',
+        'precursor_charge': 'precursor charge',
+        'protein_p1': 'accession1',
+        'protein_p2': 'accession2',
+        'start_pos_p1': 'peptide position 1',
+        'start_pos_p2': 'peptide position 2',
+        'match_score': 'score'
+    }
+        if input_type == 'xisearch':
+            new_column_names['match_score'] = 'score'
+        elif input_type == 'percolator':
+            new_column_names['score'] = 'score'
+        elif input_type == 'scout':
+            new_column_names['ClassificationScore'] = 'score'
+
+        df = df.rename(columns=new_column_names)
+
+        return df
+    
+    xiFDR_columns = ['run', 'scan', 'peptide1', 'peptide2', 'peptide link 1',
+                 'peptide link 2', 'is decoy 1', 'is decoy 2',
+                 'precursor charge', 'accession1', 'accession2', 
+                 'peptide position 1',  'peptide position 2',
+                 'score']
+    
+    # covert percolator output for merging with internal search engine output
+    df_percolator_csm_target = pd.read_csv(str(fdr_dir) + "/rescore.percolator.csms.txt", sep="\t")
+    df_percolator_csm_target = convert_percolator_output(df_percolator_csm_target)
+    df_percolator_csm_decoy = pd.read_csv(str(fdr_dir) + "/rescore.percolator.decoy.csms.txt", sep="\t")
+    df_percolator_csm_decoy = convert_percolator_output(df_percolator_csm_decoy)
+    df_percolator_csm = pd.concat([df_percolator_csm_target, df_percolator_csm_decoy], ignore_index=True)
+    df_percolator_csm.reset_index(drop=True, inplace=True)
+    print("test33333333333333333333!!!!!!!!!!!!!!!!!!!")
+    #read df_search_engine_internal
+    df_search_engine_internal = pd.read_csv(str(fdr_dir) + "/rescore_features_csm.tab", sep="\t")
+    df_search_engine_internal.reset_index(drop=True, inplace=True)
+
+    #merge percolator and search engine output
+    merged_xisearch_percolator = pd.merge(df_search_engine_internal, df_percolator_csm, on='SpecId')
+    merged_xisearch_percolator = merged_xisearch_percolator.rename(columns=lambda x: x[:-2] if x.endswith('_x') else x)
+    merged_xisearch_percolator.to_csv("/cmnfs/data/proteomics/XL/Ribosome/new_version_oktoberfest/rep_1/merged_xisearch_percolator.tab",  sep="\t")
+    print("test44444444444444444!!!!!!!!!!!!!!!!!!!")
+    df_percolator_xiFDR_input = input_columns_xiFDR(merged_xisearch_percolator, input_type = "percolator")
+    df_percolator_xiFDR_input.to_csv("/cmnfs/data/proteomics/XL/Ribosome/new_version_oktoberfest/rep_1/df_percolator_xiFDR_input.tab",  sep="\t")
+    df_percolator_xiFDR_input = df_percolator_xiFDR_input[xiFDR_columns]
+    df_percolator_xiFDR_input.to_csv(str(fdr_dir) + "/percolator_xifdr_input.tab", sep="\t")
+
+    if xisearch_or_scout == "xisearch":
+        df_xisearch_xiFDR_input = input_columns_xiFDR(merged_xisearch_percolator, input_type = "xisearch")
+        df_xisearch_xiFDR_input = df_xisearch_xiFDR_input[xiFDR_columns]
+        df_xisearch_xiFDR_input.to_csv(str(fdr_dir) + "/xisearch_xifdr_input.tab", sep="\t")
+    elif xisearch_or_scout == "scout":
+        df_scout_xiFDR_input = input_columns_xiFDR(merged_xisearch_percolator, input_type = "scout")
+        df_scout_xiFDR_input = df_scout_xiFDR_input[xiFDR_columns]
+        df_scout_xiFDR_input.to_csv(str(fdr_dir) + "/scout_xifdr_input.tab", sep="\t")
+    
 
 def run_rescoring(config_path: Union[str, Path]):
     """
@@ -1102,7 +1140,6 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                print("XL!!!!!!!!!!!!!!!!!!!! RUNNER")
                 processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True)
             else:
                 processing_pool.apply_async(_calculate_features, [spectra_file, config])
@@ -1110,7 +1147,6 @@ def run_rescoring(config_path: Union[str, Path]):
     else:
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                print("XL!!!!!!!!!!!!!!!!!!!!")
                 _calculate_features(spectra_file, config, xl=True)
             else:
                 _calculate_features(spectra_file, config)
@@ -1140,29 +1176,42 @@ def run_rescoring(config_path: Union[str, Path]):
         rescore_tab_file.to_csv(str(fdr_dir) + "/rescore_features_csm.tab", sep="\t")
         original_tab_file = pd.read_csv(str(fdr_dir) + "/original.tab", sep="\t")
         original_tab_file.to_csv(str(fdr_dir) + "/original_features_csm.tab", sep="\t")
-        input_mokapot_psm_rescore = prepare_rescore_xl_psm_level(str(fdr_dir), "rescore")
-        input_mokapot_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
-        input_mokapot_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
-        input_mokapot_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
+        input_psm_rescore = prepare_rescore_xl_psm_level(str(fdr_dir), "rescore")
+        input_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
+        input_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
+        input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
         _rescore(fdr_dir, config, xl=True)
         if config.fdr_estimation_method == "percolator":
-            mokapot_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
-            mokapot_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
-            mokapot_csms_rescore = xl_between_or_self(mokapot_csms_rescore, score="mokapot score")
-            mokapot_csms_original = xl_between_or_self(mokapot_csms_original, score="mokapot score")
-            xl_preprocessing_plot_csm(str(fdr_dir), mokapot_csms_rescore, "rescore", "percolator")
-            xl_preprocessing_plot_csm(str(fdr_dir), mokapot_csms_original, "original", "percolator")
-            xl_preprocessing_plot_unique_xl(str(fdr_dir), mokapot_csms_rescore, "rescore", "percolator")
-            xl_preprocessing_plot_unique_xl(str(fdr_dir), mokapot_csms_original, "original", "percolator")
+            output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
+            output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
+            output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
+            output_csms_original = xl_between_or_self(output_csms_original, score="score")
+            xl_preprocessing_plot_csm(str(fdr_dir),output_csms_rescore, "rescore", "percolator")
+            xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "percolator")
+            logger.info("Finished rescoring.")
+            logger.info("Generating xiFDR input.")
+            print("test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(config.inputs["search_results_type"])
+            if config.inputs["search_results_type"].lower()=="xisearch":
+                print("test2222222222222222222222!!!!!!!!!!!!!!!!!!!!")
+                input_xifdr(str(fdr_dir), "xisearch")
+            elif config.inputs["search_results_type"].lower()== "scout":
+                input_xifdr(str(fdr_dir), "scout")
+            logger.info("Finished Generating xiFDR input.")
+            
+
         else:
-            mokapot_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
-            mokapot_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "mokapot")
-            mokapot_csms_rescore = xl_between_or_self(mokapot_csms_rescore, score="mokapot score")
-            mokapot_csms_original = xl_between_or_self(mokapot_csms_original, score="mokapot score")
-            xl_preprocessing_plot_csm(str(fdr_dir), mokapot_csms_rescore, "rescore", "mokapot")
-            xl_preprocessing_plot_csm(str(fdr_dir), mokapot_csms_original, "original", "mokapot")
-            xl_preprocessing_plot_unique_xl(str(fdr_dir), mokapot_csms_rescore, "rescore", "mokapot")
-            xl_preprocessing_plot_unique_xl(str(fdr_dir), mokapot_csms_original, "original", "mokapot")
+            output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
+            output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "mokapot")
+            output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
+            output_csms_original = xl_between_or_self(output_csms_original, score="score")
+            xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "mokapot")
+            xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "mokapot")
+            logger.info("Finished rescoring.")
+            
+            
+
+            
     else:
         _rescore(fdr_dir, config)
         # plotting

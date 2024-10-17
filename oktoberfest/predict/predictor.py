@@ -151,7 +151,6 @@ class Predictor:
         if chunk_idx is None:
             if xl:
                 intensities_a, intensities_b  = self.predict_at_once(data=data, xl=xl, **kwargs)
-                #print(intensities_a["annotation"][0])
                 data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)   
             else:
@@ -388,7 +387,7 @@ class Predictor:
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        print("XL!!!!!!!!!!!!!!!!!!!!")
+
         self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, xl=xl, **kwargs)
         _alignment(alignment_library, xl=xl)
         return alignment_library
