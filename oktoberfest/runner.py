@@ -1050,13 +1050,12 @@ def input_xifdr(fdr_dir: Path, xisearch_or_scout: str):
         'protein_p1': 'accession1',
         'protein_p2': 'accession2',
         'start_pos_p1': 'peptide position 1',
-        'start_pos_p2': 'peptide position 2',
-        'match_score': 'score'
+        'start_pos_p2': 'peptide position 2'
     }
         if input_type == 'xisearch':
             new_column_names['match_score'] = 'score'
         elif input_type == 'percolator':
-            new_column_names['score'] = 'score'
+            new_column_names['score_percolator'] = 'score'
         elif input_type == 'scout':
             new_column_names['ClassificationScore'] = 'score'
 
@@ -1076,19 +1075,18 @@ def input_xifdr(fdr_dir: Path, xisearch_or_scout: str):
     df_percolator_csm_decoy = pd.read_csv(str(fdr_dir) + "/rescore.percolator.decoy.csms.txt", sep="\t")
     df_percolator_csm_decoy = convert_percolator_output(df_percolator_csm_decoy)
     df_percolator_csm = pd.concat([df_percolator_csm_target, df_percolator_csm_decoy], ignore_index=True)
+    df_percolator_csm.rename(columns={'score': 'score_percolator'}, inplace=True)
     df_percolator_csm.reset_index(drop=True, inplace=True)
-    print("test33333333333333333333!!!!!!!!!!!!!!!!!!!")
+
     #read df_search_engine_internal
     df_search_engine_internal = pd.read_csv(str(fdr_dir) + "/rescore_features_csm.tab", sep="\t")
+    df_search_engine_internal.drop("SCORE", axis=1, inplace=True)
     df_search_engine_internal.reset_index(drop=True, inplace=True)
 
     #merge percolator and search engine output
     merged_xisearch_percolator = pd.merge(df_search_engine_internal, df_percolator_csm, on='SpecId')
     merged_xisearch_percolator = merged_xisearch_percolator.rename(columns=lambda x: x[:-2] if x.endswith('_x') else x)
-    merged_xisearch_percolator.to_csv("/cmnfs/data/proteomics/XL/Ribosome/new_version_oktoberfest/rep_1/merged_xisearch_percolator.tab",  sep="\t")
-    print("test44444444444444444!!!!!!!!!!!!!!!!!!!")
     df_percolator_xiFDR_input = input_columns_xiFDR(merged_xisearch_percolator, input_type = "percolator")
-    df_percolator_xiFDR_input.to_csv("/cmnfs/data/proteomics/XL/Ribosome/new_version_oktoberfest/rep_1/df_percolator_xiFDR_input.tab",  sep="\t")
     df_percolator_xiFDR_input = df_percolator_xiFDR_input[xiFDR_columns]
     df_percolator_xiFDR_input.to_csv(str(fdr_dir) + "/percolator_xifdr_input.tab", sep="\t")
 
@@ -1190,16 +1188,12 @@ def run_rescoring(config_path: Union[str, Path]):
             xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "percolator")
             logger.info("Finished rescoring.")
             logger.info("Generating xiFDR input.")
-            print("test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print(config.inputs["search_results_type"])
             if config.inputs["search_results_type"].lower()=="xisearch":
-                print("test2222222222222222222222!!!!!!!!!!!!!!!!!!!!")
                 input_xifdr(str(fdr_dir), "xisearch")
             elif config.inputs["search_results_type"].lower()== "scout":
                 input_xifdr(str(fdr_dir), "scout")
             logger.info("Finished Generating xiFDR input.")
             
-
         else:
             output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
             output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "mokapot")
@@ -1208,10 +1202,13 @@ def run_rescoring(config_path: Union[str, Path]):
             xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "mokapot")
             xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "mokapot")
             logger.info("Finished rescoring.")
-            
-            
-
-            
+            logger.info("Generating xiFDR input.")
+            if config.inputs["search_results_type"].lower()=="xisearch":
+                input_xifdr(str(fdr_dir), "xisearch")
+            elif config.inputs["search_results_type"].lower()== "scout":
+                input_xifdr(str(fdr_dir), "scout")
+            logger.info("Finished Generating xiFDR input.")
+                
     else:
         _rescore(fdr_dir, config)
         # plotting
