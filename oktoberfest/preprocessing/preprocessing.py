@@ -249,7 +249,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
             "max_charge": 6,
         }
         return filter_xl_peptides(peptides, **filter_kwargs)
-    elif "prosit" in model.lower() and "xl" not in model.lower():
+    if "prosit" in model.lower():
         filter_kwargs = {
             "min_length": 7,
             "max_length": 30,
@@ -269,6 +269,8 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
         }
     else:
         raise ValueError(f"The model {model} is not known.")
+    
+    return filter_peptides(peptides, **filter_kwargs)
 
 
 def filter_peptides(

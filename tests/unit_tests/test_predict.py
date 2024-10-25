@@ -156,7 +156,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             return_value={"intensities": self.intensities, "annotation": self.ion_annotations}
         )
         predictor.predict_intensities(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra, xl=False)
         self.mock_spectra.add_intensities.assert_called_once_with(
             self.intensities, self.ion_annotations, fragment_type=FragmentType.PRED
         )
@@ -172,7 +172,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             }
         )
         predictor.predict_intensities(self.mock_spectra, chunk_idx=self.chunk_idx)
-        predictor.predict_in_chunks.assert_called_once_with(data=self.mock_spectra, chunk_idx=self.chunk_idx)
+        predictor.predict_in_chunks.assert_called_once_with(data=self.mock_spectra, chunk_idx=self.chunk_idx, xl=False)
         self.mock_spectra.add_list_of_predicted_intensities.assert_called_once_with(
             [self.intensities, self.intensities], [self.ion_annotations, self.ion_annotations], self.chunk_idx
         )
@@ -227,12 +227,12 @@ class TestPredictorBehavioral(unittest.TestCase):
             library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, model_name="prosit"
         )
         mock_prepare_alignment_df.assert_called_once_with(
-            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
+            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, xl=False
         )
         predictor.predict_intensities.assert_called_once_with(
-            data=self.mock_spectra, chunk_idx=None, keep_dataset=False, model_name="prosit"
+            data=self.mock_spectra, chunk_idx=None, keep_dataset=False, model_name="prosit", xl=False
         )
-        mock_alignment.assert_called_once_with(self.mock_spectra)
+        mock_alignment.assert_called_once_with(self.mock_spectra, xl=False)
         self.assertEqual(alignment_library, self.mock_spectra)
 
     @patch("oktoberfest.pr.predictor.group_iterator", return_value="chunk_idx_dummy")
@@ -248,12 +248,12 @@ class TestPredictorBehavioral(unittest.TestCase):
             library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
         )
         mock_prepare_alignment_df.assert_called_once_with(
-            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
+            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, xl=False
         )
         predictor.predict_intensities.assert_called_once_with(
-            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False
+            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False, xl=False
         )
-        mock_alignment.assert_called_once_with(self.mock_spectra)
+        mock_alignment.assert_called_once_with(self.mock_spectra, xl=False)
         self.assertEqual(alignment_library, self.mock_spectra)
 
 

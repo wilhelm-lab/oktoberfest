@@ -105,10 +105,11 @@ def generate_features(
     else:
         perc_features = Percolator(
             metadata=library.get_meta_data().reset_index(drop=True),
-            pred_intensities=library.get_matrix(FragmentType.PRED_A),
-            true_intensities=library.get_matrix(FragmentType.RAW_A),
-            mz=library.get_matrix(FragmentType.MZ_A),
+            pred_intensities=library.get_matrix(FragmentType.PRED),
+            true_intensities=library.get_matrix(FragmentType.RAW),
+            mz=library.get_matrix(FragmentType.MZ),
             input_type=search_type,
+            additional_columns=additional_columns,
             all_features_flag=all_features,
             regression_method=regression_method,
             neutral_loss_flag=add_neutral_loss_features,

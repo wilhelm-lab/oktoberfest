@@ -143,17 +143,17 @@ class Spectra(anndata.AnnData):
         elif fragment_type.value == 3:
             layer = Spectra.INTENSITY_PRED_LAYER_NAME_B
         elif fragment_type.value == 4:
-            layer = Spectra.INTENSITY_COLUMN_PREFIX
+            layer = Spectra.INTENSITY_LAYER_NAME
         elif fragment_type.value == 5:
-            layer = Spectra.INTENSITY_COLUMN_PREFIX_A
+            layer = Spectra.INTENSITY_LAYER_NAME_A
         elif fragment_type.value == 6:
-            layer = Spectra.INTENSITY_COLUMN_PREFIX_B
+            layer = Spectra.INTENSITY_LAYER_NAME_B
         elif fragment_type.value == 7:
-            layer = Spectra.MZ_COLUMN_PREFIX
+            layer = Spectra.MZ_LAYER_NAME
         elif fragment_type.value == 8:
-            layer = Spectra.MZ_COLUMN_PREFIX_A
+            layer = Spectra.MZ_LAYER_NAME_A
         elif fragment_type.value == 9:
-            layer = Spectra.MZ_COLUMN_PREFIX_B
+            layer = Spectra.MZ_LAYER_NAME_B
         return layer
 
     def __getitem__(self, index: Index):
