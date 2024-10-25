@@ -15,7 +15,7 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSFragger, MSAmanda, Sage, Scout, Xisearch
+from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, Sage, Scout, Xisearch
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -269,7 +269,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
         }
     else:
         raise ValueError(f"The model {model} is not known.")
-    
+
     return filter_peptides(peptides, **filter_kwargs)
 
 

@@ -79,9 +79,8 @@ class Spectra(anndata.AnnData):
         df.set_index("ion", inplace=True)
         return df
 
-    
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType,  xl: bool = False) -> list[str]:
+    def _gen_column_names(fragment_type: FragmentType, xl: bool = False) -> list[str]:
         """
         Get column names of the spectra data.
 
@@ -229,7 +228,7 @@ class Spectra(anndata.AnnData):
         """
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
-        
+
         annotation_to_index = {annot: index for index, annot in enumerate(self.var_names)}
         col_index = np.vectorize(annotation_to_index.get)(annotation[0].astype(str))
         sparse_intensity_matrix = dok_matrix(self.shape)
@@ -251,7 +250,7 @@ class Spectra(anndata.AnnData):
         """
         intensities[intensities == 0] = c.EPSILON
         intensities[intensities == -1] = 0.0
-        
+
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = csr_matrix(intensities)
 
@@ -349,7 +348,7 @@ class Spectra(anndata.AnnData):
         :param input_file: path to input file
         :return: a spectra instance
         """
-        
+
         return cls(anndata.read_h5ad(str(input_file)))
 
     def remove_decoys(self) -> None:

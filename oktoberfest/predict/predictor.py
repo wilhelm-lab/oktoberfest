@@ -109,7 +109,9 @@ class Predictor:
         signature = inspect.signature(self._predictor.predict)
         return {key: value for key, value in kwargs.items() if key in signature.parameters}
 
-    def predict_intensities(self, data: Spectra, xl: bool = False, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
+    def predict_intensities(
+        self, data: Spectra, xl: bool = False, chunk_idx: Optional[list[pd.Index]] = None, **kwargs
+    ):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -150,29 +152,32 @@ class Predictor:
         """
         if chunk_idx is None:
             if xl:
-                intensities_a, intensities_b  = self.predict_at_once(data=data, xl=xl, **kwargs)
+                intensities_a, intensities_b = self.predict_at_once(data=data, xl=xl, **kwargs)
                 data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
-                data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)   
+                data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
                 intensities = self.predict_at_once(data=data, xl=xl, **kwargs)
-                data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
+                data.add_intensities(
+                    intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
+                )
 
         else:
             if xl:
-                chunked_intensities_a, chunked_intensities_b  = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks(
+                    data=data, chunk_idx=chunk_idx, xl=xl, **kwargs
+                )
                 data.add_list_of_predicted_intensities(
-                chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
-            )
+                    chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
+                )
                 data.add_list_of_predicted_intensities(
-                chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
-            )
+                    chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
+                )
             else:
                 chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
                 data.add_list_of_predicted_intensities(
-                chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
-            )
+                    chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
+                )
 
-   
     def predict_rt(self, data: Spectra, **kwargs):
         """
         Generate retention time predictions and add them to the provided data object.
@@ -248,8 +253,6 @@ class Predictor:
         else:
             return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-        
-
     def _predict_at_once_df(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
@@ -286,7 +289,9 @@ class Predictor:
         """
         return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(
+        self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs
+    ) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 
@@ -336,7 +341,9 @@ class Predictor:
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
-    def ce_calibration(self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, xl: bool = False, **kwargs) -> Spectra:
+    def ce_calibration(
+        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, xl: bool = False, **kwargs
+    ) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
 

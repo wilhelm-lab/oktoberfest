@@ -9,7 +9,9 @@ from ..data.spectra import FragmentType, Spectra
 logger = logging.getLogger(__name__)
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_charge: bool = False, xl: bool = False) -> Spectra:
+def _prepare_alignment_df(
+    library: Spectra, ce_range: tuple[int, int], group_by_charge: bool = False, xl: bool = False
+) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
@@ -33,7 +35,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
     top_hcd_targets = hcd_targets.head(top_n)
-    
+
     alignment_library = library[top_hcd_targets.index]
     alignment_library = Spectra(
         anndata.concat([alignment_library for _ in range(*ce_range)], index_unique="_", keys=range(*ce_range))
@@ -43,7 +45,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
 
     alignment_library.obs["ORIG_COLLISION_ENERGY"] = alignment_library.obs["COLLISION_ENERGY"]
     alignment_library.obs["COLLISION_ENERGY"] = np.repeat(range(*ce_range), len(top_hcd_targets))
-                                                          
+
     # alignment_library.uns["ion_types"] = library.uns["ion_types"]
 
     return alignment_library

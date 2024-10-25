@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import copy
 import logging
 from typing import TYPE_CHECKING
@@ -11,8 +12,9 @@ from ..data.spectra import Spectra
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from typing import Dict, Tuple
+
     import numpy as np
-    from typing import Tuple, Dict
 
 
 alternative_column_map = {
@@ -84,7 +86,9 @@ class Koina(_KoinaGRPC):
             }
         return super().predict(inputs=data, **kwargs)
 
-    def predict_xl(self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
+    def predict_xl(
+        self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
         """
         Perform inference on the xl data using the Koina model.
 
@@ -119,10 +123,10 @@ class Koina(_KoinaGRPC):
                 input_field: data[[alternative_column_map_xl[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
-            prediction_ab = super().predict(inputs=data, debug = True, **kwargs)
+            prediction_ab = super().predict(inputs=data, debug=True, **kwargs)
             temp_field = data["peptide_sequences_1"].copy()
             data["peptide_sequences_1"] = data["peptide_sequences_2"]
             data["peptide_sequences_2"] = temp_field
-            prediction_ba = super().predict(inputs=data, debug = True, **kwargs)
-            
+            prediction_ba = super().predict(inputs=data, debug=True, **kwargs)
+
             return prediction_ab, prediction_ba
