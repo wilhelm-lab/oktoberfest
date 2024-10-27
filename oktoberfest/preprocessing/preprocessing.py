@@ -973,7 +973,7 @@ def annotate_spectral_library(
     return aspec
 
 
-def annotate_spectral_library_xl(psms: Spectra, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
+def annotate_spectral_library_xl(psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None):
     """
     Annotate spectral library with peaks and mass for cross-linked peptides.
 

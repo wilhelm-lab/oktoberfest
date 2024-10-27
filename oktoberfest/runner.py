@@ -744,7 +744,7 @@ def xl_between_or_self(df: pd.DataFrame, score: str) -> pd.DataFrame:
 
 
 def xl_preprocessing_plot_csm(
-    features_dir: Path, df: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str
+    features_dir: str, df: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str
 ):
     """
      Helper function to convert psm to csm level for plotting.
@@ -801,7 +801,7 @@ def xl_preprocessing_plot_csm(
             df_decoy.to_csv(features_dir + "/rescore.mokapot.decoy.csms.txt", sep="\t", index=False)
 
 
-def xl_psm_to_csm(features_dir: Path, original_or_rescore: str, percolator_or_mokapot: str):
+def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mokapot: str):
     """
      Helper function to convert psm to csm level for ploting.
 
@@ -887,7 +887,7 @@ def xl_psm_to_csm(features_dir: Path, original_or_rescore: str, percolator_or_mo
     return df_csm
 
 
-def prepare_rescore_xl_psm_level(features_dir: Path, original_or_rescore: str):
+def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     """
     Helper function for running percolator on psm level instead of csm level.
 
@@ -1058,7 +1058,7 @@ def prepare_rescore_xl_psm_level(features_dir: Path, original_or_rescore: str):
     return input_psm_rescore
 
 
-def _ptm_localization_rescore(fdr_dir: Path, config: Config):
+def _ptm_localization_rescore(fdr_dir: str, config: Config):
     """
      Helper function for running percolator to do PTM localization.
 
@@ -1095,7 +1095,7 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
         re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
 
 
-def input_xifdr(fdr_dir: Path, xisearch_or_scout: str):
+def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
     """
      Helper function to generate xiFDR input.
 

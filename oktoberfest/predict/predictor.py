@@ -215,7 +215,7 @@ class Predictor:
         pred_irts = self.predict_at_once(data=data, **kwargs)
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, xl: bool = False, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(self, data: Spectra, xl: bool = False, **kwargs) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 

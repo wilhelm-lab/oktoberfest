@@ -98,14 +98,15 @@ class Koina(_KoinaGRPC):
         :param data: A dictionary or dataframe containing input data for inference. For the dictionary, keys are input names,
             and values are numpy arrays. In case of a dataframe, the input fields for the requested model must be present
             in the column names.
-         :param kwargs: Additional params that are forwarded to super().predict
+        :param kwargs: Additional params that are forwarded to super().predict
+        :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
+            representing the model's output.
 
-        :return: TODO
-
-        Example:: TODO
-            model = Koina("Prosit_2019_intensity")
+        Example:: 
+            model = Koina("Prosit_XL_CMS2_intensity")
             input_data = {
-                "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
+                "peptide_sequences_1": np.array(["PEPTIDEK" for _ in range(size)]),
+                "peptide_sequences_2": np.array(["PEPTIDEK" for _ in range(size)]),
                 "precursor_charges": np.array([2 for _ in range(size)]),
                 "collision_energies": np.array([20 for _ in range(size)]),
                 "fragmentation_types": np.array(["HCD" for _ in range(size)]),
@@ -127,3 +128,5 @@ class Koina(_KoinaGRPC):
             prediction_ba = super().predict(inputs=data, debug=True, **kwargs)
 
             return prediction_ab, prediction_ba
+        
+        raise ValueError("Input data must be of type Spectra, pd.DataFrame, or a dictionary.")
