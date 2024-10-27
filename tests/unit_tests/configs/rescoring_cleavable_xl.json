@@ -10,7 +10,7 @@
     },
     "models": {
         "intensity": "Prosit_2023_intensity_XL_CMS2",
-	"irt": ""
+        "irt": ""
     },
     "prediction_server": "koina.wilhelmlab.org:443",
     "numThreads": 1,
@@ -21,10 +21,7 @@
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
     "ce_alignment_options": {
-        "ce_range": [
-            19,
-            50
-        ],
+        "ce_range": [19, 50],
         "use_ransac_model": false
     }
 }

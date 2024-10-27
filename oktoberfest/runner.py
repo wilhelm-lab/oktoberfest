@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import pickle
+import shutil
 import sys
 import time
 from functools import partial
@@ -9,8 +10,6 @@ from math import ceil
 from multiprocessing import Manager, Process, pool
 from pathlib import Path
 from typing import Optional, Union
-
-import shutil
 
 import numpy as np
 import pandas as pd
@@ -710,6 +709,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
 
+
 def xl_fdr(df: pd.DataFrame, score: str) -> pd.DataFrame:
     """
     "calculate and add fdr_xl to the DataFrame : (TD-DD)/(TT)".
@@ -1305,7 +1305,7 @@ def run_rescoring(config_path: Union[str, Path]):
             shutil.copy(fdr_dir / "rescore.tab", rescore_features_path)
             input_psm_rescore = prepare_rescore_xl_psm_level(str(fdr_dir), "rescore")
             input_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
-        
+
         original_features_path = fdr_dir / "original_features_csm.tab"
         if not original_features_path.exists():
             shutil.copy(fdr_dir / "original.tab", original_features_path)
@@ -1325,7 +1325,6 @@ def run_rescoring(config_path: Union[str, Path]):
                 input_xifdr(str(fdr_dir), "scout")
             logger.info("Finished Generating xiFDR input.")
             generate_xifdr_input_step.mark_done()
-
 
     else:
         _rescore(fdr_dir, config)

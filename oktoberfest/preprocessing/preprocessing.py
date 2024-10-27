@@ -984,6 +984,7 @@ def annotate_spectral_library_xl(psms: Spectra, mass_tol: Optional[float] = None
     :param psms: Spectral library to be annotated.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
+    :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)

@@ -122,6 +122,7 @@ class Predictor:
 
         :param data: Spectra object containing the required data for prediction and to store the
             predictions in after retrieval from the server.
+        :param xl: crosslinked or linear peptide
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
@@ -223,6 +224,7 @@ class Predictor:
         See the Koina or DLomix predict functions for details. TODO, link this properly.
 
         :param data: Spectra containing the data for the prediction.
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
@@ -304,6 +306,7 @@ class Predictor:
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
@@ -354,6 +357,7 @@ class Predictor:
         :param library: spectral library to perform CE calibration on
         :param ce_range: the min and max CE to be tested during calibration
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
         :return: a spectra object containing the spectral angle for each tested CE
 
@@ -387,7 +391,6 @@ class Predictor:
             >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
             >>> print(alignment_library)
         """
-
         alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
 
         if "alphapept" in self.model_name.lower():

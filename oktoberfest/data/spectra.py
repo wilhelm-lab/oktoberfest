@@ -66,6 +66,7 @@ class Spectra(anndata.AnnData):
         Create annotation dataframe for vars in AnnData object.
 
         :param ion_types: ion types that are expected to be in the spectra
+        :param xl: crosslinked or linear peptide
         :return: pd.Dataframe of fragment annotations
         """
         df = pd.DataFrame(
@@ -85,6 +86,7 @@ class Spectra(anndata.AnnData):
         Get column names of the spectra data.
 
         :param fragment_type: choose predicted, raw, or mz
+        :param xl: crosslinked or linear peptide
         :return: A list of column names
         """
         prefix = Spectra._resolve_prefix(fragment_type)
@@ -101,7 +103,10 @@ class Spectra(anndata.AnnData):
     @staticmethod
     def _resolve_prefix(fragment_type: FragmentType) -> str:
         """
-        Resolve prefix given fragment type (1 for pred, 2 for xl_pred_a, 3 for xl_pred_a, 4 for raw, 5 for xl_raw_a, 6 for xl_raw_b, 7 for mz, 8 for xl_mz_a, 9 for xl_mz_b).
+        Resolve prefix given fragment type.
+
+        (1 for pred, 2 for xl_pred_a, 3 for xl_pred_a, 4 for raw, 5 for xl_raw_a,
+        6 for xl_raw_b, 7 for mz, 8 for xl_mz_a, 9 for xl_mz_b).
 
         :param fragment_type: choose predicted, raw, or mz
         :return: prefix as string
@@ -348,7 +353,6 @@ class Spectra(anndata.AnnData):
         :param input_file: path to input file
         :return: a spectra instance
         """
-
         return cls(anndata.read_h5ad(str(input_file)))
 
     def remove_decoys(self) -> None:

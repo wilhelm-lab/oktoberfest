@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import logging
 from typing import TYPE_CHECKING
 
@@ -12,8 +11,6 @@ from ..data.spectra import Spectra
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from typing import Dict, Tuple
-
     import numpy as np
 
 

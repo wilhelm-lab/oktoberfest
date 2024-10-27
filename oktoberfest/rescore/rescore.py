@@ -41,6 +41,7 @@ def generate_features(
     :param output_file: the location to the generated tab file to be used for percolator / mokapot
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
+    :param xl: crosslinked or linear peptide
     :param regression_method: The regression method to use for iRT alignment
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
@@ -233,6 +234,7 @@ def rescore_with_percolator(
     :param num_threads: The number of threads used in parallel for percolator
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
+    :param xl: crosslinked or linear peptide
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):

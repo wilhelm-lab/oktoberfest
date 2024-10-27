@@ -59,6 +59,7 @@ def _alignment(alignment_library: Spectra, xl: bool = False):
     adds it as a column to the alignment library.
 
     :param alignment_library: the library to perform the alignment on
+    :param xl: crosslinked or linear peptide
     """
     if xl:
         pred_intensity_a = alignment_library.get_matrix(FragmentType.PRED_A)
