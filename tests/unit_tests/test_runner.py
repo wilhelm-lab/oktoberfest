@@ -39,7 +39,9 @@ class TestRunner(unittest.TestCase):
         )
 
         try:
-            assert_frame_equal(expected_perc_tab_file, created_perc_tab_file, check_dtype=True, check_exact=False, rtol = 1e-2)
+            assert_frame_equal(
+                expected_perc_tab_file, created_perc_tab_file, check_dtype=True, check_exact=False, rtol=1e-2
+            )
         except AssertionError as e:
             print("DataFrames are not equal:", e)
             raise  # Re-raise the assertion error for the test framework to catch
@@ -47,4 +49,3 @@ class TestRunner(unittest.TestCase):
         config = Config()
         config.read(config_path)
         shutil.rmtree(Path(__file__).parent / "data" / "xl" / "cleavable" / "out")
-        

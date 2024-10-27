@@ -594,7 +594,6 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
 
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
-
         if "alphapept" in config.models["intensity"].lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
@@ -1317,7 +1316,6 @@ def run_rescoring(config_path: Union[str, Path]):
         logger.info("Finished rescoring.")
         generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
         if not generate_xifdr_input_step.is_done():
-
             logger.info("Generating xiFDR input.")
             if config.inputs["search_results_type"].lower() == "xisearch":
                 input_xifdr(str(fdr_dir), "xisearch")
