@@ -1,0 +1,30 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "output": "../data/xl/cleavable/out",
+    "inputs": {
+        "search_results": "../data/xl/cleavable/inputs/L1_20211028_BB_HCMV_b4_5mM_repl2_B9_msms.csv",
+        "search_results_type": "Xisearch",
+        "spectra": "../data/xl/cleavable/inputs/L1_20211028_BB_HCMV_b4_5mM_repl2_B9.mzML",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2023_intensity_XL_CMS2",
+	"irt": ""
+    },
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "numThreads": 1,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": true,
+    "regressionMethod": "spline",
+    "ssl": true,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": [
+            19,
+            50
+        ],
+        "use_ransac_model": false
+    }
+}
