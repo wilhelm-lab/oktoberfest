@@ -152,11 +152,11 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test if predict_intensities does the right steps when chunk_idx=None."""
         # TODO add state-based test
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(
+        predictor._predictor.predict = MagicMock(
             return_value={"intensities": self.intensities, "annotation": self.ion_annotations}
         )
         predictor.predict_intensities(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra, xl=False)
+        predictor._predictor.predict.assert_called_once_with(data=self.mock_spectra)
         self.mock_spectra.add_intensities.assert_called_once_with(
             self.intensities, self.ion_annotations, fragment_type=FragmentType.PRED
         )
@@ -181,9 +181,9 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test iRT prediction."""
         # TODO add state-based test
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(return_value={"irt": self.retention_times})
+        predictor._predictor.predict = MagicMock(return_value={"irt": self.retention_times})
         predictor.predict_rt(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
         self.mock_spectra.add_column.assert_called_once_with(self.retention_times, name="PREDICTED_IRT")
 
     def test_predict_at_once(self):
@@ -322,9 +322,9 @@ class TestLocalPrediction(unittest.TestCase):
             self.assertTrue(True)
             return
         predictor = Predictor(mock_dlomix, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(return_value={"irt": self.retention_times})
+        predictor._predictor.predict = MagicMock(return_value={"irt": self.retention_times})
         predictor.predict_rt(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
         self.mock_spectra.add_column.assert_called_once_with(self.retention_times, name="PREDICTED_IRT")
 
 
