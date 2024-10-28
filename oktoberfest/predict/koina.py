@@ -101,8 +101,9 @@ class Koina(_KoinaGRPC):
         :param kwargs: Additional params that are forwarded to super().predict
         :return: A dictionary containing the model's predictions. Keys are output names, and values are numpy arrays
             representing the model's output.
+        :raises ValueError: If `data` is not of type `Spectra`, `pd.DataFrame`, or a dictionary.
 
-        Example:: 
+        Example::
             model = Koina("Prosit_XL_CMS2_intensity")
             input_data = {
                 "peptide_sequences_1": np.array(["PEPTIDEK" for _ in range(size)]),
@@ -128,5 +129,5 @@ class Koina(_KoinaGRPC):
             prediction_ba = super().predict(inputs=data, debug=True, **kwargs)
 
             return prediction_ab, prediction_ba
-        
+
         raise ValueError("Input data must be of type Spectra, pd.DataFrame, or a dictionary.")

@@ -153,18 +153,17 @@ class Predictor:
         """
         if chunk_idx is None:
             if xl:
-                intensities_a, intensities_b = self.predict_at_once(data=data, xl=xl, **kwargs)
+                intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs)) 
                 data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
-                intensities = self.predict_at_once(data=data, xl=xl, **kwargs)
+                intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
                 data.add_intensities(
                     intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
                 )
-
         else:
             if xl:
-                chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks(
+                chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks_xl(
                     data=data, chunk_idx=chunk_idx, xl=xl, **kwargs
                 )
                 data.add_list_of_predicted_intensities(
@@ -212,10 +211,13 @@ class Predictor:
             >>> irt_predictor.predict_rt(data=library)
             >>> print(library.obs["PREDICTED_IRT"])
         """
-        pred_irts = self.predict_at_once(data=data, **kwargs)
+        # If xl becomes available for an RT model, this need to be incorporated here
+        pred_irts = self._predictor.predict(data, **self._filter_kwargs(**kwargs))
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, xl: bool = False, **kwargs) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]] | dict[str, np.ndarray]:
+    def predict_at_once(
+        self, data: Spectra, xl: bool = False, **kwargs
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -337,12 +339,64 @@ class Predictor:
         """
         results = []
         for idx in chunk_idx:
-            if xl:
-                results.append(self._predictor.predict_xl(data[idx], **self._filter_kwargs(**kwargs)))
-            else:
-                results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
+            results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
+    
+    def predict_in_chunks_xl(
+        self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs
+    ) -> tuple[dict[str, list[np.ndarray]], dict[str, list[np.ndarray]]]:
+        """
+        Retrieve and return predictions in chunks.
+
+        This function takes a Spectra object containing information about PSMs and predicts peptide properties.The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
+
+        :param data: Spectra object containing the data for the prediction.
+        :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
+            e.g. if padding should be avoided when predicting peptides of different length.
+            For alphapept, this is required as padding is only performed within one batch, leading to
+            different sizes of arrays between individual prediction batches that cannot be concatenated.
+        :param xl: crosslinked or linear peptide
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+
+        :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
+            to the number of chunks provided.
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest import predict as pr
+            >>> from oktoberfest.utils import group_iterator
+            >>> # Required columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"],
+            >>>                         "PEPTIDE_LENGTH": [8,9]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
+            >>> print(predictions)
+        """
+        results_a = []
+        results_b = []
+        for idx in chunk_idx:
+            res_a, res_b = self._predictor.predict_xl(data[idx], **self._filter_kwargs(**kwargs))
+            results_a.append(res_a)
+            results_b.append(res_b)
+        ret_val_a = {key: [item[key] for item in results_a] for key in results_a[0].keys()}
+        ret_val_b = {key: [item[key] for item in results_b] for key in results_b[0].keys()}
+
+        return ret_val_a, ret_val_b
 
     def ce_calibration(
         self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, xl: bool = False, **kwargs

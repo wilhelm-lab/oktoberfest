@@ -294,3 +294,16 @@ class DLomix:
             shutil.rmtree(self.output_path / dataset_name)
 
         return {self.output_name: preds, "annotation": annotations}
+    
+    def predict_xl(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+        """
+        Perform inference on the xl data using the DLOmix model.
+
+        This is currently not implemented.
+
+        :param data: spectral library to predict features for
+        :param dataset_name: Name of the dataset for storing processed files for DLomix
+        :param keep_dataset: Whether to keep or discard the pre-processed dataset after inference
+        :raises NotImplementedError: Always.
+        """
+        raise NotImplementedError("This method is not implemeted")

@@ -282,6 +282,7 @@ def rescore_with_mokapot(
     input_file: str | Path,
     output_folder: str | Path | None = None,
     test_fdr: float = 0.01,
+    xl: bool = False,
 ):
     """
     Rescore using mokapot.
@@ -292,6 +293,7 @@ def rescore_with_mokapot(
     :param input_file: Path to percolator tab file
     :param output_folder: An optional output folder for all percolator files, default is the parent directory of the input_file
     :param test_fdr: the fdr cutoff for the test set
+    :param xl: crosslinked or linear peptide (currently unused)
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):

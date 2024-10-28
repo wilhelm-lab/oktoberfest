@@ -1058,7 +1058,7 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     return input_psm_rescore
 
 
-def _ptm_localization_rescore(fdr_dir: str, config: Config):
+def _ptm_localization_rescore(fdr_dir: Path, config: Config):
     """
      Helper function for running percolator to do PTM localization.
 
