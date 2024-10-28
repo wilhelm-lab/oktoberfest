@@ -2,12 +2,13 @@ import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-import oktoberfest as ok
-from oktoberfest.runner import _preprocess, _ce_calib, _calculate_features, prepare_rescore_xl_psm_level
+
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
+import oktoberfest as ok
 from oktoberfest.__main__ import main
+from oktoberfest.runner import _calculate_features, _ce_calib, _preprocess, prepare_rescore_xl_psm_level
 from oktoberfest.utils import Config
 
 
@@ -27,7 +28,7 @@ class TestRunner(unittest.TestCase):
     def test_rescoring_xl(self):
         """Test the runner for a rescoring run with crosslinking."""
         config_path = Path(__file__).parent / "configs" / "rescoring_cleavable_xl.json"
-        #with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
+        # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
         config = Config()
         config.read(config_path)
         config.check()
@@ -40,21 +41,22 @@ class TestRunner(unittest.TestCase):
 
         spectra_file = _preprocess(spectra_files, config)[0]
         _ = _ce_calib(spectra_file, config)
-  
+
         _calculate_features(spectra_file, config, xl=True)
-                
+
         # prepare rescoring
 
         fdr_dir = config.output / "results" / config.fdr_estimation_method
-        original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
+        original_tab_files = [
+            fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files
+        ]
         rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
-            
+
         ok.re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
         ok.re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
-        
 
         # prepare rescoring file
-        
+
         rescore_features_path = fdr_dir / "rescore_features_csm.tab"
         if not rescore_features_path.exists():
             shutil.copy(fdr_dir / "rescore.tab", rescore_features_path)
@@ -70,9 +72,9 @@ class TestRunner(unittest.TestCase):
         expected_perc_tab_file = pd.read_csv(
             Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
         )
-        
+
         created_perc_tab_file = pd.read_csv(
-             fdr_dir/ "rescore.tab",
+            fdr_dir / "rescore.tab",
             sep="\t",
         )
 
