@@ -259,7 +259,9 @@ def rescore_with_percolator(
         cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
+                    --only-psms \
                     {input_file} 2> {log_file}"
+
     else:
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
