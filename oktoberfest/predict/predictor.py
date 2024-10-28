@@ -153,7 +153,7 @@ class Predictor:
         """
         if chunk_idx is None:
             if xl:
-                intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs)) 
+                intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs))
                 data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
@@ -342,7 +342,7 @@ class Predictor:
             results.append(self._predictor.predict(data[idx], **self._filter_kwargs(**kwargs)))
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
-    
+
     def predict_in_chunks_xl(
         self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs
     ) -> tuple[dict[str, list[np.ndarray]], dict[str, list[np.ndarray]]]:

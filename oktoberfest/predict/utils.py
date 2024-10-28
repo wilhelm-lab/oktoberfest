@@ -20,7 +20,7 @@ class ZeroPredictor:
         """
         # TODO implement for intensity
         return {"irt": data.obs["RETENTION_TIME"]}
-    
+
     def predict_xl(self, data: Spectra) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
         """
         Perform inference on the xl data using the using a zero predictor.

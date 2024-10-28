@@ -294,8 +294,10 @@ class DLomix:
             shutil.rmtree(self.output_path / dataset_name)
 
         return {self.output_name: preds, "annotation": annotations}
-    
-    def predict_xl(self, data: Spectra, dataset_name: str, keep_dataset: bool = True) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+
+    def predict_xl(
+        self, data: Spectra, dataset_name: str, keep_dataset: bool = True
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
         """
         Perform inference on the xl data using the DLOmix model.
 
