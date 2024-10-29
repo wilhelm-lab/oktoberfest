@@ -123,9 +123,10 @@ class Koina(_KoinaGRPC):
                 for input_field in self.model_inputs.keys()
             }
             prediction_ab = super().predict(inputs=data, debug=True, **kwargs)
-            temp_field = data["peptide_sequences_1"].copy()
-            data["peptide_sequences_1"] = data["peptide_sequences_2"]
-            data["peptide_sequences_2"] = temp_field
+            data["peptide_sequences_1"], data["peptide_sequences_2"] = (
+                data["peptide_sequences_2"],
+                data["peptide_sequences_1"],
+            )
             prediction_ba = super().predict(inputs=data, debug=True, **kwargs)
 
             return prediction_ab, prediction_ba
