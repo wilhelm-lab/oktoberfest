@@ -109,7 +109,9 @@ class Predictor:
         signature = inspect.signature(self._predictor.predict)
         return {key: value for key, value in kwargs.items() if key in signature.parameters}
 
-    def predict_intensities(self, data: Spectra, chunk_idx: Optional[list[pd.Index]] = None, **kwargs):
+    def predict_intensities(
+        self, data: Spectra, xl: bool = False, chunk_idx: Optional[list[pd.Index]] = None, **kwargs
+    ):
         """
         Generate intensity predictions and add them to the provided data object.
 
@@ -120,6 +122,7 @@ class Predictor:
 
         :param data: Spectra object containing the required data for prediction and to store the
             predictions in after retrieval from the server.
+        :param xl: crosslinked or linear peptide
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
@@ -149,13 +152,31 @@ class Predictor:
             >>> print(library.layers["pred_int"])
         """
         if chunk_idx is None:
-            intensities = self.predict_at_once(data=data, **kwargs)
-            data.add_intensities(intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED)
+            if xl:
+                intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs))
+                data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
+                data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
+            else:
+                intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
+                data.add_intensities(
+                    intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
+                )
         else:
-            chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, **kwargs)
-            data.add_list_of_predicted_intensities(
-                chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
-            )
+            if xl:
+                chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks_xl(
+                    data=data, chunk_idx=chunk_idx, xl=xl, **kwargs
+                )
+                data.add_list_of_predicted_intensities(
+                    chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
+                )
+                data.add_list_of_predicted_intensities(
+                    chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
+                )
+            else:
+                chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                data.add_list_of_predicted_intensities(
+                    chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
+                )
 
     def predict_rt(self, data: Spectra, **kwargs):
         """
@@ -190,10 +211,13 @@ class Predictor:
             >>> irt_predictor.predict_rt(data=library)
             >>> print(library.obs["PREDICTED_IRT"])
         """
-        pred_irts = self.predict_at_once(data=data, **kwargs)
+        # If xl becomes available for an RT model, this need to be incorporated here
+        pred_irts = self._predictor.predict(data, **self._filter_kwargs(**kwargs))
         data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
-    def predict_at_once(self, data: Spectra, **kwargs) -> dict[str, np.ndarray]:
+    def predict_at_once(
+        self, data: Spectra, xl: bool = False, **kwargs
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Retrieve and return predictions in one go.
 
@@ -202,6 +226,7 @@ class Predictor:
         See the Koina or DLomix predict functions for details. TODO, link this properly.
 
         :param data: Spectra containing the data for the prediction.
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and predictions (values)
@@ -227,7 +252,10 @@ class Predictor:
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
-        return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
+        if xl:
+            return self._predictor.predict_xl(data, **self._filter_kwargs(**kwargs))
+        else:
+            return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
     def _predict_at_once_df(self, data: pd.DataFrame, **kwargs) -> dict[str, np.ndarray]:
         """
@@ -265,7 +293,9 @@ class Predictor:
         """
         return self._predictor.predict(data, **self._filter_kwargs(**kwargs))
 
-    def predict_in_chunks(self, data: Spectra, chunk_idx: list[pd.Index], **kwargs) -> dict[str, list[np.ndarray]]:
+    def predict_in_chunks(
+        self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs
+    ) -> dict[str, list[np.ndarray]]:
         """
         Retrieve and return predictions in chunks.
 
@@ -278,6 +308,7 @@ class Predictor:
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
@@ -312,7 +343,64 @@ class Predictor:
         ret_val = {key: [item[key] for item in results] for key in results[0].keys()}
         return ret_val
 
-    def ce_calibration(self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, **kwargs) -> Spectra:
+    def predict_in_chunks_xl(
+        self, data: Spectra, chunk_idx: list[pd.Index], xl: bool = False, **kwargs
+    ) -> tuple[dict[str, list[np.ndarray]], dict[str, list[np.ndarray]]]:
+        """
+        Retrieve and return predictions in chunks.
+
+        This function takes a Spectra object containing information about PSMs and predicts peptide properties.The
+        configuration of Koina/DLomix is set using the kwargs.
+        See the Koina or DLomix predict functions for details. TODO, link this properly.
+
+        :param data: Spectra object containing the data for the prediction.
+        :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
+            e.g. if padding should be avoided when predicting peptides of different length.
+            For alphapept, this is required as padding is only performed within one batch, leading to
+            different sizes of arrays between individual prediction batches that cannot be concatenated.
+        :param xl: crosslinked or linear peptide
+        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+
+        :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
+            to the number of chunks provided.
+
+        :Example:
+
+        .. code-block:: python
+
+            >>> from oktoberfest import predict as pr
+            >>> from oktoberfest.utils import group_iterator
+            >>> # Required columns: MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, FRAGMENTATION and PEPTIDE_LENGTH
+            >>> meta_df = pd.DataFrame({"MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
+            >>>                         "COLLISION_ENERGY": [30,35],
+            >>>                         "PRECURSOR_CHARGE": [1,2],
+            >>>                         "FRAGMENTATION": ["HCD","HCD"],
+            >>>                         "PEPTIDE_LENGTH": [8,9]})
+            >>> var = Spectra._gen_vars_df()
+            >>> library = Spectra(obs=meta_df, var=var)
+            >>> idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
+            >>> intensity_predictor = pr.Predictor.from_koina(
+            >>>                         model_name="Prosit_2020_intensity_HCD",
+            >>>                         server_url="koina.wilhelmlab.org:443",
+            >>>                         ssl=True,
+            >>>                         targets=["intensities", "annotation"])
+            >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
+            >>> print(predictions)
+        """
+        results_a = []
+        results_b = []
+        for idx in chunk_idx:
+            res_a, res_b = self._predictor.predict_xl(data[idx], **self._filter_kwargs(**kwargs))
+            results_a.append(res_a)
+            results_b.append(res_b)
+        ret_val_a = {key: [item[key] for item in results_a] for key in results_a[0].keys()}
+        ret_val_b = {key: [item[key] for item in results_b] for key in results_b[0].keys()}
+
+        return ret_val_a, ret_val_b
+
+    def ce_calibration(
+        self, library: Spectra, ce_range: tuple[int, int], group_by_charge: bool, xl: bool = False, **kwargs
+    ) -> Spectra:
         """
         Calculate best collision energy for peptide property predictions.
 
@@ -323,6 +411,7 @@ class Predictor:
         :param library: spectral library to perform CE calibration on
         :param ce_range: the min and max CE to be tested during calibration
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
+        :param xl: crosslinked or linear peptide
         :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
         :return: a spectra object containing the spectral angle for each tested CE
 
@@ -356,12 +445,13 @@ class Predictor:
             >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
             >>> print(alignment_library)
         """
-        alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge)
+        alignment_library = _prepare_alignment_df(library, ce_range=ce_range, group_by_charge=group_by_charge, xl=xl)
 
         if "alphapept" in self.model_name.lower():
             chunk_idx = list(group_iterator(df=alignment_library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, **kwargs)
-        _alignment(alignment_library)
+
+        self.predict_intensities(data=alignment_library, chunk_idx=chunk_idx, keep_dataset=False, xl=xl, **kwargs)
+        _alignment(alignment_library, xl=xl)
         return alignment_library
