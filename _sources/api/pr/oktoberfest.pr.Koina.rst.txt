@@ -15,6 +15,7 @@
    
       ~Koina.__init__
       ~Koina.predict
+      ~Koina.predict_xl
    
    
 

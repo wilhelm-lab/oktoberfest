@@ -20,6 +20,7 @@
       ~Predictor.from_koina
       ~Predictor.predict_at_once
       ~Predictor.predict_in_chunks
+      ~Predictor.predict_in_chunks_xl
       ~Predictor.predict_intensities
       ~Predictor.predict_rt
    

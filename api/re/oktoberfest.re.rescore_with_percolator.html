@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.re.rescore_with_percolator &mdash; Oktoberfest 0.8.2 documentation</title>
+  <title>oktoberfest.re.rescore_with_percolator &mdash; Oktoberfest 0.8.3 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=dbee5847"></script>
+      <script src="../../_static/documentation_options.js?v=7f96dc5e"></script>
       <script src="../../_static/doctools.js?v=9a2dae69"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -86,7 +86,7 @@
       <li class="breadcrumb-item active">oktoberfest.re.rescore_with_percolator</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L196-L249" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/rescore/rescore.py#L218-L280" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -98,7 +98,7 @@
 <h1>oktoberfest.re.rescore_with_percolator<a class="headerlink" href="#oktoberfest-re-rescore-with-percolator" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.re.rescore_with_percolator">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">rescore_with_percolator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_fdr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_fdr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.rescore_with_percolator" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.re.</span></span><span class="sig-name descname"><span class="pre">rescore_with_percolator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_fdr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_fdr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.re.rescore_with_percolator" title="Link to this definition"></a></dt>
 <dd><p>Rescore using percolator.</p>
 <p>The function takes an input file location, as well as an output folder location for percolator outputs and
 executes percolator with additional optional parameters.</p>
@@ -110,6 +110,7 @@ executes percolator with additional optional parameters.</p>
 <li><p><strong>num_threads</strong> (<span class="sphinx_autodoc_typehints-type">int</span>) – The number of threads used in parallel for percolator</p></li>
 <li><p><strong>test_fdr</strong> (<span class="sphinx_autodoc_typehints-type">float</span>) – the fdr cutoff for the test set</p></li>
 <li><p><strong>train_fdr</strong> (<span class="sphinx_autodoc_typehints-type">float</span>) – the fdr cutoff for the train set</p></li>
+<li><p><strong>xl</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – crosslinked or linear peptide</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
