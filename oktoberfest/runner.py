@@ -674,11 +674,34 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
     df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
     df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
     df_rescore.drop(columns=["id"], inplace=True)
-    df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+    #df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
     new_rescore_dir = fdr_dir / "localize_mod"
     new_rescore_dir.mkdir(parents=True, exist_ok=True)
 
     if unimod_id == 7:
+        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
+        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
+        df_rescore_psms_targets = df_rescore_psms_targets[
+            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms_decoys = df_rescore_psms_decoys[
+            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
+        ]
+        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
+        df_rescore_psms = df_rescore_psms[["PSMId"]]
+        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
+        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
+        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
+        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+    elif unimod_id == 21:
+        remove_cols = []
+        for col in df_rescore.columns:
+            if 'count' in col or 'COUNT' in col or 'abs_rt_diff' in col:
+                remove_cols.append(col)
+        df_rescore.drop(columns=remove_cols,inplace=True)
+
+        df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
         re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
         df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
         df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")

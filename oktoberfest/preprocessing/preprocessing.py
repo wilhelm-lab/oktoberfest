@@ -244,7 +244,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
     """
     if "prosit" in model.lower():
         filter_kwargs = {
-            "min_length": 7,
+            "min_length": 6,
             "max_length": 30,
             "max_charge": 6,
         }

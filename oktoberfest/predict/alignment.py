@@ -29,8 +29,10 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
     else:
         groups = ["RAW_FILE"]
 
-    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
+    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE & ~(MODIFIED_SEQUENCE.str.contains('UNIMOD'))")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
+    if len(hcd_targets)<2000:
+        top_n= len(hcd_targets)*0.5
     top_hcd_targets = hcd_targets.head(top_n)
 
     alignment_library = library[top_hcd_targets.index]
