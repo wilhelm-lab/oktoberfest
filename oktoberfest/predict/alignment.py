@@ -9,20 +9,23 @@ from ..data.spectra import FragmentType, Spectra
 logger = logging.getLogger(__name__)
 
 
-def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_charge: bool = False) -> Spectra:
+def _prepare_alignment_df(
+    library: Spectra, ce_range: tuple[int, int], group_by_charge: bool = False, xl: bool = False
+) -> Spectra:
     """
     Prepare an alignment DataFrame from the given Spectra library.
 
-    This function creates an alignment DataFrame by removing decoys and non-HCD-fragmented spectra
-    from the input library, selecting the top 1000 (or however many are available if <1000) highest-scoring spectra, and
-    repeating the DataFrame for each collision energy (CE) in the given range.
+    This function creates an alignment DataFrame by removing decoy and HCD fragmented spectra
+    from the input library, selecting the top 1000 highest-scoring spectra for linear and top 20s for cross-linked peptides
+    and repeating the DataFrame for each collision energy (CE) in the given range.
 
     :param library: the library to be propagated
     :param ce_range: the min and max CE to be propagated for alignment in the dataframe
     :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
+    :param xl: if true, select the top 50 spectra for cross-linked peptide
     :return: a library that is modified according to the description above
     """
-    top_n = 1000
+    top_n = 1000 if not xl else 20
 
     if group_by_charge:
         groups = ["RAW_FILE", "PRECURSOR_CHARGE"]
@@ -50,7 +53,7 @@ def _prepare_alignment_df(library: Spectra, ce_range: tuple[int, int], group_by_
     return alignment_library
 
 
-def _alignment(alignment_library: Spectra):
+def _alignment(alignment_library: Spectra, xl: bool = False):
     """
     Perform the alignment of predicted versus raw intensities.
 
@@ -58,8 +61,23 @@ def _alignment(alignment_library: Spectra):
     adds it as a column to the alignment library.
 
     :param alignment_library: the library to perform the alignment on
+    :param xl: crosslinked or linear peptide
     """
-    pred_intensity = alignment_library.get_matrix(FragmentType.PRED)
-    raw_intensity = alignment_library.get_matrix(FragmentType.RAW)
-    sm = SimilarityMetrics(pred_intensity, raw_intensity)
-    alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
+    if xl:
+        pred_intensity_a = alignment_library.get_matrix(FragmentType.PRED_A)
+        pred_intensity_b = alignment_library.get_matrix(FragmentType.PRED_B)
+        raw_intensity_a = alignment_library.get_matrix(FragmentType.RAW_A)
+        raw_intensity_b = alignment_library.get_matrix(FragmentType.RAW_B)
+        sm_a = SimilarityMetrics(pred_intensity_a, raw_intensity_a)
+        sm_b = SimilarityMetrics(pred_intensity_b, raw_intensity_b)
+        alignment_library.add_column(sm_a.spectral_angle(raw_intensity_a, pred_intensity_a, 0), "SPECTRAL_ANGLE_A")
+        alignment_library.add_column(sm_b.spectral_angle(raw_intensity_b, pred_intensity_b, 0), "SPECTRAL_ANGLE_B")
+        alignment_library.add_column(
+            (alignment_library.obs["SPECTRAL_ANGLE_A"] + alignment_library.obs["SPECTRAL_ANGLE_B"]) / 2,
+            "SPECTRAL_ANGLE",
+        )
+    else:
+        pred_intensity = alignment_library.get_matrix(FragmentType.PRED)
+        raw_intensity = alignment_library.get_matrix(FragmentType.RAW)
+        sm = SimilarityMetrics(pred_intensity, raw_intensity)
+        alignment_library.add_column(sm.spectral_angle(raw_intensity, pred_intensity, 0), "SPECTRAL_ANGLE")
