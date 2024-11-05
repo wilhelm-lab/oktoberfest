@@ -437,6 +437,7 @@ def convert_search(
     output_file: Optional[Union[str, Path]] = None,
     ptm_unimod_id: Optional[int] = 0,
     ptm_sites: Optional[list] = None,
+    ptm_model: Optional[bool] = False
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -562,6 +563,7 @@ def convert_search(
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
         xl=xl,
+        ptm_model= ptm_model
     )
 
 

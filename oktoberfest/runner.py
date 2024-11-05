@@ -64,6 +64,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             tmt_label = config.tag
             ptm_unimods = config.ptm_unimod_id
             ptm_sites = config.ptm_possible_sites
+            ptm_model = 'PTM' in config.models['intensity']
             search_results = pp.convert_search(
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
@@ -72,6 +73,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
                 output_file=internal_search_file,
                 ptm_unimod_id=ptm_unimods,
                 ptm_sites=ptm_sites,
+                ptm_model=ptm_model
             )
             if config.spectra_type.lower() in ["d", "hdf"]:
                 timstof_metadata = pp.convert_timstof_metadata(
