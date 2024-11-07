@@ -32,8 +32,8 @@ def _prepare_alignment_df(
     else:
         groups = ["RAW_FILE"]
 
-    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE)")
-    hcd_targets = hcd_targets[hcd_targets["MODIFIED_SEQUENCE"].str.match(r"^(?:[^U]*(?:\[UNIMOD:737\])?[^U]*)$")]
+    hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
+    hcd_targets = hcd_targets[hcd_targets["MODIFIED_SEQUENCE"].str.match(r"^(?!.*UNIMOD(?!:737)).*$")]
 
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
     if len(hcd_targets)<2000:
