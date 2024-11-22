@@ -36,4 +36,4 @@ When using Prosit-TMT
 
 When using Prosit-timsTOF
 
-[Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2023), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [BioRxiv](https://doi.org/10.1101/2023.07.17.549401)
+[Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2024), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [Nature Communications](https://doi.org/10.1038/s41467-024-48322-0)
