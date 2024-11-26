@@ -25,8 +25,6 @@ The data submodule provides access to PSMs, predictions, and metadata.
    :toctree: api/data
 
    data.Spectra
-   data.Spectra.add_column
-
 
 Preprocessing: :code:`pp`
 -------------------------
