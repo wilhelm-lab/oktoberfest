@@ -247,7 +247,7 @@ class Spectra(anndata.AnnData):
         Add predicted intensities and convert to sparse matrix.
 
         This function takes a numpy array, containing intensities.
-        The intensitz arraz is aexpected to have the same shape as this object and will be added to
+        The intensity array is expected to have the same shape as this object and will be added to
         the respective lazer without checking the order of fragment annotations.
 
         :param intensities: intensity numpy array to add with shapes (n x m)
@@ -360,7 +360,11 @@ class Spectra(anndata.AnnData):
         self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
 
     def filter_by_score(self, threshold: float) -> None:
-        """Filter out peptides with search engine score below threshold in-place."""
+        """
+        Filter out peptides with search engine score below threshold in-place.
+
+        :param threshold: The threshold to use below which peptides are filtered out.
+        """
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
     def remove_duplicates(self, num_duplicates: int) -> None:

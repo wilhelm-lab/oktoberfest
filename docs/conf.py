@@ -164,6 +164,22 @@ man_pages = [
 
 autodoc_typehints = "description"
 
+autodoc_mock_imports = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "seaborn",
+    "scipy",
+    "koinapy",
+    "anndata",
+    "spectrum_fundamentals",
+    "spectrum_io",
+    "tqdm",
+    "picked_group_fdr",
+    "mokapot",
+    "dlomix",
+    "tensorflow",
+]
 
 # -- Options for Texinfo output ----------------------------------------
 
@@ -254,3 +270,5 @@ DEFAULT_FILTERS["modurl"] = modurl
 
 # -- Options for autosectionlabel mappings -----------------------------
 autosectionlabel_prefix_document = True
+
+suppress_warnings = ["footnote.reference"]

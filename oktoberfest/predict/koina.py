@@ -64,6 +64,7 @@ class Koina(_KoinaGRPC):
             representing the model's output.
 
         Example::
+
             model = Koina("Prosit_2019_intensity")
             input_data = {
                 "peptide_sequences": np.array(["PEPTIDEK" for _ in range(size)]),
@@ -104,6 +105,7 @@ class Koina(_KoinaGRPC):
         :raises ValueError: If `data` is not of type `Spectra`, `pd.DataFrame`, or a dictionary.
 
         Example::
+
             model = Koina("Prosit_XL_CMS2_intensity")
             input_data = {
                 "peptide_sequences_1": np.array(["PEPTIDEK" for _ in range(size)]),
