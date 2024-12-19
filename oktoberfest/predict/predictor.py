@@ -21,6 +21,9 @@ if TYPE_CHECKING or importlib.util.find_spec("dlomix"):
     from .dlomix import DLomix
 
     PredictionInterface = Union[DLomix, Koina, ZeroPredictor]
+elif importlib.util.find_spec("torch"):
+    from .torch import TorchModel
+    PredictionInterface = Union[TorchModel, Koina, ZeroPredictor]
 else:
     PredictionInterface = Union[Koina, ZeroPredictor]
     DLomix = None
@@ -71,12 +74,21 @@ class Predictor:
 
     @classmethod
     def from_torch(
+        cls,
         model_path: Union[str, bytes, os.PathLike],
         ion_dict_path: Union[str, bytes, os.PathLike],
         token_dict_path: Union[str, bytes, os.PathLike],
         yaml_dir_path: Union[str, bytes, os.PathLike],
     ) -> Predictor:
-        return Predictor(model_name=model_path)
+        return Predictor(
+            TorchModel(
+                model_path=model_path,
+                ion_dict_path=ion_dict_path,
+                token_dict_path=token_dict_path,
+                yaml_dir_path=yaml_dir_path,
+            ),
+            model_name='torch'
+        )
 
     @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
@@ -98,11 +110,11 @@ class Predictor:
         output_folder.mkdir(parents=True, exist_ok=True)
         
         if model_name == "local":
-            return Predictor.from_local(
-                model_path=config.model_path,
-                ion_dict_path=config.ion_dict_path,
-                token_dict_path=config.token_dict_path,
-                yaml_dir_path=config.yaml_dir_path,
+            return Predictor.from_torch(
+                model_path=config.models['weights_path'],
+                ion_dict_path=config.models['ion_dict_path'],
+                token_dict_path=config.models['token_dict_path'],
+                yaml_dir_path=config.models['yaml_dir_path'],
             )
         
         if config.download_baseline_intensity_predictor:

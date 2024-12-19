@@ -10,7 +10,7 @@ from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
-BASELINE_MODEL_KEYS = ["baseline", ""]
+BASELINE_MODEL_KEYS = ["baseline", "local"]
 
 
 class Config:
@@ -569,7 +569,7 @@ class Config:
             elif model_path.suffix != ".keras":
                 raise ValueError(f"Model file {model_path} exists, but is not a .keras file")
 
-        if not importlib.util.find_spec("dlomix"):
+        if not (importlib.util.find_spec("dlomix") or importlib.util.find_spec("torch")):
             raise ModuleNotFoundError(
                 """Local prediction requested, but the DLomix package could not be found. Please verify that it has been
                 installed as an optional dependency."""
