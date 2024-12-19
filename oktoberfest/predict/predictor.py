@@ -70,6 +70,15 @@ class Predictor:
         )
 
     @classmethod
+    def from_torch(
+        model_path: Union[str, bytes, os.PathLike],
+        ion_dict_path: Union[str, bytes, os.PathLike],
+        token_dict_path: Union[str, bytes, os.PathLike],
+        yaml_dir_path: Union[str, bytes, os.PathLike],
+    ) -> Predictor:
+        return Predictor(model_name=model_path)
+
+    @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
         model_name = config.models[model_type]
@@ -83,11 +92,19 @@ class Predictor:
             return Predictor.from_koina(
                 model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
-
+        
         # TODO actually pass the output folder through kwargs
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(parents=True, exist_ok=True)
-
+        
+        if model_name == "local":
+            return Predictor.from_local(
+                model_path=config.model_path,
+                ion_dict_path=config.ion_dict_path,
+                token_dict_path=config.token_dict_path,
+                yaml_dir_path=config.yaml_dir_path,
+            )
+        
         if config.download_baseline_intensity_predictor:
             model_path = output_folder / "prosit_baseline_model.keras"
             download = True
@@ -97,7 +114,7 @@ class Predictor:
         return Predictor.from_dlomix(
             model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
         )
-
+    
     def _filter_kwargs(self, **kwargs) -> dict[str, Any]:
         """
         Get only arguments accepted by predictor implementation's predict() method from arbitrary set of kwargs.

@@ -153,13 +153,19 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         annotate_neutral_loss = config.ptm_use_neutral_loss
-        aspec = pp.annotate_spectral_library(
+        """aspec = pp.annotate_spectral_library(
             psms=library,
             mass_tol=config.mass_tolerance,
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
             custom_mods=config.unimod_to_mass(),
             annotate_neutral_loss=annotate_neutral_loss,
+        )"""
+        aspec = pp.annotate_spectral_library_jl(
+            psms=library,
+            ion_dict_path=config.models['ion_dict_path'],
+            mass_tol=config.mass_tolerance,
+            p_window=config.p_window,
         )
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
@@ -610,7 +616,9 @@ def _calculate_features(spectra_file: Path, config: Config):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
+        custom_ion_dict=None,
     )
+    use_custom_ion_dict = True if config.models['ion_dict_path'] is not None else False
     re.generate_features(
         library=library,
         search_type="rescore",
@@ -620,6 +628,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
+        custom_ion_dict=use_custom_ion_dict,
     )
 
     calc_feature_step.mark_done()

@@ -71,6 +71,10 @@ class Config:
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
+    
+    @property
+    def p_window(self) -> Optional[float]:
+        return self.data.get("p_window", None)
 
     @property
     def fragmentation_method(self) -> str:
