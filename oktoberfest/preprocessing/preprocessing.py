@@ -932,14 +932,14 @@ def annotate_spectral_library_jl(
     from mass_scale import Scale, my_annotation_function # ADHOC
     scale = Scale()
     var_df = pd.read_csv(ion_dict_path, index_col='full')
-    koina_var_df = var_df.copy()
-    koina_var_df.index = koina_var_df.index.map(lambda x: re.sub("\^", "+", x))
+    #koina_var_df = var_df.copy()
+    #koina_var_df.index = koina_var_df.index.map(lambda x: re.sub("\^", "+", x))
     
     logger.info("Annotating spectra...")
     ann_info = my_annotation_function(psms, var_df, mass_tol, p_window)['dataframe']
     
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=koina_var_df)
-    aspec.uns["ion_types"] = koina_var_df['ion'].unique().tolist()
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df) # koina_var_df
+    aspec.uns["ion_types"] = var_df['ion'].unique().tolist() # koina_var_df
     
     int_vectors = []
     mz_vectors = []
