@@ -260,6 +260,12 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
             "max_length": 35,
             "max_charge": 4,
         }
+    elif "local" in model.lower():
+        filter_kwargs = {
+            "min_length": 6,
+            "max_length": 30,
+            "max_charge": 6,
+        }
     else:
         raise ValueError(f"The model {model} is not known.")
 
@@ -932,14 +938,12 @@ def annotate_spectral_library_jl(
     from mass_scale import Scale, my_annotation_function # ADHOC
     scale = Scale()
     var_df = pd.read_csv(ion_dict_path, index_col='full')
-    #koina_var_df = var_df.copy()
-    #koina_var_df.index = koina_var_df.index.map(lambda x: re.sub("\^", "+", x))
     
     logger.info("Annotating spectra...")
     ann_info = my_annotation_function(psms, var_df, mass_tol, p_window)['dataframe']
     
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df) # koina_var_df
-    aspec.uns["ion_types"] = var_df['ion'].unique().tolist() # koina_var_df
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    aspec.uns["ion_types"] = var_df['ion'].unique().tolist()
     
     int_vectors = []
     mz_vectors = []
