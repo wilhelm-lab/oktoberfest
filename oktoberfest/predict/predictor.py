@@ -75,6 +75,7 @@ class Predictor:
     @classmethod
     def from_torch(
         cls,
+        model_name: str,
         model_path: Union[str, bytes, os.PathLike],
         ion_dict_path: Union[str, bytes, os.PathLike],
         token_dict_path: Union[str, bytes, os.PathLike],
@@ -82,6 +83,7 @@ class Predictor:
     ) -> Predictor:
         return Predictor(
             TorchModel(
+                model_name=model_name,
                 model_path=model_path,
                 ion_dict_path=ion_dict_path,
                 token_dict_path=token_dict_path,
@@ -109,12 +111,14 @@ class Predictor:
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(parents=True, exist_ok=True)
         
-        if model_name == "local":
+        if "local" in model_name.lower():
+            model_name = model_name.split('_')[-1]
             return Predictor.from_torch(
-                model_path=config.models['weights_path'],
-                ion_dict_path=config.models['ion_dict_path'],
-                token_dict_path=config.models['token_dict_path'],
-                yaml_dir_path=config.models['yaml_dir_path'],
+                model_name=model_name,
+                model_path=config.models['local_args']['weights_path'],
+                ion_dict_path=config.models['local_args']['ion_dict_path'],
+                token_dict_path=config.models['local_args']['token_dict_path'],
+                yaml_dir_path=config.models['local_args']['yaml_dir_path'],
             )
         
         if config.download_baseline_intensity_predictor:

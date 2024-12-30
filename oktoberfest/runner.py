@@ -163,7 +163,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         )"""
         aspec = pp.annotate_spectral_library_jl(
             psms=library,
-            ion_dict_path=config.models['ion_dict_path'],
+            ion_dict_path=config.models['local_args']['ion_dict_path'],
             mass_tol=config.mass_tolerance,
             p_window=config.p_window,
         )
@@ -618,7 +618,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         regression_method=config.curve_fitting_method,
         custom_ion_dict=None,
     )
-    use_custom_ion_dict = True if config.models['ion_dict_path'] is not None else False
+    use_custom_ion_dict = True if config.models['local_args']['ion_dict_path'] is not None else False
     re.generate_features(
         library=library,
         search_type="rescore",
