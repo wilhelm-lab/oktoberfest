@@ -82,6 +82,7 @@ class TorchModel:
         self.model.eval()
         
         self.token_dict = create_dictionary(token_dict_path)
+        self.token_dict['C'] = self.token_dict['C[UNIMOD:4]']
         self.max_length = load_config['pep_length'][-1]
         
         method_list = load_config['method_list']

@@ -150,6 +150,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         config_instrument_type = config.instrument_type
         if config_instrument_type is not None:
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
+        if config.fragmentation_method is not None:
+            spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         annotate_neutral_loss = config.ptm_use_neutral_loss
