@@ -125,9 +125,17 @@ class TorchModel:
             with th.no_grad():
                 prediction = self.model(**inp)
             prediction /= prediction.max(1, keepdim=True)[0]
-            prediction = prediction.clip(0, 1)
+            #prediction = prediction.clip(0, 1)
             outputs.append(prediction.cpu().numpy())
-        full_output = np.concatenate(outputs, axis=0)
+        full_output = np.concatenate(outputs, axis=0).astype(np.float32)
+        
+        # data.add_intensities turns -1s into 0s
+        # data.add_intensities turns 0s into epsilon
+        # FIXME Can't clip to 0 because conversions add a tiny amount to the number
+        #  and then the predicted mask fails for predicted_intensities > c.EPSILON
+        #  in the spectrum fundamentals spectral angle calculation.
+        full_output = full_output.clip(1e-9, 1)
+        full_output[spectra_dataframe.layers['mz'].todense()==-1] = -1
         
         return {
             'intensities': full_output,

@@ -21,6 +21,7 @@ from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
+import re as Re
 
 from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
@@ -646,10 +647,21 @@ def _rescore(fdr_dir: Path, config: Config):
     """
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
+    
+    # Find available number of cpus, use all of them
+    try:
+        string = Re.search(r'(?m)^Cpus_allowed:\s*(.*)$', open('/proc/self/status').read())
+        num_threads = bin(int(string.group(1).replace(',', ''), 16)).count('1')
+    except:
+        num_threads = 3
 
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir)
+            re.rescore_with_percolator(
+                input_file=fdr_dir / "original.tab", 
+                output_folder=fdr_dir,
+                num_threads=num_threads,
+            )
             rescore_original_step.mark_done()
         if not rescore_prosit_step.is_done():
             logger.info("Start percolator rescoring")
@@ -657,7 +669,11 @@ def _rescore(fdr_dir: Path, config: Config):
             if config.ptm_localization:
                 _ptm_localization_rescore(fdr_dir, config)
             else:
-                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+                re.rescore_with_percolator(
+                    input_file=fdr_dir / "rescore.tab", 
+                    output_folder=fdr_dir,
+                    num_threads=num_threads,
+                )
                 rescore_prosit_step.mark_done()
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
@@ -761,7 +777,7 @@ def run_rescoring(config_path: Union[str, Path]):
 
     prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
     prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
-
+    
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
         re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
