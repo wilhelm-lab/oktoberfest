@@ -620,6 +620,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         all_features=config.all_features,
         regression_method=config.curve_fitting_method,
         custom_ion_dict=None,
+        featured_ions=None,
     )
     use_custom_ion_dict = True if config.models['local_args']['ion_dict_path'] is not None else False
     re.generate_features(
@@ -632,6 +633,7 @@ def _calculate_features(spectra_file: Path, config: Config):
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
         custom_ion_dict=use_custom_ion_dict,
+        featured_ions=config.featured_ions,
     )
 
     calc_feature_step.mark_done()

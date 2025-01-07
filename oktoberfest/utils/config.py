@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 from sys import platform
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 # from spectrum_io.search_result.search_results import parse_mods
 
@@ -80,6 +80,11 @@ class Config:
     def fragmentation_method(self) -> str:
         """Get fragmentation method from config file."""
         return self.data.get("fragmentation_method", "HCD")
+
+    @property
+    def featured_ions(self) -> List[str]:
+        """Ion series to use for calculating percolator features"""
+        return self.data.get("featured_ions", None)
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
