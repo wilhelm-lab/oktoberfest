@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Union
 
@@ -5,7 +6,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import spectrum_utils.plot as sup
+import spectrum_utils.spectrum as sus
 from scipy import stats
+from spectrum_io.raw import ThermoRaw
+
+from oktoberfest.data.spectra import Spectra
 
 # Set the default fontsize and linewidth
 plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
@@ -452,11 +458,82 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-def plot_all(data_dir: Path):
+def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: int, mirror_dir: Path):
+    """
+    Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
+
+    :param spec_pred: Spectra object containing predicted MS/MS spectra
+    :param mzml: ThermoRaw object containing experimental MS/MS spectra from an mzML file
+    :param raw_file: The name of the raw file being processed
+    :param scan_number: The scan number of the spectrum to be plotted
+    :param mirror_dir: The directory where the mirror plots should be saved
+
+    :raises ValueError: If the mass analyzer type is unknown.
+    """
+    filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
+    if filtered_obs.empty:
+        print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
+        return
+    obs = filtered_obs.iloc[0]
+
+    mod_sequence = obs["MODIFIED_SEQUENCE"].replace("[]-", "").replace("-[]", "")
+    charge = obs["PRECURSOR_CHARGE"]
+    mass = obs["MASS"]
+    mass_analyzer = obs["MASS_ANALYZER"]
+    fragm = obs["FRAGMENTATION"]
+    raw_file = obs["RAW_FILE"]
+    score = obs["SCORE"]
+
+    # Set tolerance based on mass analyzer
+    if mass_analyzer == "FTMS":
+        fragment_tol_mass = 20.0
+        fragment_tol_mode = "ppm"
+    elif mass_analyzer == "ITMS":
+        fragment_tol_mass = 0.4
+        fragment_tol_mode = "Da"
+    else:
+        raise ValueError(f"Unknown mass analyzer: {mass_analyzer}")
+
+    # Get experimental spectrum
+    mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
+    intensity_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["INTENSITIES"].iloc[0])
+
+    top_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_exp, intensity=intensity_exp)
+    top_spectrum = top_spectrum.annotate_proforma(
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types="byrI", max_ion_charge=charge
+    )
+
+    # Get predicted spectrum
+    idx = spec_pred.obs.index.get_loc(spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number].index[0])
+    mz_pred = spec_pred.layers["mz"].toarray()[idx]
+    intensity_pred = spec_pred.layers["pred_int"].toarray()[idx]
+
+    bot_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_pred, intensity=intensity_pred)
+    bot_spectrum = bot_spectrum.annotate_proforma(
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types="byrI", max_ion_charge=charge
+    )
+    os.makedirs(mirror_dir, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_xlabel("m/z")
+
+    title = f"Modified sequence: {mod_sequence}, Raw file: {raw_file}, Scan number: {scan_number}"
+    title_2 = f"Fragmentation: {fragm}, Mass analyzer: {mass_analyzer}, Charge: {charge}, Score: {score}"
+    ax.set_title(f"{title}\n{title_2}", fontsize=12)
+
+    sup.mirror(top_spectrum, bot_spectrum)
+
+    output_path = os.path.join(mirror_dir, f"mirror_plot_{raw_file}_{scan_number}.svg")
+    plt.savefig(output_path, format="svg", dpi=300)
+    plt.close()
+
+
+def plot_all(data_dir: Path, mirror_plots: dict[str, list[int]]):
     """
     Generate all plots after a rescoring run.
 
-    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot.
+    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
+    :param mirror_plots: dictionary with raw files (as keys) and scan numbers (as values) for which to generate mirror plots
     """
     fdr_method = data_dir.stem
     prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
@@ -521,6 +598,20 @@ def plot_all(data_dir: Path):
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
 
     plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
+
+    base_mzml_path = os.path.abspath(os.path.join(data_dir, "../../spectra"))
+    base_hdf5_path = os.path.abspath(os.path.join(data_dir, "../../data"))
+    mirror_dir = Path(data_dir).parent / "mirror_plots"
+
+    for raw_file, scan_numbers in mirror_plots.items():
+        mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+        hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+
+        mzml = ThermoRaw.read_mzml(source=mzml_path)
+        spec_pred = Spectra.from_hdf5(hdf5_path)
+
+        for scan_number in scan_numbers:
+            plot_mirror_spectrum(spec_pred, mzml, raw_file, scan_number, mirror_dir)
 
 
 def plot_ce_ransac_model(

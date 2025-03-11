@@ -103,6 +103,18 @@ class Config:
 
         return Path(self.data.get("thermoExe", default_thermo()))
 
+    @property
+    def mirror_plots(self) -> dict[str, list[int]]:
+        """
+        Get the raw files and scan numbers for which to generate mirror plots.
+
+        This function returns a dictionary where the keys are raw file names,
+        and the values are lists of scan numbers.
+
+        :return: Dictionary mapping raw file names to a list of scan numbers.
+        """
+        return {str(k): list(map(int, v)) for k, v in self.data.get("mirror_plots", {}).items()}
+
     ###########################
     # these are input options #
     ###########################

@@ -30,7 +30,7 @@ class TestMokapot(unittest.TestCase):
         # suppress UserWarning that agg cannot show plots
         warnings.filterwarnings("ignore", "Matplotlib is currently using agg")
 
-        pl.plot_all(path)
+        pl.plot_all(path, {})
 
         for file in path.glob("*"):
             if file.suffix != ".tab":
