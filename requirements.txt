@@ -116,6 +116,7 @@ snowballstemmer==2.2.0 ; python_version >= "3.9" and python_full_version < "3.11
 sortedcontainers==2.4.0 ; python_full_version >= "3.9.0" and python_full_version < "3.11.0"
 spectrum-fundamentals==0.7.8 ; python_full_version >= "3.9.0" and python_full_version < "3.11.0"
 spectrum-io==0.6.4 ; python_full_version >= "3.9.0" and python_full_version < "3.11.0"
+spectrum-utils==0.4.2 ; python_full_version >= "3.9.0" and python_full_version < "3.11.0"
 sphinx-autobuild==2024.10.3 ; python_version >= "3.9" and python_full_version < "3.11.0"
 sphinx-autodoc-typehints==2.3.0 ; python_version >= "3.9" and python_full_version < "3.11.0"
 sphinx-click==6.0.0 ; python_full_version >= "3.9.0" and python_full_version < "3.11.0"
