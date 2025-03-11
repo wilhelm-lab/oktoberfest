@@ -103,6 +103,17 @@ test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypo
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
+name = "appdirs"
+version = "1.4.4"
+description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
+optional = false
+python-versions = "*"
+files = [
+    {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
+    {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
+]
+
+[[package]]
 name = "array-api-compat"
 version = "1.7.1"
 description = "A wrapper around NumPy and other array libraries to make them compatible with the Array API standard"
@@ -909,6 +920,50 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "fastobo"
+version = "0.13.0"
+description = "Faultless AST for Open Biomedical Ontologies in Python."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "fastobo-0.13.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4620527cb6575a844dd244c725984f2d3d9b41d32140026782d18e1666f8228d"},
+    {file = "fastobo-0.13.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:4e126c58378c9df1c3f3c2f21f62b4badcd97076656e6f708ee5d0ec776c960c"},
+    {file = "fastobo-0.13.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9a2976412a05939ea57ecdd7d60ede6d97d20f18f89131e9c182c26484738cd8"},
+    {file = "fastobo-0.13.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5431b840dba3aac04cb7a70704bb0453eabfec71f407937cc93f49fa8daac7cc"},
+    {file = "fastobo-0.13.0-cp310-cp310-win_amd64.whl", hash = "sha256:ee6011d23097bbb234e4d054c922ad61f3ab0f781315503ae3aa41cff956504b"},
+    {file = "fastobo-0.13.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:eb2021500483fab3b7c756412bf1d27f8b991f16661943bfb281a83ecab2cfc8"},
+    {file = "fastobo-0.13.0-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:50a42abc476c1a9c0831e015abd53328705f8289de406c807b6f54b0b436e90e"},
+    {file = "fastobo-0.13.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d6ca19f7e81dc5c369ffee2f5b5a03658302a3d1b8520b8b655fe5af8995be0b"},
+    {file = "fastobo-0.13.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bcbc0ae0c74feb9e0bcaba305026bb8f03cbebf71a13b1dda5e06a29e0dfcf64"},
+    {file = "fastobo-0.13.0-cp311-cp311-win_amd64.whl", hash = "sha256:4f812fd9392d1049323ce73270885e81b6fb330035acdeb2488bc5aad326d6db"},
+    {file = "fastobo-0.13.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:80fe72f334801e9815ba59565210501a8f614283c4d8b6151b63ffa9aef3167a"},
+    {file = "fastobo-0.13.0-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:c3d457ce4b54686f299811b921b3ce9ad4d25bb6cdd72a71bbe4bcad56693543"},
+    {file = "fastobo-0.13.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8c389fa99ca7a941cde2f72743a12dbc586be73a6ebc0b84f0fa7b7651892ccc"},
+    {file = "fastobo-0.13.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4d525e3fe1ca321a1a59671947827fb431822f5f7a467aa03f22d86437505bb1"},
+    {file = "fastobo-0.13.0-cp312-cp312-win_amd64.whl", hash = "sha256:72572abcea0c01bc7c004553ac3fa80df8938be1013f7a514701b13d89f788a1"},
+    {file = "fastobo-0.13.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:7ad230422eec31aa668081a9cdd0030058ed200e79181f132c74536fbe7f066b"},
+    {file = "fastobo-0.13.0-cp313-cp313-macosx_12_0_x86_64.whl", hash = "sha256:ff01175bb43745c089b4249e18af15d9955b31a88dd6ba69f63ad25161d80175"},
+    {file = "fastobo-0.13.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:728014987eff7c3e05249b3ea59830fb9cb24293947c9a05a85f21853baa4304"},
+    {file = "fastobo-0.13.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:65885c095c2260e011cfbca197ee68710e6cc3cb31bdc6d470b0ae5c8382de2b"},
+    {file = "fastobo-0.13.0-cp313-cp313-win_amd64.whl", hash = "sha256:ffa708db4157c40f8ff61edc228f5bfae30f88b8d96d3d3ea4a1f0eb01cba474"},
+    {file = "fastobo-0.13.0-cp37-cp37m-macosx_12_0_x86_64.whl", hash = "sha256:026d2e4f841248aaa58f61667a2bdb6ec4950f6ef06ccf23f4bc48bab52696bb"},
+    {file = "fastobo-0.13.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f520caef3b577427c4f3cafbd3726b256df0b2bda849d15861c7a63d65e835c3"},
+    {file = "fastobo-0.13.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e5ada41082672560373e2657e3b5a7258b863a3a4fe6f20efdf291c43221dd59"},
+    {file = "fastobo-0.13.0-cp37-cp37m-win_amd64.whl", hash = "sha256:6092c1847f76809245c0611fde93931552311011194b3f630b133de419858abc"},
+    {file = "fastobo-0.13.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:2f23da932a20bd28bc0815c0ac652341eeb9689d247f78f1fde01df3c85f404c"},
+    {file = "fastobo-0.13.0-cp38-cp38-macosx_12_0_x86_64.whl", hash = "sha256:d89baa235d13dedb4d081d103c1cc40e90c5c6a9a7404a60775b6cf92857fa31"},
+    {file = "fastobo-0.13.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e40faeafa83840fdb14035b1ab3cea06e4da6bed4ef2cfb32f9bb6261cf04160"},
+    {file = "fastobo-0.13.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f5b2bb2482d9d10a003a8b5c633b7d7711e8d1bb12c7747aa1bb5a970e8fe969"},
+    {file = "fastobo-0.13.0-cp38-cp38-win_amd64.whl", hash = "sha256:292705768e77588469e9137f110e3cb04afb5d0da07d53a3afff02aff321d4a0"},
+    {file = "fastobo-0.13.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:4045e5cb2d016d00ada73a4a1e34165d0ab6b28f0416f892eacc67d370c0cd7d"},
+    {file = "fastobo-0.13.0-cp39-cp39-macosx_12_0_x86_64.whl", hash = "sha256:e6ac03ec93d165626ad70238a0d3c5345c94f03858b42af4462f8468418ffa41"},
+    {file = "fastobo-0.13.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7be08e40821c3b83d57a5fa55126ec935ac7402a07cdd670f873c2df7901c6b9"},
+    {file = "fastobo-0.13.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b8a3bf6fd683a37d7768c261aea855f1be2e55b295f33ebbba78fa5cfeb008f4"},
+    {file = "fastobo-0.13.0-cp39-cp39-win_amd64.whl", hash = "sha256:699da60c277c02ce8db253d37fe05b1ba1388483f7b521c3a0a6eedc4f761f8a"},
+    {file = "fastobo-0.13.0.tar.gz", hash = "sha256:c4548bcfb7f9f87188bf5d8e4c7fd530162707265a8d644ee75259d305cd6964"},
+]
+
+[[package]]
 name = "filelock"
 version = "3.12.4"
 description = "A platform independent file lock."
@@ -1469,6 +1524,23 @@ files = [
 pandas = "*"
 tqdm = "*"
 tritonclient = {version = ">=2.23,<2.41 || >2.41", extras = ["grpc"], markers = "python_version >= \"3.8\" and python_version < \"3.11\""}
+
+[[package]]
+name = "lark"
+version = "1.2.2"
+description = "a modern parsing library"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "lark-1.2.2-py3-none-any.whl", hash = "sha256:c2276486b02f0f1b90be155f2c8ba4a8e194d42775786db622faccd652d8e80c"},
+    {file = "lark-1.2.2.tar.gz", hash = "sha256:ca807d0162cd16cef15a8feecb862d7319e7a09bdb13aef927968e45040fed80"},
+]
+
+[package.extras]
+atomic-cache = ["atomicwrites"]
+interegular = ["interegular (>=0.3.1,<0.4.0)"]
+nearley = ["js2py"]
+regex = ["regex"]
 
 [[package]]
 name = "llvmlite"
@@ -3559,6 +3631,31 @@ sortedcontainers = ">=2.4.0,<3.0.0"
 spectrum-fundamentals = ">=0.7.8,<0.8.0"
 
 [[package]]
+name = "spectrum-utils"
+version = "0.4.2"
+description = "Mass spectrometry utility functions"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "spectrum_utils-0.4.2-py3-none-any.whl", hash = "sha256:db2e1e7ecd85b8b9c6b87b6d8633083fa64d4900dd0ddf8fee94e8295aa22283"},
+    {file = "spectrum_utils-0.4.2.tar.gz", hash = "sha256:7a0212f12b6770c592184f4e82f4b7bb1f110b4db2a3b914a1b4b2f3f8c79693"},
+]
+
+[package.dependencies]
+appdirs = "*"
+fastobo = "*"
+lark = ">=1.0"
+matplotlib = ">=3.5"
+numba = ">=0.47"
+numpy = "*"
+pyteomics = ">=4.5"
+
+[package.extras]
+dev = ["black", "pytest", "pytest-cov"]
+docs = ["myst-parser", "numpydoc (>=1.1.0)", "sphinx (>=3.5.3)", "sphinx-markdown-tables", "sphinx-rtd-theme (>=0.5.1)"]
+iplot = ["altair", "pandas"]
+
+[[package]]
 name = "sphinx"
 version = "7.4.7"
 description = "Python documentation generator"
@@ -4298,4 +4395,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9.0,<3.11.0"
-content-hash = "c0808addd73527bdb97969f7d3e8cfb622bf1df9d8c15940c567f62eac12c0e3"
+content-hash = "e21362ecdc12376493539ba280cf25d5e42a9597657a51c28c3c4428bf487784"
