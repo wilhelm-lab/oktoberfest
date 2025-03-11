@@ -174,6 +174,7 @@ autodoc_mock_imports = [
     "anndata",
     "spectrum_fundamentals",
     "spectrum_io",
+    "spectrum_utils",
     "tqdm",
     "picked_group_fdr",
     "mokapot",
