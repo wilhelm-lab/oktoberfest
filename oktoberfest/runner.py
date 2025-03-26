@@ -1329,7 +1329,7 @@ def run_rescoring(config_path: Union[str, Path]):
         # plotting
         logger.info("Generating summary plots...")
         if not config.ptm_localization:
-            pl.plot_all(fdr_dir, config.mirror_plots)
+            pl.plot_all(fdr_dir, config)
         logger.info("Finished rescoring.")
 
         if config.quantification:

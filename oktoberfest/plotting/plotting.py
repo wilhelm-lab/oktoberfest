@@ -12,6 +12,7 @@ from scipy import stats
 from spectrum_io.raw import ThermoRaw
 
 from oktoberfest.data.spectra import Spectra
+from oktoberfest.utils import Config
 
 # Set the default fontsize and linewidth
 plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
@@ -458,7 +459,7 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: int, mirror_dir: Path):
+def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: int, mirror_dir: Path, config: Config):
     """
     Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
 
@@ -467,6 +468,7 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     :param raw_file: The name of the raw file being processed
     :param scan_number: The scan number of the spectrum to be plotted
     :param mirror_dir: The directory where the mirror plots should be saved
+    :param config: the configuration object
 
     :raises ValueError: If the mass analyzer type is unknown.
     """
@@ -482,7 +484,9 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     mass_analyzer = obs["MASS_ANALYZER"]
     fragm = obs["FRAGMENTATION"]
     raw_file = obs["RAW_FILE"]
-    score = obs["SCORE"]
+    rt = obs["RETENTION_TIME"].round(2)
+    ce = obs["COLLISION_ENERGY"]
+    model = config.models["intensity"]
 
     # Set tolerance based on mass analyzer
     if mass_analyzer == "FTMS":
@@ -517,9 +521,11 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.set_xlabel("m/z")
 
-    title = f"Modified sequence: {mod_sequence}, Raw file: {raw_file}, Scan number: {scan_number}"
-    title_2 = f"Fragmentation: {fragm}, Mass analyzer: {mass_analyzer}, Charge: {charge}, Score: {score}"
-    ax.set_title(f"{title}\n{title_2}", fontsize=12)
+    title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
+    title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy: {ce}"
+    title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
+    title_bottom = f"Bottom: prediction, model: {model}"
+    ax.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=12)
 
     sup.mirror(top_spectrum, bot_spectrum)
 
@@ -528,12 +534,12 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     plt.close()
 
 
-def plot_all(data_dir: Path, mirror_plots: dict[str, list[int]]):
+def plot_all(data_dir: Path, config: Config):
     """
     Generate all plots after a rescoring run.
 
     :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
-    :param mirror_plots: dictionary with raw files (as keys) and scan numbers (as values) for which to generate mirror plots
+    :param config: the configuration object
     """
     fdr_method = data_dir.stem
     prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
@@ -602,8 +608,9 @@ def plot_all(data_dir: Path, mirror_plots: dict[str, list[int]]):
     base_mzml_path = os.path.abspath(os.path.join(data_dir, "../../spectra"))
     base_hdf5_path = os.path.abspath(os.path.join(data_dir, "../../data"))
     mirror_dir = Path(data_dir).parent / "mirror_plots"
+    mirror_plots_dict = config.mirror_plots
 
-    for raw_file, scan_numbers in mirror_plots.items():
+    for raw_file, scan_numbers in mirror_plots_dict.items():
         mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
         hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
 
@@ -611,7 +618,7 @@ def plot_all(data_dir: Path, mirror_plots: dict[str, list[int]]):
         spec_pred = Spectra.from_hdf5(hdf5_path)
 
         for scan_number in scan_numbers:
-            plot_mirror_spectrum(spec_pred, mzml, raw_file, scan_number, mirror_dir)
+            plot_mirror_spectrum(spec_pred, mzml, raw_file, scan_number, mirror_dir, config)
 
 
 def plot_ce_ransac_model(
