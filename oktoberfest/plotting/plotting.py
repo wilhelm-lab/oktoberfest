@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 import spectrum_utils.plot as sup
 import spectrum_utils.spectrum as sus
+from matplotlib.gridspec import GridSpec
 from scipy import stats
 from spectrum_io.raw import ThermoRaw
 
@@ -459,7 +460,17 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: int, mirror_dir: Path, config: Config):
+def plot_mirror_spectrum(
+    spec_pred: Spectra,
+    mzml,
+    raw_file: str,
+    scan_number: int,
+    mirror_dir: Path,
+    config: Config,
+    prosit_df: pd.DataFrame,
+    target_df: pd.DataFrame,
+    decoy_df: pd.DataFrame,
+):
     """
     Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
 
@@ -469,9 +480,16 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     :param scan_number: The scan number of the spectrum to be plotted
     :param mirror_dir: The directory where the mirror plots should be saved
     :param config: the configuration object
+    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
+    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
 
     :raises ValueError: If the mass analyzer type is unknown.
     """
+    score_col, _, _, _ = _check_columns(target_df)
+    target_df["target"] = True
+    decoy_df["target"] = False
+    concat_target_decoy = pd.concat([target_df, decoy_df])
     filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
     if filtered_obs.empty:
         print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
@@ -487,6 +505,10 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
     rt = obs["RETENTION_TIME"].round(2)
     ce = obs["COLLISION_ENERGY"]
     model = config.models["intensity"]
+    score = concat_target_decoy[
+        (concat_target_decoy["ScanNr"] == scan_number) & (concat_target_decoy["filename"] == raw_file)
+    ][score_col]
+    abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)]["abs_rt_diff"]
 
     # Set tolerance based on mass analyzer
     if mass_analyzer == "FTMS":
@@ -517,17 +539,39 @@ def plot_mirror_spectrum(spec_pred: Spectra, mzml, raw_file: str, scan_number: i
         mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types="byrI", max_ion_charge=charge
     )
     os.makedirs(mirror_dir, exist_ok=True)
+    fig = plt.figure(figsize=(12, 7))  # Adjust total figure size
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.set_xlabel("m/z")
+    gs = GridSpec(2, 2, width_ratios=[2, 1], wspace=0.2)
 
+    ax_mirror = fig.add_subplot(gs[:, 0])
+    ax_kde = fig.add_subplot(gs[3])
+    ax_rt = fig.add_subplot(gs[1])
+
+    # Mirror spectrum plot
+    ax_mirror.set_xlabel("m/z")
     title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
     title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
     title_bottom = f"Bottom: prediction, model: {model}"
-    ax.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=12)
+    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
+    sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
 
-    sup.mirror(top_spectrum, bot_spectrum)
+    # KDE score plot
+    sns.kdeplot(data=concat_target_decoy, x=score_col, hue="target", ax=ax_kde)
+
+    ax_kde.axvline(score.iloc[0], color="black", linestyle="--", linewidth=1, label=f"score: {score.iloc[0]:.2f}")
+    ax_kde.legend(loc="upper right", fontsize=8)
+    ax_kde.set_xlabel(score_col, fontsize=10)
+    ax_kde.set_ylabel("Density", fontsize=10)
+
+    # KDE abs rt diff plot
+    sns.kdeplot(data=prosit_df, x="abs_rt_diff", ax=ax_rt)
+    ax_rt.axvline(
+        abs_rt_diff.iloc[0], color="black", linestyle="--", linewidth=1, label=f"abs rt diff: {abs_rt_diff.iloc[0]:.2f}"
+    )
+    ax_rt.legend(loc="upper right", fontsize=8)
+    ax_rt.set_xlabel("abs rt diff", fontsize=10)
+    ax_rt.set_ylabel("Density", fontsize=10)
 
     output_path = os.path.join(mirror_dir, f"mirror_plot_{raw_file}_{scan_number}.svg")
     plt.savefig(output_path, format="svg", dpi=300)
@@ -618,7 +662,17 @@ def plot_all(data_dir: Path, config: Config):
         spec_pred = Spectra.from_hdf5(hdf5_path)
 
         for scan_number in scan_numbers:
-            plot_mirror_spectrum(spec_pred, mzml, raw_file, scan_number, mirror_dir, config)
+            plot_mirror_spectrum(
+                spec_pred,
+                mzml,
+                raw_file,
+                scan_number,
+                mirror_dir,
+                config,
+                prosit_df,
+                prosit_psms_target,
+                prosit_psms_decoy,
+            )
 
 
 def plot_ce_ransac_model(
