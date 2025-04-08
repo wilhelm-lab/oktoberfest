@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 import spectrum_utils.plot as sup
 import spectrum_utils.spectrum as sus
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.gridspec import GridSpec
 from scipy import stats
 from spectrum_io.raw import ThermoRaw
@@ -462,14 +463,14 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
 
 def plot_mirror_spectrum(
     spec_pred: Spectra,
-    mzml,
+    mzml: ThermoRaw,
     raw_file: str,
     scan_number: int,
-    mirror_dir: Path,
     config: Config,
     prosit_df: pd.DataFrame,
     target_df: pd.DataFrame,
     decoy_df: pd.DataFrame,
+    pdf: PdfPages,
 ):
     """
     Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
@@ -478,11 +479,11 @@ def plot_mirror_spectrum(
     :param mzml: ThermoRaw object containing experimental MS/MS spectra from an mzML file
     :param raw_file: The name of the raw file being processed
     :param scan_number: The scan number of the spectrum to be plotted
-    :param mirror_dir: The directory where the mirror plots should be saved
     :param config: the configuration object
     :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
     :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
     :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param pdf: PDF file object for saving mirror plots
 
     :raises ValueError: If the mass analyzer type is unknown.
     """
@@ -505,10 +506,17 @@ def plot_mirror_spectrum(
     rt = obs["RETENTION_TIME"].round(2)
     ce = obs["COLLISION_ENERGY"]
     model = config.models["intensity"]
+    ion_types = config.ion_types
+    abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
+        "abs_rt_diff"
+    ].iloc[0]
+    sa = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)]["spectral_angle"].iloc[0]
+    ce = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
+        "collision_energy_aligned"
+    ].iloc[0]
     score = concat_target_decoy[
         (concat_target_decoy["ScanNr"] == scan_number) & (concat_target_decoy["filename"] == raw_file)
-    ][score_col]
-    abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)]["abs_rt_diff"]
+    ][score_col].iloc[0]
 
     # Set tolerance based on mass analyzer
     if mass_analyzer == "FTMS":
@@ -536,9 +544,8 @@ def plot_mirror_spectrum(
 
     bot_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_pred, intensity=intensity_pred)
     bot_spectrum = bot_spectrum.annotate_proforma(
-        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types="byrI", max_ion_charge=charge
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types=ion_types, max_ion_charge=charge
     )
-    os.makedirs(mirror_dir, exist_ok=True)
     fig = plt.figure(figsize=(12, 7))  # Adjust total figure size
 
     gs = GridSpec(2, 2, width_ratios=[2, 1], wspace=0.2)
@@ -550,32 +557,28 @@ def plot_mirror_spectrum(
     # Mirror spectrum plot
     ax_mirror.set_xlabel("m/z")
     title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
-    title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy: {ce}"
+    title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
-    title_bottom = f"Bottom: prediction, model: {model}"
+    title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa}"
     ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
     sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
 
     # KDE score plot
     sns.kdeplot(data=concat_target_decoy, x=score_col, hue="target", ax=ax_kde)
 
-    ax_kde.axvline(score.iloc[0], color="black", linestyle="--", linewidth=1, label=f"score: {score.iloc[0]:.2f}")
+    ax_kde.axvline(score, color="black", linestyle="--", linewidth=1, label=f"score: {score:.2f}")
     ax_kde.legend(loc="upper right", fontsize=8)
     ax_kde.set_xlabel(score_col, fontsize=10)
     ax_kde.set_ylabel("Density", fontsize=10)
 
     # KDE abs rt diff plot
     sns.kdeplot(data=prosit_df, x="abs_rt_diff", ax=ax_rt)
-    ax_rt.axvline(
-        abs_rt_diff.iloc[0], color="black", linestyle="--", linewidth=1, label=f"abs rt diff: {abs_rt_diff.iloc[0]:.2f}"
-    )
+    ax_rt.axvline(abs_rt_diff, color="black", linestyle="--", linewidth=1, label=f"abs rt diff: {abs_rt_diff:.2f}")
     ax_rt.legend(loc="upper right", fontsize=8)
     ax_rt.set_xlabel("abs rt diff", fontsize=10)
     ax_rt.set_ylabel("Density", fontsize=10)
 
-    output_path = os.path.join(mirror_dir, f"mirror_plot_{raw_file}_{scan_number}.svg")
-    plt.savefig(output_path, format="svg", dpi=300)
-    plt.close()
+    pdf.savefig(fig)
 
 
 def plot_all(data_dir: Path, config: Config):
@@ -651,28 +654,35 @@ def plot_all(data_dir: Path, config: Config):
 
     base_mzml_path = os.path.abspath(os.path.join(data_dir, "../../spectra"))
     base_hdf5_path = os.path.abspath(os.path.join(data_dir, "../../data"))
-    mirror_dir = Path(data_dir).parent / "mirror_plots"
     mirror_plots_dict = config.mirror_plots
 
-    for raw_file, scan_numbers in mirror_plots_dict.items():
-        mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
-        hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+    fdr_method = data_dir.stem
 
-        mzml = ThermoRaw.read_mzml(source=mzml_path)
-        spec_pred = Spectra.from_hdf5(hdf5_path)
+    prosit_psms_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.psms.txt", delimiter="\t")
+    prosit_psms_decoy = pd.read_csv(data_dir / f"rescore.{fdr_method}.decoy.psms.txt", delimiter="\t")
 
-        for scan_number in scan_numbers:
-            plot_mirror_spectrum(
-                spec_pred,
-                mzml,
-                raw_file,
-                scan_number,
-                mirror_dir,
-                config,
-                prosit_df,
-                prosit_psms_target,
-                prosit_psms_decoy,
-            )
+    pdf_path = data_dir / "mirror_plots.pdf"
+
+    with PdfPages(pdf_path) as pdf:
+        for raw_file, scan_numbers in mirror_plots_dict.items():
+            mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+            hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+
+            mzml = ThermoRaw.read_mzml(source=mzml_path)
+            spec_pred = Spectra.from_hdf5(hdf5_path)
+
+            for scan_number in scan_numbers:
+                plot_mirror_spectrum(
+                    spec_pred,
+                    mzml,
+                    raw_file,
+                    scan_number,
+                    config,
+                    prosit_df,
+                    prosit_psms_target,
+                    prosit_psms_decoy,
+                    pdf,
+                )
 
 
 def plot_ce_ransac_model(

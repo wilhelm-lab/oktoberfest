@@ -78,6 +78,17 @@ class Config:
         return self.data.get("fragmentation_method", "HCD")
 
     @property
+    def ion_types(self) -> str:
+        """
+        Returns the fragment ion types used for fragment annotation.
+
+        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "abcxyz"). Default is "by".
+
+        :returns: A string representing the fragment ion types.
+        """
+        return self.data.get("ion_types", "by")
+
+    @property
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
