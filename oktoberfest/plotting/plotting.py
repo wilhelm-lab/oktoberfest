@@ -463,7 +463,7 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
 
 def plot_mirror_spectrum(
     spec_pred: Spectra,
-    mzml: ThermoRaw,
+    mzml: pd.DataFrame,
     raw_file: str,
     scan_number: int,
     config: Config,
