@@ -73,4 +73,4 @@ Importantly, this also gives you the option to refinement-learn the pre-trained 
 
 For local intensity prediction and refinement learning, you need to provide either a path to a pre-trained model or the keyword `baseline`
 (for the runner to automatically download a model for you) as the intensity model in the config, and specify `localPredictionOptions` as well as optional `refinementLearningOptions`.
-For more details, refer to the :ref:`job <jobs:b) with refinement>` and :ref:`configuration <config:applicable to local intensity prediction and transfer learning>` docs.
+For more details, refer to the :ref:`job <jobs:b) with refinement>` and :ref:`configuration <config:Applicable to local intensity prediction>` docs.
