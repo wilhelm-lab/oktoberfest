@@ -130,7 +130,7 @@ sphinxcontrib-jquery==4.1 ; python_full_version >= "3.9.0" and python_full_versi
 sphinxcontrib-jsmath==1.0.1 ; python_version >= "3.9" and python_full_version < "3.11.0"
 sphinxcontrib-qthelp==2.0.0 ; python_version >= "3.9" and python_full_version < "3.11.0"
 sphinxcontrib-serializinghtml==2.0.0 ; python_version >= "3.9" and python_full_version < "3.11.0"
-starlette==0.46.1 ; python_version >= "3.9" and python_full_version < "3.11.0"
+starlette==0.46.2 ; python_version >= "3.9" and python_full_version < "3.11.0"
 stevedore==5.4.1 ; python_version >= "3.9" and python_full_version < "3.11.0"
 threadpoolctl==3.6.0 ; python_version >= "3.9" and python_full_version < "3.11.0"
 tokenize-rt==6.1.0 ; python_version >= "3.9" and python_full_version < "3.11.0"
