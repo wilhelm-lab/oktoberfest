@@ -1,13 +1,15 @@
 How to cite
 ===========
 
-If you want to cite Oktoberfest in your work, please use the following:
+Please always cite the main publication
+---------------------------------------
 
 .. [1] Picciani M, Gabriel W, Giurcoiu VG et al. (2023),
     *Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit*,
     `Proteomics <https://doi.org/10.1002/pmic.202300112>`__.
 
-Should you make use of peptide property predictions through Oktoberfest using one of the supported Prosit models, please also cite one of the following:
+Please cite the Prosit model(s) you are using
+---------------------------------------------
 
 When using Prosit
 
@@ -30,3 +32,10 @@ When using Prosit-timsTOF
 .. [5] Adams C, Gabriel W, Laukens K et al. (2024),
     *Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF*,
     `Nature Communications <https://doi.org/10.1038/s41467-024-48322-0>`__.
+
+Please cite in case you use quantification
+------------------------------------------
+
+.. [6] The M, Samaras P, Kuster B, Wilhelm, M. (2022),
+    *Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups*,
+    `Molecular & Cellular Proteomics <https://doi-org.org/10.1016/j.mcpro.2022.100437>`__.
