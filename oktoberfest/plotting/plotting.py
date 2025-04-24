@@ -487,10 +487,12 @@ def plot_mirror_spectrum(
 
     :raises ValueError: If the mass analyzer type is unknown.
     """
-    score_col, _, _, _ = _check_columns(target_df)
+    score_col, _, _, spec_col = _check_columns(target_df)
     target_df["target"] = True
     decoy_df["target"] = False
     concat_target_decoy = pd.concat([target_df, decoy_df])
+    if spec_col == "PSMId":
+        concat_target_decoy["ScanNr"] = concat_target_decoy["PSMId"].str.split("-").str[-1].astype(int)
     filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
     if filtered_obs.empty:
         print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
