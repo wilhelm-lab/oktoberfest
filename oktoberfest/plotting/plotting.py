@@ -536,7 +536,7 @@ def plot_mirror_spectrum(
 
     top_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_exp, intensity=intensity_exp)
     top_spectrum = top_spectrum.annotate_proforma(
-        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types="byrI", max_ion_charge=charge
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types=ion_types, max_ion_charge=charge
     )
 
     # Get predicted spectrum
@@ -561,7 +561,7 @@ def plot_mirror_spectrum(
     title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
     title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
-    title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa}"
+    title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa:.2f}"
     ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
     sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
 
