@@ -484,8 +484,6 @@ def plot_mirror_spectrum(
     :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
     :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
     :param pdf: PDF file object for saving mirror plots
-
-    :raises ValueError: If the mass analyzer type is unknown.
     """
     score_col, _, _, spec_col = _check_columns(target_df)
     target_df["target"] = True
@@ -519,16 +517,8 @@ def plot_mirror_spectrum(
     score = concat_target_decoy[
         (concat_target_decoy["ScanNr"] == scan_number) & (concat_target_decoy["filename"] == raw_file)
     ][score_col].iloc[0]
-
-    # Set tolerance based on mass analyzer
-    if mass_analyzer == "FTMS":
-        fragment_tol_mass = 20.0
-        fragment_tol_mode = "ppm"
-    elif mass_analyzer == "ITMS":
-        fragment_tol_mass = 0.4
-        fragment_tol_mode = "Da"
-    else:
-        raise ValueError(f"Unknown mass analyzer: {mass_analyzer}")
+    fragment_tol_mass = config.mass_tolerance
+    fragment_tol_mode = config.unit_mass_tolerance
 
     # Get experimental spectrum
     mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
