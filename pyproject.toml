@@ -39,7 +39,7 @@ picked_group_fdr = ">=0.7.1"
 koinapy = "^0.0.7"
 spectrum-utils = "^0.4.2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
 safety = ">=1.9.0"
