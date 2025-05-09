@@ -19,6 +19,8 @@ from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, Sag
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
+from oktoberfest.preprocessing.mass_scale import Scale, my_annotation_function 
+
 
 logger = logging.getLogger(__name__)
 
@@ -510,7 +512,8 @@ def convert_search(
         search_result = MSAmanda
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
-
+    logger.info(f"Search result :  {search_result}")
+    
     return search_result(input_path).generate_internal(
         tmt_label=tmt_label,
         out_path=output_file,
@@ -933,9 +936,9 @@ def annotate_spectral_library_jl(
     mass_tol: float=20,
     p_window: float=1.2,
 ) -> Spectra:
-    import sys
-    sys.path.append("/cmnfs/home/j.lapin/projects/shabaz/data")
-    from mass_scale import Scale, my_annotation_function # ADHOC
+    # import sys
+    # sys.path.append("/cmnfs/home/j.lapin/projects/shabaz/data")
+    # from mass_scale import Scale, my_annotation_function # ADHOC
     scale = Scale()
     var_df = pd.read_csv(ion_dict_path, index_col='full')
     

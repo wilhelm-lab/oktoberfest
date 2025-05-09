@@ -199,7 +199,7 @@ def merge_input(
 def rescore_with_percolator(
     input_file: str | Path,
     output_folder: str | Path | None = None,
-    num_threads: int = 3,
+    num_threads: int = 5,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
 ):
@@ -237,7 +237,6 @@ def rescore_with_percolator(
 
     cmd = f"percolator --weights {weights_file} \
                     --num-threads {num_threads} \
-                    --subset-max-train 500000 \
                     --post-processing-tdc \
                     --testFDR {test_fdr} \
                     --trainFDR {train_fdr} \
