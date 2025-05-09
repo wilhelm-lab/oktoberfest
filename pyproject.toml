@@ -16,13 +16,11 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 
-
 [tool.poetry.dependencies]
 python = ">3.9.0,<3.11.0"
 click = ">=8.0.0"
 rich = ">=10.3.0"
 PyYAML = ">=5.4.1"
-
 anndata = "^0.10.5post1"
 array-api-compat = "1.7.1"
 matplotlib = "^3.6.3"
@@ -32,7 +30,6 @@ seaborn = ">=0.12.2,<0.14.0"
 spectrum-fundamentals = ">=0.7.8,<0.8.0"
 spectrum-io = ">=0.6.4,<0.7.0"
 picked_group_fdr = ">=0.7.1"
-
 #dlomix = {extras = ["rltl-report", "wandb"], url="https://github.com/wilhelm-lab/dlomix/tarball/feature/bmpc", optional = true}
 #tensorflow = {version = ">=2.13,<2.16", extras = ["and-cuda"], optional = true}
 #wandb = {version = "^0.17.5", optional = true}
@@ -67,12 +64,10 @@ Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 pyupgrade = ">=2.31.0"
 openpyxl = ">=3.0.10"
+sphinx-autodoc-typehints = ">=1.24,<3.0"
 
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
-
-[tool.poetry.group.dev.dependencies]
-sphinx-autodoc-typehints = ">=1.24,<3.0"
 
 #[tool.poetry.extras]
 #dlomix = ["dlomix", "tensorflow"]
