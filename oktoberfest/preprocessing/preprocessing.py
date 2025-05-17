@@ -860,6 +860,8 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 def annotate_spectral_library(
     psms: pd.DataFrame,
     fragmentation_method: str = "HCD",
+    ion_dict_path: Optional[str] = None,
+    p_window: Optional[float] = 1.2,
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
@@ -901,17 +903,26 @@ def annotate_spectral_library(
         >>> print(library)
     """
     logger.info("Annotating spectra...")
+    if ion_dict_path is not None:
+        ion_df =  pd.read_csv(ion_dict_path, index_col='full')
+        ion_types = list(np.sort(ion_df['ion'].unique()))
+        var_df = ion_df.copy()
+        var_df.index.name = 'ion'
+        var_df = var_df.rename(columns={'ion':'type', 'length':'num'}).drop(columns=['neutral_loss', 'index'])
     df_annotated_spectra = annotate_spectra(
         un_annot_spectra=psms,
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
+        ion_df=ion_df,
+        p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
     )
-
-    ion_types = retrieve_ion_types(fragmentation_method)
-    var_df = Spectra._gen_vars_df(ion_types)
+    
+    if ion_dict_path is None:
+        ion_types = retrieve_ion_types(fragmentation_method)
+        var_df = Spectra._gen_vars_df(ion_types)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(

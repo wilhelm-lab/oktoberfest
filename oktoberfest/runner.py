@@ -156,20 +156,22 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         annotate_neutral_loss = config.ptm_use_neutral_loss
-        """aspec = pp.annotate_spectral_library(
+        aspec = pp.annotate_spectral_library(
             psms=library,
             mass_tol=config.mass_tolerance,
             unit_mass_tol=config.unit_mass_tolerance,
             fragmentation_method=config.fragmentation_method,
+            ion_dict_path=config.models['local_args']['ion_dict_path'],
+            p_window=config.p_window,
             custom_mods=config.unimod_to_mass(),
             annotate_neutral_loss=annotate_neutral_loss,
-        )"""
-        aspec = pp.annotate_spectral_library_jl(
+        )
+        """aspec = pp.annotate_spectral_library_jl(
             psms=library,
             ion_dict_path=config.models['local_args']['ion_dict_path'],
             mass_tol=config.mass_tolerance,
             p_window=config.p_window,
-        )
+        )"""
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
     return aspec
