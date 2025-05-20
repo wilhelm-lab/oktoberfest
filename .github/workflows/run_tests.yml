@@ -19,47 +19,47 @@ jobs:
             matrix:
                 include:
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "pre-commit",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "safety",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "mypy",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: windows-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: macos-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "typeguard",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "xdoctest",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.11",
                           os: ubuntu-latest,
                           session: "docs-build",
                       }
@@ -138,10 +138,10 @@ jobs:
             - name: Check out the repository
               uses: actions/checkout@v4
 
-            - name: Set up Python 3.9
+            - name: Set up Python "3.11"
               uses: actions/setup-python@v5
               with:
-                  python-version: 3.9
+                  python-version: "3.11"
 
             - name: Install Poetry
               run: |

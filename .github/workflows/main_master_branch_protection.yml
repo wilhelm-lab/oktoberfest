@@ -42,7 +42,7 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.8"
+                  python-version: "3.11"
             # PRs to the repository master branch are only ok if coming from any patch or release branch
             - name: Install mlf-core
               run: pip install mlf-core
