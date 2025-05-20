@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.8.3"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.8.4"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
 authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
@@ -30,7 +30,7 @@ mokapot = ">=0.9.1,<0.11.0"
 numpy = ">=1.20,<1.25"
 seaborn = ">=0.12.2,<0.14.0"
 spectrum-fundamentals = ">=0.7.8,<0.8.0"
-spectrum-io = ">=0.6.4,<0.7.0"
+spectrum-io = ">=0.6.5,<0.7.0"
 picked_group_fdr = ">=0.7.1"
 
 #dlomix = {extras = ["rltl-report", "wandb"], url="https://github.com/wilhelm-lab/dlomix/tarball/feature/bmpc", optional = true}
