@@ -64,7 +64,6 @@ Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 pyupgrade = ">=2.31.0"
 openpyxl = ">=3.0.10"
-sphinx-autodoc-typehints = ">=1.24,<3.0"
 
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
