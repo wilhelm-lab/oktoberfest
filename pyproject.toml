@@ -35,7 +35,6 @@ picked_group_fdr = ">=0.7.1"
 #wandb = {version = "^0.17.5", optional = true}
 koinapy = "^0.0.7"
 spectrum-utils = "^0.4.2"
-cryptography = "^44.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=6.2.3"
