@@ -78,6 +78,17 @@ class Config:
         return self.data.get("fragmentation_method", "HCD")
 
     @property
+    def ion_types(self) -> str:
+        """
+        Returns the fragment ion types used for fragment annotation.
+
+        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "abcxyz"). Default is "by".
+
+        :returns: A string representing the fragment ion types.
+        """
+        return self.data.get("ion_types", "by")
+
+    @property
     def unit_mass_tolerance(self) -> Optional[str]:
         """Get unit for the mass tolerance from the config file (da or ppm)."""
         return self.data.get("unitMassTolerance", None)
@@ -102,6 +113,18 @@ class Config:
             return "ThermoRawFileParser.exe"
 
         return Path(self.data.get("thermoExe", default_thermo()))
+
+    @property
+    def mirror_plots(self) -> dict[str, list[int]]:
+        """
+        Get the raw files and scan numbers for which to generate mirror plots.
+
+        This function returns a dictionary where the keys are raw file names,
+        and the values are lists of scan numbers.
+
+        :return: Dictionary mapping raw file names to a list of scan numbers.
+        """
+        return {str(k): list(map(int, v)) for k, v in self.data.get("mirror_plots", {}).items()}
 
     ###########################
     # these are input options #

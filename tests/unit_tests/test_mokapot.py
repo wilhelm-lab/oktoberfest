@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import mokapot
 
 import oktoberfest.plotting as pl
+from oktoberfest.utils import Config
 
 
 def _run_mokapot(path: Path, search_type: str):
@@ -30,7 +31,7 @@ class TestMokapot(unittest.TestCase):
         # suppress UserWarning that agg cannot show plots
         warnings.filterwarnings("ignore", "Matplotlib is currently using agg")
 
-        pl.plot_all(path)
+        pl.plot_all(path, Config())
 
         for file in path.glob("*"):
             if file.suffix != ".tab":

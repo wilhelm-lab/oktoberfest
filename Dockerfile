@@ -1,4 +1,4 @@
-FROM python:3.8.12
+FROM python:3.9.22
 
 # Tell docker that we don't want to be bothered with questions
 ARG DEBIAN_FRONTEND=noninteractive
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 ENV HOME /root
 WORKDIR /root
 
-RUN pip install poetry==1.6.1
+RUN pip install poetry==1.8.3
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
 ADD pyproject.toml /root/pyproject.toml
@@ -31,9 +31,9 @@ RUN DEB=percolator-v3-06-linux-amd64.deb && \
     rm /tmp/$DEB
 
 # install ThermoRawFileParser
-RUN ZIP=ThermoRawFileParser1.4.2.zip && \
-    wget https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/$ZIP -O /tmp/$ZIP && \
-    unzip /tmp/$ZIP -d /root/ && \
+RUN ZIP=ThermoRawFileParser1.4.3.zip && \
+    wget https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.3/$ZIP -O /tmp/$ZIP && \
+    unzip /tmp/$ZIP -d /opt/compomics/ && \
     rm /tmp/$ZIP
 
 # Copy source folder
