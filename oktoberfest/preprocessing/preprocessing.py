@@ -15,7 +15,7 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, Sage, Scout, Xisearch
+from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -531,18 +531,17 @@ def convert_search(
     """
     search_engine = search_engine.lower()
     search_result: Any
+    xl = False
     if search_engine == "maxquant":
         search_result = MaxQuant
-        xl = False
     elif search_engine == "msfragger":
         search_result = MSFragger
-        xl = False
     elif search_engine == "mascot":
         search_result = Mascot
-        xl = False
     elif search_engine == "sage":
         search_result = Sage
-        xl = False
+    elif search_engine == "openms":
+        search_result = OpenMS
     elif search_engine == "xisearch":
         search_result = Xisearch
         xl = True
@@ -551,7 +550,6 @@ def convert_search(
         xl = True
     elif search_engine == "msamanda":
         search_result = MSAmanda
-        xl = False
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
