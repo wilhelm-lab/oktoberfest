@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.8.3"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.9.0"  # <<COOKIETEMPLE_FORCE_BUMP>>
 description = "Public repo oktoberfest"
 authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
@@ -12,33 +12,31 @@ packages = [
     { include = "oktoberfest" },
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 
-
 [tool.poetry.dependencies]
-python = ">=3.9.0,<3.11.0"
+python = ">=3.10.0,<3.12.0"
 click = ">=8.0.0"
 rich = ">=10.3.0"
 PyYAML = ">=5.4.1"
-
 anndata = "^0.10.5post1"
-array-api-compat = "1.7.1"
+array-api-compat = "1.12.0"
 matplotlib = "^3.6.3"
 mokapot = ">=0.9.1,<0.11.0"
-numpy = ">=1.20,<1.25"
+numpy = ">=1.26.4"
 seaborn = ">=0.12.2,<0.14.0"
-spectrum-fundamentals = ">=0.7.8,<0.8.0"
-spectrum-io = ">=0.6.4,<0.7.0"
+spectrum-fundamentals = ">=0.8.0,<0.9.0"
+spectrum-io = ">=0.7.0,<0.8.0"
 picked_group_fdr = ">=0.7.1"
-
 #dlomix = {extras = ["rltl-report", "wandb"], url="https://github.com/wilhelm-lab/dlomix/tarball/feature/bmpc", optional = true}
 #tensorflow = {version = ">=2.13,<2.16", extras = ["and-cuda"], optional = true}
 #wandb = {version = "^0.17.5", optional = true}
 koinapy = "^0.0.7"
+spectrum-utils = "^0.4.2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
 safety = ">=1.9.0"
@@ -69,9 +67,6 @@ openpyxl = ">=3.0.10"
 
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
-
-[tool.poetry.group.dev.dependencies]
-sphinx-autodoc-typehints = ">=1.24,<3.0"
 
 #[tool.poetry.extras]
 #dlomix = ["dlomix", "tensorflow"]

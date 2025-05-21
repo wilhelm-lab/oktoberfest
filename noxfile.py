@@ -18,7 +18,7 @@ except ImportError:
     sys.exit(1)
 
 package = "oktoberfest"
-python_versions = ["3.9", "3.10"]
+python_versions = ["3.10", "3.11"]
 nox.options.sessions = (
     "pre-commit",
     "safety",

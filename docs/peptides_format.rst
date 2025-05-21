@@ -14,8 +14,8 @@ In this case, you need to have the following parameter in your config file:
 
 Oktoberfest will then create the table of peptides with associated metadata in internal format (see below) based on the configuration in the spectralLibraryOptions of your configuration file. For a list of these options, check the `configuration options <./config.html>`_.
 
-Format
-~~~~~~
+Description of peptide list columns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Oktoberfest expects a csv formatted file, where each row represent a peptide and optional mappings to proteins.
 
@@ -29,8 +29,8 @@ Oktoberfest expects a csv formatted file, where each row represent a peptide and
     | proteins          | An optional list of protein ids separated by ';'. If this column is left out, or if no protein is provided, the string "unknown" will be used as a proteinID in the spectral library.                        |
     +-------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-Example
-~~~~~~~
+Example of peptide list
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block::
 
@@ -54,8 +54,8 @@ If you want to have full control, you can provide the table in internal format d
 
 Oktoberfest will then read the table directly.
 
-Format
-~~~~~~
+Description of internal file columns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Oktoberfest expects a csv formatted file where each row represents a peptide with given metadata. The following table provides the file format specification.
 
@@ -79,8 +79,8 @@ Oktoberfest expects a csv formatted file where each row represents a peptide wit
     | proteins          | An optional list of protein ids separated by ';'                                                                                                                                                                                                                                    |
     +-------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-Example
-~~~~~~~
+Example of internal file
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block::
 

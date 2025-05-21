@@ -18,11 +18,11 @@ The official Oktoberfest documentation can be found at https://oktoberfest.readt
 
 ## How to cite
 
-Please always cite the main publication:
+### Please always cite the main publication
 
 [Oktoberfest] Picciani M, Gabriel W, Giurcoiu VG et al. (2023), _Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit_, [Proteomics](https://doi.org/10.1002/pmic.202300112)
 
-Should you make use of peptide property predictions through Oktoberfest using one of the supported Prosit models, please also cite the following:
+### Please cite the Prosit model(s) you are using
 
 When using Prosit
 
@@ -32,8 +32,12 @@ When using Prosit
 
 When using Prosit-TMT
 
-[Prosit-TMT] Gabriel W, The M, Zolg D et al. (2022), _TriMap: Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides_, [Analytical Chemistry](https://doi.org/10.1021/acs.analchem.1c05435)
+[Prosit-TMT] Gabriel W, The M, Zolg D et al. (2022), _Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides_, [Analytical Chemistry](https://doi.org/10.1021/acs.analchem.1c05435)
 
 When using Prosit-timsTOF
 
-[Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2023), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [BioRxiv](https://doi.org/10.1101/2023.07.17.549401)
+[Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2024), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [Nature Communications](https://doi.org/10.1038/s41467-024-48322-0)
+
+### Please cite when using protein grouping and quantification
+
+[PickedGroupFDR] The M, Samaras P, Kuster B, Wilhelm, M. (2022), _Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups_, [Molecular & Cellular Proteomics](https://doi-org.org/10.1016/j.mcpro.2022.100437)
