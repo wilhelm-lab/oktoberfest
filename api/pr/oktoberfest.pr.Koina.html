@@ -6,22 +6,22 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pr.Koina &mdash; Oktoberfest 0.8.3 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>oktoberfest.pr.Koina &mdash; Oktoberfest 0.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=7f96dc5e"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.re.generate_features" href="../re/oktoberfest.re.generate_features.html" />
-    <link rel="prev" title="oktoberfest.pr.Predictor" href="oktoberfest.pr.Predictor.html" /> 
+    <link rel="next" title="oktoberfest.pr.Koina.predict" href="oktoberfest.pr.Koina.predict.html" />
+    <link rel="prev" title="oktoberfest.pr.Predictor.predict_rt" href="oktoberfest.pr.Predictor.predict_rt.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,8 +49,9 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#data-data">Data: <code class="code docutils literal notranslate"><span class="pre">data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="../../API.html#high-level-prediction-runner">High-level prediction runner</a></li>
 <li class="toctree-l3 current"><a class="reference internal" href="../../API.html#koina-interface">Koina interface</a><ul class="current">
 <li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pr.Koina</a></li>
@@ -96,37 +97,31 @@
 <h1>oktoberfest.pr.Koina<a class="headerlink" href="#oktoberfest-pr-koina" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="oktoberfest.pr.Koina">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">Koina</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">server_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'koina.wilhelmlab.org:443'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Koina" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">Koina</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Koina" title="Link to this definition"></a></dt>
 <dd><p>Extension of the Koina GRPC class in koinapy, to add required logic for Oktoberfest.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>)</p></li>
-<li><p><strong>server_url</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>)</p></li>
-<li><p><strong>ssl</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>)</p></li>
-<li><p><strong>targets</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.13)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>args</strong> (<em>Any</em>)</p></li>
+<li><p><strong>kwargs</strong> (<em>Any</em>)</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Any</p>
 </dd>
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="oktoberfest.pr.Koina.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">server_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'koina.wilhelmlab.org:443'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Koina.__init__" title="Link to this definition"></a></dt>
-<dd><p>Initialize a KoinaModel instance with the specified parameters.</p>
-<p>This constructor initializes the KoinaModel instance, connecting it to the specified Inference Server.
-It checks the availability of the server, the specified model, retrieves input and output information,
-and determines the maximum batch size supported by the model’s configuration.
-Note: To use this class, ensure that the inference server is properly configured and running,
-and that the specified model is available on the server.</p>
-<dl class="field-list simple">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
+<dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model_name</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The name of the Koina model to be used for inference.</p></li>
-<li><p><strong>server_url</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The URL of the inference server. Defaults to “koina.wilhelmlab.org:443”.</p></li>
-<li><p><strong>ssl</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Indicates whether to use SSL for communication with the server. Defaults to True.</p></li>
-<li><p><strong>targets</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]]</span>) – An optional list of targets to predict. If this is None, all model targets are
-predicted and received.</p></li>
-<li><p><strong>disable_progress_bar</strong> – Whether to disable the progress bar showing the progress of predictions.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><em>Any</em></a>)</p></li>
+<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><em>Any</em></a>)</p></li>
 </ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -134,31 +129,11 @@ predicted and received.</p></li>
 <p class="rubric">Methods</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#oktoberfest.pr.Koina.__init__" title="oktoberfest.pr.Koina.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(model_name[, server_url, ssl, targets])</p></td>
-<td><p>Initialize a KoinaModel instance with the specified parameters.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code>(data, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Koina.predict.html#oktoberfest.pr.Koina.predict" title="oktoberfest.pr.Koina.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(data, **kwargs)</p></td>
 <td><p>Perform inference on the given data using the Koina model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_xl</span></code>(data, **kwargs)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="oktoberfest.pr.Koina.predict_xl.html#oktoberfest.pr.Koina.predict_xl" title="oktoberfest.pr.Koina.predict_xl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_xl</span></code></a>(data, **kwargs)</p></td>
 <td><p>Perform inference on the xl data using the Koina model.</p></td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Attributes</p>
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">response_dict</span></code></p></td>
-<td><p>The dictionary containing raw InferenceResult/InferenceServerException objects (values) for a given request_id (key).</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">model_inputs</span></code></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">model_outputs</span></code></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">batch_size</span></code></p></td>
-<td><p></p></td>
 </tr>
 </tbody>
 </table>
@@ -170,14 +145,14 @@ predicted and received.</p></li>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="oktoberfest.pr.Predictor.html" class="btn btn-neutral float-left" title="oktoberfest.pr.Predictor" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../re/oktoberfest.re.generate_features.html" class="btn btn-neutral float-right" title="oktoberfest.re.generate_features" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pr.Predictor.predict_rt.html" class="btn btn-neutral float-left" title="oktoberfest.pr.Predictor.predict_rt" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="oktoberfest.pr.Koina.predict.html" class="btn btn-neutral float-right" title="oktoberfest.pr.Koina.predict" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2025, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

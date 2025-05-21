@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L262-L293
+
+oktoberfest.data.Spectra.add\_list\_of\_predicted\_intensities
+==============================================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.add_list_of_predicted_intensities

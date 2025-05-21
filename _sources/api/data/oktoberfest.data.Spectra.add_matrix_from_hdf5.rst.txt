@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L195-L204
+
+oktoberfest.data.Spectra.add\_matrix\_from\_hdf5
+================================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.add_matrix_from_hdf5

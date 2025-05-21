@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/dlomix.py#L298-L311
+
+oktoberfest.pr.DLomix.predict\_xl
+=================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: DLomix.predict_xl

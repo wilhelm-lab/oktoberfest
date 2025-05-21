@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L206-L217
+
+oktoberfest.data.Spectra.add\_mzs
+=================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.add_mzs

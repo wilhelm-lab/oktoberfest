@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L191-L193
+
+oktoberfest.data.Spectra.get\_meta\_data
+========================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.get_meta_data

@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L362-L368
+
+oktoberfest.data.Spectra.filter\_by\_score
+==========================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.filter_by_score

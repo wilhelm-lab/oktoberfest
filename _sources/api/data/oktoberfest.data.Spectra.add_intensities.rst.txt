@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L219-L243
+
+oktoberfest.data.Spectra.add\_intensities
+=========================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.add_intensities

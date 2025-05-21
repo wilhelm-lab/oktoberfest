@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L358-L360
+
+oktoberfest.data.Spectra.remove\_decoys
+=======================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.remove_decoys

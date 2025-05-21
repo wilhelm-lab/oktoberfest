@@ -7,27 +7,19 @@
 
    
    .. automethod:: __init__
+      :no-index:
 
    
    .. rubric:: Methods
 
    .. autosummary::
-   
-      ~Koina.__init__
-      ~Koina.predict
-      ~Koina.predict_xl
+      :toctree:
+      
+         ~Koina.predict
+         ~Koina.predict_xl
    
    
 
    
-   
-   .. rubric:: Attributes
-
-   .. autosummary::
-   
-      ~Koina.response_dict
-      ~Koina.model_inputs
-      ~Koina.model_outputs
-      ~Koina.batch_size
    
    

@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pr.Predictor &mdash; Oktoberfest 0.8.3 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>oktoberfest.pr.Predictor &mdash; Oktoberfest 0.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=7f96dc5e"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="oktoberfest.pr.Koina" href="oktoberfest.pr.Koina.html" />
+    <link rel="next" title="oktoberfest.pr.Predictor.ce_calibration" href="oktoberfest.pr.Predictor.ce_calibration.html" />
     <link rel="prev" title="oktoberfest.pp.filter_peptides_for_model" href="../pp/oktoberfest.pp.filter_peptides_for_model.html" /> 
 </head>
 
@@ -49,8 +49,9 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#data-data">Data: <code class="code docutils literal notranslate"><span class="pre">data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="../../API.html#high-level-prediction-runner">High-level prediction runner</a><ul class="current">
 <li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pr.Predictor</a></li>
 </ul>
@@ -96,7 +97,7 @@
 <h1>oktoberfest.pr.Predictor<a class="headerlink" href="#oktoberfest-pr-predictor" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="oktoberfest.pr.Predictor">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">Predictor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Predictor" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">oktoberfest.pr.</span></span><span class="sig-name descname"><span class="pre">Predictor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Predictor" title="Link to this definition"></a></dt>
 <dd><p>Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -107,13 +108,13 @@
 </dd>
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="oktoberfest.pr.Predictor.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pr.Predictor.__init__" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Initialize from Koina or DLomix instance.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>predictor</strong> (<a class="reference internal" href="oktoberfest.pr.Koina.html#oktoberfest.pr.Koina" title="oktoberfest.predict.koina.Koina"><em>Koina</em></a><em> | </em><em>ZeroPredictor</em>)</p></li>
+<li><p><strong>predictor</strong> (<a class="reference internal" href="oktoberfest.pr.DLomix.html#oktoberfest.pr.DLomix" title="oktoberfest.predict.dlomix.DLomix"><em>DLomix</em></a><em> | </em><a class="reference internal" href="oktoberfest.pr.Koina.html#oktoberfest.pr.Koina" title="oktoberfest.predict.koina.Koina"><em>Koina</em></a><em> | </em><em>ZeroPredictor</em>)</p></li>
 <li><p><strong>model_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>)</p></li>
 </ul>
 </dd>
@@ -123,34 +124,31 @@
 <p class="rubric">Methods</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#oktoberfest.pr.Predictor.__init__" title="oktoberfest.pr.Predictor.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(predictor, model_name)</p></td>
-<td><p>Initialize from Koina or DLomix instance.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ce_calibration</span></code>(library, ce_range, ...[, xl])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.ce_calibration.html#oktoberfest.pr.Predictor.ce_calibration" title="oktoberfest.pr.Predictor.ce_calibration"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ce_calibration</span></code></a>(library, ce_range, ...[, xl])</p></td>
 <td><p>Calculate best collision energy for peptide property predictions.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_config</span></code>(config, model_type, **kwargs)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.from_config.html#oktoberfest.pr.Predictor.from_config" title="oktoberfest.pr.Predictor.from_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_config</span></code></a>(config, model_type, **kwargs)</p></td>
 <td><p>Load from config object.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dlomix</span></code>(model_type, model_path, ...[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.from_dlomix.html#oktoberfest.pr.Predictor.from_dlomix" title="oktoberfest.pr.Predictor.from_dlomix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dlomix</span></code></a>(model_type, model_path, ...[, ...])</p></td>
 <td><p>Create DLomix predictor.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_koina</span></code>(model_name[, server_url, ssl, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.from_koina.html#oktoberfest.pr.Predictor.from_koina" title="oktoberfest.pr.Predictor.from_koina"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_koina</span></code></a>(model_name[, server_url, ssl, ...])</p></td>
 <td><p>Create Koina predictor.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_at_once</span></code>(data[, xl])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.predict_at_once.html#oktoberfest.pr.Predictor.predict_at_once" title="oktoberfest.pr.Predictor.predict_at_once"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_at_once</span></code></a>(data[, xl])</p></td>
 <td><p>Retrieve and return predictions in one go.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_in_chunks</span></code>(data, chunk_idx[, xl])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.predict_in_chunks.html#oktoberfest.pr.Predictor.predict_in_chunks" title="oktoberfest.pr.Predictor.predict_in_chunks"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_in_chunks</span></code></a>(data, chunk_idx[, xl])</p></td>
 <td><p>Retrieve and return predictions in chunks.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_in_chunks_xl</span></code>(data, chunk_idx[, xl])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.predict_in_chunks_xl.html#oktoberfest.pr.Predictor.predict_in_chunks_xl" title="oktoberfest.pr.Predictor.predict_in_chunks_xl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_in_chunks_xl</span></code></a>(data, chunk_idx[, xl])</p></td>
 <td><p>Retrieve and return predictions in chunks.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_intensities</span></code>(data[, xl, chunk_idx])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.predict_intensities.html#oktoberfest.pr.Predictor.predict_intensities" title="oktoberfest.pr.Predictor.predict_intensities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_intensities</span></code></a>(data[, xl, chunk_idx])</p></td>
 <td><p>Generate intensity predictions and add them to the provided data object.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_rt</span></code>(data, **kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="oktoberfest.pr.Predictor.predict_rt.html#oktoberfest.pr.Predictor.predict_rt" title="oktoberfest.pr.Predictor.predict_rt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict_rt</span></code></a>(data, **kwargs)</p></td>
 <td><p>Generate retention time predictions and add them to the provided data object.</p></td>
 </tr>
 </tbody>
@@ -164,13 +162,13 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../pp/oktoberfest.pp.filter_peptides_for_model.html" class="btn btn-neutral float-left" title="oktoberfest.pp.filter_peptides_for_model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="oktoberfest.pr.Koina.html" class="btn btn-neutral float-right" title="oktoberfest.pr.Koina" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="oktoberfest.pr.Predictor.ce_calibration.html" class="btn btn-neutral float-right" title="oktoberfest.pr.Predictor.ce_calibration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2025, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

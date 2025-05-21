@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L370-L374
+
+oktoberfest.data.Spectra.remove\_duplicates
+===========================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.remove_duplicates

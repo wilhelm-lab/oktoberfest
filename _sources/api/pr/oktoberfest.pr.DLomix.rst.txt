@@ -1,0 +1,25 @@
+﻿oktoberfest.pr.DLomix
+=====================
+
+.. currentmodule:: oktoberfest.pr
+
+.. autoclass:: DLomix
+
+   
+   .. automethod:: __init__
+      :no-index:
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+      
+         ~DLomix.predict
+         ~DLomix.predict_xl
+   
+   
+
+   
+   
+   

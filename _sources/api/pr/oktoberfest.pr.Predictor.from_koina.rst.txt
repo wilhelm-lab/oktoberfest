@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predictor.py#L37-L54
+
+oktoberfest.pr.Predictor.from\_koina
+====================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Predictor.from_koina

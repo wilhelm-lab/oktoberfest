@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predictor.py#L346-L399
+
+oktoberfest.pr.Predictor.predict\_in\_chunks\_xl
+================================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Predictor.predict_in_chunks_xl

@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/koina.py#L87-L136
+
+oktoberfest.pr.Koina.predict\_xl
+================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Koina.predict_xl

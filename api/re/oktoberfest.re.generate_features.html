@@ -6,22 +6,22 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.re.generate_features &mdash; Oktoberfest 0.8.3 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>oktoberfest.re.generate_features &mdash; Oktoberfest 0.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=7f96dc5e"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="oktoberfest.re.merge_input" href="oktoberfest.re.merge_input.html" />
-    <link rel="prev" title="oktoberfest.pr.Koina" href="../pr/oktoberfest.pr.Koina.html" /> 
+    <link rel="prev" title="oktoberfest.pr.refine_intensity_predictor" href="../pr/oktoberfest.pr.refine_intensity_predictor.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,16 +49,17 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#data-data">Data: <code class="code docutils literal notranslate"><span class="pre">data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a><ul class="current">
-<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#general">General</a><ul class="current">
-<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.re.generate_features</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.merge_input.html">oktoberfest.re.merge_input</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.rescore_with_mokapot.html">oktoberfest.re.rescore_with_mokapot</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.re.rescore_with_percolator.html">oktoberfest.re.rescore_with_percolator</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.re.generate_features</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.re.generate_features"><code class="docutils literal notranslate"><span class="pre">generate_features()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.re.merge_input.html">oktoberfest.re.merge_input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.re.rescore_with_mokapot.html">oktoberfest.re.rescore_with_mokapot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.re.rescore_with_percolator.html">oktoberfest.re.rescore_with_percolator</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a></li>
@@ -105,25 +106,25 @@ fdr estimation method, then writes the input tab file to the chosen output file.
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>library</strong> (<span class="sphinx_autodoc_typehints-type">Spectra</span>) – the library to perform feature generation on</p></li>
-<li><p><strong>search_type</strong> (<span class="sphinx_autodoc_typehints-type">str</span>) – One of “original” and “rescore”, which determines the generated features</p></li>
-<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type">str | Path</span>) – the location to the generated tab file to be used for percolator / mokapot</p></li>
-<li><p><strong>additional_columns</strong> (<span class="sphinx_autodoc_typehints-type">str | list | None</span>) – additional columns supplied in the search results to be used as features (either a list or “all”)</p></li>
-<li><p><strong>all_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – whether to use all features or only the standard set TODO</p></li>
-<li><p><strong>xl</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – crosslinked or linear peptide</p></li>
-<li><p><strong>regression_method</strong> (<span class="sphinx_autodoc_typehints-type">str</span>) – The regression method to use for iRT alignment</p></li>
-<li><p><strong>add_neutral_loss_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – Flag to indicate whether to add neutral loss features to percolator or not</p></li>
-<li><p><strong>remove_miss_cleavage_features</strong> (<span class="sphinx_autodoc_typehints-type">bool</span>) – Flag to indicate whether to remove miss cleavage features from percolator or not</p></li>
+<li><p><strong>library</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="../data/oktoberfest.data.Spectra.html#oktoberfest.data.Spectra" title="oktoberfest.data.spectra.Spectra"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></a></span>) – the library to perform feature generation on</p></li>
+<li><p><strong>search_type</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – One of “original” and “rescore”, which determines the generated features</p></li>
+<li><p><strong>output_file</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – the location to the generated tab file to be used for percolator / mokapot</p></li>
+<li><p><strong>additional_columns</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a> | <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.13)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a></span>) – additional columns supplied in the search results to be used as features (either a list or “all”)</p></li>
+<li><p><strong>all_features</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – whether to use all features or only the standard set TODO</p></li>
+<li><p><strong>xl</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – crosslinked or linear peptide</p></li>
+<li><p><strong>regression_method</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></span>) – The regression method to use for iRT alignment</p></li>
+<li><p><strong>add_neutral_loss_features</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Flag to indicate whether to add neutral loss features to percolator or not</p></li>
+<li><p><strong>remove_miss_cleavage_features</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – Flag to indicate whether to remove miss cleavage features from percolator or not</p></li>
 </ul>
 </dd>
 <dt class="field-even">Example<span class="colon">:</span></dt>
 <dd class="field-even"><p></p></dd>
 </dl>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">rescore</span> <span class="k">as</span> <span class="n">re</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest</span> <span class="kn">import</span> <span class="n">predict</span> <span class="k">as</span> <span class="n">pr</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">oktoberfest.data</span> <span class="kn">import</span> <span class="n">Spectra</span><span class="p">,</span> <span class="n">FragmentType</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">oktoberfest</span><span class="w"> </span><span class="kn">import</span> <span class="n">rescore</span> <span class="k">as</span> <span class="n">re</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">oktoberfest</span><span class="w"> </span><span class="kn">import</span> <span class="n">predict</span> <span class="k">as</span> <span class="n">pr</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">oktoberfest.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Spectra</span><span class="p">,</span> <span class="n">FragmentType</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Required columns: RAW_FILE, MODIFIED_SEQUENCE, SEQUENCE, CALCULATED_MASS, SCAN_NUMBER,</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">meta_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;RAW_FILE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;File1&quot;</span><span class="p">,</span><span class="s2">&quot;File1&quot;</span><span class="p">],</span>
@@ -163,14 +164,14 @@ fdr estimation method, then writes the input tab file to the chosen output file.
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../pr/oktoberfest.pr.Koina.html" class="btn btn-neutral float-left" title="oktoberfest.pr.Koina" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../pr/oktoberfest.pr.refine_intensity_predictor.html" class="btn btn-neutral float-left" title="oktoberfest.pr.refine_intensity_predictor" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="oktoberfest.re.merge_input.html" class="btn btn-neutral float-right" title="oktoberfest.re.merge_input" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2025, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

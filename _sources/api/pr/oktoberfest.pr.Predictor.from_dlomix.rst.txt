@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predictor.py#L56-L70
+
+oktoberfest.pr.Predictor.from\_dlomix
+=====================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Predictor.from_dlomix

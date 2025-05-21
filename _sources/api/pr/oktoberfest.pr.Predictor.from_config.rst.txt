@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predictor.py#L72-L99
+
+oktoberfest.pr.Predictor.from\_config
+=====================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Predictor.from_config

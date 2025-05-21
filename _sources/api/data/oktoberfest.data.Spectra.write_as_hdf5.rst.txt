@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L340-L346
+
+oktoberfest.data.Spectra.write\_as\_hdf5
+========================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.write_as_hdf5

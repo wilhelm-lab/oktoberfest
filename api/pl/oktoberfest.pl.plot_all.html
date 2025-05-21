@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pl.plot_all &mdash; Oktoberfest 0.8.3 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>oktoberfest.pl.plot_all &mdash; Oktoberfest 0.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=7f96dc5e"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -49,18 +49,19 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Principles</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../../API.html">API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#data-data">Data: <code class="code docutils literal notranslate"><span class="pre">data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pp">Preprocessing: <code class="code docutils literal notranslate"><span class="pre">pp</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../API.html#predicting-pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.pr">Predicting: <code class="code docutils literal notranslate"><span class="pre">pr</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../API.html#module-oktoberfest.re">Rescoring: <code class="code docutils literal notranslate"><span class="pre">re</span></code></a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../../API.html#module-oktoberfest.pl">Plotting: <code class="code docutils literal notranslate"><span class="pre">pl</span></code></a><ul class="current">
-<li class="toctree-l3 current"><a class="reference internal" href="../../API.html#id1">General</a><ul class="current">
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.plot_score_distribution.html">oktoberfest.pl.plot_score_distribution</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.joint_plot.html">oktoberfest.pl.joint_plot</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.plot_gain_loss.html">oktoberfest.pl.plot_gain_loss</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.plot_mean_sa_ce.html">oktoberfest.pl.plot_mean_sa_ce</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.plot_violin_sa_ce.html">oktoberfest.pl.plot_violin_sa_ce</a></li>
-<li class="toctree-l4"><a class="reference internal" href="oktoberfest.pl.plot_pred_rt_vs_irt.html">oktoberfest.pl.plot_pred_rt_vs_irt</a></li>
-<li class="toctree-l4 current"><a class="current reference internal" href="#">oktoberfest.pl.plot_all</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.plot_score_distribution.html">oktoberfest.pl.plot_score_distribution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.joint_plot.html">oktoberfest.pl.joint_plot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.plot_gain_loss.html">oktoberfest.pl.plot_gain_loss</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.plot_mean_sa_ce.html">oktoberfest.pl.plot_mean_sa_ce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.plot_violin_sa_ce.html">oktoberfest.pl.plot_violin_sa_ce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="oktoberfest.pl.plot_pred_rt_vs_irt.html">oktoberfest.pl.plot_pred_rt_vs_irt</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">oktoberfest.pl.plot_all</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#oktoberfest.pl.plot_all"><code class="docutils literal notranslate"><span class="pre">plot_all()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -89,7 +90,7 @@
       <li class="breadcrumb-item active">oktoberfest.pl.plot_all</li>
       <li class="wy-breadcrumbs-aside">
               <!-- User defined GitHub URL -->
-              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/plotting/plotting.py#L455-L523" class="fa fa-github"> Edit on GitHub</a>
+              <a href="https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/plotting/plotting.py#L576-L677" class="fa fa-github"> Edit on GitHub</a>
       </li>
   </ul>
   <hr/>
@@ -101,11 +102,14 @@
 <h1>oktoberfest.pl.plot_all<a class="headerlink" href="#oktoberfest-pl-plot-all" title="Link to this heading"></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py" id="oktoberfest.pl.plot_all">
-<span class="sig-prename descclassname"><span class="pre">oktoberfest.pl.</span></span><span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pl.plot_all" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">oktoberfest.pl.</span></span><span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#oktoberfest.pl.plot_all" title="Link to this definition"></a></dt>
 <dd><p>Generate all plots after a rescoring run.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – the directory containing all inputs / outputs from either percolator or mokapot.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dir</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span>) – the directory containing all inputs / outputs from either percolator or mokapot</p></li>
+<li><p><strong>config</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Config</span></code></span>) – the configuration object</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -123,7 +127,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2025, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

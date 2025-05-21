@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L399-L467
+
+oktoberfest.data.Spectra.preprocess\_for\_machine\_learning
+===========================================================
+
+.. currentmodule:: oktoberfest.data
+
+.. automethod:: Spectra.preprocess_for_machine_learning

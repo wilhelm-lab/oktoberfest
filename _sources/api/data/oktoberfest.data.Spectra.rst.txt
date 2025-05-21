@@ -1,0 +1,63 @@
+﻿oktoberfest.data.Spectra
+========================
+
+.. currentmodule:: oktoberfest.data
+
+.. autoclass:: Spectra
+
+   
+   .. automethod:: __init__
+      :no-index:
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+      
+         ~Spectra.add_column
+         ~Spectra.add_intensities
+         ~Spectra.add_intensities_without_mapping
+         ~Spectra.add_list_of_predicted_intensities
+         ~Spectra.add_matrix_from_hdf5
+         ~Spectra.add_mzs
+         ~Spectra.convert_to_df
+         ~Spectra.filter_by_score
+         ~Spectra.from_hdf5
+         ~Spectra.get_matrix
+         ~Spectra.get_meta_data
+         ~Spectra.preprocess_for_machine_learning
+         ~Spectra.remove_decoys
+         ~Spectra.remove_duplicates
+         ~Spectra.write_as_hdf5
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Spectra.COLUMNS_FRAGMENT_ION
+      ~Spectra.INTENSITY_COLUMN_PREFIX
+      ~Spectra.INTENSITY_COLUMN_PREFIX_A
+      ~Spectra.INTENSITY_COLUMN_PREFIX_B
+      ~Spectra.INTENSITY_LAYER_NAME
+      ~Spectra.INTENSITY_LAYER_NAME_A
+      ~Spectra.INTENSITY_LAYER_NAME_B
+      ~Spectra.INTENSITY_PRED_LAYER_NAME
+      ~Spectra.INTENSITY_PRED_LAYER_NAME_A
+      ~Spectra.INTENSITY_PRED_LAYER_NAME_B
+      ~Spectra.INTENSITY_PRED_PREFIX
+      ~Spectra.INTENSITY_PRED_PREFIX_A
+      ~Spectra.INTENSITY_PRED_PREFIX_B
+      ~Spectra.MAX_CHARGE
+      ~Spectra.MZ_COLUMN_PREFIX
+      ~Spectra.MZ_COLUMN_PREFIX_A
+      ~Spectra.MZ_COLUMN_PREFIX_B
+      ~Spectra.MZ_LAYER_NAME
+      ~Spectra.MZ_LAYER_NAME_A
+      ~Spectra.MZ_LAYER_NAME_B
+   
+   

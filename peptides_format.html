@@ -6,22 +6,22 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Custom in-silico digestion &mdash; Oktoberfest 0.8.3 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+  <title>Custom in-silico digestion &mdash; Oktoberfest 0.9.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=494d5358" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=7f96dc5e"></script>
-      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Generated outputs" href="outputs.html" />
-    <link rel="prev" title="Custom search results" href="internal_format.html" /> 
+    <link rel="prev" title="Custom modifications" href="custom_mods.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -52,15 +52,16 @@
 <li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="predictions.html">Retrieving predictions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="internal_format.html">Custom search results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="custom_mods.html">Custom modifications</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Custom in-silico digestion</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#providing-a-list-of-peptides-and-associated-proteins">Providing a list of peptides and associated proteins</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#format">Format</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#description-of-peptide-list-columns">Description of peptide list columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#example-of-peptide-list">Example of peptide list</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#internal-file-format-specification">Internal file format specification</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#id1">Format</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#id2">Example</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#description-of-internal-file-columns">Description of internal file columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#example-of-internal-file">Example of internal file</a></li>
 </ul>
 </li>
 </ul>
@@ -109,8 +110,8 @@
 </pre></div>
 </div>
 <p>Oktoberfest will then create the table of peptides with associated metadata in internal format (see below) based on the configuration in the spectralLibraryOptions of your configuration file. For a list of these options, check the <a class="reference external" href="./config.html">configuration options</a>.</p>
-<section id="format">
-<h3>Format<a class="headerlink" href="#format" title="Link to this heading"></a></h3>
+<section id="description-of-peptide-list-columns">
+<h3>Description of peptide list columns<a class="headerlink" href="#description-of-peptide-list-columns" title="Link to this heading"></a></h3>
 <p>Oktoberfest expects a csv formatted file, where each row represent a peptide and optional mappings to proteins.</p>
 <table class="docutils align-default">
 <thead>
@@ -128,8 +129,8 @@
 </tbody>
 </table>
 </section>
-<section id="example">
-<h3>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h3>
+<section id="example-of-peptide-list">
+<h3>Example of peptide list<a class="headerlink" href="#example-of-peptide-list" title="Link to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">peptide</span><span class="p">,</span><span class="n">proteins</span>
 <span class="n">ASPTQPIQL</span><span class="p">,</span>
 <span class="n">KIEKLKVEL</span><span class="p">,</span>
@@ -149,8 +150,8 @@
 </pre></div>
 </div>
 <p>Oktoberfest will then read the table directly.</p>
-<section id="id1">
-<h3>Format<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<section id="description-of-internal-file-columns">
+<h3>Description of internal file columns<a class="headerlink" href="#description-of-internal-file-columns" title="Link to this heading"></a></h3>
 <p>Oktoberfest expects a csv formatted file where each row represents a peptide with given metadata. The following table provides the file format specification.</p>
 <table class="docutils align-default">
 <thead>
@@ -183,8 +184,8 @@
 </tbody>
 </table>
 </section>
-<section id="id2">
-<h3>Example<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<section id="example-of-internal-file">
+<h3>Example of internal file<a class="headerlink" href="#example-of-internal-file" title="Link to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">modified_sequence</span><span class="p">,</span><span class="n">collision_energy</span><span class="p">,</span><span class="n">precursor_charge</span><span class="p">,</span><span class="n">fragmentation</span><span class="p">,</span><span class="n">peptide_length</span><span class="p">,</span><span class="n">instrument_types</span><span class="p">,</span><span class="n">proteins</span>
 <span class="n">ASPTQPIQL</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">HCD</span><span class="p">,,,</span>
 <span class="n">KIEKLKVEL</span><span class="p">,</span><span class="mi">31</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">HCD</span><span class="p">,</span><span class="mi">9</span><span class="p">,</span><span class="n">QE</span><span class="p">,</span>
@@ -204,14 +205,14 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="internal_format.html" class="btn btn-neutral float-left" title="Custom search results" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="custom_mods.html" class="btn btn-neutral float-left" title="Custom modifications" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="outputs.html" class="btn btn-neutral float-right" title="Generated outputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Wilhelmlab at Technical University of Munich.</p>
+    <p>&#169; Copyright 2025, Wilhelmlab at Technical University of Munich.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

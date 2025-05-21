@@ -1,0 +1,8 @@
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/predict/predictor.py#L218-L258
+
+oktoberfest.pr.Predictor.predict\_at\_once
+==========================================
+
+.. currentmodule:: oktoberfest.pr
+
+.. automethod:: Predictor.predict_at_once
