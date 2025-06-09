@@ -842,7 +842,7 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             target_psms = pd.read_csv(features_dir + "/rescore.mokapot.psms.txt", delimiter="\t")
             psm_id = "SpecId"
 
-    split_data = target_psms[psm_id].str.rsplit("-", n=13, expand=True)
+    
     new_columns = [
         "raw_file",
         "scan_number",
@@ -858,9 +858,10 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
         "base_sequence_p2",
         "index",
     ]
+    split_data = target_psms[psm_id].str.rsplit("-", n=12, expand=True)
     split_data.columns = new_columns
     df_psm_target = pd.concat([target_psms, split_data], axis=1)
-    split_data = decoy_psms[psm_id].str.rsplit("-", n=13, expand=True)
+    split_data = decoy_psms[psm_id].str.rsplit("-", n=12, expand=True)
     split_data.columns = new_columns
     df_psm_decoy = pd.concat([decoy_psms, split_data], axis=1)
     df_psm = pd.concat([df_psm_decoy, df_psm_target], axis=0)
@@ -1105,7 +1106,7 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
 
     def convert_percolator_output(df: pd.DataFrame):
         df["SpecId_raw_name_scan"] = df["SpecId"].str.extract(r"^([^-]+-[^-]+)")
-        split_data = df["SpecId"].str.split("-", n=13, expand=True)
+        split_data = df["SpecId"].str.rsplit("-", n=12, expand=True)
         new_columns = [
             "raw_file",
             "scan_number",

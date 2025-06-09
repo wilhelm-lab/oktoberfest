@@ -766,7 +766,7 @@ def split_search(
 
     if filenames is None:
         filenames = search_results["RAW_FILE"].unique()
-
+    
     grouped_search_results = search_results.groupby("RAW_FILE")
 
     filenames_found = []
