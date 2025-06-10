@@ -42,7 +42,7 @@ class TestRunner(unittest.TestCase):
         spectra_file = _preprocess(spectra_files, config)[0]
         _ = _ce_calib(spectra_file, config)
 
-        _calculate_features(spectra_file, config, xl=True)
+        _calculate_features(spectra_file, config, xl=True, cms2=True)
 
         # prepare rescoring
 
@@ -107,7 +107,7 @@ class TestRunner(unittest.TestCase):
         spectra_file = _preprocess(spectra_files, config)[0]
         _ = _ce_calib(spectra_file, config)
 
-        _calculate_features(spectra_file, config, xl=True)
+        _calculate_features(spectra_file, config, xl=True, cms2=False)
 
         # prepare rescoring
 
