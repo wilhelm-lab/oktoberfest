@@ -25,7 +25,7 @@ def _prepare_alignment_df(
     :param xl: if true, select the top 50 spectra for cross-linked peptide
     :return: a library that is modified according to the description above
     """
-    top_n = 1000 if not xl else 40
+    top_n = 1000 if not xl else 20
 
     if group_by_charge:
         groups = ["RAW_FILE", "PRECURSOR_CHARGE"]
