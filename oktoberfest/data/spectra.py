@@ -61,18 +61,18 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"], xl: bool = False) -> pd.DataFrame:
+    def _gen_vars_df(ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"], cms2: bool = False) -> pd.DataFrame:
         """
         Create annotation dataframe for vars in AnnData object.
 
         :param ion_types: ion types that are expected to be in the spectra
-        :param xl: crosslinked or linear peptide
+        :param cms2: cleavable crosslinked or linear peptide
         :return: pd.Dataframe of fragment annotations
         """
         df = pd.DataFrame(
             [
                 {"ion": f"{ion_type}{pos}+{charge}", "num": pos, "type": ion_type, "charge": charge}
-                for pos in (c.POSITIONS_XL if xl else c.POSITIONS)
+                for pos in (c.POSITIONS_XL if cms2 else c.POSITIONS)
                 for ion_type in ion_types
                 for charge in c.CHARGES
             ]
@@ -81,17 +81,17 @@ class Spectra(anndata.AnnData):
         return df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType, xl: bool = False) -> list[str]:
+    def _gen_column_names(fragment_type: FragmentType, cms2: bool = False) -> list[str]:
         """
         Get column names of the spectra data.
 
         :param fragment_type: choose predicted, raw, or mz
-        :param xl: crosslinked or linear peptide
+        :param cms2: cleavable crosslinked or linear peptide
         :return: A list of column names
         """
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
-        if xl:
+        if cms2:
             max_range = 59
         else:
             max_range = 30

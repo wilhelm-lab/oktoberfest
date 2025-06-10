@@ -57,7 +57,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         # load search results
         if not config.search_results_type == "internal":
             logger.info(f"Converting search results from {config.search_results} to internal search result.")
-
+            
             msms_output = config.output / "msms"
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
@@ -154,8 +154,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         if "xl" in config.models["intensity"].lower():
+            if "cms2" in config.models["intensity"].lower():
+                cms2 = True
+            else:
+                cms2 = False
             aspec = pp.annotate_spectral_library_xl(
-                library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+                psms=library, cms2=cms2, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
             )
             if config.inputs["search_results_type"].lower() == "xisearch":
                 aspec.obs["start_pos_p1"] = aspec.obs["start_pos_p1"].astype(str)
@@ -586,7 +590,7 @@ def _refinement_learn(spectra_files: list[Path], config: Config):
     refinement_step.mark_done()
 
 
-def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
+def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cms2: bool = False):
     library = _ce_calib(spectra_file, config)
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
     if calc_feature_step.is_done():
@@ -638,6 +642,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         xl=xl,
+        cms2=cms2,
         regression_method=config.curve_fitting_method,
     )
     re.generate_features(
@@ -647,6 +652,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         xl=xl,
+        cms2=cms2,
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
@@ -1268,14 +1274,22 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True)
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True, cms2=cms2)
             else:
                 processing_pool.apply_async(_calculate_features, [spectra_file, config])
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                _calculate_features(spectra_file, config, xl=True)
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                _calculate_features(spectra_file, config, xl=True, cms2=cms2)
             else:
                 _calculate_features(spectra_file, config)
 

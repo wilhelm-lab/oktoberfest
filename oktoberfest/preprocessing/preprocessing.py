@@ -340,8 +340,8 @@ def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int,
         & (df["PEPTIDE_LENGTH_A"] >= min_length)
         & (df["PEPTIDE_LENGTH_B"] >= min_length)
         & (df["PRECURSOR_CHARGE"] <= max_charge)
-        & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
-        & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+        & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]|\[UNIMOD:1898\]"))
+        & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]|\[UNIMOD:1898\]"))
     )
 
     return peptides[peptide_filter]
@@ -972,7 +972,7 @@ def annotate_spectral_library(
 
 
 def annotate_spectral_library_xl(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+    psms: pd.DataFrame, cms2: bool = False, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
 ):
     """
     Annotate spectral library with peaks and mass for cross-linked peptides.
@@ -982,13 +982,14 @@ def annotate_spectral_library_xl(
     The additional information is added to the provided spectral library.
 
     :param psms: Spectral library to be annotated.
+    :param cms2: cleavable or non-cleavable crosslinker.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(xl=True))
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(cms2=cms2))
     aspec.add_intensities(
         np.stack(df_annotated_spectra["INTENSITIES_A"]), aspec.var_names.values[None, ...], FragmentType.RAW_A
     )
