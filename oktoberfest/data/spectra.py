@@ -61,7 +61,9 @@ class Spectra(anndata.AnnData):
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"], cms2: bool = False) -> pd.DataFrame:
+    def _gen_vars_df(
+        ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"], cms2: bool = False
+    ) -> pd.DataFrame:
         """
         Create annotation dataframe for vars in AnnData object.
 

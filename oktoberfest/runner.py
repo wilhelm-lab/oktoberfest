@@ -57,7 +57,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         # load search results
         if not config.search_results_type == "internal":
             logger.info(f"Converting search results from {config.search_results} to internal search result.")
-            
+
             msms_output = config.output / "msms"
             msms_output.mkdir(exist_ok=True)
             internal_search_file = msms_output / "msms.prosit"
@@ -848,7 +848,6 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             target_psms = pd.read_csv(features_dir + "/rescore.mokapot.psms.txt", delimiter="\t")
             psm_id = "SpecId"
 
-    
     new_columns = [
         "raw_file",
         "scan_number",

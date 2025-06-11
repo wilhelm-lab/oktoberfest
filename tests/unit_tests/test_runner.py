@@ -135,7 +135,8 @@ class TestRunner(unittest.TestCase):
             input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
 
         expected_perc_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
+            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_rescore.tab",
+            sep="\t",
         )
 
         created_perc_tab_file = pd.read_csv(
