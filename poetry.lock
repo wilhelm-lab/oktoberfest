@@ -1605,14 +1605,14 @@ files = [
 
 [[package]]
 name = "koinapy"
-version = "0.0.7"
+version = "0.0.10"
 description = "Python client to communicate with Koina."
 optional = false
 python-versions = "<3.13,>=3.8"
 groups = ["main"]
 files = [
-    {file = "koinapy-0.0.7-py3-none-any.whl", hash = "sha256:2c76de08f70ada30f28cbdbe51ac04c2a8853b015e356c7d530559194db90632"},
-    {file = "koinapy-0.0.7.tar.gz", hash = "sha256:62796fb2efbd933012b10fec8a665e3a61a1b1a3dcb6afda427da54f0aac8ee8"},
+    {file = "koinapy-0.0.10-py3-none-any.whl", hash = "sha256:6954e31441fd42f405f46c7f2a31dc9453fe51bb7e77c495a157d5eeb5af417a"},
+    {file = "koinapy-0.0.10.tar.gz", hash = "sha256:a3138c21eb40535d5d04bb834c8838dd05780126aa9f49bb77070eadf56f6796"},
 ]
 
 [package.dependencies]
@@ -4804,4 +4804,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10.0,<3.12.0"
-content-hash = "54d9443ecbc473caa4e7f454a03a53578fdb77eb92784c9c0c89d4cf96e8b081"
+content-hash = "65b663b3f1a2d588451ad0c3562aa050863c76839dd320349553284707fec29c"
