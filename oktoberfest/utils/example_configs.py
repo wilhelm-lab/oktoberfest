@@ -33,12 +33,9 @@ RESCORING_XL_Non_Cleavable = {
         "search_results": "./msms.csv",
         "search_results_type": "Xisearch",
         "spectra": "./",
-        "spectra_type": "raw"
+        "spectra_type": "raw",
     },
-    "models": {
-        "intensity": "Prosit_2024_intensity_XL_NMS2",
-	"irt": ""
-    },
+    "models": {"intensity": "Prosit_2024_intensity_XL_NMS2", "irt": ""},
     "prediction_server": "koina.wilhelmlab.org:443",
     "numThreads": 1,
     "fdr_estimation_method": "percolator",
@@ -48,13 +45,7 @@ RESCORING_XL_Non_Cleavable = {
     "thermoExe": "/home/mkalhor/ThermoRawFileParser.exe",
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
-    "ce_alignment_options": {
-        "ce_range": [
-            19,
-            50
-        ],
-        "use_ransac_model": False
-    }
+    "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
 }
 
 RESCORING_XL_Cleavable = {
@@ -65,12 +56,9 @@ RESCORING_XL_Cleavable = {
         "search_results": "./msms.csv",
         "search_results_type": "Xisearch",
         "spectra": "./",
-        "spectra_type": "raw"
+        "spectra_type": "raw",
     },
-    "models": {
-        "intensity": "Prosit_2023_intensity_XL_CMS2",
-	"irt": ""
-    },
+    "models": {"intensity": "Prosit_2023_intensity_XL_CMS2", "irt": ""},
     "prediction_server": "koina.wilhelmlab.org:443",
     "numThreads": 1,
     "fdr_estimation_method": "percolator",
@@ -80,13 +68,7 @@ RESCORING_XL_Cleavable = {
     "thermoExe": "/home/mkalhor/ThermoRawFileParser.exe",
     "massTolerance": 20,
     "unitMassTolerance": "ppm",
-    "ce_alignment_options": {
-        "ce_range": [
-            19,
-            50
-        ],
-        "use_ransac_model": False
-    }
+    "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
 }
 
 RESCORING_WITH_QUANT = {
