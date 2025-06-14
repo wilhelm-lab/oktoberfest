@@ -89,22 +89,22 @@ This section details the files located within the mokapot / percolator directroy
     | original.log                          | Log output from percolator / mokapot (original features)                                                                                                                                    |
     +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-XL-MS rescoring / unique files in percolator directory
-------------------------------------------------------
+
+Table of default modifications for XL-MS data
+---------------------------------------------
 
 .. table::
-    :class: fixed-table
 
-    +----------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | File                       | Description                                                                                                                                                                                             |
-    +============================+=========================================================================================================================================================================================================+
-    | percolator_xifdr_input.csv | Contains Percolator scores for each CSM (cross-linked spectrum match).                                                                                                                                |
-    |                            | Input file for xiFDR to perform FDR estimation. Oktoberfest does not perform FDR estimation itself for XL-MS data — it only generates Percolator-based scores.                                        |
-    |                            | You can upload this file directly to xiFDR and apply FDR estimation as needed.                                                                                                                         |
-    |                            | More info: `xiFDR GitHub Repository <https://github.com/Rappsilber-Laboratory/xiFDR>`_                                                                                                                  |
-    +----------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | xisearch_xifdr_input.csv   | Contains XiSearch scores for each CSM (cross-linked spectrum match).                                                                                                                                   |
-    |                            | Can also be used as input for xiFDR, just like the Percolator version. This allows you to compare the performance of rescoring (Percolator) against the original XiSearch scores.                   |
-    |                            | Useful for benchmarking rescoring effectiveness.                                                                                                                                                        |
-    +----------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
+   | xiSEARCH  | Modification                 | UNIMOD ID | Monoisotopic Mass | Internal representation |
+   +===========+==============================+===========+===================+=========================+
+   | C         | carbamidomethylation of C    | 4         | 57.0215           | C[UNIMOD:4]             |
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
+   | Mox       | oxidation of M               | 35        | 15.9949           | M[UNIMOD:35]            |
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
+   | K         | Linked K to DSSO             | 1896      | 158.003765        | K[UNIMOD:1896]          |
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
+   | K         | Linked K to DSBU             | 1884      | 196.084792        | K[UNIMOD:1884]          |
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
+   | K         | Linked to DSS or BS3         | 1898      | 138.068080        | K[UNIMOD:1898]          |
+   +-----------+------------------------------+-----------+-------------------+-------------------------+
