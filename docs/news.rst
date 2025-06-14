@@ -4,6 +4,14 @@ News
 .. role:: date
     :class: date
 
+Oktoberfest supports rescoring XL-MS datasets (DSSO, DSBU, DSS, BS3) :date:`2025-06-14`
+-----------------------------------------------------------------------------------------------------------
+
+| Oktoberfest 1.0.0 is published, introducing support for crosslinking mass spectrometry (XL-MS) rescoring — including both cleavable (DSSO, DSBU) and non-cleavable (DSS, BS3) crosslinkers.
+| The update adds compatibility with `xiSEARCH <https://www.rappsilberlab.org/software/xisearch/>`_ output and integrates the new Prosit-XL models for XL-MS data.
+| Check out the preprint on `BioRxiv <https://www.biorxiv.org/content/10.1101/2024.12.15.627797v1>`_ and explore the full tutorial notebook on `GitHub <https://github.com/wilhelm-lab/oktoberfest/blob/development/tutorials/Prosit_XL_tutorial.ipynb>`_.
+| Related config files can be found here: `example_configs.py <https://github.com/wilhelm-lab/oktoberfest/blob/development/oktoberfest/utils/example_configs.py>`_.
+
 Oktoberfest supports OpenMS and custom modifications :date:`2025-05-21`
 -----------------------------------------------------------------------
 
