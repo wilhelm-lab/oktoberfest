@@ -106,4 +106,3 @@ XL-MS rescoring / unique files in percolator directory
     | xisearch_xifdr_input.csv   | This file contains XiSearch scores for each CSM (cross-linked spectrum match). It can also be used as input for xiFDR, just like the Percolator version.                                         |
     |                            | This allows you to compare the performance of rescoring (Percolator) against the original XiSearch scores. Useful for benchmarking rescoring effectiveness.                                       |
     +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
