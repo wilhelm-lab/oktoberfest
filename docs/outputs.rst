@@ -90,19 +90,13 @@ This section details the files located within the mokapot / percolator directroy
     +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
-XL-MS rescoring / unique files in percolator directory
-------------------------------------------------------
-
-.. table::
+.. table:: XL-MS rescoring / unique files in percolator directory
     :class: fixed-table
 
     +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | File                       | Description                                                                                                                                                                                      |
     +============================+==================================================================================================================================================================================================+
-    | percolator_xifdr_input.csv | Contains Percolator scores for each CSM (cross-linked spectrum match). Oktoberfest does not perform FDR estimation for XL-MS data —        |
-    |                            | this file can be directly uploaded to `xiFDR <https://github.com/Rappsilber-Laboratory/xiFDR>`_ to perform FDR estimation.                                                                         |
+    | percolator_xifdr_input.csv | Contains Percolator scores for each CSM (cross-linked spectrum match). Oktoberfest does not perform FDR estimation for XL-MS data — this file can be directly uploaded to `xiFDR <https://github.com/Rappsilber-Laboratory/xiFDR>`_ to perform FDR estimation. |
     +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | xisearch_xifdr_input.csv   | This file contains XiSearch scores for each CSM (cross-linked spectrum match). It can also be used as input for xiFDR, just like the Percolator version.                                         |
-    |                            | This allows you to compare the performance of rescoring (Percolator) against the original XiSearch scores. Useful for benchmarking rescoring effectiveness.                                       |
+    | xisearch_xifdr_input.csv   | This file contains XiSearch scores for each CSM (cross-linked spectrum match). It can also be used as input for xiFDR, just like the Percolator version. This allows you to compare the performance of rescoring (Percolator) against the original XiSearch scores. Useful for benchmarking rescoring effectiveness. |
     +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
