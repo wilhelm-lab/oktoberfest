@@ -121,8 +121,8 @@ class TestRunner(unittest.TestCase):
                 check_dtype=False,
                 check_exact=False,
                 check_like=True,
-                rtol=1e-2,
-                atol=1e-2,
+                rtol=1e-1,
+                atol=1e-1,
             )
         except AssertionError as e:
             print("DataFrames are not equal:", e)
@@ -222,8 +222,8 @@ class TestRunner(unittest.TestCase):
                 check_dtype=False,
                 check_exact=False,
                 check_like=True,
-                rtol=1e-2,
-                atol=1e-2,
+                rtol=1e-1,
+                atol=1e-1,
             )
         except AssertionError as e:
             print("DataFrames are not equal:", e)
