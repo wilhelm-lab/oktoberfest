@@ -8,14 +8,7 @@ from pandas.testing import assert_frame_equal
 
 import oktoberfest as ok
 from oktoberfest.__main__ import main
-from oktoberfest.runner import (
-    _calculate_features,
-    _ce_calib,
-    _preprocess,
-    _rescore,
-    input_xifdr,
-    prepare_rescore_xl_psm_level,
-)
+from oktoberfest.runner import _calculate_features, _ce_calib, _preprocess, input_xifdr, prepare_rescore_xl_psm_level
 from oktoberfest.utils import Config
 
 
@@ -76,9 +69,11 @@ class TestRunner(unittest.TestCase):
             input_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
             input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
 
-        # rescoring on psm level
+        inputs_dir = fdr_dir.parents[2] / "inputs"
 
-        _rescore(fdr_dir, config, xl=True)
+        # Copy required files from inputs_dir to fdr_dir before calling input_xifdr
+        shutil.copy(inputs_dir / "rescore.percolator.csms.txt", fdr_dir / "rescore.percolator.csms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
 
         # generating xifdr input file
 
@@ -176,9 +171,11 @@ class TestRunner(unittest.TestCase):
             input_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
             input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
 
-        # rescoring on psm level
+        inputs_dir = fdr_dir.parents[2] / "inputs"
 
-        _rescore(fdr_dir, config, xl=True)
+        # Copy required files from inputs_dir to fdr_dir before calling input_xifdr
+        shutil.copy(inputs_dir / "rescore.percolator.csms.txt", fdr_dir / "rescore.percolator.csms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
 
         # generating xifdr input file
 
