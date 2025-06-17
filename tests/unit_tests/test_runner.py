@@ -191,7 +191,13 @@ class TestRunner(unittest.TestCase):
         # Copy required files from inputs_dir to fdr_dir before calling input_xifdr
         shutil.copy(inputs_dir / "rescore.percolator.csms.txt", fdr_dir / "rescore.percolator.csms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.psms.txt", fdr_dir / "rescore.percolator.psms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.decoy.psms.txt", fdr_dir / "rescore.percolator.decoy.psms.txt")
 
+        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
+        output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
+        
         # generating xifdr input file
 
         if config.inputs["search_results_type"].lower() == "xisearch":
