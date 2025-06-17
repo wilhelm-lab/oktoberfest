@@ -85,24 +85,39 @@ class TestRunner(unittest.TestCase):
         shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.psms.txt", fdr_dir / "rescore.percolator.psms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.decoy.psms.txt", fdr_dir / "rescore.percolator.decoy.psms.txt")
+        shutil.copy(inputs_dir / "original.percolator.csms.txt", fdr_dir / "original.percolator.csms.txt")
+        shutil.copy(inputs_dir / "original.percolator.decoy.csms.txt", fdr_dir / "original.percolator.decoy.csms.txt")
+        shutil.copy(inputs_dir / "original.percolator.psms.txt", fdr_dir / "original.percolator.psms.txt")
+        shutil.copy(inputs_dir / "original.percolator.decoy.psms.txt", fdr_dir / "original.percolator.decoy.psms.txt")
 
         output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
         xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
 
+        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
+        output_csms_original = xl_between_or_self(output_csms_original, score="score")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original", "percolator")
+
         # generating xifdr input file
 
         if config.inputs["search_results_type"].lower() == "xisearch":
             input_xifdr(str(fdr_dir), "xisearch")
-        elif config.inputs["search_results_type"].lower() == "scout":
-            input_xifdr(str(fdr_dir), "scout")
-
+       
         expected_perc_tab_file = pd.read_csv(
             Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
         )
 
         created_perc_tab_file = pd.read_csv(
             fdr_dir / "rescore.tab",
+            sep="\t",
+        )
+
+        expected_original_tab_file = pd.read_csv(
+            Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_original.tab", sep="\t"
+        )
+
+        created_original_tab_file = pd.read_csv(
+            fdr_dir / "original.tab",
             sep="\t",
         )
 
@@ -119,6 +134,14 @@ class TestRunner(unittest.TestCase):
         try:
             assert_frame_equal(
                 expected_perc_tab_file, created_perc_tab_file, check_dtype=True, check_exact=False, rtol=1e-1
+            )
+        except AssertionError as e:
+            print("DataFrames are not equal:", e)
+            raise  # Re-raise the assertion error for the test framework to catch
+
+        try:
+            assert_frame_equal(
+                expected_original_tab_file, created_original_tab_file, check_dtype=True, check_exact=False, rtol=1e-1
             )
         except AssertionError as e:
             print("DataFrames are not equal:", e)
@@ -193,11 +216,19 @@ class TestRunner(unittest.TestCase):
         shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.psms.txt", fdr_dir / "rescore.percolator.psms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.decoy.psms.txt", fdr_dir / "rescore.percolator.decoy.psms.txt")
+        shutil.copy(inputs_dir / "original.percolator.csms.txt", fdr_dir / "original.percolator.csms.txt")
+        shutil.copy(inputs_dir / "original.percolator.decoy.csms.txt", fdr_dir / "original.percolator.decoy.csms.txt")
+        shutil.copy(inputs_dir / "original.percolator.psms.txt", fdr_dir / "original.percolator.psms.txt")
+        shutil.copy(inputs_dir / "original.percolator.decoy.psms.txt", fdr_dir / "original.percolator.decoy.psms.txt")
 
         output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
         xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
 
+        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
+        output_csms_original = xl_between_or_self(output_csms_original, score="score")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original", "percolator")
+        
         # generating xifdr input file
 
         if config.inputs["search_results_type"].lower() == "xisearch":
@@ -215,6 +246,15 @@ class TestRunner(unittest.TestCase):
             sep="\t",
         )
 
+        expected_original_tab_file = pd.read_csv(
+            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_original.tab", sep="\t"
+        )
+
+        created_original_tab_file = pd.read_csv(
+            fdr_dir / "original.tab",
+            sep="\t",
+        )
+
         expected_xifdr_input_file = pd.read_csv(
             Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_xifdr_input.csv",
             sep=",",
@@ -228,6 +268,14 @@ class TestRunner(unittest.TestCase):
         try:
             assert_frame_equal(
                 expected_perc_tab_file, created_perc_tab_file, check_dtype=True, check_exact=False, rtol=1e-1
+            )
+        except AssertionError as e:
+            print("DataFrames are not equal:", e)
+            raise  # Re-raise the assertion error for the test framework to catch
+
+        try:
+            assert_frame_equal(
+                expected_original_tab_file, created_original_tab_file, check_dtype=True, check_exact=False, rtol=1e-1
             )
         except AssertionError as e:
             print("DataFrames are not equal:", e)
