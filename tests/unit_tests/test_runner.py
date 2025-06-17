@@ -34,7 +34,7 @@ class TestRunner(unittest.TestCase):
         config.read(config_path)
         shutil.rmtree(config.output)
 
-    def test_rescoring_cms2_xl(self):
+    def test_rescoring_cms2_xl(self): # noqa: C901
         """Test the runner for a rescoring run with cleavable crosslinking."""
         config_path = Path(__file__).parent / "configs" / "rescoring_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
@@ -102,7 +102,7 @@ class TestRunner(unittest.TestCase):
 
         if config.inputs["search_results_type"].lower() == "xisearch":
             input_xifdr(str(fdr_dir), "xisearch")
-       
+
         expected_perc_tab_file = pd.read_csv(
             Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
         )
@@ -165,7 +165,7 @@ class TestRunner(unittest.TestCase):
         config.read(config_path)
         shutil.rmtree(Path(__file__).parent / "data" / "xl" / "cleavable" / "out")
 
-    def test_rescoring_nms2_xl(self):
+    def test_rescoring_nms2_xl(self): # noqa: C901
         """Test the runner for a rescoring run with non-cleavable crosslinking."""
         config_path = Path(__file__).parent / "configs" / "rescoring_non_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
@@ -228,7 +228,7 @@ class TestRunner(unittest.TestCase):
         output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
         output_csms_original = xl_between_or_self(output_csms_original, score="score")
         xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original", "percolator")
-        
+
         # generating xifdr input file
 
         if config.inputs["search_results_type"].lower() == "xisearch":
@@ -247,7 +247,8 @@ class TestRunner(unittest.TestCase):
         )
 
         expected_original_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_original.tab", sep="\t"
+            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_original.tab",
+            sep="\t",
         )
 
         created_original_tab_file = pd.read_csv(
