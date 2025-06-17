@@ -8,7 +8,16 @@ from pandas.testing import assert_frame_equal
 
 import oktoberfest as ok
 from oktoberfest.__main__ import main
-from oktoberfest.runner import _calculate_features, _ce_calib, _preprocess, input_xifdr, prepare_rescore_xl_psm_level, xl_psm_to_csm, xl_between_or_self, xl_preprocessing_plot_csm 
+from oktoberfest.runner import (
+    _calculate_features,
+    _ce_calib,
+    _preprocess,
+    input_xifdr,
+    prepare_rescore_xl_psm_level,
+    xl_between_or_self,
+    xl_preprocessing_plot_csm,
+    xl_psm_to_csm,
+)
 from oktoberfest.utils import Config
 
 
@@ -75,9 +84,9 @@ class TestRunner(unittest.TestCase):
         shutil.copy(inputs_dir / "rescore.percolator.csms.txt", fdr_dir / "rescore.percolator.csms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
 
-        #output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
-        #output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
-        #xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
+        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
+        output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
 
         # generating xifdr input file
 
