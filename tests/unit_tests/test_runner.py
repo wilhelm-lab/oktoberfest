@@ -197,7 +197,7 @@ class TestRunner(unittest.TestCase):
         output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
         xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
-        
+
         # generating xifdr input file
 
         if config.inputs["search_results_type"].lower() == "xisearch":
