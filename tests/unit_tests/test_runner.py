@@ -8,7 +8,16 @@ from pandas.testing import assert_frame_equal
 
 import oktoberfest as ok
 from oktoberfest.__main__ import main
-from oktoberfest.runner import _calculate_features, _ce_calib, _preprocess, input_xifdr, prepare_rescore_xl_psm_level, xl_psm_to_csm, xl_between_or_self, xl_preprocessing_plot_csm 
+from oktoberfest.runner import (
+    _calculate_features,
+    _ce_calib,
+    _preprocess,
+    input_xifdr,
+    prepare_rescore_xl_psm_level,
+    xl_between_or_self,
+    xl_preprocessing_plot_csm,
+    xl_psm_to_csm,
+)
 from oktoberfest.utils import Config
 
 
