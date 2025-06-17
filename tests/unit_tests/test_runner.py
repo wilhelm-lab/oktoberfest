@@ -8,16 +8,7 @@ from pandas.testing import assert_frame_equal
 
 import oktoberfest as ok
 from oktoberfest.__main__ import main
-from oktoberfest.runner import (
-    _calculate_features,
-    _ce_calib,
-    _preprocess,
-    input_xifdr,
-    prepare_rescore_xl_psm_level,
-    xl_between_or_self,
-    xl_preprocessing_plot_csm,
-    xl_psm_to_csm,
-)
+from oktoberfest.runner import _calculate_features, _ce_calib, _preprocess, input_xifdr, prepare_rescore_xl_psm_level, xl_psm_to_csm, xl_between_or_self, xl_preprocessing_plot_csm 
 from oktoberfest.utils import Config
 
 
@@ -83,6 +74,8 @@ class TestRunner(unittest.TestCase):
         # Copy required files from inputs_dir to fdr_dir before calling input_xifdr
         shutil.copy(inputs_dir / "rescore.percolator.csms.txt", fdr_dir / "rescore.percolator.csms.txt")
         shutil.copy(inputs_dir / "rescore.percolator.decoy.csms.txt", fdr_dir / "rescore.percolator.decoy.csms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.psms.txt", fdr_dir / "rescore.percolator.psms.txt")
+        shutil.copy(inputs_dir / "rescore.percolator.decoy.psms.txt", fdr_dir / "rescore.percolator.decoy.psms.txt")
 
         output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
