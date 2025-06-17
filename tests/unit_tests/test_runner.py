@@ -34,7 +34,7 @@ class TestRunner(unittest.TestCase):
         config.read(config_path)
         shutil.rmtree(config.output)
 
-    def test_rescoring_cms2_xl(self): # noqa: C901
+    def test_rescoring_cms2_xl(self):  # noqa: C901
         """Test the runner for a rescoring run with cleavable crosslinking."""
         config_path = Path(__file__).parent / "configs" / "rescoring_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
@@ -165,7 +165,7 @@ class TestRunner(unittest.TestCase):
         config.read(config_path)
         shutil.rmtree(Path(__file__).parent / "data" / "xl" / "cleavable" / "out")
 
-    def test_rescoring_nms2_xl(self): # noqa: C901
+    def test_rescoring_nms2_xl(self):  # noqa: C901
         """Test the runner for a rescoring run with non-cleavable crosslinking."""
         config_path = Path(__file__).parent / "configs" / "rescoring_non_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
