@@ -25,7 +25,7 @@ RESCORING = {
     },
 }
 
-RESCORING_XL_Non_Cleavable = {
+RESCORING_XL_NON_CLEAVABLE = {
     "type": "Rescoring",
     "tag": "",
     "output": "./out",
@@ -48,7 +48,7 @@ RESCORING_XL_Non_Cleavable = {
     "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
 }
 
-RESCORING_XL_Cleavable = {
+RESCORING_XL_CLEAVABLE = {
     "type": "Rescoring",
     "tag": "",
     "output": "./out",

@@ -89,17 +89,15 @@ This section details the files located within the mokapot / percolator directroy
     | original.log                          | Log output from percolator / mokapot (original features)                                                                                                                                    |
     +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+The following output files are specific to XL‑MS rescoring.
 
-.. list-table:: XL‑MS rescoring / unique files in percolator directory
-   :class: fixed-table
-   :widths: 25 75
-   :header-rows: 1
+.. table::
+    :class: fixed-table
 
-   * - File
-     - Description
-   * - **percolator_xifdr_input.csv**
-     - Contains Percolator scores for each CSM (cross‑linked spectrum match).
-       Oktoberfest does **not** perform FDR estimation for XL‑MS data — this file can be uploaded directly to `xiFDR <https://github.com/Rappsilber-Laboratory/xiFDR>`_ to estimate FDR.
-   * - **xisearch_xifdr_input.csv**
-     - Contains XiSearch scores for each CSM.
-       You can feed this file to xiFDR as well, allowing a direct comparison between original XiSearch scores and rescored (Percolator) results.
+    +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | File                                  | Description                                                                                                                                                                                                                                              |
+    +=======================================+==========================================================================================================================================================================================================================================================+
+    | percolator_xifdr_input.csv            | Contains Percolator scores for each CSM (cross‑linked spectrum match). Oktoberfest does **not** perform FDR estimation for XL‑MS data — this file can be uploaded directly to `xiFDR <https://github.com/Rappsilber-Laboratory/xiFDR>`_ to estimate FDR. |
+    +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | xisearch_xifdr_input.csv              | Contains XiSearch scores for each CSM. You can feed this file to xiFDR as well, allowing a direct comparison between original XiSearch scores and rescored (Percolator) results.                                                                         |
+    +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
