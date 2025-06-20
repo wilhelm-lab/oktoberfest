@@ -1,23 +1,20 @@
-FROM python:3.9.22
+FROM python:3.11-slim
 
-# Tell docker that we don't want to be bothered with questions
+# Avoid interactive prompts during package install
 ARG DEBIAN_FRONTEND=noninteractive
 
-# for mono installation
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-RUN echo "deb https://download.mono-project.com/repo/debian stable-buster main" | tee /etc/apt/sources.list.d/mono-official-stable.list
-
 RUN apt-get update && apt-get install -y \
-        mono-devel \
-        ssh \
-        zip \
-    && rm -rf /var/lib/apt/lists/*
+    wget \
+    zip \
+    ssh \
+    mono-devel \
+ && rm -rf /var/lib/apt/lists/*
 
 # set root directory
-ENV HOME /root
+ENV HOME=/root
 WORKDIR /root
 
-RUN pip install poetry==1.8.3
+RUN pip install poetry==2.1.3
 # poetry useses virtualenvs by default -> we want global installation
 RUN poetry config virtualenvs.create false
 ADD pyproject.toml /root/pyproject.toml
