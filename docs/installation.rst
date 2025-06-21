@@ -113,3 +113,13 @@ For local prediction & refinement learning, you have to install Oktoberfest with
 
    conda activate oktoberfest
    pip install oktoberfest[dlomix]
+
+Installing xiFDR
+~~~~~
+
+Oktoberfest generates input files for **xiFDR**, which is required for FDR estimation of XL-MS data. It does not run xiFDR directly.
+
+To install and run xiFDR, please follow the instructions at:
+
+- https://www.rappsilberlab.org/software/xifdr/
+- https://github.com/Rappsilber-Laboratory/xiFDR
