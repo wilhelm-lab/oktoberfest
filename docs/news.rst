@@ -11,6 +11,7 @@ Oktoberfest supports rescoring XL-MS datasets :date:`2025-06-14`
 | The update adds compatibility with `xiSEARCH <https://www.rappsilberlab.org/software/xisearch/>`_ output and integrates the new Prosit-XL models for XL-MS data.
 | Check out the preprint on `BioRxiv <https://www.biorxiv.org/content/10.1101/2024.12.15.627797v1>`_ and explore the `full tutorial notebook on GitHub <https://github.com/wilhelm-lab/oktoberfest/tree/development/tutorials>`_.
 | Related config files can be found here: `example_configs.py <https://github.com/wilhelm-lab/oktoberfest/blob/development/oktoberfest/utils/example_configs.py>`_.
+| Oktoberfest is now also supporting python 3.12
 
 Oktoberfest supports OpenMS and custom modifications :date:`2025-05-21`
 -----------------------------------------------------------------------
