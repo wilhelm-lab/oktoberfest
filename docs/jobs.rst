@@ -269,6 +269,15 @@ The example config can be loaded and viewed using
     config = ok.utils.example_configs.RESCORING_WITH_QUANT
     json.dumps(config, indent=4)
 
+
+In addition, XL-MS example configurations for non-cleavable and cleavable crosslinkers can be found using instead one of
+
+.. code-block:: python
+
+    config = ok.utils.example_configs.RESCORING_XL_NON_CLEAVABLE
+    config = ok.utils.example_configs.RESCORING_XL_CLEAVABLE
+
+
 b) with refinement
 ~~~~~~~~~~~~~~~~~~
 
