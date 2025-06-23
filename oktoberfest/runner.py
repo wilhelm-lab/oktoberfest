@@ -154,8 +154,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         if "xl" in config.models["intensity"].lower():
+            if "cms2" in config.models["intensity"].lower():
+                cms2 = True
+            else:
+                cms2 = False
             aspec = pp.annotate_spectral_library_xl(
-                library, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
+                psms=library, cms2=cms2, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
             )
             if config.inputs["search_results_type"].lower() == "xisearch":
                 aspec.obs["start_pos_p1"] = aspec.obs["start_pos_p1"].astype(str)
@@ -396,7 +400,7 @@ def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, resul
             except Exception:
                 failed_batches.append(i)
         logger.error(
-            f"Prediction for {n_failed} / {i+1} batches failed. Check the log to find out why. "
+            f"Prediction for {n_failed} / {i + 1} batches failed. Check the log to find out why. "
             "Then rerun without changing the config file to append only the missing batches to your output file."
         )
         with open(failed_batch_file, "wb") as fh:
@@ -586,7 +590,7 @@ def _refinement_learn(spectra_files: list[Path], config: Config):
     refinement_step.mark_done()
 
 
-def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
+def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cms2: bool = False):
     library = _ce_calib(spectra_file, config)
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
     if calc_feature_step.is_done():
@@ -638,6 +642,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         xl=xl,
+        cms2=cms2,
         regression_method=config.curve_fitting_method,
     )
     re.generate_features(
@@ -647,6 +652,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False):
         additional_columns=config.use_feature_cols,
         all_features=config.all_features,
         xl=xl,
+        cms2=cms2,
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
@@ -842,7 +848,6 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             target_psms = pd.read_csv(features_dir + "/rescore.mokapot.psms.txt", delimiter="\t")
             psm_id = "SpecId"
 
-    split_data = target_psms[psm_id].str.rsplit("-", n=13, expand=True)
     new_columns = [
         "raw_file",
         "scan_number",
@@ -858,9 +863,10 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
         "base_sequence_p2",
         "index",
     ]
+    split_data = target_psms[psm_id].str.rsplit("-", n=12, expand=True)
     split_data.columns = new_columns
     df_psm_target = pd.concat([target_psms, split_data], axis=1)
-    split_data = decoy_psms[psm_id].str.rsplit("-", n=13, expand=True)
+    split_data = decoy_psms[psm_id].str.rsplit("-", n=12, expand=True)
     split_data.columns = new_columns
     df_psm_decoy = pd.concat([decoy_psms, split_data], axis=1)
     df_psm = pd.concat([df_psm_decoy, df_psm_target], axis=0)
@@ -1105,7 +1111,7 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
 
     def convert_percolator_output(df: pd.DataFrame):
         df["SpecId_raw_name_scan"] = df["SpecId"].str.extract(r"^([^-]+-[^-]+)")
-        split_data = df["SpecId"].str.split("-", n=13, expand=True)
+        split_data = df["SpecId"].str.rsplit("-", n=12, expand=True)
         new_columns = [
             "raw_file",
             "scan_number",
@@ -1267,14 +1273,22 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True)
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True, cms2=cms2)
             else:
                 processing_pool.apply_async(_calculate_features, [spectra_file, config])
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
-                _calculate_features(spectra_file, config, xl=True)
+                if "cms2" in config.models["intensity"].lower():
+                    cms2 = True
+                else:
+                    cms2 = False
+                _calculate_features(spectra_file, config, xl=True, cms2=cms2)
             else:
                 _calculate_features(spectra_file, config)
 

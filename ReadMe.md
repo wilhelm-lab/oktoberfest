@@ -38,6 +38,10 @@ When using Prosit-timsTOF
 
 [Prosit-timsTOF] Adams C, Gabriel W, Laukens K et al. (2024), _Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF_, [Nature Communications](https://doi.org/10.1038/s41467-024-48322-0)
 
+When using Prosit-XL
+
+[Prosit-XL] Kalhor M, Saylan C, Picciani M et al. (2024), _Prosit-XL: enhanced cross-linked peptide identification by accurate fragment intensity prediction to study protein-protein interactions and protein structures_, [BioRxiv](https://www.biorxiv.org/content/10.1101/2024.12.15.627797v1)
+
 ### Please cite when using protein grouping and quantification
 
 [PickedGroupFDR] The M, Samaras P, Kuster B, Wilhelm, M. (2022), _Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups_, [Molecular & Cellular Proteomics](https://doi-org.org/10.1016/j.mcpro.2022.100437)
