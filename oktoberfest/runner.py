@@ -400,7 +400,7 @@ def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, resul
             except Exception:
                 failed_batches.append(i)
         logger.error(
-            f"Prediction for {n_failed} / {i+1} batches failed. Check the log to find out why. "
+            f"Prediction for {n_failed} / {i + 1} batches failed. Check the log to find out why. "
             "Then rerun without changing the config file to append only the missing batches to your output file."
         )
         with open(failed_batch_file, "wb") as fh:
