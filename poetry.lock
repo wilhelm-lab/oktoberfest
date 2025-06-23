@@ -3928,14 +3928,14 @@ scikit-learn = ">=1.5,<2.0"
 
 [[package]]
 name = "spectrum-io"
-version = "0.7.0"
+version = "0.8.0"
 description = "IO related functionalities for oktoberfest."
 optional = false
 python-versions = "<3.14.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "spectrum_io-0.7.0-py3-none-any.whl", hash = "sha256:0e428a5712b2e5f8bcc1f5eaa6b0b44997b8b61bbedf7a5613a9d00ea8ab7040"},
-    {file = "spectrum_io-0.7.0.tar.gz", hash = "sha256:d16623ee36ffa8b93859fb876c5a718b7edf57ecd4c48860540528dfa79cdc5f"},
+    {file = "spectrum_io-0.8.0-py3-none-any.whl", hash = "sha256:dd59fc9b0cc6fe1b6cbc51ba9ace4b7b22fb2f5108f00dbc8645465a6a940844"},
+    {file = "spectrum_io-0.8.0.tar.gz", hash = "sha256:d8ad8896110ad624b05f9dc54749a74992c77e09f7c7cc266d6d4eb50fb84aff"},
 ]
 
 [package.dependencies]
@@ -3952,7 +3952,7 @@ pyteomics = ">=4.3.3,<5.0.0"
 PyYAML = ">=5.4.1"
 rich = ">=10.3.0"
 sortedcontainers = ">=2.4.0,<3.0.0"
-spectrum-fundamentals = ">=0.8.0,<0.9.0"
+spectrum-fundamentals = ">=0.9.0,<0.10.0"
 
 [[package]]
 name = "spectrum-utils"
@@ -4833,4 +4833,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10.0,<3.12.0"
-content-hash = "65b663b3f1a2d588451ad0c3562aa050863c76839dd320349553284707fec29c"
+content-hash = "552e8abcca7fcf8b166799f2252653f96d43803ae1d5f1581eafba81b57d8d07"

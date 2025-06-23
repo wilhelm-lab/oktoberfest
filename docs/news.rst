@@ -4,11 +4,19 @@ News
 .. role:: date
     :class: date
 
+Oktoberfest supports rescoring XL-MS datasets :date:`2025-06-14`
+----------------------------------------------------------------
+
+| Oktoberfest 0.10.0 is published, introducing support for crosslinking mass spectrometry (XL-MS) rescoring — including both cleavable (DSSO, DSBU) and non-cleavable (DSS, BS3) crosslinkers.
+| The update adds compatibility with `xiSEARCH <https://www.rappsilberlab.org/software/xisearch/>`_ output and integrates the new Prosit-XL models for XL-MS data.
+| Check out the preprint on `BioRxiv <https://www.biorxiv.org/content/10.1101/2024.12.15.627797v1>`_ and explore the `full tutorial notebook on GitHub <https://github.com/wilhelm-lab/oktoberfest/tree/development/tutorials>`_.
+| Related config files can be found here: `example_configs.py <https://github.com/wilhelm-lab/oktoberfest/blob/development/oktoberfest/utils/example_configs.py>`_.
+
 Oktoberfest supports OpenMS and custom modifications :date:`2025-05-21`
 -----------------------------------------------------------------------
 
 | Oktoberfest 0.9.0 is published, allowing to provide `custom modifications <custom_mods.html>`_ as long as they are supported by the respective Koina model. In addition, direct support of OpenMS searches was added.
-| This release support python 3.10, and 3.11. Support for python 3.9 was dropped!
+| This release supports python 3.10, and 3.11. Support for python 3.9 was dropped!
 
 Oktoberfest supports requantifying rescored peptides with Picked-Group-FDR and offline predictions with custom models :date:`2024-10-10`
 ----------------------------------------------------------------------------------------------------------------------------------------
