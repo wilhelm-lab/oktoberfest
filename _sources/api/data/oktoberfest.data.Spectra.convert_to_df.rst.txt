@@ -1,4 +1,4 @@
-:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L376-L397
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L378-L399
 
 oktoberfest.data.Spectra.convert\_to\_df
 ========================================

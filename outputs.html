@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Generated outputs &mdash; Oktoberfest 0.9.0 documentation</title>
+  <title>Generated outputs &mdash; Oktoberfest 0.10.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=494d5358" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="_static/documentation_options.js?v=82662543"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -208,6 +208,22 @@ results/percolator/</p></td>
 </tr>
 <tr class="row-odd"><td><p>original.log</p></td>
 <td><p>Log output from percolator / mokapot (original features)</p></td>
+</tr>
+</tbody>
+</table>
+<p>The following output files are specific to XL‑MS rescoring.</p>
+<table class="fixed-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>percolator_xifdr_input.csv</p></td>
+<td><p>Contains Percolator scores for each CSM (cross‑linked spectrum match). Oktoberfest does <strong>not</strong> perform FDR estimation for XL‑MS data — this file can be uploaded directly to <a class="reference external" href="https://github.com/Rappsilber-Laboratory/xiFDR">xiFDR</a> to estimate FDR.</p></td>
+</tr>
+<tr class="row-odd"><td><p>xisearch_xifdr_input.csv</p></td>
+<td><p>Contains XiSearch scores for each CSM. You can feed this file to xiFDR as well, allowing a direct comparison between original XiSearch scores and rescored (Percolator) results.</p></td>
 </tr>
 </tbody>
 </table>

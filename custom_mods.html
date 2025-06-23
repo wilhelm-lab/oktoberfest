@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Custom modifications &mdash; Oktoberfest 0.9.0 documentation</title>
+  <title>Custom modifications &mdash; Oktoberfest 0.10.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=494d5358" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="_static/documentation_options.js?v=82662543"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -56,6 +56,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#required-information">Required information</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#example-configuration">Example configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#table-of-default-modifications">Table of default modifications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#table-of-default-modifications-for-xl-ms-data">Table of default modifications for XL-MS data</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="peptides_format.html">Custom in-silico digestion</a></li>
@@ -183,6 +184,51 @@ Important: If you want to provide n-terminal or c-terminal modifications, you ha
 <td><p>7</p></td>
 <td><p>0.984016</p></td>
 <td><p>R[UNIMOD:7]</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="table-of-default-modifications-for-xl-ms-data">
+<h2>Table of default modifications for XL-MS data<a class="headerlink" href="#table-of-default-modifications-for-xl-ms-data" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>xiSEARCH</p></th>
+<th class="head"><p>Modification</p></th>
+<th class="head"><p>UNIMOD ID</p></th>
+<th class="head"><p>Monoisotopic Mass</p></th>
+<th class="head"><p>Internal representation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>C</p></td>
+<td><p>carbamidomethylation of C</p></td>
+<td><p>4</p></td>
+<td><p>57.0215</p></td>
+<td><p>C[UNIMOD:4]</p></td>
+</tr>
+<tr class="row-odd"><td><p>Mox</p></td>
+<td><p>oxidation of M</p></td>
+<td><p>35</p></td>
+<td><p>15.9949</p></td>
+<td><p>M[UNIMOD:35]</p></td>
+</tr>
+<tr class="row-even"><td><p>K</p></td>
+<td><p>Linked K to DSSO</p></td>
+<td><p>1896</p></td>
+<td><p>158.003765</p></td>
+<td><p>K[UNIMOD:1896]</p></td>
+</tr>
+<tr class="row-odd"><td><p>K</p></td>
+<td><p>Linked K to DSBU</p></td>
+<td><p>1884</p></td>
+<td><p>196.084792</p></td>
+<td><p>K[UNIMOD:1884]</p></td>
+</tr>
+<tr class="row-even"><td><p>K</p></td>
+<td><p>Linked to DSS or BS3</p></td>
+<td><p>1898</p></td>
+<td><p>138.068080</p></td>
+<td><p>K[UNIMOD:1898]</p></td>
 </tr>
 </tbody>
 </table>

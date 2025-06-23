@@ -1,4 +1,4 @@
-:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L370-L374
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L372-L376
 
 oktoberfest.data.Spectra.remove\_duplicates
 ===========================================

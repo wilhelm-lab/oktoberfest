@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Retrieving predictions &mdash; Oktoberfest 0.9.0 documentation</title>
+  <title>Retrieving predictions &mdash; Oktoberfest 0.10.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/custom_cookietemple.css?v=494d5358" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="_static/documentation_options.js?v=82662543"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -52,7 +52,6 @@
 <li class="toctree-l2"><a class="reference internal" href="config.html">Configuration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Retrieving predictions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#connecting-to-a-community-server">Connecting to a community server</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#currently-supported-models">Currently supported models</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#hosting-and-adding-your-own-models">Hosting and adding your own models</a></li>
 </ul>
 </li>
@@ -101,19 +100,8 @@
 <p>Oktoberfest relies on retrieving predictions from a <a class="reference external" href="https://koina.wilhelmlab.org/">Koina</a> server that hosts specific models for peptide property prediction. Users can use any publicly available community server or host their own server.</p>
 <section id="connecting-to-a-community-server">
 <h2>Connecting to a community server<a class="headerlink" href="#connecting-to-a-community-server" title="Link to this heading"></a></h2>
-<p>Our publicly available community server is available at <cite>koina.wilhelmlab.org:443</cite>.
-If you want to connect to it, you need to have the following flags in your config file (default settings):</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">   </span><span class="nt">&quot;prediction_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;koina.wilhelmlab.org:443&quot;</span><span class="p">,</span>
-<span class="w">   </span><span class="nt">&quot;ssl&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p>Once more community servers become available, we will add a list here.</p>
-<section id="currently-supported-models">
-<h3>Currently supported models<a class="headerlink" href="#currently-supported-models" title="Link to this heading"></a></h3>
-<p>This is the list of currently supported and tested models for Oktoberfest provided by our community server.</p>
-<table class="fixed-table docutils align-default">
+<table class="fixed-table docutils align-default" id="id1">
+<caption><span class="caption-text">Currently supported intensity models</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
 <thead>
 <tr class="row-odd"><th class="head"><p>Intensity models</p></th>
 <th class="head"><p>Description</p></th>
@@ -134,6 +122,12 @@ If you want to connect to it, you need to have the following flags in your confi
 </tr>
 <tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer">Prosit_2023_intensity_timsTOF</a></p></td>
 <td><p>Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_XL_CMS2/infer">Prosit_2023_intensity_XL_CMS2</a></p></td>
+<td><p>Developed for HCD cleavable cross-linked peptides (DSSO, DSBU). Supports oxidation and carbamidomethylation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/Prosit_2024_intensity_XL_NMS2/infer">Prosit_2024_intensity_XL_NMS2</a></p></td>
+<td><p>Developed for HCD non-cleavable cross-linked peptides (DSS, BS3). Supports oxidation and carbamidomethylation.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference external" href="https://koina.wilhelmlab.org/docs#post-/AlphaPept_ms2_generic/infer">AlphaPept_ms2_generic</a></p></td>
 <td><p>Developed for generic data support, including TMT, timsTOF and various instrument types.</p></td>
@@ -162,7 +156,6 @@ If you want to connect to it, you need to have the following flags in your confi
 </tbody>
 </table>
 <p>Once support for additional models is implemented in Oktoberfest, they will be added here.</p>
-</section>
 <section id="hosting-and-adding-your-own-models">
 <h3>Hosting and adding your own models<a class="headerlink" href="#hosting-and-adding-your-own-models" title="Link to this heading"></a></h3>
 <p>In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official <a class="reference external" href="https://koina.wilhelmlab.org/docs#overview">Koina documentation</a>.</p>

@@ -1,4 +1,4 @@
-:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L168-L189
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L170-L191
 
 oktoberfest.data.Spectra.add\_column
 ====================================

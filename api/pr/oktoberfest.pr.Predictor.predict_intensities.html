@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>oktoberfest.pr.Predictor.predict_intensities &mdash; Oktoberfest 0.9.0 documentation</title>
+  <title>oktoberfest.pr.Predictor.predict_intensities &mdash; Oktoberfest 0.10.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_cookietemple.css?v=494d5358" />
@@ -14,7 +14,7 @@
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=39bb1c6d"></script>
+      <script src="../../_static/documentation_options.js?v=82662543"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -111,7 +111,7 @@ indices provided by optionally provided chunks of the dataframe.</p>
 <li><p><strong>data</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference internal" href="../data/oktoberfest.data.Spectra.html#oktoberfest.data.Spectra" title="oktoberfest.data.spectra.Spectra"><code class="xref py py-class docutils literal notranslate"><span class="pre">Spectra</span></code></a></span>) – Spectra object containing the required data for prediction and to store the
 predictions in after retrieval from the server.</p></li>
 <li><p><strong>xl</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></span>) – crosslinked or linear peptide</p></li>
-<li><p><strong>chunk_idx</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v2.2.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Index</span></code></a>]]</span>) – The chunked indices of the provided dataframe. This is required in some cases,
+<li><p><strong>chunk_idx</strong> (<span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.13)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>[<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v2.3.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Index</span></code></a>]]</span>) – The chunked indices of the provided dataframe. This is required in some cases,
 e.g. if padding should be avoided when predicting peptides of different length.
 For alphapept, this is required as padding is only performed within one batch, leading to
 different sizes of arrays between individual prediction batches that cannot be concatenated.</p></li>

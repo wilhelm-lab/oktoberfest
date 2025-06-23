@@ -1,4 +1,4 @@
-:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L348-L356
+:github_url: https://github.com/wilhelm-lab/oktoberfest/tree/development/oktoberfest/data/spectra.py#L350-L358
 
 oktoberfest.data.Spectra.from\_hdf5
 ===================================
