@@ -115,7 +115,7 @@ For local prediction & refinement learning, you have to install Oktoberfest with
    pip install oktoberfest[dlomix]
 
 Installing xiFDR
-~~~~~
+~~~~~~~~~~~~~~~~
 
 Oktoberfest generates input files for **xiFDR**, which is required for FDR estimation of XL-MS data. It does not run xiFDR directly.
 
