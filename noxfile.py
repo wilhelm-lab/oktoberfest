@@ -18,7 +18,7 @@ except ImportError:
     sys.exit(1)
 
 package = "oktoberfest"
-python_versions = ["3.9", "3.10"]
+python_versions = ["3.10", "3.11", "3.12"]
 nox.options.sessions = (
     "pre-commit",
     "safety",
@@ -28,15 +28,15 @@ nox.options.sessions = (
     "docs-build",
 )
 
-git_dependencies = [
-    "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc",
-]
+# git_dependencies = [
+#    "dlomix[rltl-report,wandb]@git+https://github.com/wilhelm-lab/dlomix.git@feature/bmpc",
+# ]
 
 
-def install_git_dependencies(session: Session):
-    """Manually install Git dependencies from URL."""
-    for dependency in git_dependencies:
-        session.run("pip", "install", dependency)
+# def install_git_dependencies(session: Session):
+#   """Manually install Git dependencies from URL."""
+#   for dependency in git_dependencies:
+#       session.run("pip", "install", dependency)
 
 
 def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
@@ -153,7 +153,7 @@ def mypy(session: Session) -> None:
 def tests(session: Session) -> None:
     """Run the test suite."""
     session.install(".")
-    install_git_dependencies(session)
+    #  install_git_dependencies(session)
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
@@ -182,7 +182,7 @@ def coverage(session: Session) -> None:
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
     session.install(".")
-    install_git_dependencies(session)
+    # install_git_dependencies(session)
     session.install("pytest", "typeguard", "pygments")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 

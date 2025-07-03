@@ -6,43 +6,30 @@ Oktoberfest relies on retrieving predictions from a `Koina <https://koina.wilhel
 Connecting to a community server
 --------------------------------
 
-Our publicly available community server is available at `koina.wilhelmlab.org:443`.
-If you want to connect to it, you need to have the following flags in your config file (default settings):
+.. table:: Currently supported intensity models
+    :class: fixed-table
 
-.. code-block:: json
-
-   {
-      "prediction_server": "koina.wilhelmlab.org:443",
-      "ssl": true,
-   }
-
-Once more community servers become available, we will add a list here.
-
-Currently supported models
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is the list of currently supported and tested models for Oktoberfest provided by our community server.
-
-.. table::
-   :class: fixed-table
-
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | Intensity models                                                                                                 |                             Description                                                                                                                                                      |
-   +==================================================================================================================+==============================================================================================================================================================================================+
-   | Prosit_2019_intensity                                                                                            | Developed for HCD tryptic peptides only. We recommend using the Prosit_2020_intensity_HCD model instead, since it showed slightly superior performance on tryptic peptides as well.          |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | `Prosit_2020_intensity_HCD <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_HCD/infer>`_           | Developed for HCD tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for HCD.                              |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | `Prosit_2020_intensity_CID <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_CID/infer>`_           | Developed for CID tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for CID.                              |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | `Prosit_2020_intensity_TMT <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_TMT/infer>`_           | Developed for HCD and CID, tryptic and non-tryptic peptides. Latest version we commend for TMT labeled peptides in general.                                                                  |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | `Prosit_2023_intensity_timsTOF <https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer>`_   | Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.                                                                                       |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |  `AlphaPept_ms2_generic <https://koina.wilhelmlab.org/docs#post-/AlphaPept_ms2_generic/infer>`_                  | Developed for generic data support, including TMT, timsTOF and various instrument types.                                                                                                     |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |  `ms2pip_2021_HCD <https://koina.wilhelmlab.org/docs#post-/ms2pip_2021_HCD/infer>`_                              | Developed for HCD tryptic and non-tryptic peptides.                                                                                                                                          |
-   +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | Intensity models                                                                                                 |                             Description                                                                                                                                                      |
+    +==================================================================================================================+==============================================================================================================================================================================================+
+    | Prosit_2019_intensity                                                                                            | Developed for HCD tryptic peptides only. We recommend using the Prosit_2020_intensity_HCD model instead, since it showed slightly superior performance on tryptic peptides as well.          |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2020_intensity_HCD <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_HCD/infer>`_           | Developed for HCD tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for HCD.                              |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2020_intensity_CID <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_CID/infer>`_           | Developed for CID tryptic and non-tryptic peptides. Supported modifications are oxidation and carbamidomethylation. Latest version we recommend to use for CID.                              |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2020_intensity_TMT <https://koina.wilhelmlab.org/docs#post-/Prosit_2020_intensity_TMT/infer>`_           | Developed for HCD and CID, tryptic and non-tryptic peptides. Latest version we commend for TMT labeled peptides in general.                                                                  |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2023_intensity_timsTOF <https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_timsTOF/infer>`_   | Developed for timsTOF, tryptic and non-tryptic peptides. Latest version we commend to use for timsTOF.                                                                                       |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2023_intensity_XL_CMS2 <https://koina.wilhelmlab.org/docs#post-/Prosit_2023_intensity_XL_CMS2/infer>`_   | Developed for HCD cleavable cross-linked peptides (DSSO, DSBU). Supports oxidation and carbamidomethylation.                                                                                 |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `Prosit_2024_intensity_XL_NMS2 <https://koina.wilhelmlab.org/docs#post-/Prosit_2024_intensity_XL_NMS2/infer>`_   | Developed for HCD non-cleavable cross-linked peptides (DSS, BS3). Supports oxidation and carbamidomethylation.                                                                               |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `AlphaPept_ms2_generic <https://koina.wilhelmlab.org/docs#post-/AlphaPept_ms2_generic/infer>`_                   | Developed for generic data support, including TMT, timsTOF and various instrument types.                                                                                                     |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | `ms2pip_2021_HCD <https://koina.wilhelmlab.org/docs#post-/ms2pip_2021_HCD/infer>`_                               | Developed for HCD tryptic and non-tryptic peptides.                                                                                                                                          |
+    +------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. table::
    :class: fixed-table
@@ -73,4 +60,4 @@ Importantly, this also gives you the option to refinement-learn the pre-trained 
 
 For local intensity prediction and refinement learning, you need to provide either a path to a pre-trained model or the keyword `baseline`
 (for the runner to automatically download a model for you) as the intensity model in the config, and specify `localPredictionOptions` as well as optional `refinementLearningOptions`.
-For more details, refer to the :ref:`job <jobs:b) with refinement>` and :ref:`configuration <config:applicable to local intensity prediction and transfer learning>` docs.
+For more details, refer to the :ref:`job <jobs:b) with refinement>` and :ref:`configuration <config:Applicable to local intensity prediction>` docs.

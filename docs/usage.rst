@@ -11,6 +11,7 @@ The following outlines how to run a job with the high-level API, the three types
     config
     predictions
     internal_format
+    custom_mods
     peptides_format
     outputs
     svm_features

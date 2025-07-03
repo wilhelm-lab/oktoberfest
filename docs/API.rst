@@ -12,6 +12,20 @@ Import Oktoberfest using
 
    import oktoberfest as ok
 
+Data: :code:`data`
+------------------
+
+The data submodule provides access to PSMs, predictions, and metadata.
+
+.. module:: oktoberfest.data
+
+.. currentmodule:: oktoberfest
+
+.. autosummary::
+   :toctree: api/data
+
+   data.Spectra
+
 Preprocessing: :code:`pp`
 -------------------------
 
@@ -60,8 +74,6 @@ Peptide preprocessing
 
 Predicting: :code:`pr`
 ----------------------
-.. TODO
-    add full class documentation through autosummary
 
 .. module:: oktoberfest.pr
 
@@ -73,7 +85,6 @@ High-level prediction runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-    :recursive:
     :toctree: api/pr
 
     pr.Predictor
@@ -82,7 +93,6 @@ Koina interface
 ~~~~~~~~~~~~~~~
 
 .. autosummary::
-    :recursive:
     :toctree: api/pr
 
     pr.Koina
@@ -91,7 +101,6 @@ DLomix interface
 ~~~~~~~~~~~~~~~~
 
 .. autosummary::
-    :recursive:
     :toctree: api/pr
 
     pr.DLomix
@@ -105,9 +114,6 @@ Rescoring: :code:`re`
 
 .. currentmodule:: oktoberfest
 
-General
-~~~~~~~
-
 .. autosummary::
    :toctree: api/re
 
@@ -118,14 +124,11 @@ General
 
 
 Plotting: :code:`pl`
----------------------
+--------------------
 
 .. module:: oktoberfest.pl
 
 .. currentmodule:: oktoberfest
-
-General
-~~~~~~~
 
 .. autosummary::
    :toctree: api/pl

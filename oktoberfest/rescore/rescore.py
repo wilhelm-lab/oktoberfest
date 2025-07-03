@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, List
 import mokapot
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
@@ -24,6 +25,8 @@ def generate_features(
     output_file: str | Path,
     additional_columns: str | list | None = None,
     all_features: bool = False,
+    xl: bool = False,
+    cms2: bool = False,
     regression_method: str = "spline",
     add_neutral_loss_features: bool = False,
     remove_miss_cleavage_features: bool = False,
@@ -41,6 +44,8 @@ def generate_features(
     :param output_file: the location to the generated tab file to be used for percolator / mokapot
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
+    :param xl: crosslinked or linear peptide
+    :param cms2: cleavable or non-cleavable crosslinker
     :param regression_method: The regression method to use for iRT alignment
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
@@ -84,7 +89,27 @@ def generate_features(
         >>>                         regression_method="spline",
         >>>                         output_file="./tests/doctests/output/original.tab")
     """
-    perc_features = Percolator(
+    if xl:
+        pred_a = library.get_matrix(FragmentType.PRED_A)
+        pred_b = library.get_matrix(FragmentType.PRED_B)
+        raw_a = library.get_matrix(FragmentType.RAW_A)
+        raw_b = library.get_matrix(FragmentType.RAW_B)
+        mz_a = library.get_matrix(FragmentType.MZ_A)
+        mz_b = library.get_matrix(FragmentType.MZ_B)
+        perc_features = Percolator(
+            metadata=library.get_meta_data().reset_index(drop=True),
+            pred_intensities=sp.hstack([pred_a, pred_b]),
+            true_intensities=sp.hstack([raw_a, raw_b]),
+            mz=sp.hstack([mz_a, mz_b]),
+            input_type=search_type,
+            all_features_flag=all_features,
+            regression_method=regression_method,
+            neutral_loss_flag=add_neutral_loss_features,
+            drop_miss_cleavage_flag=remove_miss_cleavage_features,
+            cms2=cms2,
+        )
+    else:
+        perc_features = Percolator(
         metadata=library.get_meta_data().reset_index(drop=True),
         pred_intensities=library.get_matrix(FragmentType.PRED),
         true_intensities=library.get_matrix(FragmentType.RAW),
@@ -96,7 +121,8 @@ def generate_features(
         neutral_loss_flag=add_neutral_loss_features,
         drop_miss_cleavage_flag=remove_miss_cleavage_features,
     )
-    ion_dict = library.var if custom_ion_dict  else None
+        ion_dict = library.var if custom_ion_dict  else None
+        
     perc_features.calc(ion_dict=ion_dict, featured_ions=featured_ions)
     perc_features.write_to_file(str(output_file))
 
@@ -202,6 +228,7 @@ def rescore_with_percolator(
     num_threads: int = 3,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
+    xl: bool = False,
 ):
     """
     Rescore using percolator.
@@ -214,6 +241,7 @@ def rescore_with_percolator(
     :param num_threads: The number of threads used in parallel for percolator
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
+    :param xl: crosslinked or linear peptide
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
@@ -234,18 +262,25 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
-
-    cmd = f"percolator --weights {weights_file} \
-                    --num-threads {num_threads} \
-                    --subset-max-train 500000 \
-                    --post-processing-tdc \
-                    --testFDR {test_fdr} \
-                    --trainFDR {train_fdr} \
+    if xl:
+        cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
-                    --results-peptides {target_peptides} \
-                    --decoy-results-peptides {decoy_peptides} \
+                    --only-psms \
                     {input_file} 2> {log_file}"
+
+    else:
+        cmd = f"percolator --weights {weights_file} \
+                        --num-threads {num_threads} \
+                        --subset-max-train 500000 \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
 
     logger.info(f"Starting percolator with command {cmd}")
     subprocess.run(cmd, shell=True, check=True)
@@ -256,6 +291,7 @@ def rescore_with_mokapot(
     input_file: str | Path,
     output_folder: str | Path | None = None,
     test_fdr: float = 0.01,
+    xl: bool = False,
 ):
     """
     Rescore using mokapot.
@@ -266,6 +302,7 @@ def rescore_with_mokapot(
     :param input_file: Path to percolator tab file
     :param output_folder: An optional output folder for all percolator files, default is the parent directory of the input_file
     :param test_fdr: the fdr cutoff for the test set
+    :param xl: crosslinked or linear peptide (currently unused)
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
