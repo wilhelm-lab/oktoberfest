@@ -26,34 +26,55 @@ class FragmentType(Enum):
     """FragmentType class to enumerate pred, raw, and mz."""
 
     PRED = 1
-    RAW = 2
-    MZ = 3
+    PRED_A = 2
+    PRED_B = 3
+    RAW = 4
+    RAW_A = 5
+    RAW_B = 6
+    MZ = 7
+    MZ_A = 8
+    MZ_B = 9
 
 
 class Spectra(anndata.AnnData):
     """Main to init spectra data."""
 
     INTENSITY_COLUMN_PREFIX = "INTENSITY_RAW"
+    INTENSITY_COLUMN_PREFIX_A = "INTENSITY_RAW_A"
+    INTENSITY_COLUMN_PREFIX_B = "INTENSITY_RAW_B"
     INTENSITY_PRED_PREFIX = "INTENSITY_PRED"
+    INTENSITY_PRED_PREFIX_A = "INTENSITY_PRED_A"
+    INTENSITY_PRED_PREFIX_B = "INTENSITY_PRED_B"
     MZ_COLUMN_PREFIX = "MZ_RAW"
+    MZ_COLUMN_PREFIX_A = "MZ_RAW_A"
+    MZ_COLUMN_PREFIX_B = "MZ_RAW_B"
     INTENSITY_PRED_LAYER_NAME = "pred_int"
+    INTENSITY_PRED_LAYER_NAME_A = "pred_int_A"
+    INTENSITY_PRED_LAYER_NAME_B = "pred_int_B"
     INTENSITY_LAYER_NAME = "raw_int"
+    INTENSITY_LAYER_NAME_A = "raw_int_A"
+    INTENSITY_LAYER_NAME_B = "raw_int_B"
     MZ_LAYER_NAME = "mz"
+    MZ_LAYER_NAME_A = "mz_A"
+    MZ_LAYER_NAME_B = "mz_B"
     COLUMNS_FRAGMENT_ION = ["Y1+", "Y1++", "Y1+++", "B1+", "B1++", "B1+++"]
     MAX_CHARGE = 3
 
     @staticmethod
-    def _gen_vars_df(ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"]) -> pd.DataFrame:
+    def _gen_vars_df(
+        ion_types: list[str] = c.FRAGMENTATION_TO_IONS_BY_PAIRS["HCD"], cms2: bool = False
+    ) -> pd.DataFrame:
         """
         Create annotation dataframe for vars in AnnData object.
 
         :param ion_types: ion types that are expected to be in the spectra
+        :param cms2: cleavable crosslinked or linear peptide
         :return: pd.Dataframe of fragment annotations
         """
         df = pd.DataFrame(
             [
                 {"ion": f"{ion_type}{pos}+{charge}", "num": pos, "type": ion_type, "charge": charge}
-                for pos in c.POSITIONS
+                for pos in (c.POSITIONS_XL if cms2 else c.POSITIONS)
                 for ion_type in ion_types
                 for charge in c.CHARGES
             ]
@@ -62,16 +83,21 @@ class Spectra(anndata.AnnData):
         return df
 
     @staticmethod
-    def _gen_column_names(fragment_type: FragmentType) -> list[str]:
+    def _gen_column_names(fragment_type: FragmentType, cms2: bool = False) -> list[str]:
         """
         Get column names of the spectra data.
 
         :param fragment_type: choose predicted, raw, or mz
+        :param cms2: cleavable crosslinked or linear peptide
         :return: A list of column names
         """
         prefix = Spectra._resolve_prefix(fragment_type)
         columns = []
-        for i in range(1, 30):
+        if cms2:
+            max_range = 59
+        else:
+            max_range = 30
+        for i in range(1, max_range):
             for column in Spectra.COLUMNS_FRAGMENT_ION:
                 columns.append(prefix + "_" + column.replace("1", str(i)))
         return columns
@@ -79,7 +105,10 @@ class Spectra(anndata.AnnData):
     @staticmethod
     def _resolve_prefix(fragment_type: FragmentType) -> str:
         """
-        Resolve prefix given fragment type (1 for pred, 2 for raw, 3 for mz).
+        Resolve prefix given fragment type.
+
+        (1 for pred, 2 for xl_pred_a, 3 for xl_pred_a, 4 for raw, 5 for xl_raw_a,
+        6 for xl_raw_b, 7 for mz, 8 for xl_mz_a, 9 for xl_mz_b).
 
         :param fragment_type: choose predicted, raw, or mz
         :return: prefix as string
@@ -88,9 +117,21 @@ class Spectra(anndata.AnnData):
         if fragment_type.value == 1:
             prefix = Spectra.INTENSITY_PRED_PREFIX
         elif fragment_type.value == 2:
-            prefix = Spectra.INTENSITY_COLUMN_PREFIX
+            prefix = Spectra.INTENSITY_PRED_PREFIX_A
         elif fragment_type.value == 3:
+            prefix = Spectra.INTENSITY_PRED_PREFIX_B
+        elif fragment_type.value == 4:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX
+        elif fragment_type.value == 5:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_A
+        elif fragment_type.value == 6:
+            prefix = Spectra.INTENSITY_COLUMN_PREFIX_B
+        elif fragment_type.value == 7:
             prefix = Spectra.MZ_COLUMN_PREFIX
+        elif fragment_type.value == 8:
+            prefix = Spectra.MZ_COLUMN_PREFIX_A
+        else:
+            prefix = Spectra.MZ_COLUMN_PREFIX_B
         return prefix
 
     @staticmethod
@@ -104,9 +145,21 @@ class Spectra(anndata.AnnData):
         if fragment_type.value == 1:
             layer = Spectra.INTENSITY_PRED_LAYER_NAME
         elif fragment_type.value == 2:
-            layer = Spectra.INTENSITY_LAYER_NAME
+            layer = Spectra.INTENSITY_PRED_LAYER_NAME_A
         elif fragment_type.value == 3:
+            layer = Spectra.INTENSITY_PRED_LAYER_NAME_B
+        elif fragment_type.value == 4:
+            layer = Spectra.INTENSITY_LAYER_NAME
+        elif fragment_type.value == 5:
+            layer = Spectra.INTENSITY_LAYER_NAME_A
+        elif fragment_type.value == 6:
+            layer = Spectra.INTENSITY_LAYER_NAME_B
+        elif fragment_type.value == 7:
             layer = Spectra.MZ_LAYER_NAME
+        elif fragment_type.value == 8:
+            layer = Spectra.MZ_LAYER_NAME_A
+        elif fragment_type.value == 9:
+            layer = Spectra.MZ_LAYER_NAME_B
         return layer
 
     def __getitem__(self, index: Index):
@@ -190,6 +243,23 @@ class Spectra(anndata.AnnData):
 
         layer = self._resolve_layer_name(fragment_type)
         self.layers[layer] = csr_matrix(sparse_intensity_matrix)
+
+    def add_intensities_without_mapping(self, intensities: np.ndarray, fragment_type: FragmentType):
+        """
+        Add predicted intensities and convert to sparse matrix.
+
+        This function takes a numpy array, containing intensities.
+        The intensity array is expected to have the same shape as this object and will be added to
+        the respective lazer without checking the order of fragment annotations.
+
+        :param intensities: intensity numpy array to add with shapes (n x m)
+        :param fragment_type: the type of intensities to add. Can be FragmentType.RAW or FragmentType.PRED.
+        """
+        intensities[intensities == 0] = c.EPSILON
+        intensities[intensities == -1] = 0.0
+
+        layer = self._resolve_layer_name(fragment_type)
+        self.layers[layer] = csr_matrix(intensities)
 
     def add_list_of_predicted_intensities(
         self,
@@ -292,7 +362,11 @@ class Spectra(anndata.AnnData):
         self.__dict__ = Spectra(self[~self.obs.REVERSE].copy()).__dict__
 
     def filter_by_score(self, threshold: float) -> None:
-        """Filter out peptides with search engine score below threshold in-place."""
+        """
+        Filter out peptides with search engine score below threshold in-place.
+
+        :param threshold: The threshold to use below which peptides are filtered out.
+        """
         self.__dict__ = Spectra(self[self.obs.SCORE >= threshold].copy()).__dict__
 
     def remove_duplicates(self, num_duplicates: int) -> None:

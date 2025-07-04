@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from numpy.testing import assert_almost_equal
 
+import oktoberfest
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
 from oktoberfest.predict import Koina, Predictor
@@ -74,7 +75,7 @@ class TestPredictorBehavioral(unittest.TestCase):
         cls.mock_config.data["models"] = {cls.model_type: cls.model_name}
         cls.mock_config.output = cls.temp_dir
 
-        cls.mock_koina = create_autospec(Koina, instance=True)
+        cls.mock_koina = create_autospec(Koina, instance=False)
         cls.mock_spectra = create_autospec(Spectra, instance=True)
         cls.intensities = np.array([[0.0, 0.0, -1.0], [1.0, 0, -1.0], [1.0, 0.0, 0.0]])
         cls.ion_annotations = np.array(
@@ -88,37 +89,37 @@ class TestPredictorBehavioral(unittest.TestCase):
     def tearDownClass(cls):  # noqa: 402
         shutil.rmtree(cls.temp_dir)
 
-    @patch("oktoberfest.pr.predictor.Koina")
+    @patch("oktoberfest.predict.predictor.Koina")
     def test_from_koina(self, mock_koina):
         """Test Koina constructor for Predictor."""
-        predictor = Predictor.from_koina(model_name=self.model_name)
-        self.assertIsInstance(predictor._predictor, type(mock_koina.return_value))
+        Predictor.from_koina(model_name=self.model_name)
+        assert mock_koina is oktoberfest.predict.predictor.Koina
         mock_koina.assert_called_once()
 
-    @patch("oktoberfest.pr.predictor.DLomix")
+    @patch("oktoberfest.predict.predictor.DLomix")
     def test_from_dlomix(self, mock_dlomix):
         """Test DLomix constructor for Predictor."""
         if mock_dlomix is None:
             self.assertTrue(True)
             return
-        predictor = Predictor.from_dlomix(
+        Predictor.from_dlomix(
             model_type=self.model_type,
             model_path=self.temp_dir / "prosit_baseline.keras",
             output_path=self.temp_dir / "dlomix_output",
             batch_size=1024,
         )
-        self.assertIsInstance(predictor._predictor, type(mock_dlomix.return_value))
+        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
         mock_dlomix.assert_called_once()
 
-    @patch("oktoberfest.pr.predictor.Koina")
+    @patch("oktoberfest.predict.predictor.Koina")
     def test_koina_from_config(self, mock_koina):
         """Test config constructor for Predictor with Koina."""
         self.mock_config.predict_intensity_locally = False
-        predictor = Predictor.from_config(self.mock_config, model_type=self.model_type)
-        self.assertIsInstance(predictor._predictor, type(mock_koina.return_value))
+        Predictor.from_config(self.mock_config, model_type=self.model_type)
+        assert mock_koina is oktoberfest.predict.predictor.Koina
         mock_koina.assert_called_once()
 
-    @patch("oktoberfest.pr.predictor.DLomix")
+    @patch("oktoberfest.predict.predictor.DLomix")
     def test_dlomix_from_config(self, mock_dlomix):
         """Test config constructor for Predictor with DLomix."""
         if mock_dlomix is None:
@@ -127,19 +128,19 @@ class TestPredictorBehavioral(unittest.TestCase):
         self.mock_config.predict_intensity_locally = True
         self.mock_config.download_baseline_intensity_predictor = False
         self.mock_config.dlomix_inference_batch_size = 1024
-        predictor = Predictor.from_config(self.mock_config, model_type=self.model_type)
-        self.assertIsInstance(predictor._predictor, type(mock_dlomix.return_value))
+        Predictor.from_config(self.mock_config, model_type=self.model_type)
+        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
         mock_dlomix.assert_called_once()
 
-    @patch("oktoberfest.pr.predictor.DLomix")
+    @patch("oktoberfest.predict.predictor.DLomix")
     def test_download_new_model(self, mock_dlomix):
         """Test if new baseline model is downloaded if requested."""
         if mock_dlomix is None:
             self.assertTrue(True)
             return
         self.mock_config.download_baseline_intensity_predictor = True
-        predictor = Predictor.from_config(self.mock_config, model_type=self.model_type)
-        self.assertIsInstance(predictor._predictor, type(mock_dlomix.return_value))
+        Predictor.from_config(self.mock_config, model_type=self.model_type)
+        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
         mock_dlomix.assert_called_once_with(
             model_type=self.model_type,
             model_path=self.data_dir / "dlomix/prosit_baseline_model.keras",
@@ -152,11 +153,11 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test if predict_intensities does the right steps when chunk_idx=None."""
         # TODO add state-based test
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(
+        predictor._predictor.predict = MagicMock(
             return_value={"intensities": self.intensities, "annotation": self.ion_annotations}
         )
         predictor.predict_intensities(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor._predictor.predict.assert_called_once_with(data=self.mock_spectra)
         self.mock_spectra.add_intensities.assert_called_once_with(
             self.intensities, self.ion_annotations, fragment_type=FragmentType.PRED
         )
@@ -172,7 +173,7 @@ class TestPredictorBehavioral(unittest.TestCase):
             }
         )
         predictor.predict_intensities(self.mock_spectra, chunk_idx=self.chunk_idx)
-        predictor.predict_in_chunks.assert_called_once_with(data=self.mock_spectra, chunk_idx=self.chunk_idx)
+        predictor.predict_in_chunks.assert_called_once_with(data=self.mock_spectra, chunk_idx=self.chunk_idx, xl=False)
         self.mock_spectra.add_list_of_predicted_intensities.assert_called_once_with(
             [self.intensities, self.intensities], [self.ion_annotations, self.ion_annotations], self.chunk_idx
         )
@@ -181,9 +182,9 @@ class TestPredictorBehavioral(unittest.TestCase):
         """Test iRT prediction."""
         # TODO add state-based test
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(return_value={"irt": self.retention_times})
+        predictor._predictor.predict = MagicMock(return_value={"irt": self.retention_times})
         predictor.predict_rt(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
         self.mock_spectra.add_column.assert_called_once_with(self.retention_times, name="PREDICTED_IRT")
 
     def test_predict_at_once(self):
@@ -214,8 +215,8 @@ class TestPredictorBehavioral(unittest.TestCase):
             },
         )
 
-    @patch("oktoberfest.pr.predictor._prepare_alignment_df")
-    @patch("oktoberfest.pr.predictor._alignment")
+    @patch("oktoberfest.predict.predictor._prepare_alignment_df")
+    @patch("oktoberfest.predict.predictor._alignment")
     def test_ce_calibration(self, mock_alignment, mock_prepare_alignment_df):
         """Test CE calibration."""
         # TODO add state-based test
@@ -227,17 +228,17 @@ class TestPredictorBehavioral(unittest.TestCase):
             library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, model_name="prosit"
         )
         mock_prepare_alignment_df.assert_called_once_with(
-            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
+            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, xl=False
         )
         predictor.predict_intensities.assert_called_once_with(
-            data=self.mock_spectra, chunk_idx=None, keep_dataset=False, model_name="prosit"
+            data=self.mock_spectra, chunk_idx=None, keep_dataset=False, model_name="prosit", xl=False
         )
-        mock_alignment.assert_called_once_with(self.mock_spectra)
+        mock_alignment.assert_called_once_with(self.mock_spectra, xl=False)
         self.assertEqual(alignment_library, self.mock_spectra)
 
-    @patch("oktoberfest.pr.predictor.group_iterator", return_value="chunk_idx_dummy")
-    @patch("oktoberfest.pr.predictor._prepare_alignment_df")
-    @patch("oktoberfest.pr.predictor._alignment")
+    @patch("oktoberfest.predict.predictor.group_iterator", return_value="chunk_idx_dummy")
+    @patch("oktoberfest.predict.predictor._prepare_alignment_df")
+    @patch("oktoberfest.predict.predictor._alignment")
     def test_ce_calibration_alphapept(self, mock_alignment, mock_prepare_alignment_df, mock_group_iterator):
         """Test CE calibration with alphapept predictor."""
         mock_prepare_alignment_df.return_value = self.mock_spectra
@@ -248,12 +249,12 @@ class TestPredictorBehavioral(unittest.TestCase):
             library=self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
         )
         mock_prepare_alignment_df.assert_called_once_with(
-            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False
+            self.mock_spectra, ce_range=self.ce_range, group_by_charge=False, xl=False
         )
         predictor.predict_intensities.assert_called_once_with(
-            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False
+            data=self.mock_spectra, chunk_idx=list("chunk_idx_dummy"), keep_dataset=False, xl=False
         )
-        mock_alignment.assert_called_once_with(self.mock_spectra)
+        mock_alignment.assert_called_once_with(self.mock_spectra, xl=False)
         self.assertEqual(alignment_library, self.mock_spectra)
 
 
@@ -314,7 +315,7 @@ class TestLocalPrediction(unittest.TestCase):
         cls.chunk_idx = [pd.Index([0, 1, 2]), pd.Index([3, 4, 5])]
         cls.ce_range = (25, 30)
 
-    @patch("oktoberfest.pr.predictor.DLomix")
+    @patch("oktoberfest.predict.predictor.DLomix")
     def test_predict_rt(self, mock_dlomix):
         """Test iRT prediction."""
         # TODO add state-based test
@@ -322,9 +323,9 @@ class TestLocalPrediction(unittest.TestCase):
             self.assertTrue(True)
             return
         predictor = Predictor(mock_dlomix, model_name=self.model_name)
-        predictor.predict_at_once = MagicMock(return_value={"irt": self.retention_times})
+        predictor._predictor.predict = MagicMock(return_value={"irt": self.retention_times})
         predictor.predict_rt(self.mock_spectra)
-        predictor.predict_at_once.assert_called_once_with(data=self.mock_spectra)
+        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
         self.mock_spectra.add_column.assert_called_once_with(self.retention_times, name="PREDICTED_IRT")
 
 

@@ -2,7 +2,7 @@
 
 # === install mono, ThermoRawFileParser and percolator as root === #
 
-sudo apt -y update && sudo apt -y install mono-devel unzip
+sudo apt -y update && sudo apt -y install mono-devel zip
 
 wget https://github.com/percolator/percolator/releases/download/rel-3-06-01/percolator-v3-06-linux-amd64.deb -O /tmp/percolator.deb
 sudo dpkg -i /tmp/percolator.deb
@@ -43,7 +43,7 @@ conda activate base
 # Check if the desired environment exists, create if not
 if ! conda env list | grep -q "oktoberfest"; then
     echo "Creating conda environment..."
-    conda create -y -n oktoberfest python==3.10
+    conda create -y -n oktoberfest python==3.11
 else
     echo "Conda environment already exists. Skipping creation..."
 fi

@@ -13,6 +13,7 @@
 
 import os
 import sys
+from pathlib import Path
 
 # If there is a global installation of poetry, prefer that.
 poetry_python_lib = os.path.expanduser("~/.poetry/lib")
@@ -26,7 +27,7 @@ except ImportError as ee:
 
 # Generate a Poetry object that knows about the metadata in pyproject.toml
 factory = Factory()
-poetry = factory.create_poetry(os.path.dirname(__file__))
+poetry = factory.create_poetry(Path(os.path.dirname(__file__)))
 
 # Use the SdistBuilder to genrate a blob for setup.py
 sdist_builder = SdistBuilder(poetry, None, None)
