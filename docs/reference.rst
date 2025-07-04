@@ -35,9 +35,9 @@ When using Prosit-timsTOF
 
 When using Prosit-XL
 
-.. [6] Kalhor M, Saylan C, Picciani M et al. (2024),
-    *Prosit-XL: enhanced cross-linked peptide identification by accurate fragment intensity prediction to study protein-protein interactions and protein structures*,
-    `BioRxiv <https://www.biorxiv.org/content/10.1101/2024.12.15.627797v1>`__.
+.. [6] Kalhor M, Saylan C, Picciani M et al. (2025),
+    *Prosit-XL: enhanced cross-linked peptide identification by fragment intensity prediction to study protein interactions and structures*,
+    `Nature Communications <https://www.nature.com/articles/s41467-025-61203-4>`__.
 
 Please cite in case you use quantification
 ------------------------------------------
