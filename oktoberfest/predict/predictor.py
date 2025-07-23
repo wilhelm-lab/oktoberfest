@@ -21,9 +21,6 @@ if TYPE_CHECKING or importlib.util.find_spec("dlomix"):
     from .dlomix import DLomix
 
     PredictionInterface = Union[DLomix, Koina, ZeroPredictor]
-elif importlib.util.find_spec("torch"):
-    from .torch import TorchModel
-    PredictionInterface = Union[TorchModel, Koina, ZeroPredictor]
 else:
     PredictionInterface = Union[Koina, ZeroPredictor]
     DLomix = None
@@ -72,25 +69,6 @@ class Predictor:
             model_name=model_path.stem,
         )
 
-    @classmethod
-    def from_torch(
-        cls,
-        model_name: str,
-        model_path: Union[str, bytes, os.PathLike],
-        ion_dict_path: Union[str, bytes, os.PathLike],
-        token_dict_path: Union[str, bytes, os.PathLike],
-        yaml_dir_path: Union[str, bytes, os.PathLike],
-    ) -> Predictor:
-        return Predictor(
-            TorchModel(
-                model_name=model_name,
-                model_path=model_path,
-                ion_dict_path=ion_dict_path,
-                token_dict_path=token_dict_path,
-                yaml_dir_path=yaml_dir_path,
-            ),
-            model_name='torch'
-        )
 
     @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
@@ -110,17 +88,7 @@ class Predictor:
         # TODO actually pass the output folder through kwargs
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(parents=True, exist_ok=True)
-        
-        if "local" in model_name.lower():
-            model_name = model_name.split('_')[-1]
-            return Predictor.from_torch(
-                model_name=model_name,
-                model_path=config.models['local_args']['weights_path'],
-                ion_dict_path=config.models['local_args']['ion_dict_path'],
-                token_dict_path=config.models['local_args']['token_dict_path'],
-                yaml_dir_path=config.models['local_args']['yaml_dir_path'],
-            )
-        
+
         if config.download_baseline_intensity_predictor:
             model_path = output_folder / "prosit_baseline_model.keras"
             download = True
