@@ -22,10 +22,6 @@ from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
 
-
-# SpectralLibrary
-
-
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
     r"""
     Generate a spectral library from a given input.
@@ -909,12 +905,12 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 def annotate_spectral_library(
     psms: pd.DataFrame,
     fragmentation_method: str = "HCD",
-    ion_dict_path: Optional[str] = None,
     p_window: Optional[float] = 1.2,
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
     annotate_neutral_loss: Optional[bool] = False,
+    multifrag: Optional[bool] = False,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -952,26 +948,25 @@ def annotate_spectral_library(
         >>> print(library)
     """
     logger.info("Annotating spectra...")
-    if ion_dict_path is not None:
-        ion_df =  pd.read_csv(ion_dict_path, index_col='full')
-        ion_types = list(np.sort(ion_df['ion'].unique()))
+    if multifrag:
+        ion_df = c.ION_DIC
+        ion_types = list(np.sort(ion_df['type'].unique()))
         var_df = ion_df.copy()
-        var_df.index.name = 'ion'
-        var_df = var_df.rename(columns={'ion':'type', 'length':'num'}).drop(columns=['neutral_loss', 'index'])
+    else:
+        ion_df = None
+        ion_types = retrieve_ion_types(fragmentation_method)
+        var_df = Spectra._gen_vars_df(ion_types)
+        
     df_annotated_spectra = annotate_spectra(
         un_annot_spectra=psms,
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
-        ion_df=ion_df,
+        multifrag=multifrag, # TODO: multifrag
         p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
-    )
-    
-    if ion_dict_path is None:
-        ion_types = retrieve_ion_types(fragmentation_method)
-        var_df = Spectra._gen_vars_df(ion_types)
+    )            
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
@@ -987,64 +982,6 @@ def annotate_spectral_library(
 
     return aspec
 
-def annotate_spectral_library_jl(
-    psms: pd.DataFrame,
-    ion_dict_path: str,
-    mass_tol: float=20,
-    p_window: float=1.2,
-) -> Spectra:
-    import sys
-    sys.path.append("/cmnfs/home/j.lapin/projects/shabaz/data")
-    from mass_scale import Scale, my_annotation_function # ADHOC
-    scale = Scale()
-    var_df = pd.read_csv(ion_dict_path, index_col='full')
-    
-    logger.info("Annotating spectra...")
-    ann_info = my_annotation_function(psms, var_df, mass_tol, p_window)['dataframe']
-    
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
-    aspec.uns["ion_types"] = var_df['ion'].unique().tolist()
-    
-    int_vectors = []
-    mz_vectors = []
-    for peptide_length, precursor_charge, ints, mzs, inds, ions in zip(
-        psms['PEPTIDE_LENGTH'],
-        psms['PRECURSOR_CHARGE'],
-        ann_info['int'], 
-        ann_info['mz'], 
-        ann_info['matched_inds'], 
-        ann_info['matched_ions']
-    ):
-        annotated_ions = var_df.loc[ions]['index'].to_numpy()
-        impossible_ions = var_df.query(f'length >= {peptide_length} or charge > {precursor_charge}')['index'].tolist()
-        
-        mz_vector = np.zeros((len(var_df))) 
-        int_vector = np.zeros((len(var_df)))
-        
-        if len(ints) > 0: ints /= ints.max()
-        int_vector[annotated_ions] = ints
-        int_vector[impossible_ions] = -1
-        int_vectors.append(int_vector)
-        mz_vector[annotated_ions] = mzs
-        mz_vector[impossible_ions] = -1
-        mz_vectors.append(mz_vector)
-    
-    # var_df['full'].values[None, ...]
-    aspec.add_intensities(
-        np.stack(int_vectors), aspec.var_names.values[None, ...], FragmentType.RAW
-    )
-    aspec.add_mzs(np.stack(mz_vectors), FragmentType.MZ)
-    ps = psms.apply(lambda row: scale.calcmass(row['MODIFIED_SEQUENCE'], row['PRECURSOR_CHARGE'], 'p'), axis=1)
-    CALCULATED_MASS = (ps-scale.mass['i'])*psms['PRECURSOR_CHARGE']
-    aspec.add_column(CALCULATED_MASS.to_numpy(), "CALCULATED_MASS")
-    EXPECTED_NL_COUNT = np.zeros((len(psms)), dtype='int')
-    aspec.add_column(EXPECTED_NL_COUNT, "EXPECTED_NL_COUNT")
-    ANNOTATED_NL_COUNT = np.zeros((len(psms)), dtype='int')
-    aspec.add_column(ANNOTATED_NL_COUNT, "ANNOTATED_NL_COUNT")
-
-    logger.info("Finished annotating.")
-
-    return aspec
 
 def annotate_spectral_library_xl(
     psms: pd.DataFrame, cms2: bool = False, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None

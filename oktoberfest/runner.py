@@ -175,10 +175,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 mass_tol=config.mass_tolerance,
                 unit_mass_tol=config.unit_mass_tolerance,
                 fragmentation_method=config.fragmentation_method,
-                ion_dict_path=config.models['local_args']['ion_dict_path'],
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
+                multifrag=config.check_multirag()
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -650,10 +650,10 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         xl=xl,
         cms2=cms2,
         regression_method=config.curve_fitting_method,
-        custom_ion_dict=None,
+        fragmentation_method = config.fragmentation_method,
         featured_ions=None,
     )
-    use_custom_ion_dict = True if config.models['local_args']['ion_dict_path'] is not None else False
+
     re.generate_features(
         library=library,
         search_type="rescore",
@@ -665,7 +665,8 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
-        custom_ion_dict=use_custom_ion_dict,
+        multifrag = config.check_multirag(),
+        fragmentation_method = config.fragmentation_method,
         featured_ions=config.featured_ions,
     )
 
@@ -684,16 +685,9 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
     
-    # Find available number of cpus, use all of them
-    try:
-        string = Re.search(r'(?m)^Cpus_allowed:\s*(.*)$', open('/proc/self/status').read())
-        num_threads = bin(int(string.group(1).replace(',', ''), 16)).count('1')
-    except:
-        num_threads = 3
-
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, num_threads=num_threads, xl=xl)
+            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
             if xl:
                 output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
                 output_csms_original = xl_between_or_self(output_csms_original, score="score")
@@ -705,7 +699,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
             if config.ptm_localization:
                 _ptm_localization_rescore(fdr_dir, config)
             else:
-                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, num_threads=num_threads, xl=xl)
+                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
             if xl:
                 output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
                 output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
@@ -1407,6 +1401,7 @@ def run_job(config_path: Union[str, Path]):
         elif job_type == "CollisionEnergyCalibration":
             run_ce_calibration(config_path)
         elif job_type == "Rescoring":
+            logger.info("Starting rescoring")
             run_rescoring(config_path)
         else:
             raise ValueError(f"Unknown job_type in config: {job_type}")

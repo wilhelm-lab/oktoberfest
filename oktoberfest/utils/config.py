@@ -74,7 +74,7 @@ class Config:
     
     @property
     def p_window(self) -> Optional[float]:
-        return self.data.get("p_window", None)
+        return self.data.get("p_window", 0.0)
 
     @property
     def fragmentation_method(self) -> str:
@@ -710,6 +710,11 @@ class Config:
         for unimod_id, mass, _ in self.static_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
+    
+    def check_multirag(self):
+        """Check if rescoring will be done on multifrag options"""
+        return "multifrag" in self.models["intensity"].lower()
+
 
     """
     def custom_for_dlomix(self):

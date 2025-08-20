@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 import mokapot
 import numpy as np
@@ -30,8 +30,9 @@ def generate_features(
     regression_method: str = "spline",
     add_neutral_loss_features: bool = False,
     remove_miss_cleavage_features: bool = False,
-    custom_ion_dict: bool = False,
-    featured_ions: List[str] = None,
+    multifrag: bool = False,
+    fragmentation_method: str = "HCD",
+    featured_ions: Optional[List] = None,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -121,10 +122,10 @@ def generate_features(
             neutral_loss_flag=add_neutral_loss_features,
             drop_miss_cleavage_flag=remove_miss_cleavage_features,
             cms2=cms2,
+            featured_ions=featured_ions
         )
-        ion_dict = library.var if custom_ion_dict  else None    
         
-    perc_features.calc(ion_dict=ion_dict, featured_ions=featured_ions)
+    perc_features.calc(multifrag=multifrag, fragmentation_method=fragmentation_method)
     perc_features.write_to_file(str(output_file))
 
 
