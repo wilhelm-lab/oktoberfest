@@ -159,6 +159,8 @@ class Predictor:
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
                 intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
+                # this affetcs spectral angle calculations
+                intensities["intensities"][intensities["mz"] <= 0] = 0
                 data.add_intensities(
                     intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
                 )

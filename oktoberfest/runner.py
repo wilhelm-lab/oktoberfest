@@ -178,7 +178,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
-                multifrag=config.check_multirag()
+                multifrag=config.check_multirag(),
+                featured_ions=config.featured_ions
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation

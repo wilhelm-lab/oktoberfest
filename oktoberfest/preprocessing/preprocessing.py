@@ -911,6 +911,7 @@ def annotate_spectral_library(
     custom_mods: Optional[dict[str, float]] = None,
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
+    featured_ions: Optional[list[str]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -966,6 +967,7 @@ def annotate_spectral_library(
         p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
+        featured_ions=featured_ions,
     )            
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
