@@ -159,8 +159,9 @@ class Predictor:
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
                 intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
-                # this affetcs spectral angle calculations
-                intensities["intensities"][intensities["mz"] <= 0] = 0
+                # Zero out invalid m/z
+                intensities["intensities"][intensities["mz"] <= 0] = 0.0              
+
                 data.add_intensities(
                     intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
                 )
@@ -177,6 +178,9 @@ class Predictor:
                 )
             else:
                 chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                # Zero out invalid m/z
+                chunked_intensities["intensities"][chunked_intensities["mz"] <= 0] = 0.0 
+
                 data.add_list_of_predicted_intensities(
                     chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
                 )
