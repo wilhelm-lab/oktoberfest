@@ -142,7 +142,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
             pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
-        elif format_ in [".mzml", ".hdf"]:
+        elif format_ in [".mzml", ".hdf", ".mgf"]:
             file_to_load = spectra_file
         elif format_ == ".d":
             file_to_load = spectra_dir / spectra_file.with_suffix(".hdf").name
@@ -153,6 +153,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
+        # if config.search_results_type.lower() == "casanovo":
+        #     library.drop(columns=["SCAN_NUMBER"], inplace=True)
+        #     library.rename(columns={"REAL_SCAN_NUMBER": "SCAN_NUMBER"}, inplace=True)
+        #     library['MASS_ANALYZER'] = config.mass_analyzer
+        #     library['FRAGMENTATION'] = config.fragmentation_method
+        #     library['COLLISION_ENERGY'] = config.collision_energy
         if "xl" in config.models["intensity"].lower():
             if "cms2" in config.models["intensity"].lower():
                 cms2 = True
@@ -181,12 +187,20 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
-    results_dir = config.output / "results"
-    results_dir.mkdir(exist_ok=True)
+    results_dir = config.output / "results/ce_calibration"
+    results_dir.mkdir(parents=True, exist_ok=True)
     if config.do_refinement_learning:
         # don't do CE calibration
         return
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
+        if config.search_results_type.lower() == "casanovo":
+            ce_file = results_dir / f"{spectra_file.stem}_ce.txt"
+            if ce_file.exists():
+                with open(ce_file, "r") as f:
+                    best_ce = int(f.read().strip())
+                library.obs["COLLISION_ENERGY"] = best_ce
+            return
+
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
 
@@ -632,9 +646,12 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
 
     # produce percolator tab files
     fdr_dir = config.output / "results" / config.fdr_estimation_method
+    rt_dir = config.output / "results/rt_model"
     fdr_dir.mkdir(exist_ok=True)
+    rt_dir.mkdir(exist_ok=True)
     add_neutral_loss_features = config.ptm_use_neutral_loss
     remove_miss_cleavage_features = ("R" in config.ptm_possible_sites) or ("K" in config.ptm_possible_sites)
+    # if config.search_results_type.lower() != "casanovo":
     re.generate_features(
         library=library,
         search_type="original",
@@ -644,7 +661,9 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         xl=xl,
         cms2=cms2,
         regression_method=config.curve_fitting_method,
+        rt_model_file=rt_dir / spectra_file.with_suffix(f".{config.curve_fitting_method}.original.pkl").name,
     )
+
     re.generate_features(
         library=library,
         search_type="rescore",
@@ -656,9 +675,12 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
+        rt_model_file=rt_dir / spectra_file.with_suffix(f".{config.curve_fitting_method}.rescore.pkl").name,
     )
 
     calc_feature_step.mark_done()
+
+    return
 
 
 def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
@@ -1277,9 +1299,9 @@ def run_rescoring(config_path: Union[str, Path]):
                     cms2 = True
                 else:
                     cms2 = False
-                processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True, cms2=cms2)
+                _ = processing_pool.apply_async(_calculate_features, [spectra_file, config], xl=True, cms2=cms2)
             else:
-                processing_pool.apply_async(_calculate_features, [spectra_file, config])
+                _ = processing_pool.apply_async(_calculate_features, [spectra_file, config])
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
@@ -1288,9 +1310,9 @@ def run_rescoring(config_path: Union[str, Path]):
                     cms2 = True
                 else:
                     cms2 = False
-                _calculate_features(spectra_file, config, xl=True, cms2=cms2)
+                _ = _calculate_features(spectra_file, config, xl=True, cms2=cms2)
             else:
-                _calculate_features(spectra_file, config)
+                _ = _calculate_features(spectra_file, config)
 
     # prepare rescoring
 
@@ -1339,11 +1361,11 @@ def run_rescoring(config_path: Union[str, Path]):
             generate_xifdr_input_step.mark_done()
 
     else:
-        _rescore(fdr_dir, config)
+        # _rescore(fdr_dir, config)
         # plotting
-        logger.info("Generating summary plots...")
-        if not config.ptm_localization:
-            pl.plot_all(fdr_dir, config)
+        # logger.info("Generating summary plots...")
+        # if not config.ptm_localization:
+        #     pl.plot_all(fdr_dir, config)
         logger.info("Finished rescoring.")
 
         if config.quantification:

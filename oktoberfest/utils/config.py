@@ -151,8 +151,13 @@ class Config:
 
     @property
     def search_results_type(self) -> str:
-        """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
+        """Get search type (Maxquant, Msfragger, Mascot, Casanovo or Internal) from the config file."""
         return self.inputs.get("search_results_type", "maxquant").lower()
+    
+    @property
+    def mass_analyzer(self) -> str:
+        """Get mass analyzer from the config file. One of "ITMS", "FTMS", "TOF" or "unknown","""
+        return self.inputs.get("mass_analyzer", "FTMS").upper()
 
     @property
     def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
@@ -197,7 +202,7 @@ class Config:
 
     @property
     def spectra_type(self) -> str:
-        """Get spectra type (.raw, .mzml, .d, .hdf) from the config file."""
+        """Get spectra type (.raw, .mzml, .d, .hdf, .mgf) from the config file."""
         return self.inputs.get("spectra_type", "raw").lower()
 
     @property
@@ -307,10 +312,7 @@ class Config:
     @property
     def all_features(self) -> bool:
         """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
+        return self.data.get("all_features", False)
 
     @property
     def curve_fitting_method(self) -> str:

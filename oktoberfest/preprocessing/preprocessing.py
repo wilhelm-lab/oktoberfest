@@ -14,8 +14,9 @@ from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_t
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
+from spectrum_io.file.mgf import MGFparser
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
+from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch, Casanovo
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -542,6 +543,8 @@ def convert_search(
         search_result = Sage
     elif search_engine == "openms":
         search_result = OpenMS
+    elif search_engine == "casanovo":
+        search_result = Casanovo
     elif search_engine == "xisearch":
         search_result = Xisearch
         xl = True
@@ -663,8 +666,8 @@ def list_spectra(input_dir: Union[str, Path], input_format: str) -> list[Path]:
 
     input_format = input_format.lower()
 
-    if input_format not in ["mzml", "raw", "hdf", "d"]:
-        raise ValueError(f"Input format {input_format} unknown. Must be one of mzml, raw, d, hdf.")
+    if input_format not in ["mzml", "raw", "hdf", "d", "mgf"]:
+        raise ValueError(f"Input format {input_format} unknown. Must be one of mzml, raw, d, hdf, mgf.")
 
     if input_dir.is_file() and input_dir.suffix.lower().endswith(input_format):
         raw_files.append(input_dir)
@@ -713,6 +716,8 @@ def _get_glob_pattern(spectra_type: str) -> str:
         return "*.[hH][dD][fF]"
     elif spectra_type.lower() == "d":
         return "*.[dD]"
+    elif spectra_type.lower() == "mgf":
+        return "*.[mM][gG][fF]"
     else:
         raise ValueError(f"{spectra_type} is not supported as rawfile-type")
 
@@ -1082,6 +1087,8 @@ def load_spectra(
     format_ = internal_filenames[0].suffix.lower()
     if format_ == ".mzml":
         return ThermoRaw.read_mzml(source=filenames, package=parser)
+    elif format_ == ".mgf":
+        return MGFparser.read_mgf(source=filenames)
     elif format_ == ".hdf":
         if tims_meta_file is None:
             raise AssertionError(

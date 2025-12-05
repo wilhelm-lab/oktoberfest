@@ -30,6 +30,7 @@ def generate_features(
     regression_method: str = "spline",
     add_neutral_loss_features: bool = False,
     remove_miss_cleavage_features: bool = False,
+    rt_model_file: str | Path | None = None,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -105,6 +106,7 @@ def generate_features(
             neutral_loss_flag=add_neutral_loss_features,
             drop_miss_cleavage_flag=remove_miss_cleavage_features,
             cms2=cms2,
+            rt_model_file=rt_model_file,
         )
     else:
         perc_features = Percolator(
@@ -119,6 +121,7 @@ def generate_features(
             neutral_loss_flag=add_neutral_loss_features,
             drop_miss_cleavage_flag=remove_miss_cleavage_features,
             cms2=cms2,
+            rt_model_file=rt_model_file,
         )
     perc_features.calc()
     perc_features.write_to_file(str(output_file))

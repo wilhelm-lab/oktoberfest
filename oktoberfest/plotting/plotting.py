@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -470,7 +470,7 @@ def plot_mirror_spectrum(
     prosit_df: pd.DataFrame,
     target_df: pd.DataFrame,
     decoy_df: pd.DataFrame,
-    pdf: PdfPages,
+    pdf: Optional[PdfPages] = None,
 ):
     """
     Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
@@ -490,6 +490,7 @@ def plot_mirror_spectrum(
     decoy_df["target"] = False
     concat_target_decoy = pd.concat([target_df, decoy_df])
     if spec_col == "PSMId":
+        concat_target_decoy["PSMId"] = concat_target_decoy["PSMId"].astype(str)
         concat_target_decoy["ScanNr"] = concat_target_decoy["PSMId"].str.split("-").str[1].astype(int)
     filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
     if filtered_obs.empty:
@@ -505,6 +506,8 @@ def plot_mirror_spectrum(
     raw_file = obs["RAW_FILE"]
     rt = obs["RETENTION_TIME"].round(2)
     ce = obs["COLLISION_ENERGY"]
+    searh_score = obs["SCORE"]
+    pmass = obs["MASS"]
     model = config.models["intensity"]
     ion_types = config.ion_types
     abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
@@ -523,6 +526,11 @@ def plot_mirror_spectrum(
     # Get experimental spectrum
     mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
     intensity_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["INTENSITIES"].iloc[0])
+    # mask = (mz_exp < pmass - 0.5) | (mz_exp > pmass + 0.5)
+
+    # # Apply the mask
+    # mz_exp = mz_exp[mask]
+    # intensity_exp = intensity_exp[mask]
 
     top_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_exp, intensity=intensity_exp)
     top_spectrum = top_spectrum.annotate_proforma(
@@ -551,9 +559,11 @@ def plot_mirror_spectrum(
     title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
     title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
+    title_top_2 = f"Search Score: {searh_score:.2f}, precursor mass: {pmass:.4f}"
     title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa:.2f}"
-    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
+    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_top_2}\n{title_bottom}", fontsize=10)
     sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
+    ax_mirror.set_ylim(-1.2, 1.2)
 
     # KDE score plot
     sns.kdeplot(data=concat_target_decoy, x=score_col, hue="target", ax=ax_kde)
@@ -570,7 +580,11 @@ def plot_mirror_spectrum(
     ax_rt.set_xlabel("abs rt diff", fontsize=10)
     ax_rt.set_ylabel("Density", fontsize=10)
 
-    pdf.savefig(fig)
+    if pdf is not None:
+        pdf.savefig(fig)
+        plt.close(fig)
+    else:
+        plt.show()
 
 
 def plot_all(data_dir: Path, config: Config):

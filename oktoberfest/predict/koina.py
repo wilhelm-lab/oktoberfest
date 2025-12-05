@@ -82,7 +82,7 @@ class Koina(_KoinaGRPC):
                 input_field: data[[alternative_column_map[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
-        return super().predict(inputs=data, **kwargs)
+        return super().predict(inputs=data, debug=True, **kwargs)
 
     def predict_xl(
         self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs
