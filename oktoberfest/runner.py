@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import pickle
+import re as Re
 import shutil
 import sys
 import time
@@ -22,7 +23,6 @@ from oktoberfest import plotting as pl
 from oktoberfest import predict as pr
 from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
-import re as Re
 
 from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
@@ -156,7 +156,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        
+
         if "xl" in config.models["intensity"].lower():
             if "cms2" in config.models["intensity"].lower():
                 cms2 = True
@@ -179,7 +179,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
                 multifrag=config.check_multirag(),
-                featured_ions=config.featured_ions
+                featured_ions=config.featured_ions,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -651,7 +651,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         xl=xl,
         cms2=cms2,
         regression_method=config.curve_fitting_method,
-        fragmentation_method = config.fragmentation_method,
+        fragmentation_method=config.fragmentation_method,
         featured_ions=None,
     )
 
@@ -666,8 +666,8 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
-        multifrag = config.check_multirag(),
-        fragmentation_method = config.fragmentation_method,
+        multifrag=config.check_multirag(),
+        fragmentation_method=config.fragmentation_method,
         featured_ions=config.featured_ions,
     )
 
@@ -685,7 +685,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
     """
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
-    
+
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
             re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
@@ -1313,7 +1313,7 @@ def run_rescoring(config_path: Union[str, Path]):
 
     prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
     prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
-    
+
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
         re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")

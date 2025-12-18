@@ -22,6 +22,7 @@ from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
 
+
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
     r"""
     Generate a spectral library from a given input.
@@ -951,24 +952,24 @@ def annotate_spectral_library(
     logger.info("Annotating spectra...")
     if multifrag:
         ion_df = c.ION_DIC
-        ion_types = list(np.sort(ion_df['type'].unique()))
+        ion_types = list(np.sort(ion_df["type"].unique()))
         var_df = ion_df.copy()
     else:
         ion_df = None
         ion_types = retrieve_ion_types(fragmentation_method)
         var_df = Spectra._gen_vars_df(ion_types)
-        
+
     df_annotated_spectra = annotate_spectra(
         un_annot_spectra=psms,
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
-        multifrag=multifrag, # TODO: multifrag
+        multifrag=multifrag,  # TODO: multifrag
         p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
-    )            
+    )
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(

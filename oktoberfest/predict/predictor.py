@@ -69,7 +69,6 @@ class Predictor:
             model_name=model_path.stem,
         )
 
-
     @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
@@ -84,7 +83,7 @@ class Predictor:
             return Predictor.from_koina(
                 model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
-        
+
         # TODO actually pass the output folder through kwargs
         output_folder = config.output / "data/dlomix"
         output_folder.mkdir(parents=True, exist_ok=True)
@@ -98,7 +97,7 @@ class Predictor:
         return Predictor.from_dlomix(
             model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
         )
-    
+
     def _filter_kwargs(self, **kwargs) -> dict[str, Any]:
         """
         Get only arguments accepted by predictor implementation's predict() method from arbitrary set of kwargs.
@@ -160,7 +159,7 @@ class Predictor:
             else:
                 intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
                 # Zero out invalid m/z
-                intensities["intensities"][intensities["mz"] <= 0] = 0.0              
+                intensities["intensities"][intensities["mz"] <= 0] = 0.0
 
                 data.add_intensities(
                     intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
@@ -179,7 +178,7 @@ class Predictor:
             else:
                 chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
                 # Zero out invalid m/z
-                chunked_intensities["intensities"][chunked_intensities["mz"] <= 0] = 0.0 
+                chunked_intensities["intensities"][chunked_intensities["mz"] <= 0] = 0.0
 
                 data.add_list_of_predicted_intensities(
                     chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx

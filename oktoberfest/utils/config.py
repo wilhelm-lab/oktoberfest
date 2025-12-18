@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 from sys import platform
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 # from spectrum_io.search_result.search_results import parse_mods
 
@@ -71,7 +71,7 @@ class Config:
     def mass_tolerance(self) -> Optional[float]:
         """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
         return self.data.get("massTolerance", None)
-    
+
     @property
     def p_window(self) -> Optional[float]:
         return self.data.get("p_window", 0.0)
@@ -82,10 +82,10 @@ class Config:
         return self.data.get("fragmentation_method", "HCD")
 
     @property
-    def featured_ions(self) -> List[str]:
+    def featured_ions(self) -> list[str]:
         """Ion series to use for calculating percolator features"""
         return self.data.get("featured_ions", None)
-    
+
     @property
     def ion_types(self) -> str:
         """
@@ -425,7 +425,7 @@ class Config:
         """Whether to predict intensity locally or using Koina."""
         return (
             self.models["intensity"] in BASELINE_MODEL_KEYS
-            or 'local' in self.models["intensity"]
+            or "local" in self.models["intensity"]
             or self.models["intensity"].endswith(".keras")
             or Path(self.models["intensity"]).exists()
         )
@@ -591,7 +591,7 @@ class Config:
                     )
 
     def _check_for_local_prediction(self):
-        if (not self.models["intensity"] in BASELINE_MODEL_KEYS) and ('local' not in self.models['intensity']):
+        if (not self.models["intensity"] in BASELINE_MODEL_KEYS) and ("local" not in self.models["intensity"]):
             model_path = Path(self.models["intensity"])
             if not model_path.exists():
                 raise FileNotFoundError(f"Model file {model_path} does not exist")
@@ -710,11 +710,10 @@ class Config:
         for unimod_id, mass, _ in self.static_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
-    
+
     def check_multirag(self):
         """Check if rescoring will be done on multifrag options"""
         return "multifrag" in self.models["intensity"].lower()
-
 
     """
     def custom_for_dlomix(self):
