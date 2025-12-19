@@ -929,6 +929,9 @@ def annotate_spectral_library(
     :param fragmentation_method: fragmentation method that was used
     :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
     :param annotate_neutral_loss: flag to indicate whether to annotate neutral loss peaks or not
+    :param multifrag: flag to indicate whether to annotate multifrag peaks or not
+    :param featured_ions: list of ions to be annotated
+    :param p_window: window size for precursor peak removal
 
     :return: Spectra object containing the annotated b and y ion peaks including metadata
 

@@ -178,8 +178,6 @@ autodoc_mock_imports = [
     "tqdm",
     "picked_group_fdr",
     "mokapot",
-    "dlomix",
-    "tensorflow",
 ]
 
 # -- Options for Texinfo output ----------------------------------------

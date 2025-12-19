@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 import mokapot
 import numpy as np
@@ -50,6 +50,9 @@ def generate_features(
     :param regression_method: The regression method to use for iRT alignment
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
+    :param multifrag: Flag to indicate whether to use multifrag features or not
+    :param fragmentation_method: The fragmentation method to use
+    :param featured_ions: The ion series to use for calculating percolator features
 
     :Example:
 

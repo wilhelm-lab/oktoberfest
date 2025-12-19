@@ -3,7 +3,6 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 import pandas as pd
 
@@ -55,17 +54,8 @@ class TestConfig(unittest.TestCase):
     def tearDownClass(cls):  # noqa: D102
         shutil.rmtree(cls.temp_dir)
 
-    @patch("pathlib.Path.exists", return_value=True)
-    @patch.dict("sys.modules", {"dlomix": None})
-    def test_check_dlomix_installed(self, mock_exists):
-        """Test if optional DLomix dependency is being checked."""
-        conf = Config()
-        conf.read(self.config_path)
-        with self.assertRaises(ModuleNotFoundError):
-            conf.check()
-
-    def test_check_model_path(self):
-        """Test if invalid model path is being checked."""
+    def test_check_model_availability(self):
+        """Test if invalid model is being checked."""
         with open(self.config_path) as f:
             raw_config = json.load(f)
         raw_config["models"]["intensity"] = "garbage"

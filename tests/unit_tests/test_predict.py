@@ -77,9 +77,11 @@ class TestPredictorBehavioral(unittest.TestCase):
 
         cls.mock_koina = create_autospec(Koina, instance=False)
         cls.mock_spectra = create_autospec(Spectra, instance=True)
-        cls.intensities = np.array([[0.0, 0.0, -1.0], [1.0, 0, -1.0], [1.0, 0.0, 0.0]])
+        cls.mz = np.array([[100.0, 200.0, 300.0], [100.0, 200.0, -1.0], [-1.0, 200.0, 300.0], [100.0, 200.0, 300.0]])
+        cls.intensities = np.array([[0.0, 0.0, -1.0], [1.0, 0, -1.0], [1.0, 0.0, 0.0], [1.0, 0.0, -1.0]])
         cls.ion_annotations = np.array(
-            [["y1+1", "y1+2", "y1+3"], ["y1+1", "y1+2", "y1+3"], ["y1+1", "y1+2", "y1+3"]], dtype=object
+            [["y1+1", "y1+2", "y1+3"], ["y1+1", "y1+2", "y1+3"], ["y1+1", "y1+2", "y1+3"], ["y1+1", "y1+2", "y1+3"]],
+            dtype=object,
         )
         cls.retention_times = np.array([30.0, 100.0, 160.0, 140.0, -2.0, 17.0])
         cls.chunk_idx = [pd.Index([0, 1, 2]), pd.Index([3, 4, 5])]
@@ -96,65 +98,23 @@ class TestPredictorBehavioral(unittest.TestCase):
         assert mock_koina is oktoberfest.predict.predictor.Koina
         mock_koina.assert_called_once()
 
-    @patch("oktoberfest.predict.predictor.DLomix")
-    def test_from_dlomix(self, mock_dlomix):
-        """Test DLomix constructor for Predictor."""
-        if mock_dlomix is None:
-            self.assertTrue(True)
-            return
-        Predictor.from_dlomix(
-            model_type=self.model_type,
-            model_path=self.temp_dir / "prosit_baseline.keras",
-            output_path=self.temp_dir / "dlomix_output",
-            batch_size=1024,
-        )
-        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
-        mock_dlomix.assert_called_once()
-
     @patch("oktoberfest.predict.predictor.Koina")
     def test_koina_from_config(self, mock_koina):
         """Test config constructor for Predictor with Koina."""
-        self.mock_config.predict_intensity_locally = False
         Predictor.from_config(self.mock_config, model_type=self.model_type)
         assert mock_koina is oktoberfest.predict.predictor.Koina
         mock_koina.assert_called_once()
-
-    @patch("oktoberfest.predict.predictor.DLomix")
-    def test_dlomix_from_config(self, mock_dlomix):
-        """Test config constructor for Predictor with DLomix."""
-        if mock_dlomix is None:
-            self.assertTrue(True)
-            return
-        self.mock_config.predict_intensity_locally = True
-        self.mock_config.download_baseline_intensity_predictor = False
-        self.mock_config.dlomix_inference_batch_size = 1024
-        Predictor.from_config(self.mock_config, model_type=self.model_type)
-        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
-        mock_dlomix.assert_called_once()
-
-    @patch("oktoberfest.predict.predictor.DLomix")
-    def test_download_new_model(self, mock_dlomix):
-        """Test if new baseline model is downloaded if requested."""
-        if mock_dlomix is None:
-            self.assertTrue(True)
-            return
-        self.mock_config.download_baseline_intensity_predictor = True
-        Predictor.from_config(self.mock_config, model_type=self.model_type)
-        assert mock_dlomix is oktoberfest.predict.predictor.DLomix
-        mock_dlomix.assert_called_once_with(
-            model_type=self.model_type,
-            model_path=self.data_dir / "dlomix/prosit_baseline_model.keras",
-            output_path=self.data_dir / "dlomix",
-            batch_size=self.mock_config.dlomix_inference_batch_size,
-            download=True,
-        )
 
     def test_predict_intensities_at_once(self):
         """Test if predict_intensities does the right steps when chunk_idx=None."""
         # TODO add state-based test
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
         predictor._predictor.predict = MagicMock(
-            return_value={"intensities": self.intensities, "annotation": self.ion_annotations}
+            return_value={
+                "mz": self.mz,
+                "intensities": self.intensities,
+                "annotation": self.ion_annotations,
+            }
         )
         predictor.predict_intensities(self.mock_spectra)
         predictor._predictor.predict.assert_called_once_with(data=self.mock_spectra)
@@ -168,6 +128,7 @@ class TestPredictorBehavioral(unittest.TestCase):
         predictor = Predictor(self.mock_koina, model_name=self.model_name)
         predictor.predict_in_chunks = MagicMock(
             return_value={
+                "mz": [self.mz, self.mz],
                 "intensities": [self.intensities, self.intensities],
                 "annotation": [self.ion_annotations, self.ion_annotations],
             }
@@ -314,20 +275,3 @@ class TestLocalPrediction(unittest.TestCase):
         cls.retention_times = np.array([30.0, 100.0, 160.0, 140.0, -2.0, 17.0])
         cls.chunk_idx = [pd.Index([0, 1, 2]), pd.Index([3, 4, 5])]
         cls.ce_range = (25, 30)
-
-    @patch("oktoberfest.predict.predictor.DLomix")
-    def test_predict_rt(self, mock_dlomix):
-        """Test iRT prediction."""
-        # TODO add state-based test
-        if mock_dlomix is None:
-            self.assertTrue(True)
-            return
-        predictor = Predictor(mock_dlomix, model_name=self.model_name)
-        predictor._predictor.predict = MagicMock(return_value={"irt": self.retention_times})
-        predictor.predict_rt(self.mock_spectra)
-        predictor._predictor.predict.assert_called_once_with(self.mock_spectra)
-        self.mock_spectra.add_column.assert_called_once_with(self.retention_times, name="PREDICTED_IRT")
-
-
-class TestRefinementLearning(unittest.TestCase):
-    """Test class for refinement learning."""
