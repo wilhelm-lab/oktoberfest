@@ -432,9 +432,9 @@ class Config:
             self._check_quantification()
             self._check_fasta()
 
-        self._check_Koina_model_avaliability()
+        self._check_koina_model_avaliability()
 
-    def _check_Koina_model_avaliability(self):
+    def _check_koina_model_avaliability(self):
         """Check if Koina model is available."""
         # This will give error automaticly in Koina if model is not available on the server.
         # Koina has function called "_is_model_ready" that checks if model is available
