@@ -86,6 +86,7 @@ class Config:
 
     @property
     def ion_types(self) -> str:
+        # TODO: this is only used in plotting. featured_ions can be combined with this
         """
         Returns the fragment ion types used for fragment annotation.
 
