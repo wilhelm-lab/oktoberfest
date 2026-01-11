@@ -107,8 +107,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> intensity_predictor.predict_intensities(data=library)
             >>> print(library.layers["pred_int"])
         """
@@ -223,8 +222,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
@@ -262,8 +260,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
@@ -308,8 +305,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
@@ -358,8 +354,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
@@ -416,8 +411,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
             >>> print(alignment_library)
         """
