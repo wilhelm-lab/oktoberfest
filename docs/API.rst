@@ -139,6 +139,6 @@ Plotting: :code:`pl`
    pl.plot_mean_sa_ce
    pl.plot_violin_sa_ce
    pl.plot_pred_rt_vs_irt
-   plot_sa_distribution
-   plot_mirror_spectrum 
+   pl.plot_sa_distribution
+   pl.plot_mirror_spectrum
    pl.plot_all
