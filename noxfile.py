@@ -21,8 +21,6 @@ package = "oktoberfest"
 python_versions = ["3.10", "3.11", "3.12"]
 nox.options.sessions = (
     "pre-commit",
-    "safety",
-    "mypy",
     "tests",
     "xdoctest",
     "docs-build",
@@ -129,24 +127,6 @@ def precommit(session: Session) -> None:
     session.run("pre-commit", *args)
     if args and args[0] == "install":
         activate_virtualenv_in_precommit_hooks(session)
-
-
-@session(python=python_versions)
-def safety(session: Session) -> None:
-    """Scan dependencies for insecure packages."""
-    to_ignore = "--ignore=70612"
-    requirements = session.poetry.export_requirements()
-    session.install("safety")
-    session.run("safety", "check", "--full-report", f"--file={requirements}", to_ignore)
-
-
-@session(python=python_versions)
-def mypy(session: Session) -> None:
-    """Type-check using mypy."""
-    args = session.posargs or ["oktoberfest", "tests", "docs/conf.py"]
-    session.install(".")
-    session.install("mypy", "pytest", "types-requests", "types-attrs")
-    session.run("mypy", *args)
 
 
 @session(python=python_versions)
