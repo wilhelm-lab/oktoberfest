@@ -933,7 +933,7 @@ def annotate_spectral_library(
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
 
-    :return: Spectra object containing the annotated b and y ion peaks including metadata
+    :return: Spectra object containing the annotated featured sion peaks including metadata
 
     :Example:
 
@@ -967,7 +967,7 @@ def annotate_spectral_library(
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
-        multifrag=multifrag,  # TODO: multifrag
+        multifrag=multifrag,
         p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,

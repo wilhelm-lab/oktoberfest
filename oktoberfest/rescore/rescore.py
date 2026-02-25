@@ -50,7 +50,6 @@ def generate_features(
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
     :param task: Flag to indicate whether to use multifrag features or not
-    :param fragmentation_method: The fragmentation method to use
     :param featured_ions: The ion series to use for calculating percolator features
 
     :Example:
@@ -92,7 +91,6 @@ def generate_features(
         >>>                         regression_method="spline",
         >>>                         output_file="./tests/doctests/output/original.tab")
     """
-
     meta = library.get_meta_data().reset_index(drop=True)
 
     if xl:
