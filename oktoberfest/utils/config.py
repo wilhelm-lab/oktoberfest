@@ -606,6 +606,6 @@ class Config:
         return unimod_to_mass
 
     # TODO: feature implementation for adding check for avaliable models for Koina
-    def check_multirag(self):
+    def check_multifrag(self):
         """Check if rescoring will be done on multifrag options."""
         return "multifrag" in self.models["intensity"].lower()

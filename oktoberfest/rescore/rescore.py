@@ -30,8 +30,7 @@ def generate_features(
     regression_method: str = "spline",
     add_neutral_loss_features: bool = False,
     remove_miss_cleavage_features: bool = False,
-    multifrag: bool = False,
-    fragmentation_method: str = "HCD",
+    task: str = "default",
     featured_ions: Optional[list] = None,
 ):
     """
@@ -50,7 +49,7 @@ def generate_features(
     :param regression_method: The regression method to use for iRT alignment
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
-    :param multifrag: Flag to indicate whether to use multifrag features or not
+    :param task: Flag to indicate whether to use multifrag features or not
     :param fragmentation_method: The fragmentation method to use
     :param featured_ions: The ion series to use for calculating percolator features
 
@@ -93,42 +92,39 @@ def generate_features(
         >>>                         regression_method="spline",
         >>>                         output_file="./tests/doctests/output/original.tab")
     """
+
+    meta = library.get_meta_data().reset_index(drop=True)
+
     if xl:
-        pred_a = library.get_matrix(FragmentType.PRED_A)
-        pred_b = library.get_matrix(FragmentType.PRED_B)
-        raw_a = library.get_matrix(FragmentType.RAW_A)
-        raw_b = library.get_matrix(FragmentType.RAW_B)
-        mz_a = library.get_matrix(FragmentType.MZ_A)
-        mz_b = library.get_matrix(FragmentType.MZ_B)
-        perc_features = Percolator(
-            metadata=library.get_meta_data().reset_index(drop=True),
-            pred_intensities=sp.hstack([pred_a, pred_b]),
-            true_intensities=sp.hstack([raw_a, raw_b]),
-            mz=sp.hstack([mz_a, mz_b]),
-            input_type=search_type,
-            all_features_flag=all_features,
-            regression_method=regression_method,
-            neutral_loss_flag=add_neutral_loss_features,
-            drop_miss_cleavage_flag=remove_miss_cleavage_features,
-            cms2=cms2,
-        )
+        pred = sp.hstack([library.get_matrix(FragmentType.PRED_A), library.get_matrix(FragmentType.PRED_B)])
+        raw = sp.hstack([library.get_matrix(FragmentType.RAW_A), library.get_matrix(FragmentType.RAW_B)])
+        mz = sp.hstack([library.get_matrix(FragmentType.MZ_A), library.get_matrix(FragmentType.MZ_B)])
+        extra_kwargs = {}
     else:
-        perc_features = Percolator(
-            metadata=library.get_meta_data().reset_index(drop=True),
-            pred_intensities=library.get_matrix(FragmentType.PRED),
-            true_intensities=library.get_matrix(FragmentType.RAW),
-            mz=library.get_matrix(FragmentType.MZ),
-            input_type=search_type,
+        pred = library.get_matrix(FragmentType.PRED)
+        raw = library.get_matrix(FragmentType.RAW)
+        mz = library.get_matrix(FragmentType.MZ)
+        extra_kwargs = dict(
             additional_columns=additional_columns,
-            all_features_flag=all_features,
-            regression_method=regression_method,
-            neutral_loss_flag=add_neutral_loss_features,
-            drop_miss_cleavage_flag=remove_miss_cleavage_features,
-            cms2=cms2,
+            task=task,
             featured_ions=featured_ions,
         )
 
-    perc_features.calc(multifrag=multifrag, fragmentation_method=fragmentation_method)
+    perc_features = Percolator(
+        metadata=meta,
+        pred_intensities=pred,
+        true_intensities=raw,
+        mz=mz,
+        input_type=search_type,
+        all_features_flag=all_features,
+        regression_method=regression_method,
+        neutral_loss_flag=add_neutral_loss_features,
+        drop_miss_cleavage_flag=remove_miss_cleavage_features,
+        cms2=cms2,
+        **extra_kwargs,
+    )
+
+    perc_features.calc()
     perc_features.write_to_file(str(output_file))
 
 

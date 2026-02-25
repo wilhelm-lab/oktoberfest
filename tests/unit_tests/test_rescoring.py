@@ -64,8 +64,7 @@ class TestRescoring(unittest.TestCase):
             output_file=Path(__file__).parent / "data" / "library" / "rescore_all_multifrag.tab",
             additional_columns=None,
             all_features=False,
-            multifrag=True,
-            fragmentation_method="ECD",
+            task="multifrag",
             regression_method="spline",
             featured_ions=["C", "z"],  # c,z ions
         )

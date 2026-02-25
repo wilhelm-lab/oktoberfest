@@ -597,7 +597,6 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         xl=xl,
         cms2=cms2,
         regression_method=config.curve_fitting_method,
-        fragmentation_method=config.fragmentation_method,
         featured_ions=None,
     )
 
@@ -612,8 +611,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         regression_method=config.curve_fitting_method,
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
-        multifrag=config.check_multirag(),
-        fragmentation_method=config.fragmentation_method,
+        task="multifrag" if config.check_multifrag() else "default",
         featured_ions=config.featured_ions,
     )
 
