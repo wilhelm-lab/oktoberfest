@@ -167,8 +167,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
-                multifrag=config.check_multirag(),
-                featured_ions=config.featured_ions,
+                multifrag=config.check_multifrag(),
+                featured_ions=config.ion_types,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -612,7 +612,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
         task="multifrag" if config.check_multifrag() else "default",
-        featured_ions=config.featured_ions,
+        featured_ions=config.ion_types,
     )
 
     calc_feature_step.mark_done()

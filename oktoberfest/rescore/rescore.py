@@ -97,16 +97,10 @@ def generate_features(
         pred = sp.hstack([library.get_matrix(FragmentType.PRED_A), library.get_matrix(FragmentType.PRED_B)])
         raw = sp.hstack([library.get_matrix(FragmentType.RAW_A), library.get_matrix(FragmentType.RAW_B)])
         mz = sp.hstack([library.get_matrix(FragmentType.MZ_A), library.get_matrix(FragmentType.MZ_B)])
-        extra_kwargs = {}
     else:
         pred = library.get_matrix(FragmentType.PRED)
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
-        extra_kwargs = dict(
-            additional_columns=additional_columns,
-            task=task,
-            featured_ions=featured_ions,
-        )
 
     perc_features = Percolator(
         metadata=meta,
@@ -119,7 +113,9 @@ def generate_features(
         neutral_loss_flag=add_neutral_loss_features,
         drop_miss_cleavage_flag=remove_miss_cleavage_features,
         cms2=cms2,
-        **extra_kwargs,
+        additional_columns=additional_columns,
+        task=task,
+        featured_ions=featured_ions,
     )
 
     perc_features.calc()

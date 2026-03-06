@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from pathlib import Path
 from sys import platform
 from typing import Optional, Union
@@ -12,6 +11,27 @@ logger = logging.getLogger(__name__)
 
 class Config:
     """Read config file and get information from it."""
+
+    def __init__(self):
+        """Initialize config file data."""
+        self.data = {}
+
+    def read(self, config_path: Union[str, Path]):
+        """
+        Read config file.
+
+        :param config_path: path to config file as a string
+        """
+        logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+        with open(config_path) as f:
+            self.data = json.load(f)
+        self.base_path = config_path.parent
+
+    ###########################
+    # these are parameters    #
+    ###########################
 
     @property
     def num_threads(self) -> int:
@@ -31,33 +51,20 @@ class Config:
     @property
     def models(self) -> dict:
         """Get intensity, IRT, and proteotypicity models from the config file."""
-        if "models" in self.data:
-            return self.data["models"]
-        if "selectedIntensityModel" in self.data:
-            return {
-                "selectedIntensityModel": self.data["selectedIntensityModel"],
-                "selectedIRTModel": self.data["selectedIRTModel"],
-            }
-        else:
-            return self.data["models"]
+        return self.data["models"]
 
     @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return ""."""
-        if "tag" in self.data:
-            return self.data["tag"].lower()
-        else:
-            return ""
+        return self.data.get("tag", "").lower()
 
     @property
     def job_type(self) -> str:
-        """Get jobType flag (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
-        if "jobType" in self.data:
-            return self.data["jobType"]
-        elif "type" in self.data:
-            return self.data["type"]
-        else:
+        """Get job type (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
+        job_type = self.data.get("type")
+        if job_type is None:
             raise ValueError("No job type specified in config file.")
+        return job_type
 
     @property
     def quantification(self) -> bool:
@@ -80,21 +87,15 @@ class Config:
         return self.data.get("fragmentation_method", "HCD")
 
     @property
-    def featured_ions(self) -> list[str]:
-        """Ion series to use for calculating percolator features."""
-        return self.data.get("featured_ions", None)
-
-    @property
-    def ion_types(self) -> str:
-        # TODO: this is only used in plotting. featured_ions can be combined with this
+    def ion_types(self) -> list[str]:
         """
-        Returns the fragment ion types used for fragment annotation.
+        Returns the fragment ion types used for fragment annotation and for calculating percolator features.
 
-        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "abcxyz"). Default is "by".
+        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "aAbcCxXyzZ"). Default is "by".
 
-        :returns: A string representing the fragment ion types.
+        :returns: A list of representing the fragment ion types.
         """
-        return self.data.get("ion_types", "by")
+        return list(self.data.get("ion_types", "by"))
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
@@ -315,10 +316,7 @@ class Config:
     @property
     def all_features(self) -> bool:
         """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
+        return self.data.get("allFeatures", False)
 
     @property
     def curve_fitting_method(self) -> str:
@@ -335,11 +333,8 @@ class Config:
 
     @property
     def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator)."""
-        if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"].lower()
-        else:
-            return "mokapot"
+        """Get peptide detection method from the config file (mokapot or percolator). Default is percolator."""
+        return self.data.get("fdr_estimation_method", "percolator").lower()
 
     ######################################
     # these are spectral library options #
@@ -433,9 +428,9 @@ class Config:
             self._check_quantification()
             self._check_fasta()
 
-        self._check_koina_model_avaliability()
+        self._check_koina_model_availability()
 
-    def _check_koina_model_avaliability(self):
+    def _check_koina_model_availability(self):
         """Check if Koina model is available."""
         # This will give error automaticly in Koina if model is not available on the server.
         # Koina has function called "_is_model_ready" that checks if model is available
@@ -498,25 +493,11 @@ class Config:
                     f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
                 )
         if "alphapept" in self.models["intensity"].lower():
-            instrument_type = self.instrument_type
-            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
-            if instrument_type is None:
-                raise AssertionError(
-                    f"The chosen intensity model {self.models['intensity']} requires an instrument type. "
-                    f"Provide one of {valid_alphapept_instrument_types}."
-                )
-            else:
-                if instrument_type not in valid_alphapept_instrument_types:
-                    raise ValueError(
-                        f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
-                        f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
-                    )
+            self._check_for_alphapept()
 
-    def _find_file_in_subd(self, directory: Path, filename: str):
-        for _, _, files in os.walk(directory):
-            if filename in files:
-                return True
-        return False
+    def _find_file_in_subd(self, directory: Path, filename: str) -> bool:
+        """Return True if a file with the given name exists anywhere under directory."""
+        return any(path.name == filename for path in directory.rglob(filename))
 
     def _check_quantification(self):
         if Path(self.search_results).is_file():
@@ -559,22 +540,9 @@ class Config:
                 "For quantification a fasta file is needed."
             )
 
-    def __init__(self):
-        """Initialize config file data."""
-        self.data = {}
-
-    def read(self, config_path: Union[str, Path]):
-        """
-        Read config file.
-
-        :param config_path: path to config file as a string
-        """
-        logger.info(f"Reading configuration from {config_path}")
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
-        with open(config_path) as f:
-            self.data = json.load(f)
-        self.base_path = config_path.parent
+    def check_multifrag(self) -> bool:
+        """Check if rescoring will be done on multifrag options."""
+        return "multifrag" in self.models["intensity"].lower()
 
     def custom_to_unimod(self) -> dict[str, int]:
         """
@@ -604,8 +572,3 @@ class Config:
         for unimod_id, mass, _ in self.static_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
-
-    # TODO: feature implementation for adding check for avaliable models for Koina
-    def check_multifrag(self):
-        """Check if rescoring will be done on multifrag options."""
-        return "multifrag" in self.models["intensity"].lower()
