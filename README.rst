@@ -38,47 +38,5 @@ The official Oktoberfest documentation can be found at `https://oktoberfest.read
 How to cite
 ===========
 
-Please always cite the main publication
----------------------------------------
-
-Picciani M, Gabriel W, Giurcoiu VG et al. (2023),
-*Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit*,
-`Proteomics <https://doi.org/10.1002/pmic.202300112>`__.
-
-Please cite the Prosit model(s) you are using
----------------------------------------------
-
-When using Prosit
-
-Gessulat S, Schmidt T, Zolg DP et al. (2019),
-*PROSIT: Proteome-wide prediction of peptide tandem mass spectra by deep learning*,
-`Nature Methods <https://doi.org/10.1038/s41592-019-0426-7>`__.
-
-Wilhelm M, Zolg DP, Graber M et al. (2021),
-*Deep learning boosts sensitivity of mass spectrometry-based immunopeptidomics*,
-`Nature Communications <https://doi.org/10.1038/s41467-021-23713-9>`__.
-
-When using Prosit-TMT
-
-Gabriel W, The M, Zolg D et al. (2022),
-*Prosit-TMT: Deep Learning Boosts Identification of TMT-Labeled Peptides*,
-`Analytical Chemistry <https://doi.org/10.1021/acs.analchem.1c05435>`__.
-
-When using Prosit-timsTOF
-
-Adams C, Gabriel W, Laukens K et al. (2024),
-*Fragment ion intensity prediction improves the identification rate of non-tryptic peptides in timsTOF*,
-`Nature Communications <https://doi.org/10.1038/s41467-024-48322-0>`__.
-
-When using Prosit-XL
-
-Kalhor M, Saylan C, Picciani M et al. (2025),
-*Prosit-XL: enhanced cross-linked peptide identification by fragment intensity prediction to study protein interactions and structures*,
-`Nature Communications <https://www.nature.com/articles/s41467-025-61203-4>`__.
-
-Please cite in case you use quantification
--------------------------------------------
-
-The M, Samaras P, Kuster B, Wilhelm, M. (2022),
-*Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups*,
-`Molecular & Cellular Proteomics <https://doi-org.org/10.1016/j.mcpro.2022.100437>`__.
+.. include:: docs/reference.rst
+   :start-line: 1
