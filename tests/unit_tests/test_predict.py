@@ -62,7 +62,8 @@ class TestPredictorBehavioral(unittest.TestCase):
     """Behavioral tests of Predictor class."""
 
     @classmethod
-    def setUpClass(cls):  # noqa: 402
+    def setUpClass(cls):  # noqa: D102
+        """Set up test fixtures for behavioral tests."""
         cls.model_name = "Prosit_2019_intensity"
         cls.model_type = "intensity"
 
@@ -88,7 +89,8 @@ class TestPredictorBehavioral(unittest.TestCase):
         cls.ce_range = (19, 50)
 
     @classmethod
-    def tearDownClass(cls):  # noqa: 402
+    def tearDownClass(cls):  # noqa: D102
+        """Clean up temporary test directory."""
         shutil.rmtree(cls.temp_dir)
 
     @patch("oktoberfest.predict.predictor.Koina")
@@ -254,7 +256,8 @@ class TestLocalPrediction(unittest.TestCase):
     """Test class for local prediction."""
 
     @classmethod
-    def setUpClass(cls):  # noqa: 402
+    def setUpClass(cls):  # noqa: D102
+        """Set up test fixtures for local prediction tests."""
         cls.model_name = "Prosit_2019_intensity"
         cls.model_type = "intensity"
 

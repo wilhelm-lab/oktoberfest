@@ -247,7 +247,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax2 = ax.bar(labels, gained, width=0.5, bottom=shared, color="#007D3E")
     ax3 = ax.bar(labels, -lost, color="#E17224", width=0.5)
 
-    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, [shared], [gained], [lost]):
+    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, [shared], [gained], [lost], strict=True):
         h1 = r1.get_height()
         h2 = r2.get_height()
         plt.text(

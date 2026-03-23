@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oktoberfest"
-version = "0.10.0"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.10.0"
 description = "Public repo oktoberfest"
 authors = ["Wilhelmlab at Technical University of Munich"]
 license = "MIT"
@@ -18,55 +18,71 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.10.0,<3.13.0"
-click = ">=8.0.0"
+python = ">=3.10,<3.13"
 rich = ">=10.3.0"
 PyYAML = ">=5.4.1"
 anndata = "^0.10.5post1"
 array-api-compat = "1.12.0"
 matplotlib = "^3.6.3"
-mokapot = ">=0.9.1,<0.11.0"
+mokapot = ">=0.9.1"
 numpy = ">=1.26.4"
-seaborn = ">=0.12.2,<0.14.0"
+seaborn = ">=0.12.2"
 spectrum-io = ">=0.8.0"
 picked_group_fdr = ">=0.9.0"
-koinapy = ">=0.0.7,<0.0.11"
+koinapy = ">=0.0.10"
 spectrum-utils = "^0.4.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = ">=6.2.3"
+pytest = ">=8.0.0"
 coverage = {extras = ["toml"], version = ">=5.3"}
-safety = ">=1.9.0"
 typeguard = ">=2.12.0"
 xdoctest = {extras = ["colors"], version = ">=0.15.0"}
-sphinx = ">=4.0.2"
-sphinx-autobuild = ">=2021.3.14"
-pre-commit = ">=2.11.1"
-flake8 = ">=3.8.4"
-black = ">=20.8b1"
-flake8-bandit = ">=2.1.2"
-flake8-bugbear = ">=21.4.3"
-flake8-docstrings = ">=1.5.0"
-flake8-rst-docstrings = ">=0.2.3"
-pep8-naming = ">=0.11.1"
-darglint = ">=1.5.8"
-pre-commit-hooks = ">=4.0.1"
-sphinx-rtd-theme = ">=1.0.0"
-sphinx-click = ">=3.0.0"
+sphinx = ">=7.0"
+sphinx-autobuild = ">=2024.10.3"
+pre-commit = ">=3.0.0"
+ruff = ">=0.15.0"
+pre-commit-hooks = ">=4.4.0"
+sphinx-rtd-theme = ">=3.0.2"
 Pygments = ">=2.8.1"
 pyteomics = ">=4.7.3"
 types-requests = ">=2.25.2"
 types-attrs = ">=19.1.0"
 Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
-pyupgrade = ">=2.31.0"
 openpyxl = ">=3.0.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit_tests"] # run only unit tests by default
 
 [tool.poetry.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 
-[tool.black]
+[tool.ruff]
+target-version = "py310"
 line-length = 120
+
+[tool.ruff.lint]
+select = ["B", "C", "D", "E", "F", "N", "S", "W"]
+ignore = [
+    "E203",  # whitespace before colon (conflicts with Black)
+    "E501",  # line too long (handled by formatter)
+    "D100",  # Missing module docstring
+    "D212",  # Multi-line docstring summary should start at first line
+    "S404",  # Consider possible security implications associated with subprocess module
+    "S602",  # shell=True used in subprocess
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # Use of assert detected
+"**/__init__.py" = ["F401", "F403"]  # Unused import / wildcard imports
+"docs/conf.py" = ["S404", "S607", "S603"]  # Security checks
+"oktoberfest/runner.py" = ["C901", "S301", "S403"]  # Complexity and security
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+# line-length inherited from [tool.ruff]
 
 [tool.mypy]
 strict = false
@@ -76,12 +92,7 @@ show_error_codes = true
 show_error_context = true
 ignore_missing_imports = true
 
-[tool.isort]
-multi_line_output=3
-include_trailing_comma=true
-balanced_wrapping=true
-line_length=120
-profile = "black"
+
 
 [tool.coverage.paths]
 source = ["oktoberfest", "*/site-packages"]

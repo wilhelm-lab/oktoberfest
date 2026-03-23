@@ -11,7 +11,10 @@ import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
 from scipy.sparse import csr_matrix, dok_matrix
-from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
+from spectrum_fundamentals.fragments import (
+    format_fragment_ion_annotation,
+    generate_fragment_ion_annotations,
+)
 
 if TYPE_CHECKING:
     from anndata.compat import Index
@@ -283,7 +286,7 @@ class Spectra(anndata.AnnData):
         """
         sparse_intensity_matrix = dok_matrix(self.shape)
 
-        for ints, annots, chunk in zip(intensities, annotations, chunk_indices):
+        for ints, annots, chunk in zip(intensities, annotations, chunk_indices, strict=True):
             self._add_predicted_intensites(
                 mat=sparse_intensity_matrix,
                 intensity_data=ints,

@@ -46,40 +46,44 @@ clean_data_folder:
 #
 # Usage:
 #   make install     – install project + all dev deps into Poetry virtualenv
-#   make check       – run all quality checks in CI order (lint → test → coverage → typecheck → doctest)
-#   make lint        – run all pre-commit hooks (format, lint, import order)
+#   make lint        – run pre-commit hooks (formatting, linting, security checks)
+#   make format      – format code with ruff
 #   make test        – run tests and collect coverage data
 #   make coverage    – combine .coverage.* files and print report
 #   make typecheck   – runtime type checking via typeguard
 #   make doctest     – validate inline docstring examples
 #   make docs        – build HTML documentation with Sphinx
+#   make check       – run all quality checks in CI order (lint → test → coverage → typecheck → doctest)
 #   make dist        – build source and wheel distributions
 # ────────────────────────────────────────────────────────────────────────────
-.PHONY: install lint test coverage typecheck doctest docs dist check
+.PHONY: install lint format test coverage typecheck doctest docs dist check
 
 check: lint test coverage typecheck doctest ## Run all quality checks in CI order
 
 install: ## Install project and all dev dependencies
 	poetry install
 
-lint: ## Run all pre-commit hooks (formatting, linting, import order)
+lint: ## Run pre-commit hooks (formatting, linting, security checks)
 	pre-commit run --all-files
 
+format: ## Format code with ruff
+	ruff format oktoberfest tests
+
 test: ## Run test suite and collect coverage data
-	poetry run coverage run --parallel -m pytest tests/
+	poetry run coverage run --parallel -m pytest tests/unit_tests
 
 coverage: ## Combine coverage files and print report
 	poetry run coverage combine
 	poetry run coverage report -i
 
 typecheck: ## Runtime type checking with typeguard
-	poetry run pytest --typeguard-packages=oktoberfest tests/
+	poetry run pytest --typeguard-packages=oktoberfest tests/unit_tests
 
 doctest: ## Validate inline docstring examples with xdoctest
 	poetry run python -m xdoctest oktoberfest all
 
 docs: ## Build HTML documentation with Sphinx
-	sphinx-build -b html docs docs/_build
+	poetry run sphinx-build -b html docs docs/_build
 
 dist: ## Build source and wheel distributions
 	poetry build --ansi

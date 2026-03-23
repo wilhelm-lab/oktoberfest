@@ -6,7 +6,7 @@
    * `Wassim Gabriel <https://github.com/WassimG>`_
    * `Victor-George Giurcoiu <https://github.com/victorgiurcoiu>`_
    * `Firas Hamood <https://github.com/fhamood>`_
-   *  Cecilia Jensen
+   * `Cecilia Jensen <https://github.com/ceciliabjensen>`_
    * `Mostafa Kalhor <https://github.com/mostafakalhor>`_
    * `Ludwig Lautenbacher <https://github.com/LLautenbacher>`_
    * `Julian Mueller <https://github.com/jmueller95>`_
@@ -17,6 +17,6 @@
    * `Matthew The <https://github.com/MatthewThe>`_
    * `Zixuan Xiao <https://github.com/zix-xiao>`_
 
-   Other roles
+   Principal Investigator
 
-   * `Mathias Wilhelm <https://github.com/mwilhelm42>`_ advisor and PI of wilhelmlab
+   * `Mathias Wilhelm <https://github.com/mwilhelm42>`_

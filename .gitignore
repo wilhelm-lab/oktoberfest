@@ -130,6 +130,9 @@ venv.bak/
 dmypy.json
 .pytype/
 
+# ruff
+.ruff_cache/
+
 # Pyre type checker
 .pyre/
 
@@ -147,7 +150,9 @@ hash.file
 !tutorials/*.ipynb
 
 # example data
-data/
+/data/
+/tests/unit_tests/data/
+
 
 # Machine learning artifacts
 wandb/

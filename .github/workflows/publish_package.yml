@@ -5,31 +5,36 @@ on:
     release:
         types: [published]
 
+# Never cancel a release publish once started.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+# Required for PyPI Trusted Publishing (OIDC) — no PYPI_TOKEN secret needed.
+permissions:
+    id-token: write
+
 jobs:
     release:
-        name: Build and publish to PyPI
+        name: Release
         runs-on: ubuntu-latest
-
-        # Required for OIDC trusted publishing — no PYPI_TOKEN secret needed.
-        # One-time setup on pypi.org: add a "GitHub Actions" trusted publisher
-        # pointing to this repository and this workflow file.
-        permissions:
-            id-token: write
-            contents: read
-
         steps:
-            - uses: actions/checkout@v4
+            - name: Check out the repository
+              uses: actions/checkout@v6
 
-            - uses: actions/setup-python@v5
+            - name: Set up Python
+              uses: actions/setup-python@v6
               with:
                   python-version: "3.12"
+                  cache: pip
 
             - name: Install Poetry
-              run: pip install poetry
+              run: |
+                  pip install poetry
+                  poetry --version
 
             - name: Build package
               run: poetry build --ansi
 
-            # Publishes using OIDC (no password field = keyless auth).
-            - name: Publish to PyPI
-              uses: pypa/gh-action-pypi-publish@v1.12.4
+            - name: Publish package on PyPI
+              uses: pypa/gh-action-pypi-publish@v1.13.0
