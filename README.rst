@@ -1,7 +1,7 @@
 Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Generation for Proteomics
 ===================================================================================================
 
-|PyPI| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
+|PyPI| |Python Version| |License| |Read the Docs| |CI| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/oktoberfest.svg
    :target: https://pypi.org/project/oktoberfest/
@@ -15,12 +15,9 @@ Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Genera
 .. |Read the Docs| image:: https://img.shields.io/readthedocs/oktoberfest/latest.svg?label=Read%20the%20Docs
    :target: https://oktoberfest.readthedocs.io/
    :alt: Read the documentation at https://oktoberfest.readthedocs.io/
-.. |Build| image:: https://github.com/wilhelm-lab/oktoberfest/workflows/Build%20oktoberfest%20Package/badge.svg
-   :target: https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Package
-   :alt: Build Package Status
-.. |Tests| image:: https://github.com/wilhelm-lab/oktoberfest/workflows/Run%20oktoberfest%20Tests/badge.svg
-   :target: https://github.com/wilhelm-lab/oktoberfest/actions?workflow=Tests
-   :alt: Run Tests Status
+.. |CI| image:: https://github.com/wilhelm-lab/oktoberfest/workflows/CI/badge.svg
+   :target: https://github.com/wilhelm-lab/oktoberfest/actions?workflow=CI
+   :alt: CI Status
 .. |Codecov| image:: https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/wilhelm-lab/oktoberfest
    :alt: Codecov

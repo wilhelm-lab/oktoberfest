@@ -1,0 +1,195 @@
+name: CI
+
+# Runs on pushes to the main integration branches and on every pull request.
+on:
+    workflow_dispatch: # Allow manual triggering from the GitHub Actions tab.
+    push:
+        branches:
+            - development
+            - "release/**" # kept for reference, releases will be via approval of the draft release
+    pull_request:
+        branches:
+            - "**"
+
+# ---------------------------------------------------------------------------
+# Shared setup used by every job that needs Poetry + the project installed.
+# ---------------------------------------------------------------------------
+
+jobs:
+    # -----------------------------------------------------------------------
+    # 1. Lint — pre-commit checks (formatting, import order, static analysis).
+    #    Does NOT require Poetry; pre-commit manages its own isolated envs.
+    # -----------------------------------------------------------------------
+    lint:
+        name: Lint (pre-commit)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Cache pre-commit hook environments
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pre-commit
+                  key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+                  restore-keys: pre-commit-${{ runner.os }}-
+
+            - name: Install pre-commit
+              run: pip install pre-commit
+
+            - name: Run all pre-commit hooks
+              run: make lint
+
+    # -----------------------------------------------------------------------
+    # 2. Tests — pytest with coverage, across all supported Python versions.
+    #    Each matrix entry uploads its own coverage file so they can be
+    #    combined in the `coverage` job below.
+    # -----------------------------------------------------------------------
+    test:
+        name: Test (Python ${{ matrix.python-version }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.10", "3.11", "3.12"]
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+
+            - name: Install Poetry
+              run: pip install poetry
+
+            - name: Cache Poetry virtualenv
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pypoetry/virtualenvs
+                  key: poetry-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+                  restore-keys: poetry-${{ runner.os }}-py${{ matrix.python-version }}-
+
+            - name: Install project and dependencies
+              run: poetry install
+
+            - name: Run tests with coverage
+              run: make test
+
+            # Upload each Python version's coverage file under a unique name so
+            # the `coverage` job can download and combine all three.
+            - name: Upload coverage data
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-${{ matrix.python-version }}
+                  path: ".coverage.*"
+                  include-hidden-files: "true"
+
+    # -----------------------------------------------------------------------
+    # 3. Runtime type checking — runs the test suite through typeguard.
+    #    Python 3.12 only (newest stable release is sufficient).
+    # -----------------------------------------------------------------------
+    typeguard:
+        name: Type checking (typeguard)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install Poetry
+              run: pip install poetry
+
+            - name: Cache Poetry virtualenv
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pypoetry/virtualenvs
+                  key: poetry-${{ runner.os }}-py3.12-${{ hashFiles('poetry.lock') }}
+                  restore-keys: poetry-${{ runner.os }}-py3.12-
+
+            - name: Install project and dependencies
+              run: poetry install
+
+            - name: Run typeguard
+              run: make typecheck
+
+    # -----------------------------------------------------------------------
+    # 4. Doctest examples — validates inline code examples in all docstrings.
+    #    Python 3.11 (stable middle version).
+    # -----------------------------------------------------------------------
+    xdoctest:
+        name: Doctest examples (xdoctest)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install Poetry
+              run: pip install poetry
+
+            - name: Cache Poetry virtualenv
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pypoetry/virtualenvs
+                  key: poetry-${{ runner.os }}-py3.11-${{ hashFiles('poetry.lock') }}
+                  restore-keys: poetry-${{ runner.os }}-py3.11-
+
+            - name: Install project and dependencies
+              run: poetry install
+
+            - name: Run xdoctest
+              run: make doctest
+
+    # -----------------------------------------------------------------------
+    # 5. Coverage report — combines data from all three test matrix entries,
+    #    reports to stdout, and uploads to Codecov.
+    #    Runs only after all `test` jobs complete.
+    # -----------------------------------------------------------------------
+    coverage:
+        name: Coverage report
+        runs-on: ubuntu-latest
+        needs: test
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install coverage
+              run: pip install "coverage[toml]"
+
+            - name: Download coverage data (3.10)
+              uses: actions/download-artifact@v4
+              with:
+                  name: coverage-3.10
+
+            - name: Download coverage data (3.11)
+              uses: actions/download-artifact@v4
+              with:
+                  name: coverage-3.11
+
+            - name: Download coverage data (3.12)
+              uses: actions/download-artifact@v4
+              with:
+                  name: coverage-3.12
+
+            - name: Combine and display coverage
+              run: make coverage
+
+            - name: Export coverage as XML
+              run: coverage xml -i
+
+            - name: Upload to Codecov
+              uses: codecov/codecov-action@v5
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}

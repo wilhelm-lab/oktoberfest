@@ -32,26 +32,19 @@ Request features on the `Issue Tracker`_.
 How to set up your development environment
 ------------------------------------------
 
-You need Python 3.9+ and the following tools:
-
-- Poetry_
-- Nox_
-- nox-poetry_
-
-You can install them with:
+You need Python 3.10+ and Poetry_:
 
 .. code:: console
 
-    $ pip install poetry nox nox-poetry
+    $ pip install poetry
 
-Install the package with development requirements:
+Install the package with all development requirements:
 
 .. code:: console
 
    $ make install
 
-You can now run an interactive Python session,
-or the command-line interface:
+You can now run an interactive Python session or the command-line interface:
 
 .. code:: console
 
@@ -59,34 +52,29 @@ or the command-line interface:
    $ poetry run oktoberfest
 
 .. _Poetry: https://python-poetry.org/
-.. _Nox: https://nox.thea.codes/
-.. _nox-poetry: https://nox-poetry.readthedocs.io/
 
 
 How to test the project
 -----------------------
 
-Run the full test suite:
+Run all quality checks in the same order as CI:
 
 .. code:: console
 
-   $ nox
+   $ make check
 
-List the available Nox sessions:
-
-.. code:: console
-
-   $ nox --list-sessions
-
-You can also run a specific Nox session.
-For example, invoke the unit test suite like this:
+Or run individual steps:
 
 .. code:: console
 
-   $ nox --session=tests
+   $ make lint        # formatting, import order, static analysis (pre-commit)
+   $ make test        # pytest with coverage data collection
+   $ make coverage    # combine coverage files and print report
+   $ make typecheck   # runtime type checking via typeguard
+   $ make doctest     # validate inline docstring examples
 
-Unit tests are located in the ``tests`` directory,
-and are written using the pytest_ testing framework.
+Unit tests are located in the ``tests`` directory and are written using the
+pytest_ testing framework.
 
 .. _pytest: https://pytest.readthedocs.io/
 
@@ -94,25 +82,17 @@ How to build and view the documentation
 ---------------------------------------
 
 This project uses Sphinx_ together with several extensions to build the documentation.
-It further requires Pandoc_ to translate various formats.
 
-To install all required dependencies for the documentation run:
-
-.. code:: console
-
-    $ pip install -r docs/requirements.txt
-
-Please note that oktoberfest itself must also be installed. To build the documentation run:
+Build the HTML documentation from the repository root:
 
 .. code:: console
 
-    $ make html
+    $ make docs
 
-from inside the docs folder. The generated static HTML files can be found in the `_build/html` folder.
-Simply open them with your favorite browser.
+The generated static HTML files are in ``docs/_build/html``.
+Open ``docs/_build/html/index.html`` in your browser to inspect them.
 
 .. _sphinx: https://www.sphinx-doc.org/en/master/
-.. _pandoc: https://pandoc.org/
 
 How to submit changes
 ---------------------
@@ -121,15 +101,15 @@ Open a `pull request`_ to submit changes to this project against the ``developme
 
 Your pull request needs to meet the following guidelines for acceptance:
 
-- The Nox test suite must pass without errors and warnings.
+- All checks in ``make check`` must pass without errors or warnings.
 - Include unit tests. This project maintains a high code coverage.
 - If your changes add functionality, update the documentation accordingly.
 
-To run linting and code formatting checks before committing your change, you can install pre-commit as a Git hook by running the following command:
+To install pre-commit as a Git hook so checks run automatically on every commit:
 
 .. code:: console
 
-   $ nox --session=pre-commit -- install
+   $ poetry run pre-commit install
 
 It is recommended to open an issue before starting work on anything.
 This will allow a chance to talk it over with the owners and validate your approach.

@@ -154,3 +154,6 @@ wandb/
 
 # doctest IO files
 tests/doctests/
+
+# vscode settings
+.vscode/
