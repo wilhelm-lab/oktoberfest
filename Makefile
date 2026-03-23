@@ -49,10 +49,11 @@ clean_data_folder:
 #   make lint        – run pre-commit hooks (formatting, linting, security checks)
 #   make format      – format code with ruff
 #   make test        – run tests and collect coverage data
-#   make coverage    – combine .coverage.* files and print report
+#   make coverage    – print coverage report and export as XML for CI upload
 #   make typecheck   – runtime type checking via typeguard
 #   make doctest     – validate inline docstring examples
 #   make docs        – build HTML documentation with Sphinx
+#  make docs-serve  – build docs and serve locally with live reload
 #   make check       – run all quality checks in CI order (lint → test → coverage → typecheck → doctest)
 #   make dist        – build source and wheel distributions
 # ────────────────────────────────────────────────────────────────────────────
@@ -64,17 +65,17 @@ install: ## Install project and all dev dependencies
 	poetry install
 
 lint: ## Run pre-commit hooks (formatting, linting, security checks)
-	pre-commit run --all-files
+	poetry run pre-commit run --all-files
 
 format: ## Format code with ruff
-	ruff format oktoberfest tests
+	poetry run ruff format oktoberfest tests
 
 test: ## Run test suite and collect coverage data
-	poetry run coverage run --parallel -m pytest tests/unit_tests
+	poetry run coverage run -m pytest tests/unit_tests
 
-coverage: ## Combine coverage files and print report
-	poetry run coverage combine
+coverage: ## Generate coverage report and export as XML
 	poetry run coverage report -i
+	poetry run coverage xml
 
 typecheck: ## Runtime type checking with typeguard
 	poetry run pytest --typeguard-packages=oktoberfest tests/unit_tests
@@ -84,6 +85,9 @@ doctest: ## Validate inline docstring examples with xdoctest
 
 docs: ## Build HTML documentation with Sphinx
 	poetry run sphinx-build -b html docs docs/_build
+
+docs-serve:  ## build docs and serve locally with live reload
+	poetry run sphinx-autobuild docs docs/_build/html --open-browser
 
 dist: ## Build source and wheel distributions
 	poetry build --ansi
