@@ -506,7 +506,7 @@ def plot_mirror_spectrum(
     rt = obs["RETENTION_TIME"].round(2)
     ce = obs["COLLISION_ENERGY"]
     model = config.models["intensity"]
-    ion_types = config.ion_types
+    ion_types = "".join(i for i in config.ion_types if i.islower())
     abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
         "abs_rt_diff"
     ].iloc[0]

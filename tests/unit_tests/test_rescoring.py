@@ -53,3 +53,24 @@ class TestRescoring(unittest.TestCase):
         expected_list = pd.read_csv(Path(__file__).parent / "data" / "library" / "expected_rescore_list.tab", sep="\t")
         created_list = pd.read_csv(Path(__file__).parent / "data" / "library" / "rescore_list.tab", sep="\t")
         pd.testing.assert_frame_equal(expected_list, created_list)
+
+        # load test library containing 150 psms for multifrag
+        library = Spectra.from_hdf5(Path(__file__).parent / "data" / "library" / "library150_multifrag.hdf5")
+
+        # all additional columns
+        re.generate_features(
+            library=library,
+            search_type="rescore",
+            output_file=Path(__file__).parent / "data" / "library" / "rescore_all_multifrag.tab",
+            additional_columns=None,
+            all_features=False,
+            task="multifrag",
+            regression_method="spline",
+            featured_ions=["C", "z"],  # c,z ions
+        )
+
+        expected_all = pd.read_csv(
+            Path(__file__).parent / "data" / "library" / "expected_rescore_multifrag.tab", sep="\t"
+        )
+        created_all = pd.read_csv(Path(__file__).parent / "data" / "library" / "rescore_all_multifrag.tab", sep="\t")
+        pd.testing.assert_frame_equal(expected_all, created_all)

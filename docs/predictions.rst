@@ -50,14 +50,3 @@ Hosting and adding your own models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In case you are planning to host your own private or public instance of Koina or want us to host your model, please refer to the official `Koina documentation <https://koina.wilhelmlab.org/docs#overview>`_.
-
-Local intensity prediction & refinement learning
-------------------------------------------------
-
-Instead of using a pre-trained intensity predictor via Koina, you can also predict intensity locally from a `DLomix <https://github.com/wilhelm-lab/dlomix>`_ model.
-If you do not have a pre-trained intensity predictor in `.keras` format, a baseline model will automatically be downloaded for you.
-Importantly, this also gives you the option to refinement-learn the pre-trained predictor on your input dataset and using the refined model for intensity prediction.
-
-For local intensity prediction and refinement learning, you need to provide either a path to a pre-trained model or the keyword `baseline`
-(for the runner to automatically download a model for you) as the intensity model in the config, and specify `localPredictionOptions` as well as optional `refinementLearningOptions`.
-For more details, refer to the :ref:`job <jobs:b) with refinement>` and :ref:`configuration <config:Applicable to local intensity prediction>` docs.
