@@ -19,4 +19,4 @@
 
    Principal Investigator
 
-   * `Mathias Wilhelm <https://github.com/mwilhelm42>`_
+   * `Mathias Wilhelm <https://www.mls.ls.tum.de/en/compms/group-members/people/mathias-wilhelm/>`_
