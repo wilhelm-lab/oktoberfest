@@ -38,11 +38,13 @@ The official Oktoberfest documentation can be found at `https://oktoberfest.read
 How to cite
 ===========
 
-### Please always cite the main publication
+Please always cite the main publication
+----
 
 [Oktoberfest] Picciani M, Gabriel W, Giurcoiu VG et al. (2023), _Oktoberfest: Open-source spectral library generation and rescoring pipeline based on Prosit_, [Proteomics](https://doi.org/10.1002/pmic.202300112)
 
-### Please cite the Prosit model(s) you are using
+Please cite the Prosit model(s) you are using
+----
 
 When using Prosit
 
@@ -66,7 +68,8 @@ When using Prosit-MultiFrag
 
 [Prosit-MultiFrag] Levin N, Saylan CC, Lapin J (2026) _Integration of alternative fragmentation techniques into standard LC-MS workflows using a single deep learning model enhances proteome coverage_, [Nature Methods](https://doi.org/10.1038/s41592-026-03042-9)
 
-### Please cite when using protein grouping and quantification
+Please cite when using protein grouping and quantification
+----
 
 [PickedGroupFDR] The M, Samaras P, Kuster B, Wilhelm, M. (2022), _Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups_, [Molecular & Cellular Proteomics](https://doi-org.org/10.1016/j.mcpro.2022.100437)
 
