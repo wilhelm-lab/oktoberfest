@@ -72,4 +72,3 @@ Please cite when using protein grouping and quantification
 ----
 
 [PickedGroupFDR] The M, Samaras P, Kuster B, Wilhelm, M. (2022), *Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups*, [Molecular & Cellular Proteomics](https://doi-org.org/10.1016/j.mcpro.2022.100437)
-
