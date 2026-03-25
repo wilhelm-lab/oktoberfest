@@ -1,5 +1,6 @@
-name-template: "0.10.0 🌈" # <<COOKIETEMPLE_FORCE_BUMP>>
-tag-template: 0.10.0 # <<COOKIETEMPLE_FORCE_BUMP>>
+commitish: development
+name-template: "$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
 exclude-labels:
     - "skip-changelog"
 
@@ -46,8 +47,6 @@ autolabeler:
     - label: enhancement
       branch:
           - /feature\/.+/
-      body:
-          - "/JIRA-[0-9]{1,4}/"
 template: |
     ## Changes
 

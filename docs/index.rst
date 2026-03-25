@@ -1,5 +1,6 @@
 
-.. include:: readme.rst
+.. include:: ../README.rst
+   :end-line: 37
 
 .. include:: _key_contributors.rst
 

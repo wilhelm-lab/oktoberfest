@@ -1,8 +1,18 @@
 name: Publish oktoberfest to PyPI
 
+# Triggered automatically when a GitHub Release is published.
 on:
     release:
         types: [published]
+
+# Never cancel a release publish once started.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+# Required for PyPI Trusted Publishing (OIDC) — no PYPI_TOKEN secret needed.
+permissions:
+    id-token: write
 
 jobs:
     release:
@@ -10,14 +20,13 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Check out the repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 2
+              uses: actions/checkout@v6
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                   python-version: "3.12"
+                  cache: pip
 
             - name: Install Poetry
               run: |
@@ -25,11 +34,7 @@ jobs:
                   poetry --version
 
             - name: Build package
-              run: |
-                  poetry build --ansi
+              run: poetry build --ansi
 
             - name: Publish package on PyPI
-              uses: pypa/gh-action-pypi-publish@v1.12.4
-              with:
-                  user: __token__
-                  password: ${{ secrets.PYPI_TOKEN }}
+              uses: pypa/gh-action-pypi-publish@v1.13.0

@@ -1,19 +1,24 @@
 name: Release Drafter
+
 on:
     push:
         branches:
             - development
-    pull_request:
-        branches:
-            - development
-        types:
-            - opened
-            - reopened
-            - synchronize
+    pull_request_target:
+        branches: [development]
+        types: [opened, reopened, synchronize, edited]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
     update_release_draft:
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
         steps:
-            - uses: release-drafter/release-drafter@v6
+            - uses: release-drafter/release-drafter@v7
               env:
-                  GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

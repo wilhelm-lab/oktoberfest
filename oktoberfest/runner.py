@@ -350,8 +350,7 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
                 batch_iterator = pickle.load(fh)
             mode = "a"
             logger.warning(
-                f"Found existing spectral library {out_file}. "
-                "Attempting to append missing batches from previous run..."
+                f"Found existing spectral library {out_file}. Attempting to append missing batches from previous run..."
             )
         else:
             logger.error(
@@ -833,9 +832,7 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "_",
             "which_pep",
         ]
-    ] = df_psm[
-        "index"
-    ].str.split("_", expand=True)
+    ] = df_psm["index"].str.split("_", expand=True)
     df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()

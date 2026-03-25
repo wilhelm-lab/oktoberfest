@@ -143,7 +143,9 @@ class Predictor:
                 # TODO: this can be done better way
                 new_intensities = []
 
-                for mz_arr, inten_arr in zip(chunked_intensities["mz"], chunked_intensities["intensities"]):
+                for mz_arr, inten_arr in zip(
+                    chunked_intensities["mz"], chunked_intensities["intensities"], strict=True
+                ):
                     inten_arr[mz_arr <= 0] = 0.0
                     new_intensities.append(inten_arr)
 
