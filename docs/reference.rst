@@ -39,9 +39,15 @@ Please cite the Prosit model(s) you are using
 *Prosit-XL: enhanced cross-linked peptide identification by fragment intensity prediction to study protein interactions and structures*,
 `Nature Communications <https://www.nature.com/articles/s41467-025-61203-4>`__.
 
+**When using Prosit-MultiFrag**
+
+[7] Levin N, Saylan CC, Lapin J et al. (2026),
+*Integration of alternative fragmentation techniques into standard LC-MS workflows using a single deep learning model enhances proteome coverage*, 
+`Nature Methods` <https://doi.org/10.1038/s41592-026-03042-9>
+
 Please cite in case you use quantification
 -------------------------------------------
 
-[7] The M, Samaras P, Kuster B, Wilhelm, M. (2022),
+[8] The M, Samaras P, Kuster B, Wilhelm, M. (2022),
 *Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups*,
 `Molecular & Cellular Proteomics <https://doi-org.org/10.1016/j.mcpro.2022.100437>`__.
