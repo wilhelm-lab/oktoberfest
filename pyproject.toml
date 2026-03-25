@@ -1,15 +1,24 @@
-[tool.poetry]
+[project]
 name = "oktoberfest"
 version = "0.10.0"
 description = "Public repo oktoberfest"
-authors = ["Wilhelmlab at Technical University of Munich"]
+authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
 readme = "README.rst"
-homepage = "https://github.com/wilhelm-lab/oktoberfest"
-repository = "https://github.com/wilhelm-lab/oktoberfest"
-documentation = "https://oktoberfest.readthedocs.io"
-packages = [
-    { include = "oktoberfest" },
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "rich>=10.3.0",
+    "PyYAML>=5.4.1",
+    "anndata>=0.10.5post1",
+    "array-api-compat==1.12.0",
+    "matplotlib>=3.6.3",
+    "mokapot>=0.9.1",
+    "numpy>=1.26.4",
+    "seaborn>=0.12.2",
+    "spectrum-io>=0.8.0",
+    "picked_group_fdr>=0.9.0",
+    "koinapy>=0.0.10",
+    "spectrum-utils>=0.4.2",
 ]
 classifiers = [
     "Programming Language :: Python :: 3.10",
@@ -17,20 +26,24 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-rich = ">=10.3.0"
-PyYAML = ">=5.4.1"
-anndata = "^0.10.5post1"
-array-api-compat = "1.12.0"
-matplotlib = "^3.6.3"
-mokapot = ">=0.9.1"
-numpy = ">=1.26.4"
-seaborn = ">=0.12.2"
-spectrum-io = ">=0.8.0"
-picked_group_fdr = ">=0.9.0"
-koinapy = ">=0.0.10"
-spectrum-utils = "^0.4.2"
+[project.urls]
+homepage = "https://github.com/wilhelm-lab/oktoberfest"
+repository = "https://github.com/wilhelm-lab/oktoberfest"
+documentation = "https://oktoberfest.readthedocs.io"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-autobuild>=2024.10.3",
+    "sphinx-autodoc-typehints>=3.0",
+    "sphinx-rtd-theme>=3.0.2",
+    "Pygments>=2.8.1",
+]
+
+[project.scripts]
+oktoberfest = "oktoberfest.__main__:main"
+
+[tool.poetry]
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"
@@ -47,21 +60,10 @@ Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 openpyxl = ">=3.0.10"
 
-[tool.poetry.group.docs]
-optional = true
 
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.0"
-sphinx-autobuild = ">=2024.10.3"
-sphinx-autodoc-typehints = ">=3.0"
-sphinx-rtd-theme = ">=3.0.2"
-Pygments = ">=2.8.1"
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit_tests"] # run only unit tests by default
-
-[tool.poetry.scripts]
-oktoberfest = "oktoberfest.__main__:main"
 
 [tool.ruff]
 target-version = "py310"
