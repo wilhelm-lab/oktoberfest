@@ -42,7 +42,7 @@ Please cite the Prosit model(s) you are using
 **When using Prosit-MultiFrag**
 
 [7] Levin N, Saylan CC, Lapin J et al. (2026),
-*Integration of alternative fragmentation techniques into standard LC-MS workflows using a single deep learning model enhances proteome coverage*, 
+*Integration of alternative fragmentation techniques into standard LC-MS workflows using a single deep learning model enhances proteome coverage*,
 `Nature Methods` <https://doi.org/10.1038/s41592-026-03042-9>
 
 Please cite in case you use quantification
