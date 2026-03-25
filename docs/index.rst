@@ -1,6 +1,6 @@
 
 .. include:: ../README.rst
-   :end-line: 37
+   :end-before: How to cite
 
 .. include:: _key_contributors.rst
 
