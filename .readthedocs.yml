@@ -8,17 +8,18 @@ build:
     os: ubuntu-22.04
     tools:
         python: "3.12"
+    jobs:
+        pre_install:
+            - pip install poetry
+        install:
+            - poetry install --with docs
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
     configuration: docs/conf.py
 
-# Optionally build your docs in additional formats such as PDF and ePub
-formats: all
-
-# Optionally set the version of Python and requirements required to build your docs
-python:
-    install:
-        - method: poetry
-          path: .
-          extra: docs
+# Only build HTML format (default)
+# PDF/ePub builds are rarely used and can be enabled later if needed
+# uncomment the following line and specify the formats you want to build
+# formats: all
+formats: []
