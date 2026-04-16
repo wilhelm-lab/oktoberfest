@@ -35,8 +35,8 @@ class Config:
 
     @property
     def num_threads(self) -> int:
-        """Get the number of threads from the config file; if not specified return 1."""
-        return self.data.get("numThreads", 1)
+        """Get the configured process count from the ``numThreads`` config field; defaults to 1."""
+        return max(1, int(self.data.get("numThreads", 1)))
 
     @property
     def prediction_server(self) -> str:
