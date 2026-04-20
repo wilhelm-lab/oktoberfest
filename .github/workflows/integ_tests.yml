@@ -24,7 +24,7 @@ on:
                 default: ""
 
     push:
-        branches: [main, development]
+        branches: [main, development, feature/OK-33*]
 
 jobs:
     # -----------------------------------------------------------------------
