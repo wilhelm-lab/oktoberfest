@@ -26,10 +26,10 @@ class TestRunner(unittest.TestCase):
 
     def test_speclib_digest(self):
         """Test the runner for a spectral library generation with a fasta digest."""
-        config_path = Path(__file__).parent / "configs" / "spectral_library_with_digest.json"
+        config_path = Path(__file__).parents[1] / "configs" / "spectral_library_with_digest.json"
         with (
             patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]),
-            patch("oktoberfest.utils.config.Config.output", Path(__file__).parent / "data/digest_out"),
+            patch("oktoberfest.utils.config.Config.output", Path(__file__).parents[1] / "data/digest_out"),
         ):
             main()
 
@@ -39,7 +39,7 @@ class TestRunner(unittest.TestCase):
 
     def test_rescoring_cms2_xl(self):  # noqa: C901
         """Test the runner for a rescoring run with cleavable crosslinking."""
-        config_path = Path(__file__).parent / "configs" / "rescoring_cleavable_xl.json"
+        config_path = Path(__file__).parents[1] / "configs" / "rescoring_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
         config = Config()
         config.read(config_path)
@@ -107,7 +107,7 @@ class TestRunner(unittest.TestCase):
             input_xifdr(str(fdr_dir), "xisearch")
 
         expected_perc_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
+            Path(__file__).parents[1] / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_rescore.tab", sep="\t"
         )
 
         created_perc_tab_file = pd.read_csv(
@@ -116,7 +116,7 @@ class TestRunner(unittest.TestCase):
         )
 
         expected_original_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_original.tab", sep="\t"
+            Path(__file__).parents[1] / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_original.tab", sep="\t"
         )
 
         created_original_tab_file = pd.read_csv(
@@ -125,7 +125,7 @@ class TestRunner(unittest.TestCase):
         )
 
         expected_xifdr_input_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_xifdr_input.csv",
+            Path(__file__).parents[1] / "data" / "xl" / "cleavable" / "expected_outputs" / "expected_xifdr_input.csv",
             sep=",",
         )
 
@@ -166,11 +166,11 @@ class TestRunner(unittest.TestCase):
 
         config = Config()
         config.read(config_path)
-        shutil.rmtree(Path(__file__).parent / "data" / "xl" / "cleavable" / "out")
+        shutil.rmtree(Path(__file__).parents[1] / "data" / "xl" / "cleavable" / "out")
 
     def test_rescoring_nms2_xl(self):  # noqa: C901
         """Test the runner for a rescoring run with non-cleavable crosslinking."""
-        config_path = Path(__file__).parent / "configs" / "rescoring_non_cleavable_xl.json"
+        config_path = Path(__file__).parents[1] / "configs" / "rescoring_non_cleavable_xl.json"
         # with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
         config = Config()
         config.read(config_path)
@@ -240,7 +240,7 @@ class TestRunner(unittest.TestCase):
             input_xifdr(str(fdr_dir), "scout")
 
         expected_perc_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_rescore.tab",
+            Path(__file__).parents[1] / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_rescore.tab",
             sep="\t",
         )
 
@@ -250,7 +250,7 @@ class TestRunner(unittest.TestCase):
         )
 
         expected_original_tab_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_original.tab",
+            Path(__file__).parents[1] / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_original.tab",
             sep="\t",
         )
 
@@ -260,7 +260,7 @@ class TestRunner(unittest.TestCase):
         )
 
         expected_xifdr_input_file = pd.read_csv(
-            Path(__file__).parent / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_xifdr_input.csv",
+            Path(__file__).parents[1] / "data" / "xl" / "non-cleavable" / "expected_outputs" / "expected_xifdr_input.csv",
             sep=",",
         )
 
@@ -301,4 +301,4 @@ class TestRunner(unittest.TestCase):
 
         config = Config()
         config.read(config_path)
-        shutil.rmtree(Path(__file__).parent / "data" / "xl" / "non-cleavable" / "out")
+        shutil.rmtree(Path(__file__).parents[1] / "data" / "xl" / "non-cleavable" / "out")

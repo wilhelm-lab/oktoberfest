@@ -73,6 +73,9 @@ format: ## Format code with ruff
 test: ## Run test suite and collect coverage data
 	poetry run coverage run -m pytest tests/unit_tests
 
+test-int: ## Run integration tests
+	poetry run pytest tests/integration_tests
+
 coverage: ## Generate coverage report and export as XML
 	poetry run coverage report -i
 	poetry run coverage xml

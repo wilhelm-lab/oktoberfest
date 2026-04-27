@@ -65,7 +65,7 @@ jobs:
 
             - name: Run integration tests
               env:
-                  # Expose any secrets your integration tests need here, e.g.:
+                  # Expose any secrets your integration tests need here:
                   # MY_SERVICE_API_KEY: ${{ secrets.MY_SERVICE_API_KEY }}
                   INTEGRATION_TEST: "1" # Sentinel env var tests can assert on
               run: |

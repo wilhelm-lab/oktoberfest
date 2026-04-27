@@ -47,7 +47,7 @@ class TestConfig(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):  # noqa: D102
-        cls.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
+        cls.config_path = Path(__file__).parents[1] / "configs/rescoring_local_prediction.json"
         cls.temp_dir = Path(tempfile.mkdtemp())
 
     @classmethod
@@ -94,11 +94,11 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         apply_quant(config)
-        compare = pd.read_csv(Path(__file__).parent / "data/quantification/mq_proteinGroups.txt", sep="\t")
+        compare = pd.read_csv(Path(__file__).parents[1] / "data/quantification/mq_proteinGroups.txt", sep="\t")
         results = pd.read_csv(
-            Path(__file__).parent / "data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
+            Path(__file__).parents[1] / "data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
         )
         pd.testing.assert_frame_equal(results, compare)
 
@@ -123,7 +123,7 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         # TODO add data for testing
         # apply_quant(config)
 
@@ -148,6 +148,6 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         # TODO add data for testing
         # apply_quant(config)

@@ -51,7 +51,6 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-./unit_tests/data/quantification
 
 # Translations
 *.mo
@@ -151,7 +150,6 @@ hash.file
 
 # example data
 /data/
-/tests/unit_tests/data/
 
 
 # Machine learning artifacts
