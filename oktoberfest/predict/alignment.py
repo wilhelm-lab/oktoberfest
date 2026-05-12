@@ -30,7 +30,8 @@ def _prepare_alignment_df(
     if group_by_charge:
         groups = ["RAW_FILE", "PRECURSOR_CHARGE"]
     else:
-        groups = ["RAW_FILE"]
+        # groups = ["RAW_FILE"]
+        groups = ["RAW_FILE", "COLLISION_ENERGY"]
 
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False).groupby(groups)
