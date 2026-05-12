@@ -79,7 +79,7 @@ Predicting: :code:`pr`
 
 .. currentmodule:: oktoberfest
 
-Access to functions that interface either a Koina server to retrieve predictions from various prediction models, or DLomix to serve & refinement-learn pre-trained models locally.
+Access to functions that interface either a Koina server to retrieve predictions from various prediction models.
 
 High-level prediction runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -96,16 +96,6 @@ Koina interface
     :toctree: api/pr
 
     pr.Koina
-
-DLomix interface
-~~~~~~~~~~~~~~~~
-
-.. autosummary::
-    :toctree: api/pr
-
-    pr.DLomix
-    pr.create_dlomix_dataset
-    pr.refine_intensity_predictor
 
 Rescoring: :code:`re`
 ---------------------
@@ -139,4 +129,6 @@ Plotting: :code:`pl`
    pl.plot_mean_sa_ce
    pl.plot_violin_sa_ce
    pl.plot_pred_rt_vs_irt
+   pl.plot_sa_distribution
+   pl.plot_mirror_spectrum
    pl.plot_all

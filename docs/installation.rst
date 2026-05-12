@@ -66,9 +66,7 @@ There are multiple optional dependencies depending on job types. Detailed notes 
     +                                                                  +---------------------+---------------------------------------------------------+
     |                                                                  | `mono`              | required for ThermoRawFileParser to work on Linux/macOS |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
-    | :ref:`Rescoring <jobs:a) without refinement>`                    | Percolator          |                                                         |
-    +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
-    | :ref:`Rescoring + refinement learning <jobs:b) with refinement>` | DLomix              |                                                         |
+    | :ref:`Rescoring`                                                 | Percolator          |                                                         |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
 
 **ThermoRawFileParser**
@@ -90,13 +88,6 @@ For MacOS, follow the instructions provided by `Mono <https://www.mono-project.c
 This is the tool Mokapot is based on. As it has more options and is generally more stable wrt. to FDR cutoffs and deduplication, it is recommended to use this tool instead of Mokapot.
 Installable packages are provided for Linux/MacOS/Windows.
 
-**DLomix**
-`DLomix <https://github.com/wilhelm-lab/dlomix>`_ is a Python framework for deep learning in proteomics. Oktoberfest uses DLomix to refinement-learn intensity predictors on input spectra. It is listed as an optional dependency and can be installed using
-
-.. code-block:: bash
-
-    poetry install -E dlomix
-
 Installing Oktoberfest
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -107,12 +98,6 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
 
-For local prediction & refinement learning, you have to install Oktoberfest with the `dlomix` extra:
-
-.. code-block:: bash
-
-   conda activate oktoberfest
-   pip install oktoberfest[dlomix]
 
 Installing xiFDR
 ~~~~~~~~~~~~~~~~

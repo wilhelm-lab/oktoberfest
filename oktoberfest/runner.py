@@ -55,42 +55,32 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
     preprocess_search_step = ProcessStep(config.output, "preprocessing_search")
     if not preprocess_search_step.is_done():
         # load search results
-        if not config.search_results_type == "internal":
-            logger.info(f"Converting search results from {config.search_results} to internal search result.")
-
-            msms_output = config.output / "msms"
-            msms_output.mkdir(exist_ok=True)
-            internal_search_file = msms_output / "msms.prosit"
-            tmt_label = config.tag
-            ptm_unimods = config.ptm_unimod_id
-            ptm_sites = config.ptm_possible_sites
-            search_results = pp.convert_search(
+        logger.info(f"Converting search results from {config.search_results} to internal search result.")
+        msms_output = config.output / "msms"
+        msms_output.mkdir(exist_ok=True)
+        internal_search_file = msms_output / "msms.prosit"
+        tmt_label = config.tag
+        ptm_unimods = config.ptm_unimod_id
+        ptm_sites = config.ptm_possible_sites
+        search_results = pp.convert_search(
+            input_path=config.search_results,
+            search_engine=config.search_results_type,
+            tmt_label=tmt_label,
+            custom_mods=config.custom_to_unimod(),
+            output_file=internal_search_file,
+            ptm_unimod_id=ptm_unimods,
+            ptm_sites=ptm_sites,
+        )
+        if config.spectra_type.lower() in ["d", "hdf"]:
+            timstof_metadata = pp.convert_timstof_metadata(
                 input_path=config.search_results,
                 search_engine=config.search_results_type,
-                tmt_label=tmt_label,
-                custom_mods=config.custom_to_unimod(),
-                output_file=internal_search_file,
-                ptm_unimod_id=ptm_unimods,
-                ptm_sites=ptm_sites,
+                output_file=msms_output / "tims_meta.csv",
             )
-            if config.spectra_type.lower() in ["d", "hdf"]:
-                timstof_metadata = pp.convert_timstof_metadata(
-                    input_path=config.search_results,
-                    search_engine=config.search_results_type,
-                    output_file=msms_output / "tims_meta.csv",
-                )
-        else:
-            internal_search_file = config.search_results
-            search_results = pp.load_search(internal_search_file)
 
-            # TODO add support for internal timstof metadata
+        # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
-
-        # filter search results
-        if config.predict_intensity_locally:
-            model_type = Path(config.models["intensity"]).stem
-        else:
-            model_type = config.models["intensity"]
+        model_type = config.models["intensity"]
         try:
             search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
         except ValueError:
@@ -151,6 +141,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         config_instrument_type = config.instrument_type
         if config_instrument_type is not None:
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
+        if config.fragmentation_method is not None:
+            spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
         # if config.search_results_type.lower() == "casanovo":
@@ -159,6 +151,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         #     library['MASS_ANALYZER'] = config.mass_analyzer
         #     library['FRAGMENTATION'] = config.fragmentation_method
         #     library['COLLISION_ENERGY'] = config.collision_energy
+
         if "xl" in config.models["intensity"].lower():
             if "cms2" in config.models["intensity"].lower():
                 cms2 = True
@@ -177,8 +170,11 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 mass_tol=config.mass_tolerance,
                 unit_mass_tol=config.unit_mass_tolerance,
                 fragmentation_method=config.fragmentation_method,
+                p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
+                multifrag=config.check_multifrag(),
+                featured_ions=config.ion_types,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -332,12 +328,8 @@ def _speclib_from_digestion(config: Config) -> Spectra:
             created_internal_step.mark_done()
         library_file = internal_library_file
 
-    elif library_input_type == "internal":
-        pass
     else:
-        raise ValueError(
-            f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides", or "internal".'
-        )
+        raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides".')
     spec_library = pp.gen_lib(library_file)
 
     pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")
@@ -375,8 +367,7 @@ def _get_batches_and_mode(out_file: Path, failed_batch_file: Path, obs: pd.DataF
                 batch_iterator = pickle.load(fh)
             mode = "a"
             logger.warning(
-                f"Found existing spectral library {out_file}. "
-                "Attempting to append missing batches from previous run..."
+                f"Found existing spectral library {out_file}. Attempting to append missing batches from previous run..."
             )
         else:
             logger.error(
@@ -535,8 +526,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
     aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
-    if not config.do_refinement_learning:
-        _get_best_ce(aspec, spectra_file, config)
+    _get_best_ce(aspec, spectra_file, config)
 
     aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
 
@@ -576,34 +566,6 @@ def run_ce_calibration(
             _ce_calib(spectra_file, config)
 
 
-def _refinement_learn(spectra_files: list[Path], config: Config):
-    refinement_step = ProcessStep(config.output, "refinement_learning")
-    if refinement_step.is_done():
-        return
-
-    libraries = [_ce_calib(spectra_file, config) for spectra_file in spectra_files]
-
-    if config.download_baseline_intensity_predictor:
-        baseline_model_path = config.output / "data/dlomix/prosit_baseline_model.keras"
-        download_new_baseline_model = True
-    else:
-        baseline_model_path = Path(config.models["intensity"])
-        download_new_baseline_model = False
-
-    pr.dlomix.refine_intensity_predictor(
-        baseline_model_path=baseline_model_path,
-        libraries=libraries,
-        config=config,
-        data_directory=config.output / "data/dlomix",
-        result_directory=config.output / "results/dlomix",
-        dataset_name="refinement_dataset",
-        model_name="refined",
-        download_new_baseline_model=download_new_baseline_model,
-    )
-
-    refinement_step.mark_done()
-
-
 def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cms2: bool = False):
     library = _ce_calib(spectra_file, config)
     calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
@@ -616,15 +578,8 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
-        if config.do_refinement_learning:
-            intensity_predictor = pr.Predictor.from_dlomix(
-                model_type="intensity",
-                model_path=config.output / "data/dlomix/refined.keras",
-                output_path=config.output / "data/dlomix/",
-                batch_size=config.dlomix_inference_batch_size,
-            )
-        else:
-            intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
+
+        intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
         if xl:
             intensity_predictor.predict_intensities(
                 data=library, xl=True, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
@@ -676,6 +631,8 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         add_neutral_loss_features=add_neutral_loss_features,
         remove_miss_cleavage_features=remove_miss_cleavage_features,
         rt_model_file=rt_dir / spectra_file.with_suffix(f".{config.curve_fitting_method}.rescore.pkl").name,
+        task="multifrag" if config.check_multifrag() else "default",
+        featured_ions=config.ion_types,
     )
 
     calc_feature_step.mark_done()
@@ -1276,9 +1233,6 @@ def run_rescoring(config_path: Union[str, Path]):
 
     spectra_files = _preprocess(spectra_files, config)
 
-    # TODO is this the most elegant way to multi-thread CE calibration before running refinement learning?
-    # Should we store the returned libraries and pass them to _calculate_features and _refinement_learn instead of
-    # _ce_calib returning cached outputs?
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
@@ -1287,9 +1241,6 @@ def run_rescoring(config_path: Union[str, Path]):
     else:
         for spectra_file in spectra_files:
             _ = _ce_calib(spectra_file, config)
-
-    if config.do_refinement_learning:
-        _refinement_learn(spectra_files, config)
 
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)
@@ -1315,7 +1266,6 @@ def run_rescoring(config_path: Union[str, Path]):
                 _ = _calculate_features(spectra_file, config)
 
     # prepare rescoring
-
     fdr_dir = config.output / "results" / config.fdr_estimation_method
     original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
     rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
@@ -1411,6 +1361,7 @@ def run_job(config_path: Union[str, Path]):
         elif job_type == "CollisionEnergyCalibration":
             run_ce_calibration(config_path)
         elif job_type == "Rescoring":
+            logger.info("Starting rescoring")
             run_rescoring(config_path)
         else:
             raise ValueError(f"Unknown job_type in config: {job_type}")

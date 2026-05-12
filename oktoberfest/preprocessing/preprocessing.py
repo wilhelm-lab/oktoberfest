@@ -24,9 +24,6 @@ from ..data.spectra import FragmentType, Spectra
 logger = logging.getLogger(__name__)
 
 
-# SpectralLibrary
-
-
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
     r"""
     Generate a spectral library from a given input.
@@ -267,6 +264,12 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
             "min_length": 7,
             "max_length": 35,
             "max_charge": 4,
+        }
+    elif "local" in model.lower():
+        filter_kwargs = {
+            "min_length": 6,
+            "max_length": 30,
+            "max_charge": 6,
         }
     else:
         raise ValueError(f"The model {model} is not known.")
@@ -908,10 +911,13 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 def annotate_spectral_library(
     psms: pd.DataFrame,
     fragmentation_method: str = "HCD",
+    p_window: Optional[float] = 1.2,
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
     annotate_neutral_loss: Optional[bool] = False,
+    multifrag: Optional[bool] = False,
+    featured_ions: Optional[list[str]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -928,8 +934,11 @@ def annotate_spectral_library(
     :param fragmentation_method: fragmentation method that was used
     :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
     :param annotate_neutral_loss: flag to indicate whether to annotate neutral loss peaks or not
+    :param multifrag: flag to indicate whether to annotate multifrag peaks or not
+    :param featured_ions: list of ions to be annotated
+    :param p_window: window size for precursor peak removal
 
-    :return: Spectra object containing the annotated b and y ion peaks including metadata
+    :return: Spectra object containing the annotated featured sion peaks including metadata
 
     :Example:
 
@@ -949,17 +958,26 @@ def annotate_spectral_library(
         >>> print(library)
     """
     logger.info("Annotating spectra...")
+    if multifrag:
+        ion_df = c.ION_DIC
+        ion_types = list(np.sort(ion_df["type"].unique()))
+        var_df = ion_df.copy()
+    else:
+        ion_df = None
+        ion_types = retrieve_ion_types(fragmentation_method)
+        var_df = Spectra._gen_vars_df(ion_types)
+
     df_annotated_spectra = annotate_spectra(
         un_annot_spectra=psms,
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
+        multifrag=multifrag,
+        p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
+        featured_ions=featured_ions,
     )
-
-    ion_types = retrieve_ion_types(fragmentation_method)
-    var_df = Spectra._gen_vars_df(ion_types)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(

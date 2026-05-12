@@ -1,5 +1,6 @@
 
-.. include:: readme.rst
+.. include:: ../README.rst
+   :end-before: How to cite
 
 .. include:: _key_contributors.rst
 

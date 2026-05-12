@@ -27,7 +27,10 @@ class TestRunner(unittest.TestCase):
     def test_speclib_digest(self):
         """Test the runner for a spectral library generation with a fasta digest."""
         config_path = Path(__file__).parent / "configs" / "spectral_library_with_digest.json"
-        with patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]):
+        with (
+            patch("sys.argv", ["oktoberfest", f"--config_path={config_path}"]),
+            patch("oktoberfest.utils.config.Config.output", Path(__file__).parent / "data/digest_out"),
+        ):
             main()
 
         config = Config()

@@ -1,11 +1,17 @@
 """Oktoberfest: Rescoring and Spectral Library Generation for Proteomics."""
 
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 
 __author__ = """The Oktoberfest development team (Wilhelmlab at Technical University of Munich)"""
 __copyright__ = f"Copyright {datetime.now():%Y}, Wilhelmlab at Technical University of Munich"
 __license__ = "MIT"
-__version__ = "0.10.0"
+
+try:
+    __version__ = version("oktoberfest")
+except PackageNotFoundError:  # package not installed
+    __version__ = "unknown"
+
 
 import logging.handlers
 import sys
