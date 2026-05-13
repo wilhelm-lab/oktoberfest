@@ -3,111 +3,58 @@ import signal
 import sys
 import traceback
 import warnings
-from multiprocessing import Pool, TimeoutError
+from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 
 from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
 
 
-# class JobPool:
-#     """JobPool class for multiprocessing."""
-
-#     results: list[pool.AsyncResult]
-#     warning_filter: str
-#     pool: pool.Pool
-
-#     def __init__(self, processes: int = 1, warning_filter: str = "default"):
-#         """Initialize JobPool."""
-#         self.warning_filter = warning_filter
-#         self.pool = Pool(processes, self.init_worker)
-#         self.results = []
-
-#     def apply_async(self, f, args, **kwargs):
-#         """Apply async."""
-#         r = self.pool.apply_async(f, args=args, kwds=kwargs)
-#         self.results.append(r)
-
-#     def init_worker(self):
-#         """Initialize the worker."""
-#         return init_worker(self.warning_filter)
-
-#     def check_pool(self):
-#         """Check the pool."""
-#         try:
-#             outputs = []
-#             res_len = len(self.results)
-#             with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
-#                 for res in self.results:
-#                     outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
-#                     progress.update(1)
-#             self.pool.close()
-#             self.pool.join()
-#             return outputs
-#         except (KeyboardInterrupt, SystemExit):
-#             logger.error("Caught KeyboardInterrupt, terminating workers")
-#             self.pool.terminate()
-#             self.pool.join()
-#             sys.exit(1)
-#         except Exception as e:
-#             logger.error("Caught Unknown exception, terminating workers")
-#             logger.error(traceback.format_exc())
-#             logger.error(e)
-#             self.pool.terminate()
-#             self.pool.join()
-#             sys.exit(1)
-
-
-# def init_worker(warning_filter):
-#     """Initialize worker given warning filter."""
-#     # set warning_filter for the child processes
-#     warnings.simplefilter(warning_filter)
-
-#     # causes child processes to ignore SIGINT signal and lets main process handle
-#     # interrupts instead (https://noswap.com/blog/python-multiprocessing-keyboardinterrupt)
-
-#     signal.signal(signal.SIGINT, signal.SIG_IGN)
 class JobPool:
-    """
-    Multiprocessing pool for side-effect-only workers (no return values).
-    Tracks per-job status instead of collecting results.
-    """
+    """Small wrapper around ProcessPoolExecutor."""
 
-    def __init__(self, processes: int = 1, warning_filter: str = "default",
-                 timeout: int = 1200, max_retries: int = 2):
+    results: list[Future]
+    warning_filter: str
+    executor: ProcessPoolExecutor
+
+    def __init__(self, processes: int = 1, warning_filter: str = "default"):
+        """Initialize JobPool."""
         self.warning_filter = warning_filter
-        self.timeout = timeout          # 20 minutes
-        self.max_retries = max_retries
-        self.pool = Pool(processes, self._init_worker)
+        self.executor = ProcessPoolExecutor(
+            max_workers=processes,
+            initializer=init_worker,
+            initargs=(self.warning_filter,),
+        )
         self.results = []
 
-    def _init_worker(self):
-        _init_worker(self.warning_filter)
-
-    def apply_async(self, func, args=(), **kwargs):
-        """
-        Submit a job. Workers may not return anything; we only track status.
-        You can pass job_label=... in kwargs for clearer logs.
-        """
-        job_label = kwargs.pop("job_label", args[0] if args else f"job_{len(self.results)}")
-        r = self.pool.apply_async(func, args=args, kwds=kwargs)
-        # attach metadata for tracking
-        r._job_label = str(job_label)
-        r._func = func
-        r._args = args
-        r._kwargs = kwargs
-        r._retries = 0
-        r._index = len(self.results)
-        self.results.append(r)
-        return r
+    def apply_async(self, f, args, **kwargs):
+        """Apply async."""
+        future = self.executor.submit(f, *args, **kwargs)
+        self.results.append(future)
+        return future
 
     def check_pool(self):
-        """
-        Waits for all jobs, retrying failures/timeouts up to max_retries.
-        Returns a dict: {job_label: {"status": "ok"|"timeout"|"error", "retries": n}}
-        """
-        status = {}
-        remaining = list(self.results)
+        """Check the pool."""
+        try:
+            outputs = [None] * len(self.results)
+            future_to_idx = {future: idx for idx, future in enumerate(self.results)}
+            res_len = len(self.results)
+            with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
+                for future in as_completed(self.results):
+                    outputs[future_to_idx[future]] = future.result(timeout=10000)  # ~3 hours
+                    progress.update(1)
+            self.executor.shutdown(wait=True, cancel_futures=False)
+            return outputs
+        except (KeyboardInterrupt, SystemExit):
+            logger.error("Caught KeyboardInterrupt, terminating workers")
+            self.executor.shutdown(wait=False, cancel_futures=True)
+            sys.exit(1)
+        except Exception as e:
+            logger.error("Caught Unknown exception, terminating workers")
+            logger.error(traceback.format_exc())
+            logger.error(e)
+            self.executor.shutdown(wait=False, cancel_futures=True)
+            sys.exit(1)
 
         with tqdm(total=len(remaining), desc="Processing tasks", leave=True) as progress:
             while remaining:
@@ -123,7 +70,9 @@ class JobPool:
                     except TimeoutError:
                         retries = getattr(res, "_retries", 0)
                         if retries < self.max_retries:
-                            logger.warning(f"Task {label} timed out after {self.timeout/60:.1f} min — retrying ({retries+1}/{self.max_retries}).")
+                            logger.warning(
+                                f"Task {label} timed out after {self.timeout/60:.1f} min — retrying ({retries+1}/{self.max_retries})."
+                            )
                             next_round.append(self._resubmit(res))
                         else:
                             logger.error(f"Task {label} timed out after {self.max_retries} retries.")
@@ -132,7 +81,9 @@ class JobPool:
                     except Exception as e:
                         retries = getattr(res, "_retries", 0)
                         if retries < self.max_retries:
-                            logger.warning(f"Task {label} failed with {e.__class__.__name__}: {e} — retrying ({retries+1}/{self.max_retries}).")
+                            logger.warning(
+                                f"Task {label} failed with {e.__class__.__name__}: {e} — retrying ({retries+1}/{self.max_retries})."
+                            )
                             logger.debug(traceback.format_exc())
                             next_round.append(self._resubmit(res))
                         else:
@@ -148,11 +99,11 @@ class JobPool:
         return status
 
     def _resubmit(self, res):
-        func   = getattr(res, "_func")
-        args   = getattr(res, "_args")
+        func = getattr(res, "_func")
+        args = getattr(res, "_args")
         kwargs = getattr(res, "_kwargs")
-        label  = getattr(res, "_job_label", "unknown")
-        tries  = getattr(res, "_retries", 0) + 1
+        label = getattr(res, "_job_label", "unknown")
+        tries = getattr(res, "_retries", 0) + 1
 
         new_res = self.pool.apply_async(func, args=args, kwds=kwargs)
         new_res._job_label = label
@@ -163,6 +114,7 @@ class JobPool:
         new_res._index = getattr(res, "_index", 0)
         logger.debug(f"Resubmitted task {label} (retry {tries}).")
         return new_res
+
 
 def _init_worker(warning_filter):
     warnings.simplefilter(warning_filter)
