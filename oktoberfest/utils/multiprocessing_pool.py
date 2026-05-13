@@ -56,66 +56,12 @@ class JobPool:
             self.executor.shutdown(wait=False, cancel_futures=True)
             sys.exit(1)
 
-        with tqdm(total=len(remaining), desc="Processing tasks", leave=True) as progress:
-            while remaining:
-                next_round = []
-                for res in remaining:
-                    label = getattr(res, "_job_label", "unknown")
-                    try:
-                        # We ignore the return value on purpose (workers have side effects)
-                        res.get(timeout=self.timeout)
-                        status[label] = {"status": "ok", "retries": getattr(res, "_retries", 0)}
-                        logger.debug(f"Task {label} completed (no return).")
-                        progress.update(1)
-                    except TimeoutError:
-                        retries = getattr(res, "_retries", 0)
-                        if retries < self.max_retries:
-                            logger.warning(
-                                f"Task {label} timed out after {self.timeout/60:.1f} min — retrying ({retries+1}/{self.max_retries})."
-                            )
-                            next_round.append(self._resubmit(res))
-                        else:
-                            logger.error(f"Task {label} timed out after {self.max_retries} retries.")
-                            status[label] = {"status": "timeout", "retries": retries}
-                            progress.update(1)
-                    except Exception as e:
-                        retries = getattr(res, "_retries", 0)
-                        if retries < self.max_retries:
-                            logger.warning(
-                                f"Task {label} failed with {e.__class__.__name__}: {e} — retrying ({retries+1}/{self.max_retries})."
-                            )
-                            logger.debug(traceback.format_exc())
-                            next_round.append(self._resubmit(res))
-                        else:
-                            logger.error(f"Task {label} failed after {self.max_retries} retries.")
-                            logger.error(traceback.format_exc())
-                            status[label] = {"status": "error", "retries": retries}
-                            progress.update(1)
-                remaining = next_round
 
-        self.pool.close()
-        self.pool.join()
-        logger.info("All tasks processed.")
-        return status
-
-    def _resubmit(self, res):
-        func = getattr(res, "_func")
-        args = getattr(res, "_args")
-        kwargs = getattr(res, "_kwargs")
-        label = getattr(res, "_job_label", "unknown")
-        tries = getattr(res, "_retries", 0) + 1
-
-        new_res = self.pool.apply_async(func, args=args, kwds=kwargs)
-        new_res._job_label = label
-        new_res._func = func
-        new_res._args = args
-        new_res._kwargs = kwargs
-        new_res._retries = tries
-        new_res._index = getattr(res, "_index", 0)
-        logger.debug(f"Resubmitted task {label} (retry {tries}).")
-        return new_res
-
-
-def _init_worker(warning_filter):
+def init_worker(warning_filter):
+    """Initialize worker given warning filter."""
+    # set warning_filter for the child processes
     warnings.simplefilter(warning_filter)
+
+    # causes child processes to ignore SIGINT signal and lets main process handle
+    # interrupts instead (https://noswap.com/blog/python-multiprocessing-keyboardinterrupt)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
