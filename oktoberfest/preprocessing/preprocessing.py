@@ -913,6 +913,8 @@ def annotate_spectral_library(
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
     featured_ions: Optional[list[str]] = None,
+    matching_method: str = "nearest",
+    matching_method_params: Optional[dict[str, Any]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -932,6 +934,11 @@ def annotate_spectral_library(
     :param multifrag: flag to indicate whether to annotate multifrag peaks or not
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
+    :param matching_method: name of the resolver registered in
+        ``spectrum_fundamentals.annotation.matchers``. ``"nearest"`` (default) reproduces the
+        legacy closest-m/z behaviour.
+    :param matching_method_params: optional keyword arguments forwarded to the resolver
+        (e.g. ``{"unique_peak": False, "residual_threshold_ppm": 8}`` for ``"global_ransac"``).
 
     :return: Spectra object containing the annotated featured sion peaks including metadata
 
@@ -972,6 +979,8 @@ def annotate_spectral_library(
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
+        matching_method=matching_method,
+        matching_method_params=matching_method_params,
     )
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types

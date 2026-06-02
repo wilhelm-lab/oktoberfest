@@ -169,6 +169,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 annotate_neutral_loss=annotate_neutral_loss,
                 multifrag=config.check_multifrag(),
                 featured_ions=config.ion_types,
+                matching_method=config.matching_method,
+                matching_method_params=config.matching_method_params,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation

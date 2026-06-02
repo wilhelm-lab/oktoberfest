@@ -87,6 +87,20 @@ class Config:
         return self.data.get("fragmentation_method", "HCD")
 
     @property
+    def matching_method(self) -> str:
+        """Name of the peak-match resolver in ``spectrum_fundamentals.annotation.matchers``."""
+        return self.data.get("matching_method", "nearest")
+
+    @property
+    def matching_method_params(self) -> dict:
+        """Keyword arguments forwarded to the peak-match resolver.
+
+        E.g. ``{"unique_peak": false, "residual_threshold_ppm": 8}`` for ``"global_ransac"``.
+        Empty by default, in which case the resolver uses its own defaults.
+        """
+        return self.data.get("matching_method_params", {})
+
+    @property
     def ion_types(self) -> list[str]:
         """
         Returns the fragment ion types used for fragment annotation and for calculating percolator features.
