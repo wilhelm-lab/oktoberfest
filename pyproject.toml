@@ -37,7 +37,7 @@ docs = [
     "sphinx-autobuild>=2024.10.3",
     "sphinx-autodoc-typehints>=3.0",
     "sphinx-rtd-theme>=3.0.2",
-    "Pygments>=2.8.1",
+    "Pygments>=2.20.0",
 ]
 
 [project.scripts]
@@ -49,7 +49,7 @@ oktoberfest = "oktoberfest.__main__:main"
 pytest = ">=8.0.0"
 coverage = {extras = ["toml"], version = ">=5.3"}
 typeguard = ">=2.12.0"
-xdoctest = {extras = ["colors"], version = ">=0.15.0"}
+xdoctest = {extras = ["colors"], version = ">=1.3.0"}
 pre-commit = ">=3.0.0"
 ruff = ">=0.15.0"
 pre-commit-hooks = ">=4.4.0"
