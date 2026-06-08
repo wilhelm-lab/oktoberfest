@@ -12,8 +12,9 @@ from spectrum_fundamentals.fragments import (
     generate_fragment_ion_annotations,
 )
 
-from .. import DATA_DIR
 from oktoberfest.data.spectra import Spectra
+
+from .. import DATA_DIR
 
 
 class TestSpectra(unittest.TestCase):
@@ -70,9 +71,6 @@ class TestSpectra(unittest.TestCase):
         df = self.mini_spectra.preprocess_for_machine_learning()
         df = df.astype({"modified_sequence": "object"})
         df = df.astype({"modified_sequence": "category"})
-        pd.testing.assert_frame_equal(
-            df.reset_index(drop=True), self.df_for_parquet.reset_index(drop=True), check_column_type=False
-        )
         pd.testing.assert_frame_equal(
             df.reset_index(drop=True), self.df_for_parquet.reset_index(drop=True), check_column_type=False
         )
