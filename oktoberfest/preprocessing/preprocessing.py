@@ -991,6 +991,12 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+
+    # sc_features: per-PSM peak matching quality metrics for rescoring.
+    # Extracted from the sc_features dict column returned by annotate_spectra().
+    aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["mean_ppm_error"]).values, "mean_ppm_error")
+    aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["max_ppm_error"]).values, "max_ppm_error")
+    aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["std_ppm_error"]).values, "std_ppm_error")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")
