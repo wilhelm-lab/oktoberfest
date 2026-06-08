@@ -151,6 +151,10 @@ hash.file
 # example data
 /data/
 
+# Test-generated output files (not test fixtures)
+tests/data/**/rescore*.tab
+tests/data/**/rescore*.txt
+tests/data/**/evidence.txt
 
 # Machine learning artifacts
 wandb/
