@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.rst"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "rich>=10.3.0",
+    "rich>=15.0.0",
     "PyYAML>=5.4.1",
     "anndata>=0.10.5post1",
     "array-api-compat==1.12.0",
