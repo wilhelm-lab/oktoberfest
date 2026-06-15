@@ -44,9 +44,9 @@ jobs:
               run: make lint
 
     # -----------------------------------------------------------------------
-    # 2. Tests — pytest with coverage, across all supported Python versions.
-    #    Each matrix entry uploads its own coverage file so they can be
-    #    combined in the `coverage` job below.
+    # 2. Tests — unit tests across all supported Python versions.
+    #    Unit coverage report is generated once on Python 3.12 and uploaded.
+    #    Integration coverage is uploaded by run_integration_tests.yml.
     # -----------------------------------------------------------------------
     test:
         name: Test (Python ${{ matrix.python-version }})
@@ -76,15 +76,23 @@ jobs:
             - name: Install project and dependencies
               run: poetry install
 
-            - name: Run tests with coverage
+            - name: Run unit tests
+              if: matrix.python-version != '3.12'
               run: make test
+
+            - name: Run unit tests with coverage
+              if: matrix.python-version == '3.12'
+              run: make coverage-unit
 
             - name: Upload coverage
               if: matrix.python-version == '3.12'
-              uses: codecov/codecov-action@v5.5.3
+              uses: codecov/codecov-action@v7
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: coverage.xml
+                  flags: unit-tests
+                  name: py3.12-unit
+                  verbose: true
                   fail_ci_if_error: false
 
     # -----------------------------------------------------------------------

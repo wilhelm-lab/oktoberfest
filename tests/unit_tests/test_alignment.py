@@ -11,7 +11,7 @@ class TestAlignment(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):  # noqa: D102
-        cls.spectra = Spectra.from_hdf5(Path(__file__).parent / "data/spectra/test_spectra.hdf5")
+        cls.spectra = Spectra.from_hdf5(Path(__file__).parents[1] / "data/spectra/test_spectra.hdf5")
         cls.ce_range = (18, 50)
 
     def test_alignment(self):
