@@ -79,9 +79,13 @@ jobs:
             - name: Run tests with coverage
               run: make test
 
+            - name: Generate coverage report
+              if: matrix.python-version == '3.12'
+              run: make coverage
+
             - name: Upload coverage
               if: matrix.python-version == '3.12'
-              uses: codecov/codecov-action@v6
+              uses: codecov/codecov-action@v7
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: coverage.xml

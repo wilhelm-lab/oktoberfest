@@ -5610,4 +5610,4 @@ docs = ["Pygments", "sphinx", "sphinx-autobuild", "sphinx-autodoc-typehints", "s
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "8f4ae7e82e3732825cd3fb772bd3bd963b6ae59913616b28242f9fa7a02aff4c"
+content-hash = "1673e8b10003ea372c13ec256ff46d5c9796a27b6a70aba352271c7c156f8995"
