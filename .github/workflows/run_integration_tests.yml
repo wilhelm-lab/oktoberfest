@@ -30,8 +30,8 @@ jobs:
     # -----------------------------------------------------------------------
     # Integration tests — pytest against ./tests/integration_tests.
     # Runs on a single Python version by default (parametrised via dispatch).
-    # No coverage upload here; integration tests are for correctness, not
-    # line coverage metrics.
+    # Uploads integration-only coverage so Codecov can merge it with unit
+    # coverage uploaded by the main CI workflow.
     # -----------------------------------------------------------------------
     integration-test:
         name: Integration Tests (Python ${{ inputs.python-version || '3.12' }})
@@ -73,3 +73,18 @@ jobs:
                     -v \
                     --tb=short \
                     ${{ inputs.pytest-extra-args }}
+
+            - name: Generate integration coverage report
+              env:
+                  INTEGRATION_TEST: "1"
+              run: make coverage-int
+
+            - name: Upload integration coverage
+              uses: codecov/codecov-action@v7
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: coverage.xml
+                  flags: integration-tests
+                  name: integration-${{ inputs.python-version || '3.12' }}
+                  verbose: true
+                  fail_ci_if_error: false
