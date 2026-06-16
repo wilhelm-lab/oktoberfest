@@ -95,7 +95,22 @@ class Config:
 
         :returns: A list of representing the fragment ion types.
         """
-        return list(self.data.get("ion_types", "by"))
+
+        raw = self.data.get("ion_types", "yb")
+        # normalize to string
+        seq = "".join(map(str, raw)) if isinstance(raw, list) else str(raw)
+
+        # priority of ion in order
+        allowed = "ybaAcCxXzZ"
+        seen = set()
+        filtered = []
+        for ch in seq:
+            if ch in allowed and ch not in seen:
+                seen.add(ch)
+                filtered.append(ch)
+
+        filtered.sort(key=lambda ch: allowed.index(ch))
+        return filtered if filtered else ["y", "b"]
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
