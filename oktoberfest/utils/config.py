@@ -89,13 +89,13 @@ class Config:
     @property
     def ion_types(self) -> list[str]:
         """
-        Returns the fragment ion types used for fragment annotation and for calculating percolator features.
+        Return the fragment ion types used for fragment annotation and Percolator feature calculation.
 
-        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "aAbcCxXyzZ"). Default is "by".
+        Specify fragment ion types as a concatenated string in alphabetical order,
+        for example, ``"aAbcCxXyzZ"``. The default is ``"by"``.
 
-        :returns: A list of representing the fragment ion types.
+        :returns: A list representing the fragment ion types.
         """
-
         raw = self.data.get("ion_types", "yb")
         # normalize to string
         seq = "".join(map(str, raw)) if isinstance(raw, list) else str(raw)
