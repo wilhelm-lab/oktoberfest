@@ -32,6 +32,7 @@ const form = reactive({
     numThreads: 1,
     tag: "",
     instrument_type: "QE",
+    ion_types_list: ["b", "y"],
 });
 
 const searchResultFiles = computed(() => store.uploads["search_results"] ?? []);
@@ -65,6 +66,7 @@ function buildConfig(): Record<string, unknown> {
         add_feature_cols: form.add_feature_cols,
         massTolerance: form.massTolerance,
         unitMassTolerance: form.unitMassTolerance,
+        ion_types: [...form.ion_types_list].sort().reverse().join(""),
         ce_alignment_options: {
             ce_range: form.ce_range,
             use_ransac_model: form.use_ransac_model,
@@ -241,6 +243,17 @@ async function handleSubmit() {
                             label="RANSAC (timsTOF)"
                             color="primary"
                             hide-details
+                        />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                        <v-select
+                            v-model="form.ion_types_list"
+                            :items="['a', 'b', 'c', 'x', 'y', 'z']"
+                            label="Ion types for annotation"
+                            density="compact"
+                            variant="outlined"
+                            multiple
+                            chips
                         />
                     </v-col>
                     <v-col cols="12">

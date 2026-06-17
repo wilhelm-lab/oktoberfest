@@ -37,6 +37,7 @@ export function uploadFile(
         .post(`/jobs/${jobId}/files`, fd, {
             headers: { "Content-Type": "multipart/form-data" },
             onUploadProgress: onProgress,
+            timeout: 0,
         })
         .then((r) => r.data);
 }

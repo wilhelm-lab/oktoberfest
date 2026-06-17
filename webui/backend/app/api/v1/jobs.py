@@ -40,6 +40,7 @@ class JobResponse(BaseModel):
     error: Optional[str]
     config: Optional[dict[str, Any]]
     required_files: Optional[list[dict[str, Any]]] = None
+    progress_phase: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -55,6 +56,7 @@ def _job_to_response(job: Job, include_required: bool = False) -> dict[str, Any]
         "has_results": job.has_results,
         "error": job.error,
         "config": json.loads(job.config_json) if job.config_json else None,
+        "progress_phase": job_service.get_job_progress_phase(job.id) if job.status in ("RUNNING", "SUCCEEDED", "FAILED") else None,
     }
     if include_required:
         cfg = json.loads(job.config_json) if job.config_json else {}

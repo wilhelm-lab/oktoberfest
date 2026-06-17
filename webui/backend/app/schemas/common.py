@@ -94,6 +94,7 @@ class CommonConfigMixin(BaseModel):
     p_window: Optional[float] = Field(default=None, gt=0)
     static_mods: Optional[dict[str, Any]] = None
     var_mods: Optional[dict[str, Any]] = None
+    ion_types: Optional[str] = None
 
 
 # Job status enum

@@ -125,4 +125,6 @@ class RescoringConfig(CommonConfigMixin):
             d["static_mods"] = self.static_mods
         if self.var_mods:
             d["var_mods"] = self.var_mods
+        if self.ion_types:
+            d["ion_types"] = self.ion_types
         return d

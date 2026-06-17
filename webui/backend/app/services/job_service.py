@@ -106,3 +106,49 @@ def check_uploaded_files(job_id: str, job_type: str, config_data: dict[str, Any]
             missing = ["fasta"]
 
     return missing
+
+
+def get_job_progress_phase(job_id: str) -> Optional[str]:
+    """Scan the captured.log file to determine the specific sub-phase of the execution."""
+    log_path = storage.captured_log_path(job_id)
+    if not log_path.exists():
+        return None
+
+    try:
+        content = log_path.read_text(errors="replace")
+    except Exception:
+        return None
+
+    # Milestones from last to first
+    phases = [
+        # Rescoring phases
+        ("Finished quantification", "Finishing quantification"),
+        ("Starting quantification", "Performing quantification"),
+        ("Finished rescoring.", "Generating summary plots"),
+        ("Generating summary plots...", "Generating summary plots"),
+        ("Finished Generating xiFDR input.", "Plotting / Finishing rescoring"),
+        ("Generating xiFDR input.", "Generating xiFDR input"),
+        ("Finished rescoring.", "Finishing rescoring"),
+        ("Starting rescoring", "Rescoring / FDR Estimation"),
+        ("Merging input tab files for rescoring with peptide property prediction", "Preparing files / predicting peptide properties"),
+        ("Merging input tab files for rescoring without peptide property prediction", "Preparing files / merging search results"),
+        
+        # Spectral Library Generation phases
+        ("Finished writing the library to disk", "Library generated successfully"),
+        ("Writing library", "Writing library to disk"),
+        ("Getting predictions", "Getting predictions from model"),
+        ("speclib_digested", "Generating internal metadata"),
+        ("speclib_created_internal", "Generating internal metadata"),
+        
+        # CE Calibration / Common phases
+        ("Performing RANSAC regression", "Collision energy alignment (RANSAC)"),
+        ("Converting search results from", "Converting search results"),
+        ("Job executed with the following config:", "Initializing Job"),
+    ]
+
+    for marker, label in phases:
+        if marker in content:
+            return label
+
+    return "Initializing"
+

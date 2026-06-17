@@ -178,13 +178,19 @@ function fmtDate(d: string | null | undefined) {
                     size="18"
                     class="mr-2"
                 />
-                In progress. Large jobs can take hours. Save this URL or your
+                <span v-if="job.status === 'RUNNING' && job.progress_phase">
+                    Currently in phase: <strong>{{ job.progress_phase }}</strong>. 
+                </span>
+                <span v-else>
+                    In progress. 
+                </span>
+                Large jobs can take hours. Save this URL or your
                 Job ID to check back later.
             </v-alert>
 
-            <!-- SUCCEEDED: download button -->
+            <!-- download button (succeeded, or failed with results) -->
             <v-btn
-                v-if="job.status === 'SUCCEEDED'"
+                v-if="job.status === 'SUCCEEDED' || (job.status === 'FAILED' && job.has_results)"
                 color="success"
                 size="large"
                 prepend-icon="mdi-download"

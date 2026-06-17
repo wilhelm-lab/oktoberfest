@@ -65,9 +65,16 @@ def run_oktoberfest_job(self, job_id: str):
 
         if result.returncode != 0:
             log_tail = _read_tail(captured_log)
+            has_results = False
+            try:
+                _package_results(job_dir, output_dir, config_path, captured_log)
+                has_results = True
+            except Exception:
+                pass
             job.status = JobStatus.FAILED.value
             job.finished_at = datetime.utcnow()
             job.error = f"Process exited with code {result.returncode}\n\n{log_tail}"
+            job.has_results = has_results
             db.commit()
             raise RuntimeError(f"Oktoberfest exited with code {result.returncode}")
 
@@ -84,9 +91,16 @@ def run_oktoberfest_job(self, job_id: str):
         log_tail = _read_tail(captured_log)
         job = db.get(Job, job_id)
         if job and job.status not in (JobStatus.SUCCEEDED.value, JobStatus.FAILED.value):
+            has_results = False
+            try:
+                _package_results(storage.job_dir(job_id), storage.output_dir(job_id), storage.config_path(job_id), captured_log)
+                has_results = True
+            except Exception:
+                pass
             job.status = JobStatus.FAILED.value
             job.finished_at = datetime.utcnow()
             job.error = f"{type(exc).__name__}: {exc}\n\n{log_tail}"
+            job.has_results = has_results
             db.commit()
         raise
     finally:

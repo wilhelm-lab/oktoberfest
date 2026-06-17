@@ -17,7 +17,14 @@ FROM python:3.11-slim
 #   and mount it into the container.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libglib2.0-0 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Percolator
+RUN curl -L https://github.com/percolator/percolator/releases/download/rel-3-06-01/percolator-v3-06-linux-amd64.deb -o /tmp/percolator.deb && \
+    dpkg -i /tmp/percolator.deb && \
+    rm /tmp/percolator.deb
 
 WORKDIR /app
 
