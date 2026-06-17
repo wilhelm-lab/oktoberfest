@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.db import Base, engine
+import app.models  # noqa: F401 — registers Job model with Base.metadata before create_all
 
 # Ensure data dir exists
 Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
