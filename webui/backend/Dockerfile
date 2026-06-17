@@ -21,21 +21,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python dependencies
+# Upgrade pip first to get reliable JSON index parsing and retry logic
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install Python dependencies (split to improve layer caching and retry isolation)
 COPY backend/pyproject.toml backend/poetry.lock* ./
-# Use pip (not poetry) in Docker for simplicity
-RUN pip install --no-cache-dir \
-    fastapi>=0.111.0 \
+RUN pip install --no-cache-dir --retries 5 --timeout 60 \
+    "fastapi>=0.111.0" \
     "uvicorn[standard]>=0.29.0" \
-    sqlalchemy>=2.0.0 \
-    alembic>=1.13.0 \
+    "sqlalchemy>=2.0.0" \
+    "alembic>=1.13.0" \
     "celery[redis]>=5.3.0" \
-    redis>=5.0.0 \
-    pydantic>=2.7.0 \
-    pydantic-settings>=2.3.0 \
-    aiofiles>=23.0.0 \
-    python-multipart>=0.0.9 \
-    oktoberfest>=0.11.0
+    "redis>=5.0.0" \
+    "pydantic>=2.7.0" \
+    "pydantic-settings>=2.3.0" \
+    "aiofiles>=23.0.0" \
+    "python-multipart>=0.0.9"
+
+RUN pip install --no-cache-dir --retries 5 --timeout 120 \
+    "oktoberfest==0.11.0"
 
 # Copy backend application code
 COPY backend/app/ ./app/

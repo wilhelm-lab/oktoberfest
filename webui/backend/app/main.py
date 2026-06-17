@@ -42,9 +42,16 @@ app.include_router(meta.router, prefix="/api/v1/meta")
 app.include_router(jobs.router, prefix="/api/v1/jobs")
 app.include_router(files.router, prefix="/api/v1/jobs")
 
-# Serve built SPA (frontend/dist) — only if the dist dir exists
-_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
-if _dist.exists():
+# Serve built SPA (frontend/dist) — check Docker path (/app/frontend/dist) and
+# local-dev path (../../frontend/dist relative to app/main.py).
+_here = Path(__file__).parent
+_dist_candidates = [
+    _here.parent / "frontend" / "dist",          # Docker: WORKDIR=/app, app at /app/app/
+    _here.parent.parent / "frontend" / "dist",   # local dev: webui/backend/app/
+]
+_dist = next((p for p in _dist_candidates if p.exists()), None)
+
+if _dist is not None:
     app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="assets")
 
     from fastapi.responses import FileResponse
