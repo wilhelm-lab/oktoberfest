@@ -4,6 +4,7 @@ import logging
 import pickle
 import shutil
 import sys
+import tempfile
 import time
 from functools import partial
 from math import ceil
@@ -1304,7 +1305,7 @@ def run_rescoring(config_path: Union[str, Path, Config]):
         _rescore(fdr_dir, config)
         # plotting
         logger.info("Generating summary plots...")
-        if not config.ptm_localization:
+        if not config.ptm_localization and not config.run_original:
             pl.plot_all(fdr_dir, config)
         logger.info("Finished rescoring.")
 
@@ -1323,13 +1324,90 @@ def run_generate_training_data(config_path: Union[str, Path, Config]):
         config.read(config_path)
     config.check()
 
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData requires fdr_estimation_method to be 'percolator'.")
+
     try:
         config.run_original = True
         run_rescoring(config)
     finally:
         config.run_original = False
 
-    # TODO: save as parquet for 100% FDR and 1%FDR
+    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
+    _export_training_data_parquets(spectra_files=spectra_files, config=config)
+
+
+def _export_training_data_parquets(spectra_files: list[Path], config: Config, fdr_threshold: float = 0.01):
+    """
+    Export full and original Percolator 1% FDR filtered training data parquet files.
+
+    :param spectra_files: Spectra files from the configured input directory
+    :param config: Parsed Oktoberfest configuration
+    :param fdr_threshold: Strict q-value threshold used for the filtered output
+    """
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
+
+    data_dir = config.output / "data"
+    fdr_dir = config.output / "results" / "percolator"
+    original_psms_path = fdr_dir / "original.percolator.psms.txt"
+    original_tab_path = fdr_dir / "original.tab"
+
+    if not original_psms_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator target PSM output not found: {original_psms_path}")
+    if not original_tab_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator original tab file not found: {original_tab_path}")
+
+    original_psms = pd.read_csv(original_psms_path, sep="\t")
+    _require_columns(original_psms, ["PSMId", "q-value"], original_psms_path)
+    original_psms["q-value"] = pd.to_numeric(original_psms["q-value"])
+    accepted_psm_ids = set(original_psms.loc[original_psms["q-value"] < fdr_threshold, "PSMId"].astype(str))
+
+    original_tab = pd.read_csv(original_tab_path, sep="\t")
+    _require_columns(original_tab, ["SpecId", "filename"], original_tab_path)
+    original_tab["SpecId"] = original_tab["SpecId"].astype(str)
+    original_tab["filename"] = original_tab["filename"].astype(str)
+
+    for spectra_file in spectra_files:
+        hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
+        if not hdf5_path.is_file():
+            raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+        run_name = _training_data_run_name(hdf5_path)
+        full_parquet_path = data_dir / f"{run_name}.parquet"
+        fdr_parquet_path = data_dir / f"{run_name}.fdr1.parquet"
+
+        logger.info(f"Writing full training parquet file to {full_parquet_path}")
+        pp.convert_anndata_to_parquet(hdf5_path, full_parquet_path)
+
+        library = Spectra.from_hdf5(hdf5_path)
+        run_tab = original_tab[original_tab["filename"] == run_name]
+        if len(run_tab) != library.n_obs:
+            raise ValueError(
+                f"Per-run original.tab row count for {run_name!r} ({len(run_tab)}) does not match "
+                f"HDF5 row count ({library.n_obs}) in {hdf5_path}."
+            )
+
+        accepted_run_rows = run_tab["SpecId"].isin(accepted_psm_ids).to_numpy()
+        filtered_library = Spectra(library[accepted_run_rows].copy())
+        with tempfile.TemporaryDirectory(dir=data_dir) as tmp_dir:
+            filtered_hdf5_path = Path(tmp_dir) / f"{run_name}.fdr1.hdf5"
+            filtered_library.write_as_hdf5(filtered_hdf5_path)
+            logger.info(f"Writing 1% FDR training parquet file to {fdr_parquet_path}")
+            pp.convert_anndata_to_parquet(filtered_hdf5_path, fdr_parquet_path)
+
+
+def _training_data_run_name(hdf5_path: Path) -> str:
+    suffix = ".mzml.hdf5"
+    if not hdf5_path.name.endswith(suffix):
+        raise ValueError(f"Expected HDF5 file name to end with {suffix!r}, got {hdf5_path.name!r}.")
+    return hdf5_path.name[: -len(suffix)]
+
+
+def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
+    missing_columns = [column for column in columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
 
 
 def run_job(config_path: Union[str, Path, Config]):
