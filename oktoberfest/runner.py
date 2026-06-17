@@ -1333,15 +1333,13 @@ def run_generate_training_data(config_path: Union[str, Path, Config]):
     finally:
         config.run_original = False
 
-    spectra_files = pp.list_spectra(input_dir=config.spectra, input_format=config.spectra_type)
-    _export_training_data_parquets(spectra_files=spectra_files, config=config)
+    _export_training_data_parquets(config=config)
 
 
-def _export_training_data_parquets(spectra_files: list[Path], config: Config, fdr_threshold: float = 0.01):
+def _export_training_data_parquets(config: Config, fdr_threshold: float = 0.01):
     """
     Export full and original Percolator 1% FDR filtered training data parquet files.
 
-    :param spectra_files: Spectra files from the configured input directory
     :param config: Parsed Oktoberfest configuration
     :param fdr_threshold: Strict q-value threshold used for the filtered output
     """
@@ -1368,12 +1366,11 @@ def _export_training_data_parquets(spectra_files: list[Path], config: Config, fd
     original_tab["SpecId"] = original_tab["SpecId"].astype(str)
     original_tab["filename"] = original_tab["filename"].astype(str)
 
-    for spectra_file in spectra_files:
-        hdf5_path = data_dir / spectra_file.with_suffix(".mzml.hdf5").name
+    for run_name in original_tab["filename"].drop_duplicates():
+        hdf5_path = data_dir / f"{run_name}.mzml.hdf5"
         if not hdf5_path.is_file():
             raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
 
-        run_name = _training_data_run_name(hdf5_path)
         full_parquet_path = data_dir / f"{run_name}.parquet"
         fdr_parquet_path = data_dir / f"{run_name}.fdr1.parquet"
 
@@ -1395,13 +1392,6 @@ def _export_training_data_parquets(spectra_files: list[Path], config: Config, fd
             filtered_library.write_as_hdf5(filtered_hdf5_path)
             logger.info(f"Writing 1% FDR training parquet file to {fdr_parquet_path}")
             pp.convert_anndata_to_parquet(filtered_hdf5_path, fdr_parquet_path)
-
-
-def _training_data_run_name(hdf5_path: Path) -> str:
-    suffix = ".mzml.hdf5"
-    if not hdf5_path.name.endswith(suffix):
-        raise ValueError(f"Expected HDF5 file name to end with {suffix!r}, got {hdf5_path.name!r}.")
-    return hdf5_path.name[: -len(suffix)]
 
 
 def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):

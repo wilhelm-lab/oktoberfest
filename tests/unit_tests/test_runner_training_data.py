@@ -36,7 +36,6 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
 
     def test_export_full_and_fdr1_parquets_for_multiple_runs(self):
         """Test full and 1% FDR parquet generation across multiple spectra files."""
-        spectra_files = [self.spectra_dir / "run_a.mzml", self.spectra_dir / "run_b.mzml"]
         self._write_spectra_hdf5("run_a", [11, 12, 13])
         self._write_spectra_hdf5("run_b", [21, 22])
         self._write_original_tab(
@@ -56,7 +55,7 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
             ]
         )
 
-        _export_training_data_parquets(spectra_files, self.config)
+        _export_training_data_parquets(self.config)
 
         run_a_full = pd.read_parquet(self.data_dir / "run_a.parquet")
         run_a_fdr = pd.read_parquet(self.data_dir / "run_a.fdr1.parquet")
@@ -70,13 +69,24 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
 
     def test_export_raises_for_original_tab_hdf5_row_mismatch(self):
         """Test clear failure when original.tab rows do not match the HDF5 rows for a run."""
-        spectra_files = [self.spectra_dir / "run_a.mzml"]
         self._write_spectra_hdf5("run_a", [11, 12])
         self._write_original_tab([("run_a-11-PEPTIDEA-2-0", "run_a")])
         self._write_original_psms([("run_a-11-PEPTIDEA-2-0", 0.001)])
 
         with self.assertRaisesRegex(ValueError, "row count"):
-            _export_training_data_parquets(spectra_files, self.config)
+            _export_training_data_parquets(self.config)
+
+    def test_export_uses_original_tab_filenames_instead_of_spectra_directory(self):
+        """Test exports are driven by original.tab run names rather than config spectra discovery."""
+        (self.spectra_dir / "run_without_search_results.mzml").touch()
+        self._write_spectra_hdf5("run_a", [11])
+        self._write_original_tab([("run_a-11-PEPTIDEA-2-0", "run_a")])
+        self._write_original_psms([("run_a-11-PEPTIDEA-2-0", 0.001)])
+
+        _export_training_data_parquets(self.config)
+
+        self.assertTrue((self.data_dir / "run_a.parquet").exists())
+        self.assertFalse((self.data_dir / "run_without_search_results.parquet").exists())
 
     def _write_spectra_hdf5(self, run_name: str, scan_numbers: list[int]):
         var_df = Spectra._gen_vars_df()

@@ -55,6 +55,8 @@ class TestProcessing(unittest.TestCase):
         intensities[0, 0] = 0
         intensities[1, 0] = -1
         spectra.add_intensities_without_mapping(intensities, FragmentType.RAW)
+        mzs = np.arange(2 * len(var_df), dtype=float).reshape(2, len(var_df))
+        spectra.add_mzs(mzs, FragmentType.MZ)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             hdf5_path = Path(temp_dir) / "spectra.hdf5"
@@ -74,6 +76,7 @@ class TestProcessing(unittest.TestCase):
                 "precursor_charge_onehot",
                 "collision_energy_aligned_normed",
                 "intensities_raw",
+                "mz_raw",
                 "package",
                 "modified_sequence",
             ],
@@ -93,6 +96,8 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(np.asarray(df.loc[0, "intensities_raw"]).shape, (len(var_df),))
         self.assertEqual(np.asarray(df.loc[0, "intensities_raw"])[0], 0)
         self.assertEqual(np.asarray(df.loc[1, "intensities_raw"])[0], -1)
+        np.testing.assert_array_equal(np.asarray(df.loc[0, "mz_raw"]), mzs[0])
+        np.testing.assert_array_equal(np.asarray(df.loc[1, "mz_raw"]), mzs[1])
 
     def test_convert_anndata_to_parquet_omits_unavailable_optional_columns(self):
         """Test converting AnnData hdf5 to parquet with only required columns."""

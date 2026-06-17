@@ -1194,6 +1194,10 @@ def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[s
     intensities[intensities == c.EPSILON] = 0
     df["intensities_raw"] = list(intensities.to_numpy())
 
+    mz_layer = library._resolve_layer_name(FragmentType.MZ)
+    if mz_layer in library.layers:
+        df["mz_raw"] = list(library.to_df(layer=mz_layer).to_numpy())
+
     if "FRAGMENTATION" in library.obs:
         df["package"] = library.obs["FRAGMENTATION"].astype(str)
 
