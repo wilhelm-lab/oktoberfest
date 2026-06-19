@@ -27,27 +27,35 @@ The `api` and `worker` services share a persistent `okt-data` Docker volume. You
 
 ## Local development (no Docker)
 
-Prerequisites: Python 3.10+, Node 18+, Redis, `oktoberfest` installed.
+Prerequisites: Python 3.10+, Node 18+, Redis, `oktoberfest` installed, and a local Python environment of your choice.
+
+Create and activate a Python environment first if you do not already have one. Then install poetry and the backend dependencies:
 
 ```bash
-# 1. Backend
+pip install poetry
+```
+
+```bash
 cd backend
-pip install fastapi "uvicorn[standard]" sqlalchemy alembic "celery[redis]" \
-    redis pydantic pydantic-settings aiofiles python-multipart oktoberfest
+poetry install
+```
 
-# 2. Database
-alembic upgrade head
+From there, the backend can be run with Poetry-managed commands:
 
-# 3. Start Redis (separate terminal or Docker)
+```bash
+# 1. Database
+poetry run alembic upgrade head
+
+# 2. Start Redis (separate terminal or Docker)
 docker run -p 6379:6379 redis:7-alpine
 
-# 4. API (separate terminal)
-uvicorn app.main:app --reload --port 8000
+# 3. API (separate terminal)
+poetry run uvicorn app.main:app --reload --port 8000
 
-# 5. Worker (separate terminal)
-celery -A app.worker.celery_app worker --loglevel=info --concurrency=1
+# 4. Worker (separate terminal)
+poetry run celery -A app.worker.celery_app worker --loglevel=info --concurrency=1
 
-# 6. Frontend dev server (separate terminal)
+# 5. Frontend dev server (separate terminal)
 cd ../frontend && npm install && npm run dev
 # → http://localhost:5173  (proxies /api → :8000)
 ```
@@ -149,12 +157,15 @@ The default FDR method is **mokapot** (pip-installable, included). If you need `
 
 ## Running tests
 
+Activate your Python environment, install backend dependencies with Poetry, and then run tests with `poetry run pytest`.
+
 ```bash
 # Backend unit + integration tests (fast, no Redis needed)
-cd backend && conda run -n ok python -m pytest tests/ -v
+cd backend
+poetry run pytest tests/ -v
 
 # End-to-end test (runs a real SpectralLibraryGeneration job)
-ENABLE_E2E=1 conda run -n ok python -m pytest tests/test_e2e.py -v -s
+ENABLE_E2E=1 poetry run pytest tests/test_e2e.py -v -s
 
 # Frontend unit tests
 cd frontend && npm run test:unit
