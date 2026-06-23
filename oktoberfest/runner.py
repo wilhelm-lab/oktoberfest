@@ -841,9 +841,7 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "_",
             "which_pep",
         ]
-    ] = df_psm[
-        "index"
-    ].str.split("_", expand=True)
+    ] = df_psm["index"].str.split("_", expand=True)
     df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
@@ -1317,6 +1315,7 @@ def run_rescoring(config_path: Union[str, Path, Config]):
 
 
 def run_generate_training_data(config_path: Union[str, Path, Config]):
+    """Generate training data for Prosit from the rescoring results. This function will run rescoring with the original features and then export the training data as parquet files."""
     if isinstance(config_path, Config):
         config = config_path
     else:

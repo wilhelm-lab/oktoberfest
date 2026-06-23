@@ -106,9 +106,7 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
         spectra.write_as_hdf5(self.data_dir / f"{run_name}.mzml.hdf5")
 
     def _write_original_tab(self, rows: list[tuple[str, str]]):
-        pd.DataFrame(rows, columns=["SpecId", "filename"]).to_csv(
-            self.fdr_dir / "original.tab", sep="\t", index=False
-        )
+        pd.DataFrame(rows, columns=["SpecId", "filename"]).to_csv(self.fdr_dir / "original.tab", sep="\t", index=False)
 
     def _write_original_psms(self, rows: list[tuple[str, float]]):
         pd.DataFrame(rows, columns=["PSMId", "q-value"]).to_csv(

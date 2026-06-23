@@ -126,9 +126,7 @@ class TestProcessing(unittest.TestCase):
         """Test converting modified sequences with explicit terminal modifications."""
         var_df = Spectra._gen_vars_df()
         spectra = Spectra(
-            obs=pd.DataFrame(
-                {"MODIFIED_SEQUENCE": ["_PEPTIDE-[UNIMOD:2]_", "_[UNIMOD:1]-PEPTIDE-[UNIMOD:2]_"]}
-            ),
+            obs=pd.DataFrame({"MODIFIED_SEQUENCE": ["_PEPTIDE-[UNIMOD:2]_", "_[UNIMOD:1]-PEPTIDE-[UNIMOD:2]_"]}),
             var=var_df,
         )
         spectra.var_names = var_df.index

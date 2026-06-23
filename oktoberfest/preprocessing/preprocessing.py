@@ -15,7 +15,16 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
+from spectrum_io.search_result import (
+    Mascot,
+    MaxQuant,
+    MSAmanda,
+    MSFragger,
+    OpenMS,
+    Sage,
+    Scout,
+    Xisearch,
+)
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -1167,9 +1176,7 @@ def _format_modified_sequence_for_parquet(modified_sequence: str) -> str:
 
 
 def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[str, Path]):
-    """
-    Convert AnnData from hdf5 to parquet required for DLOmix.
-    """
+    """Convert AnnData from hdf5 to parquet required for DLOmix."""
     library = Spectra.from_hdf5(hdf5_path)
     df = pd.DataFrame()
 
