@@ -1208,6 +1208,6 @@ def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[s
     if "FRAGMENTATION" in library.obs:
         df["package"] = library.obs["FRAGMENTATION"].astype(str)
 
-    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet)
+    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet).values
 
     df.to_parquet(output_file, index=False)
