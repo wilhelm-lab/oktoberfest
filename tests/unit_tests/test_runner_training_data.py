@@ -8,14 +8,7 @@ import pandas as pd
 
 from oktoberfest.data.spectra import FragmentType, Spectra
 from oktoberfest.runner import _export_training_data_parquets
-
-
-class _TrainingDataConfig:
-    """Minimal config shim for training data parquet export tests."""
-
-    def __init__(self, output: Path):
-        self.output = output
-        self.fdr_estimation_method = "percolator"
+from oktoberfest.utils.config import Config
 
 
 class TestGenerateTrainingDataParquets(unittest.TestCase):
@@ -29,7 +22,12 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
         self.data_dir.mkdir(parents=True)
         self.fdr_dir.mkdir(parents=True)
         self.spectra_dir.mkdir()
-        self.config = _TrainingDataConfig(self.temp_dir / "out")
+
+        # mock config
+        self.config = Config()
+        self.config.data["output"] = self.temp_dir / "out"
+        self.config.data["fdr_estimation_method"] = "percolator"
+        self.config.base_path = self.temp_dir
 
     def tearDown(self):  # noqa: D102
         shutil.rmtree(self.temp_dir)
