@@ -4,6 +4,7 @@ import logging
 import pickle
 import shutil
 import sys
+import tempfile
 import time
 from functools import partial
 from math import ceil
@@ -396,15 +397,18 @@ def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, resul
         sys.exit(1)
 
 
-def generate_spectral_lib(config_path: Union[str, Path]):
+def generate_spectral_lib(config_path: Union[str, Path, Config]):
     """
     Create a SpectralLibrary object and generate the spectral library.
 
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     spec_library = _speclib_from_digestion(config)
@@ -519,7 +523,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
 
 
 def run_ce_calibration(
-    config_path: Union[str, Path],
+    config_path: Union[str, Path, Config],
 ):
     """
     Create a CeCalibration object and run the CE calibration.
@@ -527,8 +531,11 @@ def run_ce_calibration(
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     # load spectra file names
@@ -551,12 +558,13 @@ def run_ce_calibration(
 
 def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cms2: bool = False):
     library = _ce_calib(spectra_file, config)
-    calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
+    calc_feature_step_name = "calculate_features_original." if config.run_original else "calculate_features."
+    calc_feature_step = ProcessStep(config.output, calc_feature_step_name + spectra_file.stem)
     if calc_feature_step.is_done():
         return
 
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
-    if not predict_step.is_done():
+    if not config.run_original and not predict_step.is_done():
         if "alphapept" in config.models["intensity"].lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
@@ -599,20 +607,21 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         featured_ions=None,
     )
 
-    re.generate_features(
-        library=library,
-        search_type="rescore",
-        output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
-        additional_columns=config.use_feature_cols,
-        all_features=config.all_features,
-        xl=xl,
-        cms2=cms2,
-        regression_method=config.curve_fitting_method,
-        add_neutral_loss_features=add_neutral_loss_features,
-        remove_miss_cleavage_features=remove_miss_cleavage_features,
-        task="multifrag" if config.check_multifrag() else "default",
-        featured_ions=config.ion_types,
-    )
+    if not config.run_original:
+        re.generate_features(
+            library=library,
+            search_type="rescore",
+            output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
+            additional_columns=config.use_feature_cols,
+            all_features=config.all_features,
+            xl=xl,
+            cms2=cms2,
+            regression_method=config.curve_fitting_method,
+            add_neutral_loss_features=add_neutral_loss_features,
+            remove_miss_cleavage_features=remove_miss_cleavage_features,
+            task="multifrag" if config.check_multifrag() else "default",
+            featured_ions=config.ion_types,
+        )
 
     calc_feature_step.mark_done()
 
@@ -638,7 +647,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
                 xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "percolator")
 
             rescore_original_step.mark_done()
-        if not rescore_prosit_step.is_done():
+        if not config.run_original and not rescore_prosit_step.is_done():
             logger.info(config.ptm_localization)
             if config.ptm_localization:
                 _ptm_localization_rescore(fdr_dir, config)
@@ -658,7 +667,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
                 xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "mokapot")
 
             rescore_original_step.mark_done()
-        if not rescore_prosit_step.is_done():
+        if not config.run_original and not rescore_prosit_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
             if xl:
                 output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
@@ -1189,15 +1198,18 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
         df_scout_xifdr_input.to_csv(str(fdr_dir) + "/scout_xifdr_input.csv", sep=",", index=False)
 
 
-def run_rescoring(config_path: Union[str, Path]):
+def run_rescoring(config_path: Union[str, Path, Config]):
     """
     Create a ReScore object and run the rescoring.
 
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     # load spectra file names
@@ -1243,25 +1255,26 @@ def run_rescoring(config_path: Union[str, Path]):
     # prepare rescoring
     fdr_dir = config.output / "results" / config.fdr_estimation_method
     original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
-    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
 
     prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
-    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
 
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
         re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
         prepare_tab_original_step.mark_done()
 
-    if not prepare_tab_rescore_step.is_done():
-        logger.info("Merging input tab files for rescoring with peptide property prediction")
-        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
-        prepare_tab_rescore_step.mark_done()
+    if not config.run_original:
+        rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+        prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
+        if not prepare_tab_rescore_step.is_done():
+            logger.info("Merging input tab files for rescoring with peptide property prediction")
+            re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+            prepare_tab_rescore_step.mark_done()
 
     # rescoring
     if "xl" in config.models["intensity"].lower():  # xl-psm-level
-        rescore_features_path = fdr_dir / "rescore_features_csm.tab"
-        if not rescore_features_path.exists():
+        if not config.run_original and not (fdr_dir / "rescore_features_csm.tab").exists():
+            rescore_features_path = fdr_dir / "rescore_features_csm.tab"
             shutil.copy(fdr_dir / "rescore.tab", rescore_features_path)
             input_psm_rescore = prepare_rescore_xl_psm_level(str(fdr_dir), "rescore")
             input_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
@@ -1275,21 +1288,22 @@ def run_rescoring(config_path: Union[str, Path]):
         _rescore(fdr_dir, config, xl=True)
 
         logger.info("Finished rescoring.")
-        generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
-        if not generate_xifdr_input_step.is_done():
-            logger.info("Generating xiFDR input.")
-            if config.inputs["search_results_type"].lower() == "xisearch":
-                input_xifdr(str(fdr_dir), "xisearch")
-            elif config.inputs["search_results_type"].lower() == "scout":
-                input_xifdr(str(fdr_dir), "scout")
-            logger.info("Finished Generating xiFDR input.")
-            generate_xifdr_input_step.mark_done()
+        if not config.run_original:
+            generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
+            if not generate_xifdr_input_step.is_done():
+                logger.info("Generating xiFDR input.")
+                if config.inputs["search_results_type"].lower() == "xisearch":
+                    input_xifdr(str(fdr_dir), "xisearch")
+                elif config.inputs["search_results_type"].lower() == "scout":
+                    input_xifdr(str(fdr_dir), "scout")
+                logger.info("Finished Generating xiFDR input.")
+                generate_xifdr_input_step.mark_done()
 
     else:
         _rescore(fdr_dir, config)
         # plotting
         logger.info("Generating summary plots...")
-        if not config.ptm_localization:
+        if not config.ptm_localization and not config.run_original:
             pl.plot_all(fdr_dir, config)
         logger.info("Finished rescoring.")
 
@@ -1300,15 +1314,103 @@ def run_rescoring(config_path: Union[str, Path]):
             logger.info("Finished quantification")
 
 
-def run_job(config_path: Union[str, Path]):
+def run_generate_training_data(config_path: Union[str, Path, Config]):
+    """Generate training data for Prosit from the rescoring results. This function will run rescoring with the original features and then export the training data as parquet files."""
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
+    config.check()
+
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData requires fdr_estimation_method to be 'percolator'.")
+
+    try:
+        config.run_original = True
+        run_rescoring(config)
+    finally:
+        config.run_original = False
+
+    _export_training_data_parquets(config=config)
+
+
+def _export_training_data_parquets(config: Config, fdr_threshold: float = 0.01):
+    """
+    Export full and original Percolator 1% FDR filtered training data parquet files.
+
+    :param config: Parsed Oktoberfest configuration
+    :param fdr_threshold: Strict q-value threshold used for the filtered output
+    """
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
+
+    data_dir = config.output / "data"
+    fdr_dir = config.output / "results" / "percolator"
+    original_psms_path = fdr_dir / "original.percolator.psms.txt"
+    original_tab_path = fdr_dir / "original.tab"
+
+    if not original_psms_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator target PSM output not found: {original_psms_path}")
+    if not original_tab_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator original tab file not found: {original_tab_path}")
+
+    original_psms = pd.read_csv(original_psms_path, sep="\t")
+    _require_columns(original_psms, ["PSMId", "q-value"], original_psms_path)
+    original_psms["q-value"] = pd.to_numeric(original_psms["q-value"])
+    accepted_psm_ids = set(original_psms.loc[original_psms["q-value"] < fdr_threshold, "PSMId"].astype(str))
+
+    original_tab = pd.read_csv(original_tab_path, sep="\t")
+    _require_columns(original_tab, ["SpecId", "filename"], original_tab_path)
+    original_tab["SpecId"] = original_tab["SpecId"].astype(str)
+    original_tab["filename"] = original_tab["filename"].astype(str)
+
+    for run_name in original_tab["filename"].drop_duplicates():
+        hdf5_path = data_dir / f"{run_name}.mzml.hdf5"
+        if not hdf5_path.is_file():
+            raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+        full_parquet_path = data_dir / f"{run_name}.parquet"
+        fdr_parquet_path = data_dir / f"{run_name}.fdr1.parquet"
+
+        logger.info(f"Writing full training parquet file to {full_parquet_path}")
+        pp.convert_anndata_to_parquet(hdf5_path, full_parquet_path)
+
+        library = Spectra.from_hdf5(hdf5_path)
+        run_tab = original_tab[original_tab["filename"] == run_name]
+        if len(run_tab) != library.n_obs:
+            raise ValueError(
+                f"Per-run original.tab row count for {run_name!r} ({len(run_tab)}) does not match "
+                f"HDF5 row count ({library.n_obs}) in {hdf5_path}."
+            )
+
+        accepted_run_rows = run_tab["SpecId"].isin(accepted_psm_ids).to_numpy()
+        filtered_library = Spectra(library[accepted_run_rows].copy())
+        with tempfile.TemporaryDirectory(dir=data_dir) as tmp_dir:
+            filtered_hdf5_path = Path(tmp_dir) / f"{run_name}.fdr1.hdf5"
+            filtered_library.write_as_hdf5(filtered_hdf5_path)
+            logger.info(f"Writing 1% FDR training parquet file to {fdr_parquet_path}")
+            pp.convert_anndata_to_parquet(filtered_hdf5_path, fdr_parquet_path)
+
+
+def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
+    missing_columns = [column for column in columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
+
+
+def run_job(config_path: Union[str, Path, Config]):
     """
     Run oktoberfest based on job type given in the config file.
 
     :param config_path: Path to config file
     :raises ValueError: In case the job_type in the provided config file is not known
     """
-    conf = Config()
-    conf.read(config_path)
+    if isinstance(config_path, Config):
+        conf = config_path
+    else:
+        conf = Config()
+        conf.read(config_path)
     conf.check()
 
     output_folder = conf.output
@@ -1333,6 +1435,8 @@ def run_job(config_path: Union[str, Path]):
     try:
         if job_type == "SpectralLibraryGeneration":
             generate_spectral_lib(config_path)
+        elif job_type == "GenerateTrainingData":
+            run_generate_training_data(config_path)
         elif job_type == "CollisionEnergyCalibration":
             run_ce_calibration(config_path)
         elif job_type == "Rescoring":

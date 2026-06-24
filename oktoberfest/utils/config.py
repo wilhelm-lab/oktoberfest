@@ -15,6 +15,7 @@ class Config:
     def __init__(self):
         """Initialize config file data."""
         self.data = {}
+        self.run_original = False
 
     def read(self, config_path: Union[str, Path]):
         """
@@ -60,7 +61,7 @@ class Config:
 
     @property
     def job_type(self) -> str:
-        """Get job type (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
+        """Get job type (GenerateTrainingData, CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
         job_type = self.data.get("type")
         if job_type is None:
             raise ValueError("No job type specified in config file.")
@@ -89,13 +90,28 @@ class Config:
     @property
     def ion_types(self) -> list[str]:
         """
-        Returns the fragment ion types used for fragment annotation and for calculating percolator features.
+        Return the fragment ion types used for fragment annotation and Percolator feature calculation.
 
-        Specify fragment ion types as a concatenated string in alphabetical order (e.g. "aAbcCxXyzZ"). Default is "by".
+        Specify fragment ion types as a concatenated string in alphabetical order,
+        for example, ``"aAbcCxXyzZ"``. The default is ``"by"``.
 
-        :returns: A list of representing the fragment ion types.
+        :returns: A list representing the fragment ion types.
         """
-        return list(self.data.get("ion_types", "by"))
+        raw = self.data.get("ion_types", "yb")
+        # normalize to string
+        seq = "".join(map(str, raw)) if isinstance(raw, list) else str(raw)
+
+        # priority of ion in order
+        allowed = "ybaAcCxXzZ"
+        seen = set()
+        filtered = []
+        for ch in seq:
+            if ch in allowed and ch not in seen:
+                seen.add(ch)
+                filtered.append(ch)
+
+        filtered.sort(key=lambda ch: allowed.index(ch))
+        return filtered if filtered else ["y", "b"]
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:

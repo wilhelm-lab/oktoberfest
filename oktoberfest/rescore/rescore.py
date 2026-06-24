@@ -93,14 +93,18 @@ def generate_features(
     """
     meta = library.get_meta_data().reset_index(drop=True)
 
-    if xl:
+    if search_type == "rescore" and xl:
         pred = sp.hstack([library.get_matrix(FragmentType.PRED_A), library.get_matrix(FragmentType.PRED_B)])
         raw = sp.hstack([library.get_matrix(FragmentType.RAW_A), library.get_matrix(FragmentType.RAW_B)])
         mz = sp.hstack([library.get_matrix(FragmentType.MZ_A), library.get_matrix(FragmentType.MZ_B)])
-    else:
+    elif search_type == "rescore":
         pred = library.get_matrix(FragmentType.PRED)
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
+    else:
+        pred = None
+        raw = None
+        mz = None
 
     perc_features = Percolator(
         metadata=meta,
