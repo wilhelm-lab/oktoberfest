@@ -10,12 +10,13 @@ import pandas as pd
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
 from .alignment import _alignment, _prepare_alignment_df
+from .dlomix import DLOmixLocal
 from .koina import Koina
 from .utils import ZeroPredictor
 
 logger = logging.getLogger(__name__)
 
-PredictionInterface = Union[Koina, ZeroPredictor]
+PredictionInterface = Union[Koina, DLOmixLocal, ZeroPredictor]
 
 
 class Predictor:
@@ -46,6 +47,19 @@ class Predictor:
         )
 
     @classmethod
+    def from_dlomix(
+        cls,
+        model_name: str,
+        model_path: str,
+        parquet_path: Optional[str] = None,
+    ) -> Predictor:
+        """Create local DLOmix predictor."""
+        return Predictor(
+            DLOmixLocal(model_path=model_path, parquet_path=parquet_path),
+            model_name=model_name,
+        )
+
+    @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
         model_name = config.models[model_type]
@@ -53,6 +67,12 @@ class Predictor:
         if model_type == "irt" and model_name == "zero_irt":
             logger.info("Using zero predictions for iRT")
             return Predictor(ZeroPredictor(), "zero_iRT")
+        elif model_type == "intensity" and config.models.get("dlomix_intensity"):
+            dlomix_path = config.models.get("dlomix_intensity")
+            logger.info(f"Using DLOmix intensity model from {dlomix_path}")
+            return Predictor.from_dlomix(
+                model_name="DLOmix_Intensity", model_path=dlomix_path, parquet_path=config.parquet_path
+            )
         else:
             logger.info(f"Using model {model_name} via Koina")
             return Predictor.from_koina(

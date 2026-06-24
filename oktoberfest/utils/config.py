@@ -240,6 +240,15 @@ class Config:
             return None
         return _instrument_type.upper()
 
+    @property
+    def parquet_path(self) -> Optional[Path]:
+        """Get path to parquet file with 100% FDR search results for DLOmix prediction."""
+        parquet_path = self.inputs.get("parquet_path")
+        if parquet_path is not None:
+            return self.base_path / Path(parquet_path)
+        return None
+
+
     #####################################
     # these are fasta digestion options #
     #####################################
