@@ -80,16 +80,19 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
 
         # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
-        model_type = config.models["intensity"]
-        try:
-            search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
-        except ValueError:
-            logger.exception(
-                ValueError(
-                    f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
-                    "If you're using local prediction, please ensure the model type is contained in the model file name."
+
+        # Filter peptides only if using Koina intensity model
+        if not config.models.get("dlomix_intensity"):
+            model_type = config.models.get("intensity", "")
+            try:
+                search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
+            except ValueError:
+                logger.exception(
+                    ValueError(
+                        f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
+                        "If you're using local prediction, please ensure the model type is contained in the model file name."
+                    )
                 )
-            )
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -146,8 +149,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
 
-        if "xl" in config.models["intensity"].lower():
-            if "cms2" in config.models["intensity"].lower():
+        # Check for crosslinked or local model (skip for DLOmix)
+        intensity_model = config.models.get("intensity", "").lower()
+        if "xl" in intensity_model:
+            if "cms2" in intensity_model:
                 cms2 = True
             else:
                 cms2 = False
@@ -183,7 +188,11 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
 
-        if "xl" in config.models["intensity"].lower():
+        # Check for crosslinked model (skip for DLOmix)
+        intensity_model = config.models.get("intensity", "").lower()
+        is_xl = "xl" in intensity_model
+
+        if is_xl:
             alignment_library = predictor.ce_calibration(
                 library,
                 config.ce_range,
@@ -321,7 +330,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
     if not pp_and_filter_step.is_done():
         data_dir.mkdir(exist_ok=True)
         spec_library = pp.process_and_filter_spectra_data(
-            library=spec_library, model=config.models["intensity"], tmt_label=config.tag
+            library=spec_library, model=config.models.get("intensity", ""), tmt_label=config.tag
         )
         spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
         pp_and_filter_step.mark_done()
@@ -418,7 +427,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
-            out_file, failed_batch_file, spec_library.obs, batch_size, config.models["intensity"]
+            out_file, failed_batch_file, spec_library.obs, batch_size, config.models.get("intensity", "")
         )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
@@ -557,7 +566,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
 
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
     if not predict_step.is_done():
-        if "alphapept" in config.models["intensity"].lower():
+        if "alphapept" in config.models.get("intensity", "").lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
@@ -1220,8 +1229,8 @@ def run_rescoring(config_path: Union[str, Path]):
     if config.num_threads > 1:
         processing_pool = JobPool(processes=config.num_threads)
         for spectra_file in spectra_files:
-            if "xl" in config.models["intensity"].lower():
-                if "cms2" in config.models["intensity"].lower():
+            if "xl" in config.models.get("intensity", "").lower():
+                if "cms2" in config.models.get("intensity", "").lower():
                     cms2 = True
                 else:
                     cms2 = False
@@ -1231,8 +1240,8 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
-            if "xl" in config.models["intensity"].lower():
-                if "cms2" in config.models["intensity"].lower():
+            if "xl" in config.models.get("intensity", "").lower():
+                if "cms2" in config.models.get("intensity", "").lower():
                     cms2 = True
                 else:
                     cms2 = False
@@ -1259,7 +1268,7 @@ def run_rescoring(config_path: Union[str, Path]):
         prepare_tab_rescore_step.mark_done()
 
     # rescoring
-    if "xl" in config.models["intensity"].lower():  # xl-psm-level
+    if "xl" in config.models.get("intensity", "").lower():  # xl-psm-level
         rescore_features_path = fdr_dir / "rescore_features_csm.tab"
         if not rescore_features_path.exists():
             shutil.copy(fdr_dir / "rescore.tab", rescore_features_path)

@@ -241,13 +241,22 @@ class Config:
         return _instrument_type.upper()
 
     @property
-    def parquet_path(self) -> Optional[Path]:
-        """Get path to parquet file with 100% FDR search results for DLOmix prediction."""
-        parquet_path = self.inputs.get("parquet_path")
-        if parquet_path is not None:
-            return self.base_path / Path(parquet_path)
-        return None
-
+    def dlomix_pipeline(self):
+        """Load and cache DLOmix InferencePipeline if dlomix_intensity is configured."""
+        if not hasattr(self, '_dlomix_pipeline'):
+            dlomix_path = self.models.get("dlomix_intensity")
+            if dlomix_path:
+                try:
+                    from dlomix.pipelines.predictor import InferencePipeline
+                    pipeline_path = self.base_path / Path(dlomix_path) if not Path(dlomix_path).is_absolute() else Path(dlomix_path)
+                    self._dlomix_pipeline = InferencePipeline.load(str(pipeline_path))
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
+                    self._dlomix_pipeline = None
+            else:
+                self._dlomix_pipeline = None
+        return self._dlomix_pipeline
 
     #####################################
     # these are fasta digestion options #
@@ -430,14 +439,16 @@ class Config:
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
 
-        if "alphapept" in self.models["intensity"].lower():
-            self._check_for_alphapept()
+        # Skip alphapept and Koina checks if using DLOmix
+        if not self.models.get("dlomix_intensity"):
+            if "alphapept" in self.models["intensity"].lower():
+                self._check_for_alphapept()
+
+            self._check_koina_model_availability()
 
         if self.quantification:
             self._check_quantification()
             self._check_fasta()
-
-        self._check_koina_model_availability()
 
     def _check_koina_model_availability(self):
         """Check if Koina model is available."""
@@ -446,6 +457,10 @@ class Config:
         _ = Koina(model_name=self.models["intensity"])
 
     def _check_tmt(self):
+        # Skip TMT check if using DLOmix (no intensity model requirement)
+        if self.models.get("dlomix_intensity"):
+            return
+
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
         if self.tag == "":
@@ -551,7 +566,8 @@ class Config:
 
     def check_multifrag(self) -> bool:
         """Check if rescoring will be done on multifrag options."""
-        return "multifrag" in self.models["intensity"].lower()
+        intensity_model = self.models.get("intensity", "").lower()
+        return "multifrag" in intensity_model
 
     def custom_to_unimod(self) -> dict[str, int]:
         """
