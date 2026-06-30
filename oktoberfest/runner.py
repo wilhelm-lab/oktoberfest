@@ -178,7 +178,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
-    results_dir = config.output / "results"
+    results_dir = config.output / "results/ce_calibration"
     results_dir.mkdir(exist_ok=True)
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         use_ransac_model = config.use_ransac_model
@@ -232,20 +232,31 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
 
         else:
-            ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            ce_alignment = alignment_library.obs.groupby(by=["ORIG_COLLISION_ENERGY", "COLLISION_ENERGY"])[
+                "SPECTRAL_ANGLE"
+            ].mean()
 
-            best_ce = ce_alignment.idxmax()
-            pl.plot_mean_sa_ce(
-                sa_ce_df=ce_alignment.to_frame().reset_index(),
-                filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
-            )
-            pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
-                filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
-            )
-            library.obs["COLLISION_ENERGY"] = best_ce
+            best_ce_per_orig = ce_alignment.groupby(level="ORIG_COLLISION_ENERGY").idxmax().apply(lambda x: x[1])
+            logger.info(f"Best CE per original CE: {best_ce_per_orig.to_dict()}")
+
+            for orig_ce in ce_alignment.groupby(level="ORIG_COLLISION_ENERGY").groups.keys():
+                pl.plot_mean_sa_ce(
+                    sa_ce_df=ce_alignment.to_frame().reset_index()[
+                        ce_alignment.to_frame().reset_index()["ORIG_COLLISION_ENERGY"] == orig_ce
+                    ],
+                    filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce_{orig_ce}.svg",
+                )
+                # TODO: fix this plotting.
+                pl.plot_violin_sa_ce(
+                    sa_ce_df=alignment_library.obs[alignment_library.obs["COLLISION_ENERGY"] == orig_ce][
+                        ["COLLISION_ENERGY", "SPECTRAL_ANGLE"]
+                    ],
+                    filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
+                )
+            for orig_ce, best_ce in best_ce_per_orig.items():
+                library.obs.loc[library.obs["COLLISION_ENERGY"] == orig_ce, "COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-                f.write(str(best_ce))
+                json.dump(best_ce_per_orig.to_dict(), f)
                 f.close()
 
     else:
@@ -253,7 +264,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         library.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-            f.write(str(best_ce))
+            json.dump(best_ce, f)
             f.close()
 
 
@@ -841,7 +852,9 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "_",
             "which_pep",
         ]
-    ] = df_psm["index"].str.split("_", expand=True)
+    ] = df_psm[
+        "index"
+    ].str.split("_", expand=True)
     df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
@@ -1260,7 +1273,9 @@ def run_rescoring(config_path: Union[str, Path, Config]):
 
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
-        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        re.merge_input(
+            tab_files=original_tab_files, output_file=fdr_dir / "original.tab", num_threads=config.num_threads
+        )
         prepare_tab_original_step.mark_done()
 
     if not config.run_original:
@@ -1268,7 +1283,9 @@ def run_rescoring(config_path: Union[str, Path, Config]):
         prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
         if not prepare_tab_rescore_step.is_done():
             logger.info("Merging input tab files for rescoring with peptide property prediction")
-            re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+            re.merge_input(
+                tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab", num_threads=config.num_threads
+            )
             prepare_tab_rescore_step.mark_done()
 
     # rescoring
