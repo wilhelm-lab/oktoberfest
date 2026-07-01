@@ -63,14 +63,17 @@ def transition_status(
 
 
 def get_job(db: Session, job_id: str) -> Optional[Job]:
+    """Retrieve a job by its unique ID from the database."""
     return db.get(Job, job_id)
 
 
 def list_jobs(db: Session, limit: int = 50, offset: int = 0) -> list[Job]:
+    """Retrieve a paginated list of all jobs from the database, ordered by creation time descending."""
     return db.query(Job).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
 
 
 def list_jobs_for_user(db: Session, user_id: str, limit: int = 50, offset: int = 0) -> list[Job]:
+    """Retrieve a paginated list of jobs belonging to a specific user, ordered by creation time descending."""
     return db.query(Job).filter(Job.owner_id == user_id).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
 
 

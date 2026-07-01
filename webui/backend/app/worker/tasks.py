@@ -13,6 +13,7 @@ from app.worker.backends.local import get_execution_backend
 
 
 def _read_tail(path: Path, n_lines: int = 200) -> str:
+    """Read the last n_lines from a file to capture error logs."""
     if not path.exists():
         return ""
     lines = path.read_text(errors="replace").splitlines()
@@ -20,6 +21,7 @@ def _read_tail(path: Path, n_lines: int = 200) -> str:
 
 
 def _package_results(job_dir: Path, output_dir: Path, config_path: Path, captured_log: Path) -> Path:
+    """Zip the output directory, configuration file, and captured logs into a results.zip archive."""
     zip_path = job_dir / "results.zip"
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         # Everything in output/
@@ -38,6 +40,11 @@ def _package_results(job_dir: Path, output_dir: Path, config_path: Path, capture
 
 @celery_app.task(bind=True, name="run_oktoberfest_job", acks_late=True)
 def run_oktoberfest_job(self, job_id: str):
+    """
+    Execute an Oktoberfest job as a Celery background task.
+    Updates the job status in the database, runs the execution backend, 
+    packages the results, and triggers the scheduler upon completion.
+    """
     from app.models import Job
 
     db = SessionLocal()

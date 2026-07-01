@@ -25,6 +25,10 @@ async def upload_file(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """
+    Handle large file uploads for a specific job.
+    Streams the file to disk in chunks to avoid memory issues and enforces size limits.
+    """
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")

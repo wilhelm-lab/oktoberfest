@@ -89,6 +89,10 @@ async def create_job(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """
+    Create a new job with the specified type and configuration.
+    The job starts in the CREATED status and requires files to be uploaded before submission.
+    """
     allowed = {"Rescoring", "CollisionEnergyCalibration", "SpectralLibraryGeneration"}
     if body.job_type not in allowed:
         raise HTTPException(status_code=422, detail=f"job_type must be one of {sorted(allowed)}")
@@ -111,6 +115,10 @@ def submit_job(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """
+    Submit a previously created job for execution.
+    Validates that all required files have been uploaded and transitions the job to QUEUED.
+    """
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -183,6 +191,7 @@ def get_job(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """Retrieve details and status of a specific job by its ID."""
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -196,6 +205,7 @@ def get_job_log(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """Retrieve the captured stdout/stderr log of the job execution."""
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -212,6 +222,7 @@ def download_results(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """Download the final results ZIP archive if the job has successfully finished."""
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -234,6 +245,10 @@ def list_jobs(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """
+    List jobs with pagination.
+    In hosted mode, non-admin users only see their own jobs.
+    """
     if settings.app_mode == "hosted" and not user.is_global:
         jobs = job_service.list_jobs_for_user(db, user_id=user.id, limit=limit, offset=offset)
     else:
@@ -247,6 +262,10 @@ def cancel_job(
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
+    """
+    Cancel an active job.
+    Attempts to revoke the Celery task and marks the job status as CANCELLED.
+    """
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
