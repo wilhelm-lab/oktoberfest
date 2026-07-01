@@ -105,3 +105,8 @@ def run_oktoberfest_job(self, job_id: str):
         raise
     finally:
         db.close()
+        try:
+            from app.services.scheduler import trigger_scheduler
+            trigger_scheduler()
+        except Exception:
+            pass

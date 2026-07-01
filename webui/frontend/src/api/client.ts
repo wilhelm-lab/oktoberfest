@@ -3,6 +3,7 @@ import axios, { type AxiosProgressEvent } from "axios";
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE ?? "/api/v1",
     timeout: 30000,
+    withCredentials: true,
 });
 
 // Centralized error handling

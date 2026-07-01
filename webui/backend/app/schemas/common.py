@@ -96,6 +96,14 @@ class CommonConfigMixin(BaseModel):
     var_mods: Optional[dict[str, Any]] = None
     ion_types: Optional[str] = None
 
+    @field_validator("numThreads")
+    @classmethod
+    def validate_threads(cls, v: int) -> int:
+        from app.config import settings
+        if settings.app_mode == "hosted" and v > settings.max_threads_per_user:
+            return settings.max_threads_per_user
+        return v
+
 
 # Job status enum
 class JobStatus(str, Enum):

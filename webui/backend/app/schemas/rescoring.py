@@ -40,7 +40,7 @@ class RescoringInputs(BaseModel):
 class RescoringConfig(CommonConfigMixin):
     type: str = "Rescoring"
     inputs: RescoringInputs = Field(default_factory=RescoringInputs)
-    fdr_estimation_method: str = "mokapot"
+    fdr_estimation_method: str = "percolator"
     regressionMethod: str = "spline"
     add_feature_cols: Union[str, list[str]] = "none"
     quantification: bool = False
@@ -53,8 +53,8 @@ class RescoringConfig(CommonConfigMixin):
     @field_validator("fdr_estimation_method")
     @classmethod
     def validate_fdr(cls, v):
-        if v not in ("mokapot", "percolator"):
-            raise ValueError("fdr_estimation_method must be mokapot or percolator")
+        if v not in ("percolator",):
+            raise ValueError("fdr_estimation_method must be percolator")
         return v
 
     @field_validator("regressionMethod")

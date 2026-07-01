@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, AppUser, check_job_access
 from app.config import settings
 from app.db import get_db
 from app.schemas.common import JobStatus
@@ -22,10 +23,12 @@ async def upload_file(
     role: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
 ):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
     if job.status != JobStatus.CREATED.value:
         raise HTTPException(status_code=409, detail=f"Job is {job.status}; cannot upload files")
 

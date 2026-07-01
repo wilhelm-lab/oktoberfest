@@ -16,10 +16,10 @@ from app.schemas.common import CeAlignmentOptions, FastaDigestOptions
 def test_rescoring_accepts_valid_config():
     cfg = RescoringConfig(
         inputs={"search_results_type": "Maxquant", "spectra_type": "raw"},
-        fdr_estimation_method="mokapot",
+        fdr_estimation_method="percolator",
     )
     assert cfg.type == "Rescoring"
-    assert cfg.fdr_estimation_method == "mokapot"
+    assert cfg.fdr_estimation_method == "percolator"
 
 
 def test_rescoring_rejects_bad_fdr_method():

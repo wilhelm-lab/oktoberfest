@@ -18,7 +18,7 @@ const form = reactive({
     prediction_server: "koina.wilhelmlab.org:443",
     ssl: true,
     // Job options
-    fdr_estimation_method: "mokapot",
+    fdr_estimation_method: "percolator",
     regressionMethod: "spline",
     add_feature_cols: "none",
     massTolerance: 20,
@@ -195,7 +195,7 @@ async function handleSubmit() {
                     <v-col cols="12" md="4">
                         <v-select
                             v-model="form.fdr_estimation_method"
-                            :items="['mokapot', 'percolator']"
+                            :items="['percolator']"
                             label="FDR method"
                             density="compact"
                             variant="outlined"

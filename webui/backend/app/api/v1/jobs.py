@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, check_quota, AppUser
+from app.api.deps import get_current_user, check_quota, AppUser, check_job_access
+from app.config import settings
 from app.db import get_db
 from app.models import Job
 from app.schemas.common import JobStatus, TERMINAL_STATUSES
@@ -97,18 +98,23 @@ async def create_job(
     # Validate config (file paths not yet resolved — that's ok)
     validated = _validate_config(body.job_type, body.config)
 
-    job = job_service.create_job(db, body.job_type, body.config)
+    job = job_service.create_job(db, body.job_type, validated.model_dump(exclude_none=True))
     # Store owner_id for hosted-mode scoping
-    job.owner_id = user.id if not user.is_local else None
+    job.owner_id = user.id if settings.app_mode == "hosted" else None
     db.commit()
     return _job_to_response(job, include_required=True)
 
 
 @router.post("/{job_id}/submit", status_code=202)
-def submit_job(job_id: str, db: Session = Depends(get_db)):
+def submit_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
     if job.status != JobStatus.CREATED.value:
         raise HTTPException(status_code=409, detail=f"Job is in status {job.status}, cannot submit")
 
@@ -156,34 +162,44 @@ def submit_job(job_id: str, db: Session = Depends(get_db)):
     with open(config_path, "w") as f:
         json.dump(config_dict, f, indent=2)
 
-    # Enqueue Celery task
-    task = run_oktoberfest_job.delay(job_id)
-
     # Transition to QUEUED
     job_service.transition_status(
         db,
         job,
         JobStatus.QUEUED,
         config_json=json.dumps(config_dict),
-        celery_task_id=task.id,
     )
+
+    # Trigger scheduler to start jobs
+    from app.services.scheduler import trigger_scheduler
+    trigger_scheduler()
 
     return {"job_id": job_id, "status": "QUEUED"}
 
 
 @router.get("/{job_id}")
-def get_job(job_id: str, db: Session = Depends(get_db)):
+def get_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
     return _job_to_response(job)
 
 
 @router.get("/{job_id}/log")
-def get_job_log(job_id: str, db: Session = Depends(get_db)):
+def get_job_log(
+    job_id: str,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
     log_path = storage.captured_log_path(job_id)
     if not log_path.exists():
         return {"log": ""}
@@ -191,10 +207,15 @@ def get_job_log(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{job_id}/results")
-def download_results(job_id: str, db: Session = Depends(get_db)):
+def download_results(
+    job_id: str,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
     if not storage.results_exists(job_id):
         raise HTTPException(status_code=404, detail="Results not ready")
     from fastapi.responses import FileResponse
@@ -207,16 +228,30 @@ def download_results(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("")
-def list_jobs(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
-    jobs = job_service.list_jobs(db, limit=limit, offset=offset)
+def list_jobs(
+    limit: int = 50,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
+    if settings.app_mode == "hosted" and not user.is_global:
+        jobs = job_service.list_jobs_for_user(db, user_id=user.id, limit=limit, offset=offset)
+    else:
+        jobs = job_service.list_jobs(db, limit=limit, offset=offset)
     return [_job_to_response(j) for j in jobs]
 
 
 @router.post("/{job_id}/cancel", status_code=200)
-def cancel_job(job_id: str, db: Session = Depends(get_db)):
+def cancel_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    user: AppUser = Depends(get_current_user),
+):
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    check_job_access(job, user)
+
     if job.status in (s.value for s in TERMINAL_STATUSES):
         raise HTTPException(status_code=409, detail=f"Job already in terminal status {job.status}")
 
@@ -231,4 +266,9 @@ def cancel_job(job_id: str, db: Session = Depends(get_db)):
 
     job.status = JobStatus.CANCELLED.value
     db.commit()
+
+    # Trigger scheduler to start waiting jobs
+    from app.services.scheduler import trigger_scheduler
+    trigger_scheduler()
+
     return {"job_id": job_id, "status": "CANCELLED"}

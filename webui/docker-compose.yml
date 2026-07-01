@@ -15,18 +15,14 @@ services:
         build:
             context: .
             dockerfile: backend/Dockerfile
-        command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-        env_file:
-            - .env
+        command: uvicorn app.main:app --host 0.0.0.0 --port 8080
         environment:
-            APP_MODE: local
-            DATABASE_URL: sqlite:////data/app.db
-            DATA_DIR: /data
             REDIS_URL: redis://redis:6379/0
+            TMPDIR: ${CONTAINER_DATA_DIR:-/app/data}/tmp
         volumes:
-            - okt-data:/data
+            - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         ports:
-            - "8000:8000"
+            - "8080:8080"
         depends_on:
             redis:
                 condition: service_healthy
@@ -35,16 +31,11 @@ services:
         build:
             context: .
             dockerfile: backend/Dockerfile
-        command: celery -A app.worker.celery_app worker --loglevel=info --concurrency=1
-        env_file:
-            - .env
+        command: celery -A app.worker.celery_app worker --loglevel=info
         environment:
-            APP_MODE: local
-            DATABASE_URL: sqlite:////data/app.db
-            DATA_DIR: /data
             REDIS_URL: redis://redis:6379/0
         volumes:
-            - okt-data:/data
+            - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         depends_on:
             redis:
                 condition: service_healthy

@@ -52,7 +52,7 @@ DEFAULTS = {
             "spectra_type": "raw",
             "instrument_type": "QE",
         },
-        "fdr_estimation_method": "mokapot",
+        "fdr_estimation_method": "percolator",
         "add_feature_cols": "none",
         "regressionMethod": "spline",
         "massTolerance": 20,

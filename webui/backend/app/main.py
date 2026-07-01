@@ -26,14 +26,24 @@ app = FastAPI(
 )
 
 # CORS
-origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins if origins != ["*"] else ["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip() and o.strip() != "*"]
+
+if settings.app_mode == "local":
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=".*",  # Permissive for local dev but works with credentials
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+elif origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # API routers
 from app.api.v1 import jobs, files, meta, health  # noqa: E402

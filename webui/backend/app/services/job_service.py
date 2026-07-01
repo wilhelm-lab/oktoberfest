@@ -70,6 +70,10 @@ def list_jobs(db: Session, limit: int = 50, offset: int = 0) -> list[Job]:
     return db.query(Job).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
 
 
+def list_jobs_for_user(db: Session, user_id: str, limit: int = 50, offset: int = 0) -> list[Job]:
+    return db.query(Job).filter(Job.owner_id == user_id).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
+
+
 def get_required_files(job_type: str, config_data: dict[str, Any]) -> list[dict[str, Any]]:
     """Return expected upload roles for the frontend."""
     result = []

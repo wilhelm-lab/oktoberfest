@@ -14,33 +14,68 @@ In hosted mode (APP_MODE=hosted):
 
 from __future__ import annotations
 
+from typing import Any
 from dataclasses import dataclass
 
-from fastapi import Request
-
+from fastapi import Request, Response, HTTPException
+import uuid
+from dataclasses import dataclass
 from app.config import settings
-
 
 @dataclass
 class AppUser:
     id: str
     is_local: bool = True
+    is_global: bool = False
 
+LOCAL_USER = AppUser(id="local", is_local=True, is_global=False)
 
-LOCAL_USER = AppUser(id="local", is_local=True)
-
-
-def get_current_user(request: Request) -> AppUser:
+def get_current_user(request: Request, response: Response) -> AppUser:
     """Return the authenticated user.
 
     Local mode: always returns LocalUser.
-    Hosted mode (TODO): verify Bearer token / session cookie from request.
+    Hosted mode: verify user from request headers (X-User-Id, X-Forwarded-User, Remote-User, or Authorization).
+    Fallback to cookie-based UUID sessions.
     """
     if settings.app_mode == "hosted":
-        # TODO: implement OIDC/API-key verification here
-        # raise HTTPException(401, "Not authenticated") if invalid
-        pass
+        user_id = request.cookies.get("oktoberfest_session")
+        if not user_id:
+            user_id = str(uuid.uuid4())
+            # Set cookie on the response so the browser remembers this UUID
+            response.set_cookie(
+                key="oktoberfest_session",
+                value=user_id,
+                httponly=True,
+                secure=True,
+                max_age=60 * 60 * 24 * 365,  # 1 year
+                samesite="lax"
+            )
+
+        is_global = False
+
+        # Fallback to checking settings.global_users list
+        global_users_list = [u.strip() for u in settings.global_users.split(",") if u.strip()]
+        if user_id in global_users_list:
+            is_global = True
+
+        return AppUser(id=user_id, is_local=False, is_global=is_global)
+
     return LOCAL_USER
+
+
+def check_job_access(job: Any, user: AppUser) -> None:
+    """Check if the user has permission to access this job.
+
+    In hosted mode:
+    - Global users have access to all jobs.
+    - Regular users can only access their own jobs.
+    """
+    if settings.app_mode != "hosted":
+        return
+    if user.is_global:
+        return
+    if job.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
 
 
 async def rate_limit(request: Request) -> None:

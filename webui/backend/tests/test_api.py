@@ -50,7 +50,12 @@ def test_db(tmp_path):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    yield tmp_path
+    with (
+        patch("app.db.SessionLocal", TestSession),
+        patch("app.services.scheduler.SessionLocal", TestSession),
+        patch("app.worker.tasks.SessionLocal", TestSession),
+    ):
+        yield tmp_path
     app.dependency_overrides.clear()
     engine.dispose()
 
@@ -97,7 +102,7 @@ def test_create_rescoring_job(client):
         "job_type": "Rescoring",
         "config": {
             "inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"},
-            "fdr_estimation_method": "mokapot",
+            "fdr_estimation_method": "percolator",
         },
     }
     resp = client.post("/api/v1/jobs", json=body)
@@ -155,7 +160,10 @@ def test_full_speclib_happy_path(client, tmp_store):
     assert resp.json()["role"] == "fasta"
 
     # 3. Submit (mock Celery task's delay)
-    with patch("app.api.v1.jobs.run_oktoberfest_job") as mock_task:
+    with (
+        patch("app.api.v1.jobs.run_oktoberfest_job") as mock_task,
+        patch("app.services.scheduler.run_oktoberfest_job", mock_task),
+    ):
         mock_delay = MagicMock()
         mock_delay.id = "fake-celery-task-id"
         mock_task.delay.return_value = mock_delay
@@ -175,7 +183,7 @@ def test_full_speclib_happy_path(client, tmp_store):
     # 5. GET status
     resp = client.get(f"/api/v1/jobs/{job_id}")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "QUEUED"
+    assert resp.json()["status"] in ("QUEUED", "RUNNING")
 
 
 def test_results_404_before_completion(client):
@@ -216,7 +224,10 @@ def test_double_submit_returns_409(client, tmp_store):
         files={"file": ("x.fasta", b">P\nM\n", "text/plain")},
     )
 
-    with patch("app.api.v1.jobs.run_oktoberfest_job") as mock_task:
+    with (
+        patch("app.api.v1.jobs.run_oktoberfest_job") as mock_task,
+        patch("app.services.scheduler.run_oktoberfest_job", mock_task),
+    ):
         mock_delay = MagicMock()
         mock_delay.id = "t1"
         mock_task.delay.return_value = mock_delay
