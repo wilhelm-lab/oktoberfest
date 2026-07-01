@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import os
+from pathlib import Path
 from datetime import datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -85,6 +88,7 @@ def _validate_config(job_type: str, config: dict[str, Any]):
 
 @router.post("", status_code=201)
 async def create_job(
+    request: Request,
     body: CreateJobRequest,
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
@@ -103,8 +107,30 @@ async def create_job(
     validated = _validate_config(body.job_type, body.config)
 
     job = job_service.create_job(db, body.job_type, validated.model_dump(exclude_none=True))
-    # Store owner_id for hosted-mode scoping
+    # Store owner_id and IP address for hosted-mode scoping and parallel limiting
     job.owner_id = user.id if settings.app_mode == "hosted" else None
+    
+    # Get client IP for rate limiting
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown"
+        
+    if settings.app_mode == "hosted":
+        # Hash the IP address for privacy
+        try:
+            salt_path = Path(__file__).resolve().parent.parent.parent.parent / ".ip_salt"
+            with open(salt_path, "r") as f:
+                salt = f.read().strip()
+        except Exception:
+            raise HTTPException(status_code=500, detail="Server configuration error: missing .ip_salt file")
+            
+        hashed_ip = hashlib.sha256(f"{client_ip}{salt}".encode()).hexdigest()
+        job.ip_address = hashed_ip
+    else:
+        job.ip_address = None
+    
     db.commit()
     return _job_to_response(job, include_required=True)
 
@@ -195,7 +221,7 @@ def get_job(
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    check_job_access(job, user)
+    check_job_access(job, user, read_only=True)
     return _job_to_response(job)
 
 
@@ -209,7 +235,7 @@ def get_job_log(
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    check_job_access(job, user)
+    check_job_access(job, user, read_only=True)
     log_path = storage.captured_log_path(job_id)
     if not log_path.exists():
         return {"log": ""}
@@ -226,7 +252,7 @@ def download_results(
     job = job_service.get_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    check_job_access(job, user)
+    check_job_access(job, user, read_only=True)
     if not storage.results_exists(job_id):
         raise HTTPException(status_code=404, detail="Results not ready")
     from fastapi.responses import FileResponse

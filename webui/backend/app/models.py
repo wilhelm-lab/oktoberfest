@@ -20,6 +20,7 @@ class Job(Base):
     has_results: Mapped[bool] = mapped_column(Boolean, default=False)
     celery_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     owner_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

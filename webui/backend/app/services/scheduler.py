@@ -29,12 +29,15 @@ def trigger_scheduler() -> None:
         # 1. Fetch running jobs to determine current usage
         running_jobs = db.query(Job).filter(Job.status == JobStatus.RUNNING.value).all()
 
-        # Calculate currently running threads and running user IDs
+        # Calculate currently running threads, user IDs, and IPs
         running_user_ids = set()
+        running_ips = set()
         running_threads = 0
         for job in running_jobs:
             if job.owner_id:
                 running_user_ids.add(job.owner_id)
+            if job.ip_address:
+                running_ips.add(job.ip_address)
 
             # Extract numThreads from the config_json
             num_threads = 1
@@ -56,9 +59,13 @@ def trigger_scheduler() -> None:
         for job in queued_jobs:
             # Check user limit: one job per user at a time
             owner_id = job.owner_id
-            if settings.app_mode == "hosted" and owner_id:
-                if owner_id in running_user_ids:
+            ip_address = job.ip_address
+            if settings.app_mode == "hosted":
+                if owner_id and owner_id in running_user_ids:
                     logger.debug(f"Skipping job {job.id} because user {owner_id} already has a running job.")
+                    continue
+                if ip_address and ip_address in running_ips:
+                    logger.debug(f"Skipping job {job.id} because IP address {ip_address} already has a running job.")
                     continue
 
             # Determine how many threads this job wants
@@ -95,6 +102,8 @@ def trigger_scheduler() -> None:
             # Add to running sets
             if owner_id:
                 running_user_ids.add(owner_id)
+            if ip_address:
+                running_ips.add(ip_address)
             running_threads += job_threads
 
         db.commit()

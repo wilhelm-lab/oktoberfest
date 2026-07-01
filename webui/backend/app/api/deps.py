@@ -63,16 +63,19 @@ def get_current_user(request: Request, response: Response) -> AppUser:
     return LOCAL_USER
 
 
-def check_job_access(job: Any, user: AppUser) -> None:
+def check_job_access(job: Any, user: AppUser, read_only: bool = False) -> None:
     """Check if the user has permission to access this job.
 
     In hosted mode:
     - Global users have access to all jobs.
-    - Regular users can only access their own jobs.
+    - Regular users can access their own jobs.
+    - If read_only is True, anyone possessing the job ID can view it.
     """
     if settings.app_mode != "hosted":
         return
     if user.is_global:
+        return
+    if read_only:
         return
     if job.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Job not found")
