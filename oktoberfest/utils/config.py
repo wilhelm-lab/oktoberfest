@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from sys import platform
 from typing import Optional, Union
@@ -247,12 +248,13 @@ class Config:
             dlomix_path = self.models.get("dlomix_intensity")
             if dlomix_path:
                 try:
+                    # Disable GPU before importing DLOmix to avoid CUDA initialization errors in workers
+                    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
                     from dlomix.pipelines.predictor import InferencePipeline
                     pipeline_path = self.base_path / Path(dlomix_path) if not Path(dlomix_path).is_absolute() else Path(dlomix_path)
                     self._dlomix_pipeline = InferencePipeline.load(str(pipeline_path))
                 except Exception as e:
-                    import logging
-                    logging.getLogger(__name__).warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
+                    logger.warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
                     self._dlomix_pipeline = None
             else:
                 self._dlomix_pipeline = None
