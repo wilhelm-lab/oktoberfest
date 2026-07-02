@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useJobStore } from "@/stores/job";
 
 const props = defineProps<{
     role: string;
@@ -10,12 +11,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: "add", files: File[]): void;
-    (e: "remove", index: number): void;
+    (e: "upload"): void;
 }>();
 
+const store = useJobStore();
 const fileInput = ref<HTMLInputElement | null>(null);
 const dragover = ref(false);
-const selectedFiles = ref<{ file: File; error?: string }[]>([]);
+
+const storeFiles = computed(() => store.uploads[props.role] || []);
 
 const acceptStr = props.accept.join(",");
 
@@ -37,13 +40,24 @@ function validate(file: File): string | null {
 
 function addFiles(files: FileList | File[]) {
     const arr = Array.from(files);
-    const newEntries = arr.map((f) => ({
-        file: f,
-        error: validate(f) ?? undefined,
-    }));
-    if (!props.multiple) selectedFiles.value = [];
-    selectedFiles.value.push(...newEntries);
-    const valid = newEntries.filter((e) => !e.error).map((e) => e.file);
+    const valid = [];
+    
+    if (!props.multiple) {
+        // Clear if not multiple. To do this cleanly, we need to clear store array
+        store.uploads[props.role] = [];
+    }
+
+    for (const f of arr) {
+        const error = validate(f);
+        if (error) {
+            // We can push to store with error status, or ignore
+            // For now, let's let the store handle valid files
+            alert(error); // simple error display
+        } else {
+            valid.push(f);
+        }
+    }
+    
     if (valid.length) emit("add", valid);
 }
 
@@ -59,8 +73,7 @@ function onDrop(e: DragEvent) {
 }
 
 function remove(i: number) {
-    selectedFiles.value.splice(i, 1);
-    emit("remove", i);
+    store.uploads[props.role].splice(i, 1);
 }
 
 function formatSize(bytes: number): string {
@@ -69,6 +82,10 @@ function formatSize(bytes: number): string {
     if (bytes < 1024 ** 3) return (bytes / 1024 ** 2).toFixed(1) + " MB";
     return (bytes / 1024 ** 3).toFixed(2) + " GB";
 }
+
+const isUploadingThisRole = computed(() => storeFiles.value.some(f => f.status === "uploading"));
+const isAllUploaded = computed(() => storeFiles.value.length > 0 && storeFiles.value.every(f => f.status === "done"));
+
 </script>
 
 <template>
@@ -99,31 +116,56 @@ function formatSize(bytes: number): string {
             />
         </v-card>
 
-        <v-list v-if="selectedFiles.length" density="compact" class="mt-2">
+        <v-list v-if="storeFiles.length" density="compact" class="mt-2">
             <v-list-item
-                v-for="(entry, i) in selectedFiles"
+                v-for="(entry, i) in storeFiles"
                 :key="i"
-                :subtitle="entry.error ?? formatSize(entry.file.size)"
-                :class="entry.error ? 'text-error' : ''"
+                :class="entry.status === 'error' ? 'text-error' : ''"
             >
                 <template #prepend>
-                    <v-icon :color="entry.error ? 'error' : 'success'">
+                    <v-icon :color="entry.status === 'done' ? 'success' : (entry.status === 'error' ? 'error' : 'primary')">
                         {{
-                            entry.error ? "mdi-alert-circle" : "mdi-file-check"
+                            entry.status === 'done' ? 'mdi-check-circle' :
+                            entry.status === 'error' ? 'mdi-alert-circle' :
+                            entry.status === 'uploading' ? 'mdi-loading mdi-spin' :
+                            'mdi-file-outline'
                         }}
                     </v-icon>
                 </template>
                 <template #title>{{ entry.file.name }}</template>
+                <template #subtitle>
+                    <div v-if="entry.status === 'uploading'">
+                        <v-progress-linear :model-value="entry.progress" color="primary" height="4" class="mt-1" />
+                    </div>
+                    <div v-else>
+                        {{ entry.error ?? formatSize(entry.file.size) }}
+                    </div>
+                </template>
                 <template #append>
                     <v-btn
                         icon="mdi-close"
                         size="small"
                         variant="text"
+                        :disabled="entry.status === 'uploading'"
                         @click.stop="remove(i)"
                     />
                 </template>
             </v-list-item>
         </v-list>
+        
+        <div v-if="storeFiles.length" class="d-flex justify-end mt-2">
+            <v-btn 
+                size="small" 
+                color="primary" 
+                variant="tonal"
+                prepend-icon="mdi-cloud-upload"
+                @click="emit('upload')" 
+                :disabled="isAllUploaded || isUploadingThisRole" 
+                :loading="isUploadingThisRole"
+            >
+                {{ isAllUploaded ? 'Uploaded' : 'Upload' }}
+            </v-btn>
+        </div>
     </div>
 </template>
 

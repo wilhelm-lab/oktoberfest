@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import UploadProgressOverlay from "@/components/UploadProgressOverlay.vue";
+</script>
+
 <template>
     <v-app>
         <v-app-bar color="primary" elevation="2">
@@ -55,5 +59,6 @@
                 >
             </span>
         </v-footer>
+        <UploadProgressOverlay />
     </v-app>
 </template>

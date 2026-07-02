@@ -32,6 +32,9 @@ class CreateJobRequest(BaseModel):
     job_type: str
     config: dict[str, Any]
 
+class SubmitJobRequest(BaseModel):
+    config: Optional[dict[str, Any]] = None
+
 
 class JobResponse(BaseModel):
     job_id: str
@@ -120,11 +123,11 @@ async def create_job(
     if settings.app_mode == "hosted":
         # Hash the IP address for privacy
         try:
-            salt_path = Path(__file__).resolve().parent.parent.parent.parent / ".ip_salt"
+            salt_path = Path(settings.data_dir) / ".ip_salt"
             with open(salt_path, "r") as f:
                 salt = f.read().strip()
         except Exception:
-            raise HTTPException(status_code=500, detail="Server configuration error: missing .ip_salt file")
+            raise HTTPException(status_code=403, detail="Job submission is disabled: server configuration error (missing .ip_salt file)")
             
         hashed_ip = hashlib.sha256(f"{client_ip}{salt}".encode()).hexdigest()
         job.ip_address = hashed_ip
@@ -138,6 +141,7 @@ async def create_job(
 @router.post("/{job_id}/submit", status_code=202)
 def submit_job(
     job_id: str,
+    body: SubmitJobRequest = None,
     db: Session = Depends(get_db),
     user: AppUser = Depends(get_current_user),
 ):
@@ -151,6 +155,10 @@ def submit_job(
     check_job_access(job, user)
     if job.status != JobStatus.CREATED.value:
         raise HTTPException(status_code=409, detail=f"Job is in status {job.status}, cannot submit")
+
+    if body and body.config is not None:
+        job.config_json = json.dumps(body.config)
+        db.commit()
 
     cfg_raw = json.loads(job.config_json) if job.config_json else {}
 

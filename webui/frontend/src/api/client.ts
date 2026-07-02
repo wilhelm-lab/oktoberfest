@@ -43,8 +43,8 @@ export function uploadFile(
         .then((r) => r.data);
 }
 
-export function submitJob(jobId: string) {
-    return api.post(`/jobs/${jobId}/submit`).then((r) => r.data);
+export function submitJob(jobId: string, config: Record<string, unknown> = {}) {
+    return api.post(`/jobs/${jobId}/submit`, { config }).then((r) => r.data);
 }
 
 export function getJob(jobId: string) {

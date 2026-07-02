@@ -51,11 +51,12 @@ const libraryFiles = computed(
     () => store.uploads["fasta"] ?? store.uploads["peptides"] ?? []
 );
 
-const isValid = computed(
-    () =>
-        libraryFiles.value.some((f) => f.status !== "error") &&
-        form.precursorCharge[0] < form.precursorCharge[1]
-);
+const isValid = computed(() => {
+    const hasLibraryFiles = libraryFiles.value.length > 0;
+    const libraryDone = hasLibraryFiles && libraryFiles.value.every((f) => f.status === "done");
+    const chargeValid = form.precursorCharge[0] < form.precursorCharge[1];
+    return libraryDone && chargeValid;
+});
 
 function buildConfig(): Record<string, unknown> {
     const cfg: Record<string, unknown> = {
@@ -154,6 +155,7 @@ async function handleSubmit() {
                             :accept="fileAccept"
                             :multiple="false"
                             @add="onFilesAdded(uploadRole, $event)"
+                            @upload="store.uploadRole('SpectralLibraryGeneration', uploadRole)"
                         />
                     </v-col>
                 </v-row>

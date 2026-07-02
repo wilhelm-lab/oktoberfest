@@ -15,7 +15,7 @@ export function useJobForm(jobType: string) {
         error.value = "";
         submitting.value = true;
         try {
-            const jobId = await store.createAndSubmit(jobType, config);
+            const jobId = await store.submitDraftJob(config);
             router.push({ name: "job", params: { jobId } });
         } catch (err: unknown) {
             error.value = err instanceof Error ? err.message : String(err);

@@ -13,10 +13,9 @@ def _make_engine():
         connect_args = {"check_same_thread": False}
     engine = create_engine(url, connect_args=connect_args)
     if url.startswith("sqlite"):
-        # WAL mode + busy timeout for concurrent API + worker writes
+        # Use a high busy timeout to allow concurrent API + worker writes without WAL (NFS support)
         @event.listens_for(engine, "connect")
         def set_sqlite_pragma(conn, _):
-            conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA busy_timeout=5000")
 
     return engine

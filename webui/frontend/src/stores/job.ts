@@ -31,9 +31,14 @@ export const useJobStore = defineStore("job", () => {
 
     // Per-role upload lists
     const uploads = reactive<Record<string, UploadEntry[]>>({});
+    const isUploading = ref(false);
 
     // Current job being viewed
     const currentJob = ref<Record<string, unknown> | null>(null);
+
+    // Job being drafted (created but not submitted)
+    const activeDraftJobId = ref<string | null>(null);
+    const activeDraftJobType = ref<string | null>(null);
 
     async function fetchMeta() {
         if (metaLoaded.value) return;
@@ -61,6 +66,8 @@ export const useJobStore = defineStore("job", () => {
 
     function clearUploads() {
         Object.keys(uploads).forEach((k) => delete uploads[k]);
+        activeDraftJobId.value = null;
+        activeDraftJobType.value = null;
     }
 
     function addUpload(role: string, file: File) {
@@ -68,38 +75,53 @@ export const useJobStore = defineStore("job", () => {
         uploads[role].push({ file, progress: 0, status: "pending" });
     }
 
-    async function uploadFiles(jobId: string): Promise<void> {
-        for (const [role, entries] of Object.entries(uploads)) {
+    async function ensureJob(jobType: string): Promise<string> {
+        if (activeDraftJobId.value && activeDraftJobType.value === jobType) {
+            return activeDraftJobId.value;
+        }
+        // Create a job with empty config, since all defaults are valid
+        const { job_id } = await api.createJob(jobType, {});
+        activeDraftJobId.value = job_id;
+        activeDraftJobType.value = jobType;
+        return job_id;
+    }
+
+    async function uploadRole(jobType: string, role: string): Promise<void> {
+        const jobId = await ensureJob(jobType);
+        const entries = uploads[role];
+        if (!entries || entries.length === 0) return;
+
+        isUploading.value = true;
+        try {
             for (const entry of entries) {
+                if (entry.status === "done") continue;
                 entry.status = "uploading";
                 try {
                     await api.uploadFile(jobId, role, entry.file, (e) => {
                         if (e.total)
-                            entry.progress = Math.round(
-                                (e.loaded / e.total) * 100
-                            );
+                            entry.progress = Math.round((e.loaded / e.total) * 100);
                     });
                     entry.status = "done";
                     entry.progress = 100;
                 } catch (err: unknown) {
                     entry.status = "error";
-                    entry.error =
-                        err instanceof Error ? err.message : String(err);
+                    entry.error = err instanceof Error ? err.message : String(err);
                     throw err;
                 }
             }
+        } finally {
+            isUploading.value = false;
         }
     }
 
-    async function createAndSubmit(
-        jobType: string,
-        config: Record<string, unknown>
-    ): Promise<string> {
-        const { job_id } = await api.createJob(jobType, config);
-        await uploadFiles(job_id);
-        await api.submitJob(job_id);
+    async function submitDraftJob(config: Record<string, unknown>): Promise<string> {
+        if (!activeDraftJobId.value) {
+            throw new Error("No active job. Please upload files first.");
+        }
+        const jobId = activeDraftJobId.value;
+        await api.submitJob(jobId, config);
         clearUploads();
-        return job_id;
+        return jobId;
     }
 
     async function fetchStatus(jobId: string) {
@@ -111,13 +133,17 @@ export const useJobStore = defineStore("job", () => {
         meta,
         metaLoaded,
         uploads,
+        isUploading,
         currentJob,
+        activeDraftJobId,
+        activeDraftJobType,
         fetchMeta,
         fetchDefaults,
         clearUploads,
         addUpload,
-        uploadFiles,
-        createAndSubmit,
+        ensureJob,
+        uploadRole,
+        submitDraftJob,
         fetchStatus,
     };
 });

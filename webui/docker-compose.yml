@@ -16,9 +16,15 @@ services:
             context: .
             dockerfile: backend/Dockerfile
         command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+        env_file:
+            - .env.global
         environment:
             REDIS_URL: redis://redis:6379/0
             TMPDIR: ${CONTAINER_DATA_DIR:-/app/data}/tmp
+            HOME: /tmp
+            MPLCONFIGDIR: /tmp/matplotlib
+            NUMBA_CACHE_DIR: /tmp/numba
+        user: "${APP_UID:-1000}:${APP_GID:-1000}"
         volumes:
             - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         ports:
@@ -32,8 +38,14 @@ services:
             context: .
             dockerfile: backend/Dockerfile
         command: celery -A app.worker.celery_app worker --loglevel=info
+        env_file:
+            - .env.global
         environment:
             REDIS_URL: redis://redis:6379/0
+            HOME: /tmp
+            MPLCONFIGDIR: /tmp/matplotlib
+            NUMBA_CACHE_DIR: /tmp/numba
+        user: "${APP_UID:-1000}:${APP_GID:-1000}"
         volumes:
             - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         depends_on:

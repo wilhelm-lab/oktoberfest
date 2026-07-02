@@ -32,12 +32,16 @@ const searchResultFiles = computed(() => store.uploads["search_results"] ?? []);
 const spectraFiles = computed(() => store.uploads["spectra"] ?? []);
 const showThermoExe = computed(() => form.spectra_type === "raw");
 
-const isValid = computed(
-    () =>
-        searchResultFiles.value.some((f) => f.status !== "error") &&
-        spectraFiles.value.some((f) => f.status !== "error") &&
-        form.ce_range[0] < form.ce_range[1]
-);
+const isValid = computed(() => {
+    const hasSearchResults = searchResultFiles.value.length > 0;
+    const hasSpectra = spectraFiles.value.length > 0;
+    
+    const searchResultsDone = hasSearchResults && searchResultFiles.value.every((f) => f.status === "done");
+    const spectraDone = hasSpectra && spectraFiles.value.every((f) => f.status === "done");
+    const ceValid = form.ce_range[0] < form.ce_range[1];
+
+    return searchResultsDone && spectraDone && ceValid;
+});
 
 function buildConfig(): Record<string, unknown> {
     const cfg: Record<string, unknown> = {
@@ -127,6 +131,7 @@ async function handleSubmit() {
                             ]"
                             :multiple="true"
                             @add="onFilesAdded('search_results', $event)"
+                            @upload="store.uploadRole('CollisionEnergyCalibration', 'search_results')"
                         />
                     </v-col>
                     <v-col cols="12">
@@ -145,6 +150,7 @@ async function handleSubmit() {
                             ]"
                             :multiple="true"
                             @add="onFilesAdded('spectra', $event)"
+                            @upload="store.uploadRole('CollisionEnergyCalibration', 'spectra')"
                         />
                     </v-col>
                 </v-row>

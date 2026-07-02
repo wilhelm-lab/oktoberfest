@@ -23,6 +23,15 @@ celery_app.conf.update(
     task_soft_time_limit=86400,  # 24h soft
     task_time_limit=90000,  # 25h hard
     worker_concurrency=settings.celery_concurrency,
-    # Future: task_routes for per-type dedicated queues
     # task_routes={"run_oktoberfest_job": {"queue": "heavy"}},
 )
+
+from celery.signals import worker_process_init
+from app.db import engine
+
+@worker_process_init.connect
+def dispose_sqlalchemy_engine(**kwargs):
+    """Dispose of the connection pool after Celery forks a worker process.
+    This prevents 'sqlite3.OperationalError: unable to open database file'
+    caused by sharing SQLite connections across fork boundaries."""
+    engine.dispose()

@@ -42,11 +42,15 @@ const fastaFiles = computed(() => store.uploads["fasta"] ?? []);
 const showThermoExe = computed(() => form.spectra_type === "raw");
 
 const isValid = computed(() => {
-    return (
-        searchResultFiles.value.some((f) => f.status !== "error") &&
-        spectraFiles.value.some((f) => f.status !== "error") &&
-        form.ce_range[0] < form.ce_range[1]
-    );
+    const hasSearchResults = searchResultFiles.value.length > 0;
+    const hasSpectra = spectraFiles.value.length > 0;
+    
+    const searchResultsDone = hasSearchResults && searchResultFiles.value.every((f) => f.status === "done");
+    const spectraDone = hasSpectra && spectraFiles.value.every((f) => f.status === "done");
+    const fastaDone = !form.quantification || (fastaFiles.value.length > 0 && fastaFiles.value.every((f) => f.status === "done"));
+    const ceValid = form.ce_range[0] < form.ce_range[1];
+
+    return searchResultsDone && spectraDone && fastaDone && ceValid;
 });
 
 function buildConfig(): Record<string, unknown> {
@@ -153,6 +157,7 @@ async function handleSubmit() {
                             ]"
                             :multiple="true"
                             @add="onFilesAdded('search_results', $event)"
+                            @upload="store.uploadRole('Rescoring', 'search_results')"
                         />
                     </v-col>
                     <v-col cols="12">
@@ -171,6 +176,7 @@ async function handleSubmit() {
                             ]"
                             :multiple="true"
                             @add="onFilesAdded('spectra', $event)"
+                            @upload="store.uploadRole('Rescoring', 'spectra')"
                         />
                     </v-col>
                 </v-row>
@@ -300,6 +306,7 @@ async function handleSubmit() {
                     :accept="['.fasta', '.fa', '.faa']"
                     :multiple="false"
                     @add="onFilesAdded('fasta', $event)"
+                    @upload="store.uploadRole('Rescoring', 'fasta')"
                 />
             </v-card-text>
         </v-card>
