@@ -68,6 +68,11 @@ class Config:
         return job_type
 
     @property
+    def acquisition_method(self) -> str:
+        """Get acquisition method from the config file; default is "DDA". Possible values are "DDA" or "DIA"."""
+        return self.data.get("acquisitionMethod", "DDA").lower()
+
+    @property
     def quantification(self) -> bool:
         """Get quantification flag for performing quantification using picked-group-fdr."""
         return self.data.get("quantification", False)

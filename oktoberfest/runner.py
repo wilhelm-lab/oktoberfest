@@ -179,7 +179,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results/ce_calibration"
-    results_dir.mkdir(exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
@@ -246,9 +246,8 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     ],
                     filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce_{orig_ce}.svg",
                 )
-                # TODO: fix this plotting.
                 pl.plot_violin_sa_ce(
-                    sa_ce_df=alignment_library.obs[alignment_library.obs["COLLISION_ENERGY"] == orig_ce][
+                    sa_ce_df=alignment_library.obs[alignment_library.obs["ORIG_COLLISION_ENERGY"] == orig_ce][
                         ["COLLISION_ENERGY", "SPECTRAL_ANGLE"]
                     ],
                     filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
@@ -1416,6 +1415,126 @@ def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
         raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
 
 
+def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
+
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
+    config.check()
+
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
+
+    data_dir = config.output / "data"
+    fdr_dir = config.output / "results" / "percolator"
+    peptide_path = fdr_dir / "rescore.percolator.psms.txt"
+
+    peptide_df = pd.read_csv(peptide_path, sep="\t")
+    peptide_df["q-value"] = pd.to_numeric(peptide_df["q-value"], errors="coerce")
+    grouped_files = peptide_df.groupby("filename")
+    rows = []
+    for filename, df in grouped_files:
+        hdf5_path = data_dir / f"{filename}.mzml.pred.hdf5"
+        if not hdf5_path.is_file():
+            raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+        accepted_peptide_ids = df.loc[df["q-value"] < 0.01, "PSMId"]
+
+        library = Spectra.from_hdf5(hdf5_path)
+        spec_id_cols = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+        if "SCAN_EVENT_NUMBER" in library.obs.columns:
+            spec_id_cols.append("SCAN_EVENT_NUMBER")
+        library.obs["PSMId"] = library.obs[spec_id_cols].astype(str).agg("-".join, axis=1)
+
+        # Filter 1% FDR peptide level
+        library.obs["avg_retention_time_sec"] = library.obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"])[
+            "retention_time_sec"
+        ].transform("mean")
+
+        accepted_peptide_ids = df.loc[df["q-value"] < 0.01, "PSMId"]
+
+        mask = library.obs.PSMId.isin(accepted_peptide_ids)
+        filtered_library_df = library.obs[mask]
+        for idx, row in filtered_library_df.iterrows():
+            i = int(idx)
+            mz = library.layers["mz"][i].toarray().ravel()
+            intensity = library.layers["pred_int"][i].toarray().ravel()
+            mask = (mz > 0.0) & (intensity > 0.0)
+            filtered_mz = mz[mask]
+            filtered_intensity = intensity[mask]
+            filtered_annotation = library.var.index[mask].to_list()
+            filtered_ion_types = library.var["type"][mask].to_list()
+            filtered_frag_charge = library.var["charge"][mask].to_list()
+            filtered_frag_num = library.var["num"][mask].to_list()
+            FragmentLossType = None
+
+            proteins = row["PROTEINS"]
+            num_proteins = len(proteins.split(";"))
+            protypic = 1 if num_proteins == 1 else 0
+            protein = row["PROTEINS"].split(";")[0]
+
+            prec_im = None
+            AverageExperimentalRetentionTime = row["avg_retention_time_sec"]
+            rows.append(
+                [
+                    row["MASS"],
+                    filtered_mz,
+                    filtered_annotation,
+                    protein,
+                    row["RAW_FILE"],
+                    row["SEQUENCE"],
+                    row["MODIFIED_SEQUENCE"],
+                    row["PRECURSOR_CHARGE"],
+                    filtered_intensity,
+                    row["RETENTION_TIME"],
+                    prec_im,
+                    filtered_ion_types,
+                    filtered_frag_charge,
+                    filtered_frag_num,
+                    FragmentLossType,
+                    AverageExperimentalRetentionTime,
+                    proteins,
+                    protypic,
+                ]
+            )
+
+    COLUMNS_DIA_SPECLIB = [
+        "RAW_MZ",
+        "ProductMz",
+        "Annotation",
+        "ProteinId",
+        "GeneName",
+        "PeptideSequence",
+        "ModifiedPeptideSequence",
+        "PrecursorCharge",
+        "LibraryIntensity",
+        "NormalizedRetentionTime",
+        "PrecursorIonMo,bility",
+        "FragmentType",
+        "FragmentCharge",
+        "FragmentSeriesNumber",
+        "FragmentLossType",
+        "AverageExperimentalRetentionTime",
+        "AllMappedProteins",
+        "Proteotypic",
+    ]
+
+    df = pd.DataFrame(rows, columns=COLUMNS_DIA_SPECLIB)
+    fragment_cols = [
+        "ProductMz",
+        "Annotation",
+        "LibraryIntensity",
+        "FragmentType",
+        "FragmentCharge",
+        "FragmentSeriesNumber",
+    ]
+    df = df.explode(fragment_cols, ignore_index=True)
+
+    df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
+
+
 def run_job(config_path: Union[str, Path, Config]):
     """
     Run oktoberfest based on job type given in the config file.
@@ -1424,14 +1543,14 @@ def run_job(config_path: Union[str, Path, Config]):
     :raises ValueError: In case the job_type in the provided config file is not known
     """
     if isinstance(config_path, Config):
-        conf = config_path
+        config = config_path
     else:
-        conf = Config()
-        conf.read(config_path)
-    conf.check()
+        config = Config()
+        config.read(config_path)
+    config.check()
 
-    output_folder = conf.output
-    job_type = conf.job_type
+    output_folder = config.output
+    job_type = config.job_type
 
     output_folder.mkdir(exist_ok=True)
 
@@ -1447,7 +1566,7 @@ def run_job(config_path: Union[str, Path, Config]):
 
     logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
     logger.info("Job executed with the following config:")
-    logger.info(json.dumps(conf.data, indent=4))
+    logger.info(json.dumps(config.data, indent=4))
 
     try:
         if job_type == "SpectralLibraryGeneration":
@@ -1459,6 +1578,8 @@ def run_job(config_path: Union[str, Path, Config]):
         elif job_type == "Rescoring":
             logger.info("Starting rescoring")
             run_rescoring(config_path)
+            if config.acquisition_method == "dia":
+                generate_spectral_lib_fdr_control(config_path)
         else:
             raise ValueError(f"Unknown job_type in config: {job_type}")
     finally:
