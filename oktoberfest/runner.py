@@ -1415,6 +1415,24 @@ def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
         raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
 
 
+def _extract_gene_name(protein: str) -> Optional[str]:
+    """Extract the gene name from a UniProt-style FASTA header.
+
+    Expects the ``db|accession|entry`` format (e.g. ``sp|P16402|H13_HUMAN``) and returns
+    the gene portion of the entry name (``H13`` for the example). Returns ``None`` when the
+    header does not follow this format or no gene name can be extracted.
+
+    :param protein: single protein identifier / FASTA header
+    :return: extracted gene name, or ``None`` if it cannot be determined
+    """
+    parts = protein.split("|")
+    if len(parts) != 3:
+        return None
+    entry_name = parts[2]
+    gene = entry_name.split("_")[0]
+    return gene or None
+
+
 def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_dir: Path) -> list[list]:
     """Build DIA spectral library rows for a single raw file.
 
@@ -1474,17 +1492,20 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
         protein_list = proteins.split(";")
         proteotypic = 1 if len(protein_list) == 1 else 0
 
+        gene_list = [_extract_gene_name(protein) for protein in protein_list]
+        genes = ";".join(str(gene) for gene in gene_list)
+
         rows.append(
             [
                 row.MASS,
                 mz[keep],
                 annotations[keep].tolist(),
                 protein_list[0],
-                row.RAW_FILE,
+                gene_list[0],
                 row.SEQUENCE,
                 row.MODIFIED_SEQUENCE,
                 row.PRECURSOR_CHARGE,
-                intensity[keep],
+                intensity[keep] * 10000,
                 row.RETENTION_TIME,
                 None,  # PrecursorIonMobility
                 ion_types[keep].tolist(),
@@ -1493,6 +1514,7 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
                 None,  # FragmentLossType
                 row.avg_retention_time_sec,
                 proteins,
+                genes,
                 proteotypic,
             ]
         )
@@ -1532,7 +1554,7 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
     df = pd.DataFrame(
         rows,
         columns=[
-            "RAW_MZ",
+            "PrecursorMz",
             "ProductMz",
             "Annotation",
             "ProteinId",
@@ -1549,6 +1571,7 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
             "FragmentLossType",
             "AverageExperimentalRetentionTime",
             "AllMappedProteins",
+            "AllMappedGenes",
             "Proteotypic",
         ],
     )
