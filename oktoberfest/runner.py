@@ -1415,6 +1415,90 @@ def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
         raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
 
 
+def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_dir: Path) -> list[list]:
+    """Build DIA spectral library rows for a single raw file.
+
+    :param filename: raw file name (without the .mzml.pred.hdf5 suffix)
+    :param peptide_df: percolator PSMs belonging to this file
+    :param data_dir: directory holding the annotated ``*.mzml.pred.hdf5`` files
+    :raises FileNotFoundError: if the annotated spectra HDF5 for the file is missing
+    :return: list of unexploded spectral library rows following ``_COLUMNS_DIA_SPECLIB``
+    """
+    hdf5_path = data_dir / f"{filename}.mzml.pred.hdf5"
+    if not hdf5_path.is_file():
+        raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+    library = Spectra.from_hdf5(hdf5_path)
+    obs = library.obs
+
+    spec_id_cols = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+    if "SCAN_EVENT_NUMBER" in obs.columns:
+        spec_id_cols.append("SCAN_EVENT_NUMBER")
+    obs["PSMId"] = obs[spec_id_cols].astype(str).agg("-".join, axis=1)
+
+    # Filter 1% FDR peptide level
+    obs["avg_retention_time_sec"] = obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"])[
+        "retention_time_sec"
+    ].transform("mean")
+
+    accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] < 0.01, "PSMId"]
+    positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
+
+    mz_layer = library.layers["mz"]
+    int_layer = library.layers["pred_int"]
+    annotations = library.var.index.to_numpy()
+    ion_types = library.var["type"].to_numpy()
+    frag_charges = library.var["charge"].to_numpy()
+    frag_nums = library.var["num"].to_numpy()
+
+    meta = obs.iloc[positions][
+        [
+            "MASS",
+            "PROTEINS",
+            "RAW_FILE",
+            "SEQUENCE",
+            "MODIFIED_SEQUENCE",
+            "PRECURSOR_CHARGE",
+            "RETENTION_TIME",
+            "avg_retention_time_sec",
+        ]
+    ]
+
+    rows = []
+    for pos, row in zip(positions, meta.itertuples(index=False)):
+        mz = mz_layer[pos].toarray().ravel()
+        intensity = int_layer[pos].toarray().ravel()
+        keep = (mz > 0.0) & (intensity > 0.0)
+
+        proteins = row.PROTEINS
+        protein_list = proteins.split(";")
+        proteotypic = 1 if len(protein_list) == 1 else 0
+
+        rows.append(
+            [
+                row.MASS,
+                mz[keep],
+                annotations[keep].tolist(),
+                protein_list[0],
+                row.RAW_FILE,
+                row.SEQUENCE,
+                row.MODIFIED_SEQUENCE,
+                row.PRECURSOR_CHARGE,
+                intensity[keep],
+                row.RETENTION_TIME,
+                None,  # PrecursorIonMobility
+                ion_types[keep].tolist(),
+                frag_charges[keep].tolist(),
+                frag_nums[keep].tolist(),
+                None,  # FragmentLossType
+                row.avg_retention_time_sec,
+                proteins,
+                proteotypic,
+            ]
+        )
+    return rows
+
+
 def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
 
     if isinstance(config_path, Config):
@@ -1433,95 +1517,38 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
 
     peptide_df = pd.read_csv(peptide_path, sep="\t")
     peptide_df["q-value"] = pd.to_numeric(peptide_df["q-value"], errors="coerce")
-    grouped_files = peptide_df.groupby("filename")
-    rows = []
-    for filename, df in grouped_files:
-        hdf5_path = data_dir / f"{filename}.mzml.pred.hdf5"
-        if not hdf5_path.is_file():
-            raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+    grouped_files = [(filename, group) for filename, group in peptide_df.groupby("filename")]
 
-        accepted_peptide_ids = df.loc[df["q-value"] < 0.01, "PSMId"]
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for filename, group in grouped_files:
+            processing_pool.apply_async(_build_speclib_rows_for_file, [filename, group, data_dir])
+        rows = [row for file_rows in processing_pool.check_pool() for row in file_rows]
+    else:
+        rows = []
+        for filename, group in grouped_files:
+            rows.extend(_build_speclib_rows_for_file(filename, group, data_dir))
 
-        library = Spectra.from_hdf5(hdf5_path)
-        spec_id_cols = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
-        if "SCAN_EVENT_NUMBER" in library.obs.columns:
-            spec_id_cols.append("SCAN_EVENT_NUMBER")
-        library.obs["PSMId"] = library.obs[spec_id_cols].astype(str).agg("-".join, axis=1)
-
-        # Filter 1% FDR peptide level
-        library.obs["avg_retention_time_sec"] = library.obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"])[
-            "retention_time_sec"
-        ].transform("mean")
-
-        accepted_peptide_ids = df.loc[df["q-value"] < 0.01, "PSMId"]
-
-        mask = library.obs.PSMId.isin(accepted_peptide_ids)
-        filtered_library_df = library.obs[mask]
-        for idx, row in filtered_library_df.iterrows():
-            i = int(idx)
-            mz = library.layers["mz"][i].toarray().ravel()
-            intensity = library.layers["pred_int"][i].toarray().ravel()
-            mask = (mz > 0.0) & (intensity > 0.0)
-            filtered_mz = mz[mask]
-            filtered_intensity = intensity[mask]
-            filtered_annotation = library.var.index[mask].to_list()
-            filtered_ion_types = library.var["type"][mask].to_list()
-            filtered_frag_charge = library.var["charge"][mask].to_list()
-            filtered_frag_num = library.var["num"][mask].to_list()
-            FragmentLossType = None
-
-            proteins = row["PROTEINS"]
-            num_proteins = len(proteins.split(";"))
-            protypic = 1 if num_proteins == 1 else 0
-            protein = row["PROTEINS"].split(";")[0]
-
-            prec_im = None
-            AverageExperimentalRetentionTime = row["avg_retention_time_sec"]
-            rows.append(
-                [
-                    row["MASS"],
-                    filtered_mz,
-                    filtered_annotation,
-                    protein,
-                    row["RAW_FILE"],
-                    row["SEQUENCE"],
-                    row["MODIFIED_SEQUENCE"],
-                    row["PRECURSOR_CHARGE"],
-                    filtered_intensity,
-                    row["RETENTION_TIME"],
-                    prec_im,
-                    filtered_ion_types,
-                    filtered_frag_charge,
-                    filtered_frag_num,
-                    FragmentLossType,
-                    AverageExperimentalRetentionTime,
-                    proteins,
-                    protypic,
-                ]
-            )
-
-    COLUMNS_DIA_SPECLIB = [
-        "RAW_MZ",
-        "ProductMz",
-        "Annotation",
-        "ProteinId",
-        "GeneName",
-        "PeptideSequence",
-        "ModifiedPeptideSequence",
-        "PrecursorCharge",
-        "LibraryIntensity",
-        "NormalizedRetentionTime",
-        "PrecursorIonMo,bility",
-        "FragmentType",
-        "FragmentCharge",
-        "FragmentSeriesNumber",
-        "FragmentLossType",
-        "AverageExperimentalRetentionTime",
-        "AllMappedProteins",
-        "Proteotypic",
-    ]
-
-    df = pd.DataFrame(rows, columns=COLUMNS_DIA_SPECLIB)
+    df = pd.DataFrame(rows, columns=_COLUMNS_DIA_SPECLIB = [
+    "RAW_MZ",
+    "ProductMz",
+    "Annotation",
+    "ProteinId",
+    "GeneName",
+    "PeptideSequence",
+    "ModifiedPeptideSequence",
+    "PrecursorCharge",
+    "LibraryIntensity",
+    "NormalizedRetentionTime",
+    "PrecursorIonMobility",
+    "FragmentType",
+    "FragmentCharge",
+    "FragmentSeriesNumber",
+    "FragmentLossType",
+    "AverageExperimentalRetentionTime",
+    "AllMappedProteins",
+    "Proteotypic",
+])
     fragment_cols = [
         "ProductMz",
         "Annotation",
