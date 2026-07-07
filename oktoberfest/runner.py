@@ -1529,26 +1529,29 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         for filename, group in grouped_files:
             rows.extend(_build_speclib_rows_for_file(filename, group, data_dir))
 
-    df = pd.DataFrame(rows, columns=_COLUMNS_DIA_SPECLIB = [
-    "RAW_MZ",
-    "ProductMz",
-    "Annotation",
-    "ProteinId",
-    "GeneName",
-    "PeptideSequence",
-    "ModifiedPeptideSequence",
-    "PrecursorCharge",
-    "LibraryIntensity",
-    "NormalizedRetentionTime",
-    "PrecursorIonMobility",
-    "FragmentType",
-    "FragmentCharge",
-    "FragmentSeriesNumber",
-    "FragmentLossType",
-    "AverageExperimentalRetentionTime",
-    "AllMappedProteins",
-    "Proteotypic",
-])
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "RAW_MZ",
+            "ProductMz",
+            "Annotation",
+            "ProteinId",
+            "GeneName",
+            "PeptideSequence",
+            "ModifiedPeptideSequence",
+            "PrecursorCharge",
+            "LibraryIntensity",
+            "NormalizedRetentionTime",
+            "PrecursorIonMobility",
+            "FragmentType",
+            "FragmentCharge",
+            "FragmentSeriesNumber",
+            "FragmentLossType",
+            "AverageExperimentalRetentionTime",
+            "AllMappedProteins",
+            "Proteotypic",
+        ],
+    )
     fragment_cols = [
         "ProductMz",
         "Annotation",
