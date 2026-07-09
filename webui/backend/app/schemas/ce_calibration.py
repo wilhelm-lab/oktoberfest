@@ -13,7 +13,7 @@ class CeCalibrationConfig(CommonConfigMixin):
     inputs: RescoringInputs = Field(default_factory=RescoringInputs)
     massTolerance: float = Field(default=20.0, gt=0)
     unitMassTolerance: str = "ppm"
-    thermoExe: str = "ThermoRawFileParser.exe"
+    thermoExe: str = "/cmnfs/scratch/oktoberfest_webserver/ThermoRawFileParser1.4.4/ThermoRawFileParser.exe"
     ce_alignment_options: CeAlignmentOptions = Field(default_factory=CeAlignmentOptions)
 
     @field_validator("unitMassTolerance")

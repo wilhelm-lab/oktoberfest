@@ -25,11 +25,9 @@ const form = reactive({
     unitMassTolerance: "ppm",
     ce_range: [19, 50] as [number, number],
     use_ransac_model: false,
-    thermoExe: "ThermoRawFileParser.exe",
     // Quantification
     quantification: false,
-    // Advanced
-    numThreads: 1,
+    // Other Options
     tag: "",
     instrument_type: "QE",
     ion_types_list: ["b", "y"],
@@ -39,7 +37,6 @@ const searchResultFiles = computed(() => store.uploads["search_results"] ?? []);
 const spectraFiles = computed(() => store.uploads["spectra"] ?? []);
 const fastaFiles = computed(() => store.uploads["fasta"] ?? []);
 
-const showThermoExe = computed(() => form.spectra_type === "raw");
 
 const isValid = computed(() => {
     const hasSearchResults = searchResultFiles.value.length > 0;
@@ -63,7 +60,6 @@ function buildConfig(): Record<string, unknown> {
         models: { intensity: form.intensity, irt: form.irt },
         prediction_server: form.prediction_server,
         ssl: form.ssl,
-        numThreads: form.numThreads,
         tag: form.tag,
         fdr_estimation_method: form.fdr_estimation_method,
         regressionMethod: form.regressionMethod,
@@ -77,7 +73,6 @@ function buildConfig(): Record<string, unknown> {
         },
         quantification: form.quantification,
     };
-    if (showThermoExe.value) cfg["thermoExe"] = form.thermoExe;
     if (form.quantification) {
         cfg["fastaDigestOptions"] = {
             digestion: "full",
@@ -262,6 +257,24 @@ async function handleSubmit() {
                             chips
                         />
                     </v-col>
+                    <v-col cols="12" md="6">
+                        <v-select
+                            v-model="form.tag"
+                            :items="store.meta.tags"
+                            label="Isobaric tag"
+                            density="compact"
+                            variant="outlined"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="6">
+                        <v-select
+                            v-model="form.instrument_type"
+                            :items="['QE', 'LUMOS', 'TIMSTOF', 'SCIEXTOF']"
+                            label="Instrument type"
+                            density="compact"
+                            variant="outlined"
+                        />
+                    </v-col>
                     <v-col cols="12">
                         <RangeField
                             v-model="form.ce_range"
@@ -270,16 +283,7 @@ async function handleSubmit() {
                             :max="100"
                         />
                     </v-col>
-                    <v-col v-if="showThermoExe" cols="12">
-                        <v-text-field
-                            v-model="form.thermoExe"
-                            label="ThermoRawFileParser path"
-                            density="compact"
-                            variant="outlined"
-                            hint="Required for .raw spectra files"
-                            persistent-hint
-                        />
-                    </v-col>
+
                 </v-row>
             </v-card-text>
         </v-card>
@@ -311,46 +315,6 @@ async function handleSubmit() {
             </v-card-text>
         </v-card>
 
-        <!-- Advanced -->
-        <v-expansion-panels class="mb-4">
-            <v-expansion-panel>
-                <v-expansion-panel-title
-                    >Advanced settings</v-expansion-panel-title
-                >
-                <v-expansion-panel-text>
-                    <v-row>
-                        <v-col cols="12" md="4">
-                            <v-text-field
-                                v-model.number="form.numThreads"
-                                label="Parallel threads"
-                                type="number"
-                                density="compact"
-                                variant="outlined"
-                                :min="1"
-                            />
-                        </v-col>
-                        <v-col cols="12" md="4">
-                            <v-select
-                                v-model="form.tag"
-                                :items="store.meta.tags"
-                                label="Isobaric tag"
-                                density="compact"
-                                variant="outlined"
-                            />
-                        </v-col>
-                        <v-col cols="12" md="4">
-                            <v-select
-                                v-model="form.instrument_type"
-                                :items="['QE', 'LUMOS', 'TIMSTOF', 'SCIEXTOF']"
-                                label="Instrument type"
-                                density="compact"
-                                variant="outlined"
-                            />
-                        </v-col>
-                    </v-row>
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
 
         <!-- Config preview -->
         <ConfigSummary :config="buildConfig()" class="mb-4" />
