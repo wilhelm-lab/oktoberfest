@@ -88,6 +88,16 @@ def run_oktoberfest_job(self, job_id: str):
         # Package results
         zip_path = _package_results(job_dir, output_dir, config_path, captured_log)
 
+        # Extract number of spectra for logging
+        spectra_count = None
+        if captured_log.exists():
+            import re
+            log_text = captured_log.read_text(errors="replace")
+            m = re.search(r"#sequences after filtering for valid prosit sequences:\s*(\d+)", log_text)
+            if m:
+                spectra_count = int(m.group(1))
+                job.spectra_count = spectra_count
+
         job.status = JobStatus.SUCCEEDED.value
         job.finished_at = datetime.utcnow()
         job.has_results = True

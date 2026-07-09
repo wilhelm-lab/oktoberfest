@@ -16,7 +16,6 @@ const form = reactive({
     irt: "Prosit_2019_irt",
     prediction_server: "koina.wilhelmlab.org:443",
     ssl: true,
-    numThreads: 1,
     tag: "",
     instrument_type: "QE",
     // spectralLibraryOptions
@@ -67,7 +66,6 @@ function buildConfig(): Record<string, unknown> {
         models: { intensity: form.intensity, irt: form.irt },
         prediction_server: form.prediction_server,
         ssl: form.ssl,
-        numThreads: form.numThreads,
         tag: form.tag,
         spectralLibraryOptions: {
             fragmentation: form.fragmentation,
@@ -204,6 +202,24 @@ async function handleSubmit() {
                             variant="outlined"
                         />
                     </v-col>
+                    <v-col cols="12" md="4">
+                        <v-select
+                            v-model="form.tag"
+                            :items="store.meta.tags"
+                            label="Isobaric tag"
+                            density="compact"
+                            variant="outlined"
+                        />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-select
+                            v-model="form.instrument_type"
+                            :items="['QE', 'LUMOS', 'TIMSTOF', 'SCIEXTOF']"
+                            label="Instrument type"
+                            density="compact"
+                            variant="outlined"
+                        />
+                    </v-col>
                     <v-col cols="12">
                         <RangeField
                             v-model="form.precursorCharge"
@@ -324,43 +340,7 @@ async function handleSubmit() {
             </v-card-text>
         </v-card>
 
-        <!-- Advanced -->
-        <v-expansion-panels class="mb-4">
-            <v-expansion-panel>
-                <v-expansion-panel-title
-                    >Advanced settings</v-expansion-panel-title
-                >
-                <v-expansion-panel-text>
-                    <v-row>
-                        <v-col cols="12" md="4"
-                            ><v-text-field
-                                v-model.number="form.numThreads"
-                                label="Parallel threads"
-                                type="number"
-                                density="compact"
-                                variant="outlined"
-                                :min="1"
-                        /></v-col>
-                        <v-col cols="12" md="4"
-                            ><v-select
-                                v-model="form.tag"
-                                :items="store.meta.tags"
-                                label="Isobaric tag"
-                                density="compact"
-                                variant="outlined"
-                        /></v-col>
-                        <v-col cols="12" md="4"
-                            ><v-select
-                                v-model="form.instrument_type"
-                                :items="['QE', 'LUMOS', 'TIMSTOF', 'SCIEXTOF']"
-                                label="Instrument type"
-                                density="compact"
-                                variant="outlined"
-                        /></v-col>
-                    </v-row>
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
+
 
         <ConfigSummary :config="buildConfig()" class="mb-4" />
 

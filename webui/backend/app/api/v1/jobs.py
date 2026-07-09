@@ -48,6 +48,9 @@ class JobResponse(BaseModel):
     config: Optional[dict[str, Any]]
     required_files: Optional[list[dict[str, Any]]] = None
     progress_phase: Optional[str] = None
+    file_count: Optional[int] = None
+    total_size_bytes: Optional[int] = None
+    spectra_count: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -64,6 +67,9 @@ def _job_to_response(job: Job, include_required: bool = False) -> dict[str, Any]
         "error": job.error,
         "config": json.loads(job.config_json) if job.config_json else None,
         "progress_phase": job_service.get_job_progress_phase(job.id) if job.status in ("RUNNING", "SUCCEEDED", "FAILED") else None,
+        "file_count": job.file_count,
+        "total_size_bytes": job.total_size_bytes,
+        "spectra_count": job.spectra_count,
     }
     if include_required:
         cfg = json.loads(job.config_json) if job.config_json else {}
@@ -171,6 +177,14 @@ def submit_job(
     inputs_dir = storage.inputs_dir(job_id)
     uploaded_files = list(inputs_dir.iterdir()) if inputs_dir.exists() else []
     output_dir = str(storage.output_dir(job_id))
+    
+    total_size = sum(f.stat().st_size for f in uploaded_files if f.is_file())
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Job {job_id} submitted with {len(uploaded_files)} files (total size: {total_size} bytes)")
+    
+    job.file_count = len(uploaded_files)
+    job.total_size_bytes = total_size
 
     if "inputs" not in cfg_raw:
         cfg_raw["inputs"] = {}
@@ -188,10 +202,32 @@ def submit_job(
         if search_files:
             cfg_raw["inputs"]["search_results"] = str(search_files[0])
         if spectra_files:
-            cfg_raw["inputs"]["spectra"] = str(spectra_files[0]) if len(spectra_files) == 1 else str(inputs_dir)
+            unique_exts = {f.suffix.lower() for f in spectra_files}
+            if len(unique_exts) > 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Multiple spectra file types uploaded: {', '.join(unique_exts)}. Please upload only one type of spectra files."
+                )
+            
+            ext = list(unique_exts)[0]
+            if ext == ".mzml":
+                cfg_raw["inputs"]["spectra_type"] = "mzml"
+            elif ext == ".raw":
+                cfg_raw["inputs"]["spectra_type"] = "raw"
+            elif ext in (".hdf", ".hdf5"):
+                cfg_raw["inputs"]["spectra_type"] = "hdf"
+            elif ext == ".d":
+                cfg_raw["inputs"]["spectra_type"] = "d"
+
+            cfg_raw["inputs"]["spectra"] = str(inputs_dir)
     elif job.job_type == "SpectralLibraryGeneration":
         if uploaded_files:
             cfg_raw["inputs"]["library_input"] = str(uploaded_files[0])
+            
+    # Dynamically set numThreads based on the number of raw/spectra files (max 4)
+    spectra_exts = {".raw", ".mzml", ".hdf", ".hdf5", ".d"}
+    spectra_count_for_threads = len([f for f in uploaded_files if f.suffix.lower() in spectra_exts])
+    cfg_raw["numThreads"] = min(4, spectra_count_for_threads) if spectra_count_for_threads > 0 else 1
 
     # Final validation with resolved paths
     validated = _validate_config(job.job_type, cfg_raw)

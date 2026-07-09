@@ -24,3 +24,7 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    
+    file_count: Mapped[int | None] = mapped_column(nullable=True)
+    total_size_bytes: Mapped[int | None] = mapped_column(nullable=True)
+    spectra_count: Mapped[int | None] = mapped_column(nullable=True)

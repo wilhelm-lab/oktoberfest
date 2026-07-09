@@ -69,6 +69,10 @@ async def upload_file(
                 raise HTTPException(status_code=413, detail="File exceeds size limit")
             f.write(chunk)
 
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"File uploaded for job {job_id}: {safe_name} ({total} bytes)")
+
     return {
         "job_id": job_id,
         "role": role,
