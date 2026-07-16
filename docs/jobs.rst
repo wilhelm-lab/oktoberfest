@@ -273,5 +273,3 @@ In addition, XL-MS example configurations for non-cleavable and cleavable crossl
 
     config = ok.utils.example_configs.RESCORING_XL_NON_CLEAVABLE
     config = ok.utils.example_configs.RESCORING_XL_CLEAVABLE
-
-
