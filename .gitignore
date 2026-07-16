@@ -51,7 +51,6 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-./unit_tests/data/quantification
 
 # Translations
 *.mo
@@ -151,8 +150,11 @@ hash.file
 
 # example data
 /data/
-/tests/unit_tests/data/
 
+# Test-generated output files (not test fixtures)
+tests/data/**/rescore*.tab
+tests/data/**/rescore*.txt
+tests/data/**/evidence.txt
 
 # Machine learning artifacts
 wandb/
@@ -162,3 +164,6 @@ tests/doctests/
 
 # vscode settings
 .vscode/
+
+# .DS_Store files
+.DS_Store

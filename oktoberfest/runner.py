@@ -423,9 +423,11 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
 
+        worker_count = max(1, min(config.num_threads, n_batches))
+
         with Manager() as manager:
             # setup
-            shared_queue = manager.Queue(maxsize=config.num_threads)
+            shared_queue = manager.Queue(maxsize=worker_count)
             prediction_progress = manager.Value("i", 0)
             prediction_failure_progress = manager.Value("i", 0)
             writing_progress = manager.Value("i", 0)
@@ -434,7 +436,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
             lock_failure = manager.Lock()
 
             # Create a pool for producer processes
-            predictor_pool = pool.Pool(config.num_threads)
+            predictor_pool = pool.Pool(worker_count)
 
             consumer_process = Process(
                 target=speclib.async_write,
@@ -539,8 +541,10 @@ def run_ce_calibration(
 
     spectra_files = _preprocess(spectra_files, config)
 
-    if config.num_threads > 1:
-        processing_pool = JobPool(processes=config.num_threads)
+    worker_count = max(1, min(config.num_threads, len(spectra_files)))
+
+    if worker_count > 1:
+        processing_pool = JobPool(processes=worker_count)
         for spectra_file in spectra_files:
             processing_pool.apply_async(_ce_calib, [spectra_file, config])
         processing_pool.check_pool()
@@ -1208,8 +1212,10 @@ def run_rescoring(config_path: Union[str, Path]):
 
     spectra_files = _preprocess(spectra_files, config)
 
-    if config.num_threads > 1:
-        processing_pool = JobPool(processes=config.num_threads)
+    worker_count = max(1, min(config.num_threads, len(spectra_files)))
+
+    if worker_count > 1:
+        processing_pool = JobPool(processes=worker_count)
         for spectra_file in spectra_files:
             _ = processing_pool.apply_async(_ce_calib, [spectra_file, config])
         processing_pool.check_pool()
@@ -1217,8 +1223,8 @@ def run_rescoring(config_path: Union[str, Path]):
         for spectra_file in spectra_files:
             _ = _ce_calib(spectra_file, config)
 
-    if config.num_threads > 1:
-        processing_pool = JobPool(processes=config.num_threads)
+    if worker_count > 1:
+        processing_pool = JobPool(processes=worker_count)
         for spectra_file in spectra_files:
             if "xl" in config.models["intensity"].lower():
                 if "cms2" in config.models["intensity"].lower():

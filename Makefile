@@ -48,8 +48,11 @@ clean_data_folder:
 #   make install     – install project + all dev deps into Poetry virtualenv
 #   make lint        – run pre-commit hooks (formatting, linting, security checks)
 #   make format      – format code with ruff
-#   make test        – run tests and collect coverage data
-#   make coverage    – print coverage report and export as XML for CI upload
+#   make test        – run unit tests
+#   make test-int    – run integration tests
+#   make coverage-unit – run unit tests with coverage and export XML
+#   make coverage-int  – run integration tests with coverage and export XML
+#   make coverage    – run unit + integration tests with coverage and export XML
 #   make typecheck   – runtime type checking via typeguard
 #   make doctest     – validate inline docstring examples
 #   make docs        – build HTML documentation with Sphinx
@@ -57,7 +60,7 @@ clean_data_folder:
 #   make check       – run all quality checks in CI order (lint → test → coverage → typecheck → doctest)
 #   make dist        – build source and wheel distributions
 # ────────────────────────────────────────────────────────────────────────────
-.PHONY: install lint format test coverage typecheck doctest docs dist check
+.PHONY: install lint format test test-int coverage coverage-unit coverage-int typecheck doctest docs dist check
 
 check: lint test coverage typecheck doctest ## Run all quality checks in CI order
 
@@ -70,10 +73,28 @@ lint: ## Run pre-commit hooks (formatting, linting, security checks)
 format: ## Format code with ruff
 	poetry run ruff format oktoberfest tests
 
-test: ## Run test suite and collect coverage data
-	poetry run coverage run -m pytest tests/unit_tests
+test: ## Run unit tests
+	poetry run pytest tests/unit_tests
 
-coverage: ## Generate coverage report and export as XML
+test-int: ## Run integration tests
+	poetry run pytest tests/integration_tests
+
+coverage-unit: ## Run unit tests with coverage and export XML
+	poetry run coverage erase
+	poetry run coverage run -m pytest tests/unit_tests
+	poetry run coverage report -i
+	poetry run coverage xml
+
+coverage-int: ## Run integration tests with coverage and export XML
+	poetry run coverage erase
+	poetry run coverage run -m pytest tests/integration_tests
+	poetry run coverage report -i
+	poetry run coverage xml
+
+coverage: ## Run unit + integration tests with coverage and export combined XML
+	poetry run coverage erase
+	poetry run coverage run -m pytest tests/unit_tests
+	poetry run coverage run --append -m pytest tests/integration_tests
 	poetry run coverage report -i
 	poetry run coverage xml
 
