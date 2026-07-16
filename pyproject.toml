@@ -1,6 +1,6 @@
 [project]
 name = "oktoberfest"
-version = "0.11.0"
+version = "0.11.1"
 description = "Public repo oktoberfest"
 authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
