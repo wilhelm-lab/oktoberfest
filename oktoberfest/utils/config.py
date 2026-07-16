@@ -9,6 +9,10 @@ from koinapy.grpc import Koina
 
 logger = logging.getLogger(__name__)
 
+# DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
+# pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
+_DLOMIX_PIPELINE_CACHE: dict = {}
+
 
 class Config:
     """Read config file and get information from it."""
@@ -258,22 +262,39 @@ class Config:
 
     @property
     def dlomix_pipeline(self):
-        """Load and cache DLOmix InferencePipeline if dlomix_intensity is configured."""
-        if not hasattr(self, '_dlomix_pipeline'):
-            dlomix_path = self.models.get("dlomix_intensity")
-            if dlomix_path:
-                try:
-                    # Disable GPU before importing DLOmix to avoid CUDA initialization errors in workers
-                    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-                    from dlomix.pipelines.predictor import InferencePipeline
-                    pipeline_path = self.base_path / Path(dlomix_path) if not Path(dlomix_path).is_absolute() else Path(dlomix_path)
-                    self._dlomix_pipeline = InferencePipeline.load(str(pipeline_path))
-                except Exception as e:
-                    logger.warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
-                    self._dlomix_pipeline = None
-            else:
-                self._dlomix_pipeline = None
-        return self._dlomix_pipeline
+        """Return the DLOmix pipeline, loading it once per model path and caching it at module level.
+
+        Loaded once in the parent (via check_dlomix) before the worker pools fork, so workers
+        inherit the single load via copy-on-write instead of each reloading it. NOTE: this relies
+        on TF tolerating fork-after-init; _load_dlomix_pipeline pins TF to single-threaded execution
+        as a mitigation for the fork-after-init deadlock.
+        """
+        dlomix_path = self.models.get("dlomix_intensity")
+        if not dlomix_path:
+            return None
+        key = str(self.base_path / dlomix_path if not Path(dlomix_path).is_absolute() else Path(dlomix_path))
+        if key not in _DLOMIX_PIPELINE_CACHE:
+            _DLOMIX_PIPELINE_CACHE[key] = self._load_dlomix_pipeline()
+        return _DLOMIX_PIPELINE_CACHE[key]
+
+    def _load_dlomix_pipeline(self):
+        """Load the DLOmix InferencePipeline configured via ``dlomix_intensity``, or None."""
+        dlomix_path = self.models.get("dlomix_intensity")
+        if not dlomix_path:
+            return None
+        try:
+            # Disable GPU before importing DLOmix to avoid CUDA initialization errors in workers
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+            from dlomix.pipelines.predictor import InferencePipeline
+
+            pipeline_path = Path(dlomix_path)
+            if not pipeline_path.is_absolute():
+                pipeline_path = self.base_path / pipeline_path
+            logger.info(f"Loading DLOmix pipeline from {pipeline_path} (pid {os.getpid()})")
+            return InferencePipeline.load(str(pipeline_path))
+        except Exception as e:
+            logger.warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
+            return None
 
     #####################################
     # these are fasta digestion options #
@@ -457,7 +478,9 @@ class Config:
             self._check_for_speclib()
 
         # Skip alphapept and Koina checks if using DLOmix
-        if not self.models.get("dlomix_intensity"):
+        if self.models.get("dlomix_intensity"):
+            self.check_dlomix()
+        else:
             if "alphapept" in self.models["intensity"].lower():
                 self._check_for_alphapept()
 
@@ -472,6 +495,20 @@ class Config:
         # This will give error automaticly in Koina if model is not available on the server.
         # Koina has function called "_is_model_ready" that checks if model is available
         _ = Koina(model_name=self.models["intensity"])
+
+    def check_dlomix(self):
+        """Load the DLOmix pipeline once in the parent process (from ``check``, before the worker pools).
+
+        Validates the path (fail fast on a bad model) and primes the module-level cache so the
+        fork-based Pool workers created afterwards reuse this single load instead of each reloading.
+        NOTE: loading TF in the parent and then forking can deadlock when a worker runs inference;
+        _load_dlomix_pipeline pins TF to single-threaded execution to mitigate that.
+        """
+        if self.dlomix_pipeline is None:
+            raise ValueError(
+                f"Could not load DLOmix pipeline from {self.models.get('dlomix_intensity')}. "
+                "Please check that 'dlomix_intensity' in your config points to a valid saved pipeline."
+            )
 
     def _check_tmt(self):
         # Skip TMT check if using DLOmix (no intensity model requirement)
