@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from typing import Union
@@ -15,6 +16,8 @@ from spectrum_io.raw import ThermoRaw
 
 from oktoberfest.data.spectra import Spectra
 from oktoberfest.utils import Config
+
+logger = logging.getLogger(__name__)
 
 # Set the default fontsize and linewidth
 plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
@@ -461,6 +464,34 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
+_MIRROR_GROUP_CACHE: dict[str, dict] = {}
+
+
+def _mirror_group_label(raw_file: str, scan_number: int) -> str:
+    """Return the selection-group label for a (raw_file, scan) mirror plot, or "".
+
+    Env-gated and default-off: only active when ``MIRROR_GROUP_TSV`` points at a
+    tab-separated file with ``group``, ``filename`` and ``ScanNr`` columns (as written
+    by ``runs/matcher_compare/plot_groups.py``). Lets each mirror-plot page be tagged
+    with the group it was picked for (best_sa / worst_sa / just in/outside 1% FDR). If
+    the env var is unset or the pair is absent, returns "" and the title is unchanged,
+    so all other callers of ``plot_mirror_spectrum`` are unaffected.
+    """
+    path = os.environ.get("MIRROR_GROUP_TSV")
+    if not path:
+        return ""
+    if path not in _MIRROR_GROUP_CACHE:
+        mapping: dict[tuple[str, int], list[str]] = {}
+        try:
+            df = pd.read_csv(path, sep="\t")
+            for _, r in df.iterrows():
+                mapping.setdefault((str(r["filename"]), int(r["ScanNr"])), []).append(str(r["group"]))
+        except (FileNotFoundError, KeyError, ValueError):
+            mapping = {}
+        _MIRROR_GROUP_CACHE[path] = mapping
+    return "+".join(_MIRROR_GROUP_CACHE[path].get((str(raw_file), int(scan_number)), []))
+
+
 def plot_mirror_spectrum(
     spec_pred: Spectra,
     mzml: pd.DataFrame,
@@ -552,7 +583,9 @@ def plot_mirror_spectrum(
     title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
     title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa:.2f}"
-    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
+    group = _mirror_group_label(raw_file, scan_number)
+    title_group = f"Selection group: {group}\n" if group else ""
+    ax_mirror.set_title(f"{title_group}{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
     sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
 
     # KDE score plot
@@ -616,12 +649,17 @@ def plot_all(data_dir: Path, config: Config):
         "psm",
         data_dir / "original_target_vs_decoys_psm_bins.svg",
     )
-    plot_sa_distribution(
-        prosit_df,
-        prosit_psms_target,
-        prosit_psms_decoy,
-        data_dir / "target_vs_decoys_sa_distribution.svg",
-    )
+    # Guarded individually: this plot needs the spectral_angle column, which a feature-ablation
+    # run (OKT_DROP_FEATURES) may have removed. Skipping it must not abort the remaining plots.
+    try:
+        plot_sa_distribution(
+            prosit_df,
+            prosit_psms_target,
+            prosit_psms_decoy,
+            data_dir / "target_vs_decoys_sa_distribution.svg",
+        )
+    except Exception as e:
+        logger.warning(f"Skipping SA distribution plot: {e}")
     joint_plot(
         prosit_pep_target,
         prosit_pep_decoy,
@@ -642,7 +680,11 @@ def plot_all(data_dir: Path, config: Config):
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
 
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
+    # Guarded individually: needs RT/iRT/pred_RT, which a feature-ablation run may have removed.
+    try:
+        plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
+    except Exception as e:
+        logger.warning(f"Skipping iRT-vs-pred-RT plot: {e}")
 
     base_mzml_path = os.path.abspath(os.path.join(data_dir, "../../spectra"))
     base_hdf5_path = os.path.abspath(os.path.join(data_dir, "../../data"))
@@ -655,26 +697,41 @@ def plot_all(data_dir: Path, config: Config):
 
     pdf_path = data_dir / "mirror_plots.pdf"
 
-    with PdfPages(pdf_path) as pdf:
-        for raw_file, scan_numbers in mirror_plots_dict.items():
-            mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
-            hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+    # Guarded: mirror plots need abs_rt_diff and spectral_angle, which a feature-ablation run
+    # may have removed (and only run at all if mirror_plots is configured).
+    try:
+        with PdfPages(pdf_path) as pdf:
+            for raw_file, scan_numbers in mirror_plots_dict.items():
+                mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+                hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
 
-            mzml = ThermoRaw.read_mzml(source=mzml_path)
-            spec_pred = Spectra.from_hdf5(hdf5_path)
+                mzml = ThermoRaw.read_mzml(source=mzml_path)
+                spec_pred = Spectra.from_hdf5(hdf5_path)
 
-            for scan_number in scan_numbers:
-                plot_mirror_spectrum(
-                    spec_pred,
-                    mzml,
-                    raw_file,
-                    scan_number,
-                    config,
-                    prosit_df,
-                    prosit_psms_target,
-                    prosit_psms_decoy,
-                    pdf,
-                )
+                for scan_number in scan_numbers:
+                    plot_mirror_spectrum(
+                        spec_pred,
+                        mzml,
+                        raw_file,
+                        scan_number,
+                        config,
+                        prosit_df,
+                        prosit_psms_target,
+                        prosit_psms_decoy,
+                        pdf,
+                    )
+    except Exception as e:
+        logger.warning(f"Skipping mirror plots: {e}")
+
+    # Standalone interactive HTML investigation report, written next to the native plots (data_dir).
+    # FULLY GUARDED: report generation must never break a rescoring run for any reason.
+    try:
+        from oktoberfest.plotting.investigate import build_report_safe
+
+        build_report_safe(data_dir, out_html=data_dir / "investigate_report.html",
+                          want_spectra=True, log=logger.info)
+    except Exception as e:
+        logger.warning(f"Skipping HTML investigation report: {e}")
 
 
 def plot_ce_ransac_model(
