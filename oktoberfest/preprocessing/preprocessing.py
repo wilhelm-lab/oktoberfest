@@ -997,6 +997,8 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["mean_ppm_error"]).values, "mean_ppm_error")
     aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["max_ppm_error"]).values, "max_ppm_error")
     aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["std_ppm_error"]).values, "std_ppm_error")
+    aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x: x["intensity_coverage"]).values, "intensity_coverage")
+
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")
