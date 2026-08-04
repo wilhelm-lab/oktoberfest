@@ -14,7 +14,7 @@ from oktoberfest.data.spectra import FragmentType
 from oktoberfest.predict import Koina, Predictor
 from oktoberfest.utils import Config
 
-DATA_PATH = Path(__file__).parent / "data"
+DATA_PATH = Path(__file__).parents[1] / "data"
 
 
 class TestTMTProsit(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestTMTProsit(unittest.TestCase):
 
     def test_prosit_tmt(self):
         """Test retrieval of predictions from prosit tmt models via koina."""
-        meta_df = pd.read_csv(Path(__file__).parent / "data" / "predictions" / "library_input.csv")
+        meta_df = pd.read_csv(Path(__file__).parents[1] / "data" / "predictions" / "library_input.csv")
         var = Spectra._gen_vars_df()
         library = Spectra(obs=meta_df, var=var)
         library.strings_to_categoricals()
@@ -41,7 +41,9 @@ class TestTMTProsit(unittest.TestCase):
         )
         irt_predictor.predict_rt(data=library)
 
-        library_expected = Spectra.from_hdf5(Path(__file__).parent / "data" / "predictions" / "library_output.h5ad.gz")
+        library_expected = Spectra.from_hdf5(
+            Path(__file__).parents[1] / "data" / "predictions" / "library_output.h5ad.gz"
+        )
 
         assert_almost_equal(
             library.get_matrix(FragmentType.PRED).toarray(),

@@ -1,0 +1,90 @@
+name: Integration Tests
+
+# Integration tests are heavier and may depend on external services or
+# multiple packages, so we deliberately avoid running them on every push/PR.
+#
+# Triggers:
+#   - Manual dispatch (primary day-to-day trigger, supports input overrides)
+#   - Push to main/development (post-merge gate, not pre-merge)
+#
+# To run against a specific branch or with extra pytest flags, use the
+# manual dispatch inputs below.
+on:
+    workflow_dispatch:
+        inputs:
+            python-version:
+                description: "Python version to use"
+                required: false
+                default: "3.12"
+                type: choice
+                options: ["3.10", "3.11", "3.12"]
+            pytest-extra-args:
+                description: "Extra pytest arguments (e.g. -k test_my_feature)"
+                required: false
+                default: ""
+
+    push:
+        branches: [main, development]
+
+jobs:
+    # -----------------------------------------------------------------------
+    # Integration tests — pytest against ./tests/integration_tests.
+    # Runs on a single Python version by default (parametrised via dispatch).
+    # Uploads integration-only coverage so Codecov can merge it with unit
+    # coverage uploaded by the main CI workflow.
+    # -----------------------------------------------------------------------
+    integration-test:
+        name: Integration Tests (Python ${{ inputs.python-version || '3.12' }})
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-python@v6
+              with:
+                  python-version: ${{ inputs.python-version || '3.12' }}
+                  cache: pip
+
+            - name: Install Poetry
+              run: pip install poetry
+
+            - name: Cache Poetry virtualenv
+              uses: actions/cache@v5
+              with:
+                  path: ~/.cache/pypoetry/virtualenvs
+                  # Separate cache key from the unit-test jobs so that adding
+                  # integration-only dependencies does not bust their caches.
+                  key: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-${{ hashFiles('poetry.lock') }}
+                  restore-keys: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-
+
+            - name: Install project and dependencies
+              # If your integration tests require extra packages (e.g. a
+              # dedicated [tool.poetry.group.integration] group in
+              # pyproject.toml), add --with integration here.
+              run: poetry install --with dev
+
+            - name: Run integration tests
+              env:
+                  # Expose any secrets your integration tests need here:
+                  # MY_SERVICE_API_KEY: ${{ secrets.MY_SERVICE_API_KEY }}
+                  INTEGRATION_TEST: "1" # Sentinel env var tests can assert on
+              run: |
+                  poetry run pytest tests/integration_tests \
+                    -v \
+                    --tb=short \
+                    ${{ inputs.pytest-extra-args }}
+
+            - name: Generate integration coverage report
+              env:
+                  INTEGRATION_TEST: "1"
+              run: make coverage-int
+
+            - name: Upload integration coverage
+              uses: codecov/codecov-action@v7
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: coverage.xml
+                  flags: integration-tests
+                  name: integration-${{ inputs.python-version || '3.12' }}
+                  verbose: true
+                  fail_ci_if_error: false
