@@ -774,7 +774,7 @@ def split_search(
 
     filenames_found = []
     for filename in filenames:
-        output_file = (output_dir / filename).with_suffix(".rescore")
+        output_file = output_dir / f"{filename}.rescore"
         logger.info(f"Creating split search results file {output_file}")
         try:
             grouped_search_results.get_group(filename).to_csv(output_file)
@@ -840,7 +840,7 @@ def split_timstof_metadata(
 
     filenames_found = []
     for filename in filenames:
-        output_file = (output_dir / filename).with_suffix(".timsmeta")
+        output_file = output_dir / f"{filename}.timsmeta"
         logger.info(f"Creating split timstof metadata file {output_file}")
         try:
             grouped_timstof_metadata.get_group(filename).to_csv(output_file)

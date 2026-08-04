@@ -143,7 +143,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
         if config.fragmentation_method is not None:
             spectra["FRAGMENTATION"] = config.fragmentation_method
-        search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
+        search = pp.load_search(config.output / "msms" / f"{spectra_file.stem}.rescore")
         library = pp.merge_spectra_and_peptides(spectra, search)
 
         if "xl" in config.models["intensity"].lower():
@@ -509,7 +509,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
             raise FileNotFoundError(f"{hdf5_path} not found but ce_calib.{spectra_file.stem} found. Please check.")
     tims_meta_file = None
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
-        tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
+        tims_meta_file = config.output / "msms" / f"{spectra_file.stem}.timsmeta"
     aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
     _get_best_ce(aspec, spectra_file, config)
 
@@ -836,7 +836,9 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "_",
             "which_pep",
         ]
-    ] = df_psm["index"].str.split("_", expand=True)
+    ] = df_psm[
+        "index"
+    ].str.split("_", expand=True)
     df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
