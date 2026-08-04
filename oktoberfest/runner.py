@@ -1281,12 +1281,12 @@ def run_rescoring(config_path: Union[str, Path]):
 
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
-        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab", num_threads=worker_count)
         prepare_tab_original_step.mark_done()
 
     if not prepare_tab_rescore_step.is_done():
         logger.info("Merging input tab files for rescoring with peptide property prediction")
-        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
+        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab", num_threads=worker_count)
         prepare_tab_rescore_step.mark_done()
 
     # rescoring

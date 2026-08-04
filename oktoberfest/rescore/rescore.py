@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
+from ..utils import JobPool
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -124,9 +125,19 @@ def generate_features(
     perc_features.write_to_file(str(output_file))
 
 
+def _fillna_tab_file(tab_file: Path, include_header: bool) -> bytes:
+    """Read a tab file, fill NaN values with 0, and return it serialized as tab-separated bytes."""
+    df = pd.read_csv(tab_file, sep="\t")
+    df = df.fillna(0)
+    content = df.to_csv(sep="\t", index=False, header=include_header).encode()
+    tab_file.unlink()
+    return content
+
+
 def merge_input(
     tab_files: list[Path],
     output_file: str | Path,
+    num_threads: int = 1,
 ):
     r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
@@ -196,27 +207,17 @@ def merge_input(
         >>> filelist = [tabfile1,tabfile2]
         >>> re.merge_input(tab_files=filelist, output_file="./tests/doctests/output/merged_rescore.tab")
     """
+    if num_threads > 1:
+        fillna_pool = JobPool(processes=num_threads)
+        for i, tab_file in enumerate(tab_files):
+            fillna_pool.apply_async(_fillna_tab_file, [tab_file, i == 0])
+        contents = fillna_pool.check_pool()
+    else:
+        contents = [_fillna_tab_file(tab_file, i == 0) for i, tab_file in enumerate(tab_files)]
+
     with open(output_file, "wb") as fout:
-        first = True
-        for tab_file in tab_files:
-            with open(tab_file, "rb") as f:
-                if not first:
-                    next(f)  # skip the header
-                else:
-                    first = False
-                fout.write(f.read())
-            tab_file.unlink()
-
-    # TODO make this more efficient
-    df_prosit = pd.read_csv(output_file, sep="\t")
-    df_prosit = df_prosit.fillna(0)
-
-    # We exploit the expmass column here by assigning a unique id per filename+scannr group.
-    # This ensures percolator will not deduplicate scannrs between filenames, as it uses only
-    # filename+ExpMass for TDC.
-    df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
-
-    df_prosit.to_csv(output_file, sep="\t", index=False)
+        for content in contents:
+            fout.write(content)
 
 
 def rescore_with_percolator(
