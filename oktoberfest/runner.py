@@ -185,9 +185,6 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results/ce_calibration"
     results_dir.mkdir(parents=True, exist_ok=True)
-    if config.do_refinement_learning:
-        # don't do CE calibration
-        return
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         if config.search_results_type.lower() == "casanovo":
             ce_file = results_dir / f"{spectra_file.stem}_ce.txt"
