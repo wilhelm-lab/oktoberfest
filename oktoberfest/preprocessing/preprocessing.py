@@ -993,8 +993,9 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
 
     # sc_features: per-PSM peak matching quality metrics for rescoring (ppm_error +
-    # intensity_coverage + peak-coverage). Extracted from the sc_features dict column
-    # returned by annotate_spectra(); canonical key list lives in constants.SC_FEATURE_KEYS.
+    # intensity_coverage + peak-coverage + series continuity + TMT reporter ions).
+    # Extracted from the sc_features dict column returned by annotate_spectra();
+    # canonical key list lives in constants.SC_FEATURE_KEYS.
     for feat_name in c.SC_FEATURE_KEYS:
         aspec.add_column(
             df_annotated_spectra["sc_features"].apply(lambda x, k=feat_name: x[k]).values, feat_name
