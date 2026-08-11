@@ -182,6 +182,10 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir.mkdir(parents=True, exist_ok=True)
     if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
         use_ransac_model = config.use_ransac_model
+        if config.acquisition_method.lower() == "dia" or use_ransac_model:
+            group_by_charge = True
+        else:
+            group_by_charge = False
         predictor = pr.Predictor.from_config(config, model_type="intensity")
 
         if "xl" in config.models["intensity"].lower():
@@ -196,7 +200,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             alignment_library = predictor.ce_calibration(
                 library,
                 config.ce_range,
-                use_ransac_model,
+                group_by_charge,
                 dataset_name=spectra_file.stem + "_ce_calibration",
             )
 
@@ -232,28 +236,32 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
 
         else:
-            ce_alignment = alignment_library.obs.groupby(by=["ORIG_COLLISION_ENERGY", "COLLISION_ENERGY"])[
+            if config.acquisition_method.lower() == "dia":
+                groupby_column = 'PRECURSOR_CHARGE'
+            else:
+                groupby_column = 'ORIG_COLLISION_ENERGY'
+            ce_alignment = alignment_library.obs.groupby(by=[groupby_column, "COLLISION_ENERGY"])[
                 "SPECTRAL_ANGLE"
             ].mean()
 
-            best_ce_per_orig = ce_alignment.groupby(level="ORIG_COLLISION_ENERGY").idxmax().apply(lambda x: x[1])
+            best_ce_per_orig = ce_alignment.groupby(level=groupby_column).idxmax().apply(lambda x: x[1])
             logger.info(f"Best CE per original CE: {best_ce_per_orig.to_dict()}")
 
-            for orig_ce in ce_alignment.groupby(level="ORIG_COLLISION_ENERGY").groups.keys():
+            for orig_ce in ce_alignment.groupby(level=groupby_column).groups.keys():
                 pl.plot_mean_sa_ce(
                     sa_ce_df=ce_alignment.to_frame().reset_index()[
-                        ce_alignment.to_frame().reset_index()["ORIG_COLLISION_ENERGY"] == orig_ce
+                        ce_alignment.to_frame().reset_index()[groupby_column] == orig_ce
                     ],
                     filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce_{orig_ce}.svg",
                 )
                 pl.plot_violin_sa_ce(
-                    sa_ce_df=alignment_library.obs[alignment_library.obs["ORIG_COLLISION_ENERGY"] == orig_ce][
+                    sa_ce_df=alignment_library.obs[alignment_library.obs[groupby_column] == orig_ce][
                         ["COLLISION_ENERGY", "SPECTRAL_ANGLE"]
                     ],
                     filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
                 )
             for orig_ce, best_ce in best_ce_per_orig.items():
-                library.obs.loc[library.obs["COLLISION_ENERGY"] == orig_ce, "COLLISION_ENERGY"] = best_ce
+                library.obs.loc[library.obs[groupby_column] == orig_ce, "COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 json.dump(best_ce_per_orig.to_dict(), f)
                 f.close()
@@ -1584,7 +1592,7 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         "FragmentSeriesNumber",
     ]
     df = df.explode(fragment_cols, ignore_index=True)
-
+    df.sort_values(by=['ModifiedPeptideSequence','PrecursorCharge','ProductMz'], inplace=True)
     df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
 
 
