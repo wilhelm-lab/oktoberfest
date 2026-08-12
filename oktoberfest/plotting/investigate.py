@@ -3,13 +3,15 @@
 
 Point it at an Oktoberfest Rescoring output folder (`<run>/out`, or directly a percolator dir) and it
 builds a single HTML report bundling:
-  * native Oktoberfest plots (FDR, target-vs-decoy, SA distribution, rescore-vs-original joint) +
-    a collapsible gallery of every per-raw SVG (iRT-vs-RT, CE spectral-angle violins),
-  * gains & losses (no-Prosit vs +Prosit),
-  * SA diagnostics (SA vs features + missed cleavage),
-  * rescoring headroom (rejected targets vs decoys),
+  * identification yield vs FDR threshold, +Prosit vs no-Prosit (the headline comparison),
+  * rescore-vs-original per-PSM score movement, coloured by what was gained/lost/kept,
+  * identifications per raw file — whether the gain is uniform across files,
   * Percolator feature weights (no-Prosit vs +Prosit),
-  * discrimination & FDR curves, rescore-vs-original score movement, RT & mass-error calibration,
+  * SA diagnostics (spectral angle vs the properties that move it),
+  * rescoring headroom (rejected targets vs decoys),
+  * RT & mass-error calibration, accepted targets vs decoys,
+  * native Oktoberfest plots (gain/loss bars, target-vs-decoy, SA distribution, rescore-vs-original
+    joint) + a collapsible gallery of every per-raw SVG (iRT-vs-RT, CE spectral-angle violins),
   * an interactive spectra viewer: observed vs clean Koina prediction, score-based groups + decoys,
     unmatched observed peaks drawn near-black, full info per spectrum (raw/scan/peptide/charge/RT/CE/
     SA/score/q/m-over-z).
@@ -18,10 +20,14 @@ Generic across search engines: every optional feature column / SVG is used only 
 
 CLARITY RULE (enforced on every non-native panel): a legend or annotation DEFINES every colour and
 mark, every axis has units, every distribution shows n, and each panel has a one-line "what is this".
+EARN-YOUR-PLACE RULE: a panel that restates a native Oktoberfest plot, a KPI card or a neighbouring
+panel does not go in. Deliberate omissions are recorded as comments where they would otherwise be
+re-added out of habit (see fig_sa_features, fig_calibration).
 
 Usage (cluster compute node, mp26_test env — needs mzML + Koina for the spectra section):
     python oktoberfest_investigate.py <run>/out [out.html] [--n-per-group 20] [--no-spectra]
 Runs locally too (on a synced percolator dir); the spectra section auto-skips if mzML/Koina absent.
+For a printable PDF of an already-built report, see tools/report_to_pdf.py.
 """
 import argparse
 import base64
@@ -37,7 +43,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-from matplotlib.lines import Line2D
 import numpy as np
 
 # ============================== house style ==============================
@@ -49,7 +54,6 @@ BLUE, ORANGE, GREEN, RED = "#1f6fb2", "#e8720c", "#2f9e44", "#d1352b"
 GOLD, PURPLE, TEAL = "#e0a82e", "#7b4ea3", "#1b9e9e"
 COMMON, GAINED, LOST = "#115795", "#007D3E", "#E17224"   # native Oktoberfest gains/losses colours
 TARGET_C, DECOY_C = "#2f9e44", "#8f8e88"                 # target = green, decoy = neutral grey
-DENS_CMAP = "YlOrRd"  # sequential density colormap (single-variable point density, not categories)
 plt.rcParams.update({"font.size": 11, "axes.edgecolor": "#c9c9c4", "axes.linewidth": 0.9,
                      "axes.spines.top": False, "axes.spines.right": False, "figure.dpi": 110,
                      "xtick.color": INK2, "ytick.color": INK2, "text.color": INK, "axes.labelcolor": INK2})
@@ -198,13 +202,15 @@ def load_data(P):
     origd = load_perc(origp) if origp.exists() else {}
     origdec = perc / "original.percolator.decoy.psms.txt"
     origdd = load_perc(origdec) if origdec.exists() else {}
-    oscore = np.full(n, np.nan)
+    oscore = np.full(n, np.nan); oq = np.full(n, np.nan)
     for i, sid in enumerate(t["SpecId"]):
         rec = origd.get(sid) if label[i] == 1 else origdd.get(sid)
         if rec is not None:
             oscore[i] = rec[0]
+            if label[i] == 1:
+                oq[i] = rec[1]
 
-    t.update(dict(charge=charge, label=label, score=score, q=q, oscore=oscore, header=header, n=n))
+    t.update(dict(charge=charge, label=label, score=score, q=q, oscore=oscore, oq=oq, header=header, n=n))
     return t
 
 
@@ -295,74 +301,11 @@ def _split_violin(ax, left, right, colL, colR, pos=0.0, width=0.9):
     ax.text(pos + width / 4, 1.03, f"{np.median(right):.2f}", ha="center", va="bottom", fontsize=9, color=INK, fontweight="bold")
 
 
-def fig_gains(D, P):
-    if not (P["perc"] / "original.percolator.psms.txt").exists():
-        return None  # gains/losses need the no-Prosit (original) Percolator run
-    def gains(level, key):
-        no = ids_at_fdr(P["perc"] / f"original.percolator.{level}.txt", key)
-        rs = ids_at_fdr(P["perc"] / f"rescore.percolator.{level}.txt", key)
-        return dict(no=len(no), rs=len(rs), common=len(no & rs), gained=len(rs - no), lost=len(no - rs))
-    levels = [("psms", "PSMs", "PSMId"), ("peptides", "Peptides", "peptide")]
-    data = {lv: gains(lv, k) for lv, _, k in levels if (P["perc"] / f"rescore.percolator.{lv}.txt").exists()}
-    if not data:
-        return None
-    fig, axes = plt.subplots(1, 2, figsize=(9.5, 6.2))
-    for i, (lv, name, _) in enumerate(levels):
-        s = data.get(lv); ax = axes[i]
-        if s is None:
-            ax.axis("off"); continue
-        ax.bar(0, s["common"], width=0.5, color=COMMON)
-        ax.bar(0, s["gained"], width=0.5, bottom=s["common"], color=GAINED)
-        ax.bar(0, -s["lost"], width=0.5, color=LOST)
-        top = s["common"] + s["gained"]
-        ax.text(0, s["common"] / 2, f"{s['common']:,}", ha="center", va="center", color="white", fontsize=12, fontweight="bold")
-        ax.text(0, s["common"] + s["gained"] / 2, f"+{s['gained']:,}", ha="center", va="center", color="white", fontsize=12, fontweight="bold")
-        ax.text(0, -s["lost"] - top * 0.012, f"−{s['lost']:,}", ha="center", va="top", color=LOST, fontsize=12, fontweight="bold")
-        ax.axhline(0, color="#c9c9c4", lw=1)
-        ax.set_xticks([]); ax.set_xlim(-0.85, 0.85); ax.set_ylim(-top * 0.17, top * 1.2)
-        ax.set_ylabel(f"target {name} @ 1% FDR")
-        _caption(ax, f"{name}   ·   net {s['rs'] - s['no']:+,}")
-        grid(ax, "y")
-    fig.legend(handles=[Patch(color=COMMON, label="Common (accepted in both)"),
-                        Patch(color=GAINED, label="Gained by Prosit"), Patch(color=LOST, label="Lost by Prosit")],
-               loc="lower center", ncol=3, frameon=False, fontsize=11, bbox_to_anchor=(0.5, -0.01))
-    _sup(fig, "Gains & losses — what Prosit adds and removes at 1% FDR")
-    fig.tight_layout(rect=(0, 0.06, 1, 0.9))
-    cap = ("Accepted target identifications at 1% FDR (q≤0.01), set-differenced between Percolator WITH vs WITHOUT "
-           "Prosit predictions (by PSMId for PSMs, peptide string for peptides). Common = accepted in both runs; "
-           "Gained = accepted only with Prosit; Lost = accepted only without. Net = +Prosit − no-Prosit.")
-    return "gains", "Gains & losses", cap, fig_to_uri(fig)
-
-
-def _hex(ax, x, y, title, xlabel, clip=(1, 99)):
-    m = np.isfinite(x) & np.isfinite(y)
-    x, y = x[m], y[m]
-    if x.size < 20:
-        ax.axis("off"); return
-    lo, hi = np.percentile(x, clip); k = (x >= lo) & (x <= hi); x, y = x[k], y[k]
-    hb = ax.hexbin(x, y, gridsize=32, cmap="Blues", mincnt=1, linewidths=0)
-    bins = np.linspace(x.min(), x.max(), 12); bi = np.clip(np.digitize(x, bins), 1, len(bins) - 1)
-    mx, my = [], []
-    for b in range(1, len(bins)):
-        s = bi == b
-        if s.sum() > 20:
-            mx.append(x[s].mean()); my.append(np.median(y[s]))
-    ax.plot(mx, my, "-o", color=INK, lw=1.8, ms=3, label="binned median SA")
-    from scipy.stats import spearmanr
-    r, _ = spearmanr(x, y)
-    ax.text(0.97, 0.06, f"Spearman r={r:+.2f}\nn={x.size:,}", transform=ax.transAxes, ha="right",
-            va="bottom", fontsize=9, color=INK, bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#cccccc", alpha=0.85))
-    _caption(ax, title)  # short feature name only (avoids horizontal title overflow into neighbours)
-    ax.set_ylim(0, 1.02); ax.set_ylabel("spectral angle"); ax.set_xlabel(xlabel)
-    ax.legend(frameon=False, fontsize=8.5, loc="lower left")
-    grid(ax)
-
-
 def fig_sa_features(D, P):
     acc = (D["label"] == 1) & (D["q"] <= FDR)
     sa = D["spectral_angle"]; saa = sa[acc]
     ch = D["charge"][acc]
-    fig, axes = plt.subplots(3, 3, figsize=(16, 13)); A = axes.ravel()
+    fig, axes = plt.subplots(2, 2, figsize=(13.5, 10.5)); A = axes.ravel()
     # A0: SA by precursor charge — split violin (2+ | 3+) when both present, else side-by-side violins
     c2, c3 = saa[ch == 2], saa[ch == 3]
     if len(c2) > 30 and len(c3) > 30:
@@ -385,29 +328,29 @@ def fig_sa_features(D, P):
     A[1].set_xticks([0, 1, 2]); A[1].set_xticklabels([f"{'2+' if k == 2 else k}\n(n={len(mcg[k]):,})" for k in [0, 1, 2]])
     A[1].set_ylim(0, 1.12); A[1].set_ylabel("spectral angle"); A[1].set_xlabel("missed cleavages")
     _caption(A[1], "SA by missed cleavages  (violins)"); grid(A[1], "y")
-    # A2..A8: density-coloured scatter (fragment-ppm dropped; retention time added)
-    panels = [("sequence_length", "peptide length", "peptide length (residues)"),
-              ("count_observed_and_predicted", "matched fragments", "matched fragments (obs & pred)"),
-              ("fraction_observed_and_predicted", "fragment coverage", "fraction obs & pred"),
-              ("abs_rt_diff", "RT residual", "|aligned RT − predicted RT|"),
-              ("RT", "retention time", "retention time"),
-              ("Mass", "precursor mass", "precursor mass (Da)"),
-              ("log10_evalue", "search e-value", "log10(search e-value)")]
+    # A2..A3: the two continuous covariates that actually move SA. Deliberately NOT plotted, because each
+    # was flat or duplicated a panel we keep: retention time (Spearman ~+0.05 — no effect), matched-fragment
+    # COUNT and peptide LENGTH (collinear with fragment coverage / precursor mass but weaker), and SA-vs-RT-
+    # residual (weak cross-term; the RT residual gets its own target-vs-decoy panel under Calibration).
+    panels = [("fraction_observed_and_predicted", "fragment coverage", "fraction obs & pred"),
+              ("Mass", "precursor mass", "precursor mass (Da)")]
     ai = 2
     for col, title, lab in panels:
-        if ai >= 9:
+        if ai >= 4:
             break
         if col not in D or not np.isfinite(D[col][acc]).any():
             continue
         density_scatter(A[ai], D[col][acc], saa, title, lab); ai += 1
-    for j in range(ai, 9):
+    for j in range(ai, 4):
         A[j].axis("off")
     _sup(fig, "SA diagnostics — spectral angle vs features (confident targets, q≤1%)")
-    fig.tight_layout(rect=(0, 0, 1, 0.95), h_pad=3.2, w_pad=2.2)
-    cap = ("Confident target PSMs (q≤1%). Violin panels: shaded = SA distribution, black bar = median (value above); "
-           "SA-by-charge is a split violin — left half 2+, right half 3+. Scatter panels plot every PSM coloured by "
-           "local point density (warm colourbar = dense), with a black binned-median line; Spearman r and n annotated, "
-           "x clipped to [p1,p99]. Fragment coverage and fewer missed cleavages raise SA; longer/heavier peptides lower it.")
+    fig.tight_layout(rect=(0, 0, 1, 0.94), h_pad=3.2, w_pad=2.2)
+    cap = ("Confident target PSMs (q≤1%), showing the four properties that measurably move the spectral angle. "
+           "Violin panels: shaded = SA distribution, black bar = median (value above); SA-by-charge is a split "
+           "violin — left half 2+, right half 3+. Scatter panels plot every PSM coloured by local point density "
+           "(warm colourbar = dense), with a black binned-median line; Spearman r and n annotated, x clipped to "
+           "[p1,p99]. Reading: higher charge, missed cleavages and heavier precursors all lower SA, while fragment "
+           "coverage raises it — i.e. SA degrades exactly where the fragmentation model is least constrained.")
     return "sa", "SA diagnostics", cap, fig_to_uri(fig)
 
 
@@ -415,41 +358,17 @@ def fig_headroom(D, P):
     sa, label, score, q = D["spectral_angle"], D["label"], D["score"], D["q"]
     has = np.isfinite(score)
     acc = (label == 1) & (q <= FDR); rej = (label == 1) & (q > FDR); isd = (label == -1)
-    fig, axes = plt.subplots(2, 2, figsize=(14.5, 11)); bins = np.linspace(0, 1, 60)
+    fig, axes = plt.subplots(1, 2, figsize=(14.5, 5.8)); bins = np.linspace(0, 1, 60)
     # (a)
-    ax = axes[0][0]
+    ax = axes[0]
     for m, col, lbl in [(acc, GREEN, f"accepted targets (q≤1%), n={int(acc.sum()):,}"),
                         (rej, ORANGE, f"rejected targets (q>1%), n={int(rej.sum()):,}"),
                         (isd, INK2, f"decoys, n={int(isd.sum()):,}")]:
         ax.hist(sa[m], bins=bins, density=True, histtype="step", lw=2, color=col, label=lbl)
     ax.set_xlabel("spectral angle"); ax.set_ylabel("density (area=1)")
     ax.legend(frameon=False, fontsize=9); _caption(ax, "(a) SA: accepted vs rejected targets vs decoys"); grid(ax)
-    # (b)
-    ax = axes[0][1]
-    mt = (label == 1) & has; md = isd & has
-    hb = ax.hexbin(score[mt], sa[mt], gridsize=42, cmap=DENS_CMAP, mincnt=1, bins="log", linewidths=0)
-    rng = np.random.default_rng(0); di = np.where(md)[0]
-    di = rng.choice(di, size=min(6000, di.size), replace=False)
-    ax.scatter(score[di], sa[di], s=5, color=INK2, alpha=0.30, linewidths=0)
-    ax.axvline(0, color=RED, lw=1.6, ls="--")
-    n_hi = int((rej & (sa > 0.5) & has).sum())
-    ax.set_xlabel("percolator score"); ax.set_ylabel("spectral angle"); ax.set_ylim(0, 1.02)
-    ax.legend(handles=[Patch(color=ORANGE, label="target PSM density (log)"),
-                       Line2D([0], [0], marker="o", color="none", markerfacecolor=INK2, alpha=0.6, label="decoys (sample)"),
-                       Line2D([0], [0], color=RED, ls="--", label="1% FDR cutoff (score≈0)")], frameon=False, fontsize=8.5, loc="lower right")
-    _caption(ax, f"(b) score vs SA — rejected targets with SA>0.5: {n_hi:,}"); grid(ax)
-    # (c)
-    ax = axes[1][0]
-    near = has & (np.abs(score) < 0.5); nr = near & rej; nd = near & isd
-    for m, col, lbl in [(nr, ORANGE, f"rejected targets, n={int(nr.sum()):,}"), (nd, INK2, f"decoys, n={int(nd.sum()):,}")]:
-        ax.hist(sa[m], bins=bins, density=True, histtype="stepfilled", lw=0, color=col, alpha=0.35)
-        ax.hist(sa[m], bins=bins, density=True, histtype="step", lw=2, color=col, label=lbl)
-    mr, mdd = np.median(sa[nr]), np.median(sa[nd])
-    ax.axvline(mr, color=ORANGE, ls=":", lw=1.4); ax.axvline(mdd, color=INK2, ls=":", lw=1.4)
-    ax.set_xlabel("spectral angle"); ax.set_ylabel("density (area=1)"); ax.legend(frameon=False, fontsize=9)
-    _caption(ax, f"(c) near cutoff |score|<0.5: rejected≈decoy (median SA {mr:.2f} vs {mdd:.2f})"); grid(ax)
-    # (d)
-    ax = axes[1][1]
+    # (b) — the quantitative version of (a): would an SA cut recover anything the decoys don't also pass?
+    ax = axes[1]
     thr = [0.5, 0.6, 0.7, 0.8]
     rc = [int((rej & (sa > th)).sum()) for th in thr]; dc = [int((isd & (sa > th)).sum()) for th in thr]
     x = np.arange(len(thr)); w = 0.38
@@ -460,13 +379,19 @@ def fig_headroom(D, P):
                 fontsize=10, color=GREEN if r - d > 0 else RED, fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels([f"SA>{th}" for th in thr]); ax.set_ylabel("PSM count")
     ax.set_ylim(0, max(rc) * 1.2); ax.legend(frameon=False, fontsize=9)
-    _caption(ax, "(d) high-SA rejected targets vs high-SA decoys"); grid(ax, "y")
-    _sup(fig, "Rescoring headroom — target PSMs NOT accepted at 1% FDR", y=0.995)
-    cap = ("Do we leave good targets behind? (a) rejected targets track DECOYS, not accepted targets. "
-           "(b) 2-D density of target PSMs (warm colourmap) with a decoy sample (grey) vs percolator score; cutoff at score≈0. "
-           "(c) near the cutoff, rejected targets and decoys have the same SA ⇒ well-calibrated boundary. "
-           "(d) decoys estimate the false rate of an SA cut, so (rejected−decoy) ≈ recoverable true targets: small and "
-           "shrinking with SA ⇒ SA alone can't cleanly recover them.")
+    _caption(ax, "(b) high-SA rejected targets vs high-SA decoys"); grid(ax, "y")
+    _sup(fig, "Rescoring headroom — target PSMs NOT accepted at 1% FDR", y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=2.5)
+    # The caption states how to READ the net numbers, not what they come out as: the sign is run-dependent
+    # (it is positive on some search-engine/model combinations and negative on others), so asserting a
+    # direction here would make the report wrong on half the runs it is generated for.
+    cap = ("Do we leave good identifications behind? (a) the SA distribution of REJECTED targets, compared against "
+           "the DECOYS: where the two overlap, the rejects are indistinguishable from noise; any excess of rejected "
+           "targets over decoys at high SA is the part that could still be real. (b) the same comparison in counts. "
+           "Decoys estimate how many false PSMs an SA cut would also let through, so net = (rejected − decoy) "
+           "approximates the true targets such a cut could recover: a large positive net means real headroom that "
+           "a better spectral model could reach, while a net near zero or negative means an SA cut would buy nothing "
+           "the FDR has not already priced in.")
     return "headroom", "Rescoring headroom", cap, fig_to_uri(fig)
 
 
@@ -506,32 +431,68 @@ def fig_weights(D, P):
     return "weights", "Percolator feature weights", cap, fig_to_uri(fig)
 
 
-def fig_discrimination(D, P):
-    label, score, q = D["label"], D["score"], D["q"]
-    has = np.isfinite(score); tgt = (label == 1) & has; dec = (label == -1) & has
-    cutoff = score[tgt & (q <= FDR)].min() if (tgt & (q <= FDR)).any() else 0.0
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.6))
-    ax = axes[0]
-    lo, hi = np.percentile(score[has], [0.2, 99.8]); b = np.linspace(lo, hi, 70)
-    ax.hist(score[tgt], bins=b, color=TARGET_C, alpha=0.55, label=f"targets, n={int(tgt.sum()):,}")
-    ax.hist(score[dec], bins=b, color=DECOY_C, alpha=0.6, label=f"decoys, n={int(dec.sum()):,}")
-    ax.axvline(cutoff, color=RED, lw=1.6, ls="--", label=f"1% FDR cutoff (score={cutoff:.2f})")
-    ax.set_xlabel("percolator score"); ax.set_ylabel("PSM count"); ax.legend(frameon=False, fontsize=9)
-    _caption(ax, "Target vs decoy score — separation"); grid(ax, "y")
-    ax = axes[1]
-    qs = np.sort(q[tgt]); ncum = np.arange(1, len(qs) + 1)
-    ax.plot(qs, ncum, color=BLUE, lw=2, label="accepted target PSMs")
-    ax.axvline(FDR, color=RED, ls="--", lw=1.4, label="1% FDR")
-    n_at = int((q[tgt] <= FDR).sum())
-    ax.plot([FDR], [n_at], "o", color=RED); ax.annotate(f"{n_at:,} @1%", (FDR, n_at), textcoords="offset points",
-                                                        xytext=(8, -4), fontsize=9, color=RED)
-    ax.set_xlim(0, 0.05); ax.set_xlabel("q-value threshold"); ax.set_ylabel("accepted target PSMs (cumulative)")
-    ax.legend(frameon=False, fontsize=9, loc="lower right"); _caption(ax, "Accepted IDs vs q-value threshold"); grid(ax)
-    _sup(fig, "Discrimination & FDR — rescored (+Prosit) PSMs", y=1.02)
-    cap = ("LEFT: histogram of the +Prosit percolator score for target vs decoy PSMs; the dashed line is the score at "
-           "the 1% FDR q-value threshold. RIGHT: how many target PSMs are accepted as the q-value threshold is relaxed "
-           "(cumulative), with the 1% operating point marked.")
-    return "discrimination", "Discrimination & FDR", cap, fig_to_uri(fig)
+def _qvals(path):
+    """Sorted q-values of the target rows in a percolator output file."""
+    out = []
+    with open(path) as f:
+        qi = f.readline().rstrip("\n").split("\t").index("q-value")
+        for line in f:
+            p = line.rstrip("\n").split("\t")
+            try:
+                out.append(float(p[qi]))
+            except (IndexError, ValueError):
+                pass
+    return np.sort(np.asarray(out, float))
+
+
+def fig_yield(D, P):
+    """Identifications accepted as a function of the FDR threshold, +Prosit vs no-Prosit.
+
+    The standard way this comparison is reported in the rescoring literature: one curve per model, so the
+    gain is visible at EVERY threshold rather than only at the single 1% operating point.
+    """
+    lv_have = []
+    for lv, name in [("psms", "PSMs"), ("peptides", "Peptides")]:
+        r = P["perc"] / f"rescore.percolator.{lv}.txt"
+        o = P["perc"] / f"original.percolator.{lv}.txt"
+        if r.exists():
+            lv_have.append((name, _qvals(r), _qvals(o) if o.exists() else None))
+    if not lv_have:
+        return None
+    ts = np.linspace(0, 0.05, 501)
+    fig, axes = plt.subplots(1, len(lv_have), figsize=(7.1 * len(lv_have), 5.6), squeeze=False)
+    for i, (name, qr, qo) in enumerate(lv_have):
+        ax = axes[0][i]
+        yr = np.searchsorted(qr, ts, side="right")
+        if qo is not None:
+            yo = np.searchsorted(qo, ts, side="right")
+            ax.fill_between(ts, yo, yr, color=GAINED, alpha=0.16, lw=0, label="gain from Prosit")
+            ax.plot(ts, yo, color=COMMON, lw=2.2, label="no Prosit (search features only)")
+        ax.plot(ts, yr, color=GAINED, lw=2.2, label="+Prosit (all features)")
+        ax.axvline(FDR, color=RED, ls="--", lw=1.4, label="1% FDR")
+        nr = int(np.searchsorted(qr, FDR, side="right"))
+        ax.plot([FDR], [nr], "o", color=GAINED, ms=6, zorder=5)
+        txt = f"{nr:,}"
+        if qo is not None:
+            no = int(np.searchsorted(qo, FDR, side="right"))
+            ax.plot([FDR], [no], "o", color=COMMON, ms=6, zorder=5)
+            pct = 100 * (nr - no) / no if no else float("nan")
+            txt = f"{nr:,}  vs  {no:,}\n{nr - no:+,}  ({pct:+.1f}%)"
+        ax.annotate(txt, (FDR, nr), textcoords="offset points", xytext=(12, -6), fontsize=10,
+                    color=INK, fontweight="bold",
+                    bbox=dict(boxstyle="round,pad=0.32", fc="white", ec="#cccccc", alpha=0.9))
+        ax.set_xlim(0, 0.05); ax.set_ylim(bottom=0)
+        ax.set_xlabel("FDR threshold (q-value)"); ax.set_ylabel(f"accepted target {name} (cumulative)")
+        ax.legend(frameon=False, fontsize=9, loc="lower right")
+        _caption(ax, f"{name} accepted vs FDR threshold"); grid(ax)
+    _sup(fig, "Identification yield vs FDR — with and without Prosit", y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=2.5)
+    cap = ("Number of target identifications accepted as the FDR threshold is relaxed, for Percolator WITH Prosit "
+           "predictions (green) and WITHOUT them (blue); the shaded band between the curves is the gain. The dashed "
+           "line marks the 1% operating point, annotated with both counts, the absolute and the relative gain. "
+           "Reading: a curve that sits above the other ACROSS the whole range is a genuine discrimination "
+           "improvement, not an artefact of where the threshold happens to be drawn.")
+    return "yield", "Identification yield vs FDR", cap, fig_to_uri(fig)
 
 
 def fig_movement(D, P):
@@ -567,20 +528,87 @@ def fig_movement(D, P):
     return "movement", "Rescore-vs-original movement", cap, fig_to_uri(fig)
 
 
+def fig_per_file(D, P):
+    """Identifications PER RAW FILE, +Prosit vs no-Prosit.
+
+    Every other panel in this report pools all raw files together, which hides the question that matters for
+    single-cell / low-input runs: does rescoring lift every file, or only rescue a few good ones?
+    """
+    if "filename" not in D or not np.isfinite(D["oq"]).any():
+        return None
+    acc_r = (D["label"] == 1) & (D["q"] <= FDR)
+    acc_o = (D["label"] == 1) & (D["oq"] <= FDR)
+    files = np.array(sorted(set(D["filename"])), dtype=object)
+    if files.size < 4:
+        return None  # a per-file view needs enough files to be a distribution rather than a list
+    pep = np.array([strip_pep(p) for p in D["Peptide"]], dtype=object) if "Peptide" in D else None
+    nr, no = [], []
+    for f in files:
+        inf = D["filename"] == f
+        if pep is None:
+            nr.append(int((inf & acc_r).sum())); no.append(int((inf & acc_o).sum()))
+        else:
+            nr.append(len(set(pep[inf & acc_r]))); no.append(len(set(pep[inf & acc_o])))
+    nr = np.array(nr, float); no = np.array(no, float)
+    unit = "distinct peptides" if pep is not None else "PSMs"
+    order = np.argsort(-nr)
+    x = np.arange(files.size)
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5.6))
+    # (a) the per-file yield curve — dynamic range across files, and the lift on top of it
+    ax = axes[0]
+    ax.fill_between(x, no[order], nr[order], color=GAINED, alpha=0.18, lw=0, label="gain from Prosit")
+    ax.plot(x, no[order], color=COMMON, lw=1.8, label="no Prosit")
+    ax.plot(x, nr[order], color=GAINED, lw=1.8, label="+Prosit")
+    ax.set_xlabel(f"raw file, ranked by +Prosit yield  (n={files.size} files)")
+    ax.set_ylabel(f"{unit} @ 1% FDR"); ax.set_xlim(0, files.size - 1); ax.set_ylim(bottom=0)
+    ax.legend(frameon=False, fontsize=9)
+    _caption(ax, f"(a) {unit} per raw file  ·  median {np.median(nr):,.0f} vs {np.median(no):,.0f}")
+    grid(ax)
+    # (b) does the lift depend on how well the file ran?
+    ax = axes[1]
+    ok = no > 0
+    pct = 100 * (nr[ok] - no[ok]) / no[ok]
+    ax.scatter(no[ok], pct, s=26, color=GAINED, alpha=0.75, linewidths=0)
+    ax.axhline(0, color=INK, lw=1)
+    med = float(np.median(pct))
+    ax.axhline(med, color=ORANGE, ls="--", lw=1.5, label=f"median {med:+.1f}%")
+    n_up = int((nr[ok] > no[ok]).sum()); n_dn = int((nr[ok] < no[ok]).sum())
+    from scipy.stats import spearmanr
+    r, _ = spearmanr(no[ok], pct)
+    ax.text(0.97, 0.94, f"gained in {n_up}/{int(ok.sum())} files · lost in {n_dn}\nSpearman r={r:+.2f}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=9, color=INK,
+            bbox=dict(boxstyle="round,pad=0.32", fc="white", ec="#cccccc", alpha=0.9))
+    ax.set_xlabel(f"{unit} @ 1% FDR without Prosit  (per raw file)")
+    ax.set_ylabel("relative gain from Prosit (%)")
+    lo = min(0.0, float(pct.min())); hi = float(pct.max())
+    ax.set_ylim(lo - 0.08 * (hi - lo), hi + 0.18 * (hi - lo))
+    ax.legend(frameon=False, fontsize=9, loc="lower left")
+    _caption(ax, "(b) relative gain vs how well the file ran"); grid(ax)
+    _sup(fig, "Per-raw-file identifications — is the gain uniform?", y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=2.5)
+    cap = (f"Every other panel pools all raw files; this one splits them. (a) {unit} accepted at 1% FDR per raw file, "
+           "files ranked by their +Prosit yield, with vs without Prosit — the spread along x is the run-to-run "
+           "variability of the experiment, the shaded band is what rescoring adds on top of it. (b) the same gain "
+           "expressed relative to each file's own no-Prosit yield, plotted against that yield: a flat cloud means "
+           "rescoring helps every file by roughly the same factor, a downward trend (negative Spearman r) means "
+           "weak files benefit disproportionately. NB counts are distinct peptide sequences among PSMs accepted at "
+           "1% PSM-level FDR, which is a per-file proxy — Percolator's own peptide-level FDR is estimated globally, "
+           "not per file, so these do not sum to the peptide count in the summary.")
+    return "perfile", "Per-raw-file identifications", cap, fig_to_uri(fig)
+
+
 def fig_calibration(D, P):
     from scipy.stats import spearmanr
     label, q = D["label"], D["q"]
     acc = (label == 1) & (q <= FDR); dec = (label == -1)
-    have_rt = ("iRT" in D and "pred_RT" in D and np.isfinite(D.get("iRT", np.array([np.nan]))[acc]).any())
     have_ard = "abs_rt_diff" in D
     ppm_cols = [(c, lab) for c, lab in [("delta_mass_ppm", "precursor mass error (ppm)"),
                                         ("mean_ppm_error", "fragment mean ppm error (ppm)")] if c in D]
+    # NB no pooled observed-vs-predicted iRT scatter here: RT alignment is fitted PER RAW FILE, so pooling
+    # all raws bends the band into a curve that says more about the pooling than about the model. The honest
+    # per-raw straight-line fits are the iRT-vs-RT SVGs in the per-raw gallery; the pooling-safe summary is
+    # the abs_rt_diff residual below.
     panels = []  # list of draw-callables
-    if have_rt:
-        def _rt(ax):
-            density_scatter(ax, D["pred_RT"][acc], D["iRT"][acc], "RT: observed vs predicted",
-                            "predicted iRT (Prosit)", ylab="observed iRT (pooled across raws)", ylim=None, trend=False)
-        panels.append(_rt)
     if have_ard:
         def _ard(ax):
             va = D["abs_rt_diff"][acc]; vd = D["abs_rt_diff"][dec]
@@ -619,13 +647,13 @@ def fig_calibration(D, P):
         draw(flat[i])
     for j in range(len(panels), len(flat)):
         flat[j].axis("off")
-    _sup(fig, "Calibration — retention time & mass accuracy", y=0.995)
-    fig.tight_layout(rect=(0, 0, 1, 0.93), h_pad=2.5)
-    cap = ("RT scatter: predicted vs observed iRT for confident targets (blue density, log). Because RT alignment is "
-           "PER RAW FILE, pooling all raws bends the band and makes it non-linear — so we report Spearman (rank) here; "
-           "the proper per-raw straight-line fits are the iRT-vs-RT SVGs in the gallery below. abs_rt_diff panel: the "
-           "pooling-safe per-PSM aligned RT residual, accepted targets vs decoys (targets tight, decoys broad). ppm "
-           "panels: mass-error for accepted targets vs decoys, zoomed to the TARGET core (isotope-error PSMs spill beyond).")
+    _sup(fig, "Calibration — retention time & mass accuracy", y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.94 if nrow > 1 else 0.9), h_pad=2.5, w_pad=2.5)
+    cap = ("Each panel contrasts accepted targets (green) with decoys (grey) — the separation between the two IS the "
+           "discriminative power that feature contributes to Percolator. RT panel: the pooling-safe per-PSM aligned RT "
+           "residual |aligned RT − predicted RT| (targets tight, decoys broad; medians dotted). The per-raw "
+           "observed-vs-predicted iRT fits are in the gallery below, where the per-file alignment is not pooled away. "
+           "ppm panels: mass error, zoomed to the TARGET core via a robust MAD window (isotope-error PSMs spill beyond).")
     return "calibration", "RT & mass-error calibration", cap, fig_to_uri(fig)
 
 
@@ -937,11 +965,11 @@ def _logo_uri():
 
 SECTION_DESC = {
     "summary": "Headline identification counts, the Prosit contribution, and the run configuration.",
-    "gains": "Identifications gained and lost at 1% FDR when Prosit predictions are added to Percolator.",
+    "yield": "Identifications accepted at every FDR threshold, with vs without Prosit — the headline comparison.",
     "sa": "How the spectral angle (observed↔predicted agreement) depends on peptide and spectrum properties.",
     "headroom": "Whether confidently-rejected target PSMs still hide identifications a better model could recover.",
     "weights": "The Percolator SVM feature weights that determine each PSM's score, with vs without Prosit.",
-    "discrimination": "Target/decoy score separation and the identification–FDR trade-off.",
+    "perfile": "Identifications per raw file — whether the gain is uniform or driven by a few files.",
     "movement": "How Prosit shifts each PSM's score relative to the search-features-only model.",
     "calibration": "Retention-time and mass-accuracy agreement, accepted targets vs decoys.",
     "spectra": "Observed spectra vs clean Prosit predictions for representative PSMs and decoys.",
@@ -1122,7 +1150,7 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, log=
     D = load_data(P)
 
     sections = []
-    for fn in [fig_gains, fig_sa_features, fig_headroom, fig_weights, fig_discrimination, fig_movement, fig_calibration]:
+    for fn in [fig_yield, fig_movement, fig_per_file, fig_weights, fig_sa_features, fig_headroom, fig_calibration]:
         try:
             res = fn(D, P)
         except Exception as e:
