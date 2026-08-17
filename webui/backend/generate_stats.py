@@ -18,7 +18,7 @@ def main():
     # 2. Unique Users (using owner_id, or ip_address as fallback if owner_id is not widely used)
     cursor.execute("SELECT COUNT(DISTINCT owner_id) FROM jobs WHERE owner_id IS NOT NULL;")
     unique_owners = cursor.fetchone()[0] or 0
-    
+
     cursor.execute("SELECT COUNT(DISTINCT ip_address) FROM jobs WHERE ip_address IS NOT NULL;")
     unique_ips = cursor.fetchone()[0] or 0
 

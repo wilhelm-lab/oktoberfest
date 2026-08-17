@@ -11,20 +11,25 @@ Submit and monitor **Rescoring**, **Collision Energy Calibration**, and **Spectr
 Running the Web UI locally via Docker is the easiest way to get started. This process works identically on **Windows**, **macOS**, and **Linux**.
 
 ### 1. Prerequisites
-You must install the following software on your machine:
-* **Docker Desktop** (for Windows/Mac) or **Docker Engine / Docker Compose** (for Linux). [Download Docker](https://docs.docker.com/get-docker/)
-* **Git** (to clone the repository). [Download Git](https://git-scm.com/downloads)
 
-*(Note for Windows users: We strongly recommend installing WSL2 as the backend for Docker Desktop for optimal performance).*
+You must install the following software on your machine:
+
+-   **Docker Desktop** (for Windows/Mac) or **Docker Engine / Docker Compose** (for Linux). [Download Docker](https://docs.docker.com/get-docker/)
+-   **Git** (to clone the repository). [Download Git](https://git-scm.com/downloads)
+
+_(Note for Windows users: We strongly recommend installing WSL2 as the backend for Docker Desktop for optimal performance)._
 
 ### 2. Setup the Environment
+
 Clone the repository and navigate to the `webui` folder.
+
 ```bash
 git clone https://github.com/wilhelm-lab/oktoberfest.git
 cd oktoberfest/webui
 ```
 
 Copy the example environment file to create your local `.env` file:
+
 ```bash
 cp .env.example .env
 ```
@@ -32,6 +37,7 @@ cp .env.example .env
 **Where are files saved?**
 By default, all uploaded inputs, generated outputs, databases, and logs are saved inside the `webui/data/` folder on your machine.
 If you want to save these files somewhere else (e.g., an external hard drive `D:\oktoberfest-data` or `/mnt/data`), open the `.env` file you just created and modify the `DATA_DIR` variable:
+
 ```env
 # Example for Windows:
 DATA_DIR=D:\oktoberfest-data
@@ -40,19 +46,24 @@ DATA_DIR=/mnt/data/oktoberfest
 ```
 
 ### 3. Build and Run
+
 Start the Docker containers in the background using docker compose:
+
 ```bash
 docker compose up --build -d
 ```
+
 Docker will automatically pull the necessary images, build the frontend/backend, and start the services.
 
 ### 4. Access the Web UI
+
 Once the containers are running, open your web browser and go to:
 **[http://localhost:8000](http://localhost:8000)**
 
-*(Note: The `api` and `worker` services share a persistent Docker volume mapped to your `DATA_DIR`. Your jobs and data survive container restarts).*
+_(Note: The `api` and `worker` services share a persistent Docker volume mapped to your `DATA_DIR`. Your jobs and data survive container restarts)._
 
 To stop the server at any time, run:
+
 ```bash
 docker compose down
 ```
@@ -183,8 +194,9 @@ Or set it per-job in the **Models & Prediction** form section.
 ### Percolator
 
 The sole supported FDR estimation method is **percolator**.
-- The binary is executed locally via subprocess during the rescoring step.
-- Ensure `percolator` is on `$PATH` inside the container if running custom builds.
+
+-   The binary is executed locally via subprocess during the rescoring step.
+-   Ensure `percolator` is on `$PATH` inside the container if running custom builds.
 
 ---
 

@@ -42,7 +42,7 @@ const uploadProgress = computed(() => {
                         <strong>{{ Math.ceil(value) }}%</strong>
                     </template>
                 </v-progress-linear>
-                
+
                 <div class="mt-4 text-caption text-grey">
                     Please do not close this window until the upload is complete.
                 </div>

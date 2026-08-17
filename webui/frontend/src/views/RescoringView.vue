@@ -41,7 +41,7 @@ const fastaFiles = computed(() => store.uploads["fasta"] ?? []);
 const isValid = computed(() => {
     const hasSearchResults = searchResultFiles.value.length > 0;
     const hasSpectra = spectraFiles.value.length > 0;
-    
+
     const searchResultsDone = hasSearchResults && searchResultFiles.value.every((f) => f.status === "done");
     const spectraDone = hasSpectra && spectraFiles.value.every((f) => f.status === "done");
     const fastaDone = !form.quantification || (fastaFiles.value.length > 0 && fastaFiles.value.every((f) => f.status === "done"));

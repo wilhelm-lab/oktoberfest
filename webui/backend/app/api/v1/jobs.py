@@ -118,14 +118,14 @@ async def create_job(
     job = job_service.create_job(db, body.job_type, validated.model_dump(exclude_none=True))
     # Store owner_id and IP address for hosted-mode scoping and parallel limiting
     job.owner_id = user.id if settings.app_mode == "hosted" else None
-    
+
     # Get client IP for rate limiting
     client_ip = request.headers.get("X-Forwarded-For")
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
         client_ip = request.client.host if request.client else "unknown"
-        
+
     if settings.app_mode == "hosted":
         # Hash the IP address for privacy
         try:
@@ -134,12 +134,12 @@ async def create_job(
                 salt = f.read().strip()
         except Exception:
             raise HTTPException(status_code=403, detail="Job submission is disabled: server configuration error (missing .ip_salt file)")
-            
+
         hashed_ip = hashlib.sha256(f"{client_ip}{salt}".encode()).hexdigest()
         job.ip_address = hashed_ip
     else:
         job.ip_address = None
-    
+
     db.commit()
     return _job_to_response(job, include_required=True)
 
@@ -177,12 +177,12 @@ def submit_job(
     inputs_dir = storage.inputs_dir(job_id)
     uploaded_files = list(inputs_dir.iterdir()) if inputs_dir.exists() else []
     output_dir = str(storage.output_dir(job_id))
-    
+
     total_size = sum(f.stat().st_size for f in uploaded_files if f.is_file())
     import logging
     logger = logging.getLogger(__name__)
     logger.info(f"Job {job_id} submitted with {len(uploaded_files)} files (total size: {total_size} bytes)")
-    
+
     job.file_count = len(uploaded_files)
     job.total_size_bytes = total_size
 
@@ -208,7 +208,7 @@ def submit_job(
                     status_code=400,
                     detail=f"Multiple spectra file types uploaded: {', '.join(unique_exts)}. Please upload only one type of spectra files."
                 )
-            
+
             ext = list(unique_exts)[0]
             if ext == ".mzml":
                 cfg_raw["inputs"]["spectra_type"] = "mzml"
@@ -223,7 +223,7 @@ def submit_job(
     elif job.job_type == "SpectralLibraryGeneration":
         if uploaded_files:
             cfg_raw["inputs"]["library_input"] = str(uploaded_files[0])
-            
+
     # Dynamically set numThreads based on the number of raw/spectra files (max 4)
     spectra_exts = {".raw", ".mzml", ".hdf", ".hdf5", ".d"}
     spectra_count_for_threads = len([f for f in uploaded_files if f.suffix.lower() in spectra_exts])

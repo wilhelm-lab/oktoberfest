@@ -32,7 +32,7 @@ const spectraFiles = computed(() => store.uploads["spectra"] ?? []);
 const isValid = computed(() => {
     const hasSearchResults = searchResultFiles.value.length > 0;
     const hasSpectra = spectraFiles.value.length > 0;
-    
+
     const searchResultsDone = hasSearchResults && searchResultFiles.value.every((f) => f.status === "done");
     const spectraDone = hasSpectra && spectraFiles.value.every((f) => f.status === "done");
     const ceValid = form.ce_range[0] < form.ce_range[1];

@@ -42,7 +42,7 @@ def _package_results(job_dir: Path, output_dir: Path, config_path: Path, capture
 def run_oktoberfest_job(self, job_id: str):
     """
     Execute an Oktoberfest job as a Celery background task.
-    Updates the job status in the database, runs the execution backend, 
+    Updates the job status in the database, runs the execution backend,
     packages the results, and triggers the scheduler upon completion.
     """
     from app.models import Job

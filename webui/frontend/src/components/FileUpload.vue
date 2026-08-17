@@ -41,7 +41,7 @@ function validate(file: File): string | null {
 function addFiles(files: FileList | File[]) {
     const arr = Array.from(files);
     const valid = [];
-    
+
     if (!props.multiple) {
         // Clear if not multiple. To do this cleanly, we need to clear store array
         store.uploads[props.role] = [];
@@ -57,7 +57,7 @@ function addFiles(files: FileList | File[]) {
             valid.push(f);
         }
     }
-    
+
     if (valid.length) emit("add", valid);
 }
 
@@ -152,15 +152,15 @@ const isAllUploaded = computed(() => storeFiles.value.length > 0 && storeFiles.v
                 </template>
             </v-list-item>
         </v-list>
-        
+
         <div v-if="storeFiles.length" class="d-flex justify-end mt-2">
-            <v-btn 
-                size="small" 
-                color="primary" 
+            <v-btn
+                size="small"
+                color="primary"
                 variant="tonal"
                 prepend-icon="mdi-cloud-upload"
-                @click="emit('upload')" 
-                :disabled="isAllUploaded || isUploadingThisRole" 
+                @click="emit('upload')"
+                :disabled="isAllUploaded || isUploadingThisRole"
                 :loading="isUploadingThisRole"
             >
                 {{ isAllUploaded ? 'Uploaded' : 'Upload' }}

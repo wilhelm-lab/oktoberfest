@@ -19,8 +19,8 @@ def main():
 
     # Load data into pandas
     query = """
-    SELECT 
-        id, job_type, status, owner_id, ip_address, 
+    SELECT
+        id, job_type, status, owner_id, ip_address,
         created_at, file_count, total_size_bytes, spectra_count
     FROM jobs
     """
@@ -34,7 +34,7 @@ def main():
     # Convert created_at to datetime
     df['created_at'] = pd.to_datetime(df['created_at'])
     df['date'] = df['created_at'].dt.date
-    
+
     # Fill numeric NaNs with 0
     df['file_count'] = df['file_count'].fillna(0)
     df['total_size_bytes'] = df['total_size_bytes'].fillna(0)

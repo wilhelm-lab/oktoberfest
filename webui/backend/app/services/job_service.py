@@ -139,14 +139,14 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
         ("Starting rescoring", "Rescoring / FDR Estimation"),
         ("Merging input tab files for rescoring with peptide property prediction", "Preparing files / predicting peptide properties"),
         ("Merging input tab files for rescoring without peptide property prediction", "Preparing files / merging search results"),
-        
+
         # Spectral Library Generation phases
         ("Finished writing the library to disk", "Library generated successfully"),
         ("Writing library", "Writing library to disk"),
         ("Getting predictions", "Getting predictions from model"),
         ("speclib_digested", "Generating internal metadata"),
         ("speclib_created_internal", "Generating internal metadata"),
-        
+
         # CE Calibration / Common phases
         ("Performing RANSAC regression", "Collision energy alignment (RANSAC)"),
         ("Converting search results from", "Converting search results"),
@@ -158,4 +158,3 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
             return label
 
     return "Initializing"
-

@@ -179,10 +179,10 @@ function fmtDate(d: string | null | undefined) {
                     class="mr-2"
                 />
                 <span v-if="job.status === 'RUNNING' && job.progress_phase">
-                    Currently in phase: <strong>{{ job.progress_phase }}</strong>. 
+                    Currently in phase: <strong>{{ job.progress_phase }}</strong>.
                 </span>
                 <span v-else>
-                    In progress. 
+                    In progress.
                 </span>
                 Large jobs can take hours. Save this URL or your
                 Job ID to check back later.
