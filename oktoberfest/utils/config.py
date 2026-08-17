@@ -40,7 +40,14 @@ class Config:
 
     @property
     def num_threads(self) -> int:
-        """Get the number of threads from the config file; if not specified return 1."""
+        """Get the number of threads from the config file; if not specified return 1.
+
+        Forced to 1 when a DLOmix model is configured, since DLOmix's TensorFlow-based
+        pipeline is not safe to run with multiple worker threads/processes (see
+        ``dlomix_pipeline`` and ``check_dlomix``).
+        """
+        if self.models.get("dlomix_intensity"):
+            return 1
         return self.data.get("numThreads", 1)
 
     @property
