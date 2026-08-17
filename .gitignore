@@ -106,6 +106,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.global
 .venv
 env/
 venv/
@@ -167,3 +168,7 @@ tests/doctests/
 
 # .DS_Store files
 .DS_Store
+
+CLAUDE.md
+.specs
+webui/frontend/node_modules/
