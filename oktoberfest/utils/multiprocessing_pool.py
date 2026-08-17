@@ -3,7 +3,7 @@ import signal
 import sys
 import traceback
 import warnings
-from multiprocessing import Pool, pool
+from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 
 from tqdm.auto import tqdm
 
@@ -11,50 +11,49 @@ logger = logging.getLogger(__name__)
 
 
 class JobPool:
-    """JobPool class for multiprocessing."""
+    """Small wrapper around ProcessPoolExecutor."""
 
-    results: list[pool.AsyncResult]
+    results: list[Future]
     warning_filter: str
-    pool: pool.Pool
+    executor: ProcessPoolExecutor
 
     def __init__(self, processes: int = 1, warning_filter: str = "default"):
         """Initialize JobPool."""
         self.warning_filter = warning_filter
-        self.pool = Pool(processes, self.init_worker)
+        self.executor = ProcessPoolExecutor(
+            max_workers=processes,
+            initializer=init_worker,
+            initargs=(self.warning_filter,),
+        )
         self.results = []
 
     def apply_async(self, f, args, **kwargs):
         """Apply async."""
-        r = self.pool.apply_async(f, args=args, kwds=kwargs)
-        self.results.append(r)
-
-    def init_worker(self):
-        """Initialize the worker."""
-        return init_worker(self.warning_filter)
+        future = self.executor.submit(f, *args, **kwargs)
+        self.results.append(future)
+        return future
 
     def check_pool(self):
         """Check the pool."""
         try:
-            outputs = []
+            outputs = [None] * len(self.results)
+            future_to_idx = {future: idx for idx, future in enumerate(self.results)}
             res_len = len(self.results)
             with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
-                for res in self.results:
-                    outputs.append(res.get(timeout=10000))  # 10000 seconds = ~3 hours
+                for future in as_completed(self.results):
+                    outputs[future_to_idx[future]] = future.result(timeout=10000)  # ~3 hours
                     progress.update(1)
-            self.pool.close()
-            self.pool.join()
+            self.executor.shutdown(wait=True, cancel_futures=False)
             return outputs
         except (KeyboardInterrupt, SystemExit):
             logger.error("Caught KeyboardInterrupt, terminating workers")
-            self.pool.terminate()
-            self.pool.join()
+            self.executor.shutdown(wait=False, cancel_futures=True)
             sys.exit(1)
         except Exception as e:
             logger.error("Caught Unknown exception, terminating workers")
             logger.error(traceback.format_exc())
             logger.error(e)
-            self.pool.terminate()
-            self.pool.join()
+            self.executor.shutdown(wait=False, cancel_futures=True)
             sys.exit(1)
 
 

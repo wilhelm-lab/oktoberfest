@@ -23,7 +23,7 @@ class TestJobPool(unittest.TestCase):
         pool = JobPool(2)
         for i in range(5):
             pool.apply_async(add_one, [i])
-        pool.check_pool()
+        self.assertEqual(pool.check_pool(), [1, 2, 3, 4, 5])
 
 
 class TestProcessStep(unittest.TestCase):
@@ -68,6 +68,18 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(ValueError):
             conf.check()
         garbage_config_file.unlink()
+
+    def test_num_threads_defaults_to_one(self):
+        """Test that num_threads defaults to one when unset."""
+        conf = Config()
+        conf.data = {}
+        self.assertEqual(conf.num_threads, 1)
+
+    def test_num_threads_uses_config_key(self):
+        """Test that num_threads uses the numThreads config key."""
+        conf = Config()
+        conf.data = {"numThreads": 4}
+        self.assertEqual(conf.num_threads, 4)
 
 
 class TestQuant(unittest.TestCase):
