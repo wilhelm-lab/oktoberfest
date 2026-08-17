@@ -1,6 +1,6 @@
 [project]
 name = "oktoberfest"
-version = "0.11.0"
+version = "0.11.1"
 description = "Public repo oktoberfest"
 authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
@@ -38,6 +38,13 @@ docs = [
     "sphinx-autodoc-typehints>=3.0",
     "sphinx-rtd-theme>=3.0.2",
     "Pygments>=2.20.0",
+]
+
+# dlomix optional install directly installs tensorflow
+# oktoberfest integration relies on dlomix models trained with keras/tensorflow
+dlomix = [
+    "dlomix>=0.2.8",
+    "tensorflow<2.16"
 ]
 
 [project.scripts]

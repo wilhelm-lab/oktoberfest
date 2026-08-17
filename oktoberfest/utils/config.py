@@ -20,6 +20,8 @@ class Config:
     def __init__(self):
         """Initialize config file data."""
         self.data = {}
+        self.data["models"] = {}
+        self._run_original = False
 
     def read(self, config_path: Union[str, Path]):
         """
@@ -72,7 +74,7 @@ class Config:
 
     @property
     def job_type(self) -> str:
-        """Get job type (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
+        """Get job type (GenerateTrainingData, CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
         job_type = self.data.get("type")
         if job_type is None:
             raise ValueError("No job type specified in config file.")

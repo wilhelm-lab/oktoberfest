@@ -76,6 +76,7 @@ class TestPredictorBehavioral(unittest.TestCase):
         cls.mock_config = create_autospec(Config, instance=True)
         cls.mock_config.data = {}
         cls.mock_config.data["models"] = {cls.model_type: cls.model_name}
+
         cls.mock_config.output = cls.temp_dir
 
         cls.mock_koina = create_autospec(Koina, instance=False)

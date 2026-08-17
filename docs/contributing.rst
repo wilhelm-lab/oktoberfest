@@ -44,13 +44,6 @@ Install the package with all development requirements:
 
    $ make install
 
-You can now run an interactive Python session or the command-line interface:
-
-.. code:: console
-
-   $ poetry run python
-   $ poetry run oktoberfest
-
 .. _Poetry: https://python-poetry.org/
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
@@ -33,7 +33,7 @@ class DLOmixLocal:
 
     def predict(
         self,
-        data: Any,
+        data: Spectra,
         **kwargs,
     ) -> dict[str, np.ndarray]:
         """
@@ -46,7 +46,7 @@ class DLOmixLocal:
                  - 'annotation': fragment ion annotations
                  - 'mz': m/z values (zeros)
         """
-        n_input_psms = data.n_obs if hasattr(data, 'n_obs') else data.shape[0]
+        n_input_psms = data.n_obs if hasattr(data, "n_obs") else data.shape[0]
 
         logger.info(f"Running DLOmix predictions for {n_input_psms} PSMs")
 
@@ -57,15 +57,17 @@ class DLOmixLocal:
         predictions = self.pipeline.predict(input_df)
 
         # Get expected fragment annotations from Spectra var_names
-        fragment_annotations = np.array(data.var_names) if hasattr(data, 'var_names') else None
+        fragment_annotations = np.array(data.var_names) if hasattr(data, "var_names") else None
 
         # Process output with normalization
-        result = self._process_output(predictions, data=data, input_df=input_df, fragment_annotations=fragment_annotations)
+        result = self._process_output(
+            predictions, data=data, input_df=input_df, fragment_annotations=fragment_annotations
+        )
         logger.info("Successfully predicted intensities")
 
         return result
 
-    def _build_input_df(self, data: Any) -> pd.DataFrame:
+    def _build_input_df(self, data: Spectra) -> pd.DataFrame:
         """
         Build input dataframe for InferencePipeline from Spectra object.
 
@@ -109,7 +111,7 @@ class DLOmixLocal:
     def _process_output(
         self,
         intensities: np.ndarray,
-        data: Any = None,
+        data: Spectra = None,
         input_df: pd.DataFrame = None,
         fragment_annotations: Optional[np.ndarray] = None,
     ) -> dict[str, np.ndarray]:
@@ -140,11 +142,13 @@ class DLOmixLocal:
                 if 1 <= c <= 6:
                     onehot[i, c - 1] = 1.0
 
-            norm_df = pd.DataFrame({
-                "sequences": data.obs[seq_col].values[:n_psms],
-                "intensities_pred": [list(row) for row in intensities],
-                "precursor_charge_onehot": [list(row) for row in onehot],
-            })
+            norm_df = pd.DataFrame(
+                {
+                    "sequences": data.obs[seq_col].values[:n_psms],
+                    "intensities_pred": [list(row) for row in intensities],
+                    "precursor_charge_onehot": [list(row) for row in onehot],
+                }
+            )
 
             norm_df = normalize_intensity_predictions(norm_df, compute_spectral_angle=False)
             intensities = np.array(norm_df["intensities_pred"].tolist(), dtype=np.float32)
@@ -159,7 +163,7 @@ class DLOmixLocal:
         mz = np.ones((n_psms, n_fragments), dtype=np.float32)
 
         return {
-            'intensities': intensities.astype(np.float32),
-            'annotation': annotation,
-            'mz': mz,
+            "intensities": intensities.astype(np.float32),
+            "annotation": annotation,
+            "mz": mz,
         }

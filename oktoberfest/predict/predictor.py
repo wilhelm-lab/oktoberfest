@@ -63,16 +63,14 @@ class Predictor:
         """Load from config object."""
         # Intensity model: either DLOmix or Koina, not both
         if model_type == "intensity":
-            if config.models.get("dlomix_intensity"):
+            if config.data["models"].get("dlomix_intensity", ""):
                 pipeline = config.dlomix_pipeline
                 if pipeline is None:
                     raise ValueError(f"Failed to load DLOmix pipeline from {config.models['dlomix_intensity']}")
                 logger.info("Using DLOmix intensity model")
-                return Predictor.from_dlomix(
-                    model_name="DLOmix_Intensity", pipeline=pipeline
-                )
-            elif model_type in config.models:
-                model_name = config.models[model_type]
+                return Predictor.from_dlomix(model_name="DLOmix_Intensity", pipeline=pipeline)
+            elif model_type in config.data["models"]:
+                model_name = config.data["models"][model_type]
                 logger.info(f"Using model {model_name} via Koina")
                 return Predictor.from_koina(
                     model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
