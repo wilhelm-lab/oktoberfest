@@ -2,7 +2,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import MagicMock, PropertyMock, create_autospec, patch
 
 import numpy as np
 import pandas as pd
@@ -12,6 +12,7 @@ import oktoberfest
 from oktoberfest.data import Spectra
 from oktoberfest.data.spectra import FragmentType
 from oktoberfest.predict import Koina, Predictor
+from oktoberfest.predict.dlomix import DLOmixLocal
 from oktoberfest.utils import Config
 
 DATA_PATH = Path(__file__).parents[1] / "data"
@@ -73,11 +74,9 @@ class TestPredictorBehavioral(unittest.TestCase):
         cls.data_dir = cls.temp_dir / "data"
         cls.data_dir.mkdir()
 
-        cls.mock_config = create_autospec(Config, instance=True)
-        cls.mock_config.data = {}
+        cls.mock_config = Config()
         cls.mock_config.data["models"] = {cls.model_type: cls.model_name}
-
-        cls.mock_config.output = cls.temp_dir
+        cls.mock_config.base_path = cls.temp_dir
 
         cls.mock_koina = create_autospec(Koina, instance=False)
         cls.mock_spectra = create_autospec(Spectra, instance=True)
@@ -109,6 +108,16 @@ class TestPredictorBehavioral(unittest.TestCase):
         Predictor.from_config(self.mock_config, model_type=self.model_type)
         assert mock_koina is oktoberfest.predict.predictor.Koina
         mock_koina.assert_called_once()
+
+    @patch("oktoberfest.predict.predictor.Koina")
+    def test_dlomix_from_config(self, mock_koina):
+        """Test config constructor for Predictor with a local DLOmix pipeline."""
+        config = Config()
+        config.data["models"] = {"dlomix_intensity": "some/path"}
+        with patch.object(Config, "dlomix_pipeline", new_callable=PropertyMock, return_value=MagicMock()):
+            predictor = Predictor.from_config(config, model_type=self.model_type)
+        self.assertIsInstance(predictor._predictor, DLOmixLocal)
+        mock_koina.assert_not_called()
 
     def test_predict_intensities_at_once(self):
         """Test if predict_intensities does the right steps when chunk_idx=None."""
@@ -268,10 +277,9 @@ class TestLocalPrediction(unittest.TestCase):
         cls.data_dir = cls.temp_dir / "data"
         cls.data_dir.mkdir()
 
-        cls.mock_config = create_autospec(Config, instance=True)
-        cls.mock_config.data = {}
+        cls.mock_config = Config()
         cls.mock_config.data["models"] = {cls.model_type: cls.model_name}
-        cls.mock_config.output = cls.temp_dir
+        cls.mock_config.base_path = cls.temp_dir
 
         cls.mock_spectra = create_autospec(Spectra, instance=True)
         cls.intensities = np.array([[0.0, 0.0, -1.0], [1.0, 0, -1.0], [1.0, 0.0, 0.0]])

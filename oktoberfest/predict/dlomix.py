@@ -11,8 +11,6 @@ import pandas as pd
 if TYPE_CHECKING:
     from ..data import Spectra
 
-from dlomix.reports.postprocessing import normalize_intensity_predictions
-
 logger = logging.getLogger(__name__)
 
 
@@ -124,6 +122,8 @@ class DLOmixLocal:
         :param fragment_annotations: Fragment ion annotations
         :return: Dictionary with 'intensities', 'annotation', 'mz'
         """
+        from dlomix.reports.postprocessing import normalize_intensity_predictions
+
         # Ensure 2D: (n_psms, n_fragments)
         if len(intensities.shape) == 1:
             intensities = intensities.reshape(-1, 1)

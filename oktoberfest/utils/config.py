@@ -301,6 +301,12 @@ class Config:
                 pipeline_path = self.base_path / pipeline_path
             logger.info(f"Loading DLOmix pipeline from {pipeline_path} (pid {os.getpid()})")
             return InferencePipeline.load(str(pipeline_path))
+        except ImportError as e:
+            logger.warning(
+                f"DLOmix is not installed, so the 'dlomix_intensity' model could not be loaded. "
+                f"Install the optional extra with `pip install oktoberfest[dlomix]`. ({e})"
+            )
+            return None
         except Exception as e:
             logger.warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
             return None
