@@ -40,11 +40,10 @@ docs = [
     "Pygments>=2.20.0",
 ]
 
-# dlomix optional install directly installs tensorflow
+# dlomix[tf] extra installs tensorflow alongside dlomix
 # oktoberfest integration relies on dlomix models trained with keras/tensorflow
 dlomix = [
-    "dlomix>=0.2.8",
-    "tensorflow<2.16"
+    "dlomix[tf] @ git+https://github.com/wilhelm-lab/dlomix.git@feature/migration-to-keras-3-tf-2.16"
 ]
 
 [project.scripts]
