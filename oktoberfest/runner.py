@@ -1467,7 +1467,9 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
         "retention_time_sec"
     ].transform("mean")
 
-    accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] < 0.01, "PSMId"]
+    peptide_df['charge'] = peptide_df['PSMId'].apply(lambda x: x.split('-')[-2])
+    peptide_df.drop_duplicates(['peptide','charge'],inplace=True)
+    accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] <= 0.01, "PSMId"]
     positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
 
     mz_layer = library.layers["mz"]
@@ -1494,7 +1496,7 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
     for pos, row in zip(positions, meta.itertuples(index=False)):
         mz = mz_layer[pos].toarray().ravel()
         intensity = int_layer[pos].toarray().ravel()
-        keep = (mz > 0.0) & (intensity > 0.0)
+        keep = (mz > 0.0) & (intensity > 0.05)
 
         proteins = row.PROTEINS
         protein_list = proteins.split(";")
@@ -1505,7 +1507,7 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
 
         rows.append(
             [
-                row.MASS,
+                row.ExpMass,
                 mz[keep],
                 annotations[keep].tolist(),
                 protein_list[0],
@@ -1592,6 +1594,8 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         "FragmentSeriesNumber",
     ]
     df = df.explode(fragment_cols, ignore_index=True)
+    df.sort_values(by='LibraryIntensity',ascending=False)
+    df.drop_duplicates(['ModifiedPeptideSequence','PrecursorCharge','ProductMz','NormalizedRetentionTime'])
     df.sort_values(by=['ModifiedPeptideSequence','PrecursorCharge','ProductMz'], inplace=True)
     df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
 
