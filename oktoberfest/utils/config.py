@@ -8,6 +8,20 @@ from koinapy.grpc import Koina
 
 logger = logging.getLogger(__name__)
 
+#: Settings of the standalone HTML/PDF investigation report and their defaults. The report is opt-in
+#: (``enabled``), and every remaining key is a guard rail that keeps it affordable on bulk-size runs:
+#: it is a diagnostic aid, so it must never dominate the runtime or the disk footprint of a rescoring
+#: job, no matter how many PSMs, raw files or plots that job produced.
+REPORT_DEFAULTS: dict[str, Union[bool, int]] = {
+    "enabled": False,  # opt-in: no report is written unless this is switched on
+    "spectra": True,  # interactive observed-vs-predicted spectra viewer (needs mzML + Koina)
+    "n_per_group": 20,  # spectra shown per selection group (best/worst/cutoff/decoy)
+    "pdf": False,  # additionally render a printable PDF (needs headless Chrome)
+    "max_psms": 20_000_000,  # skip the report above this many PSMs in rescore.tab
+    "max_gallery_files": 25,  # raw files shown in the per-raw SVG gallery
+    "max_embedded_mb": 60,  # budget for all embedded native SVGs together
+}
+
 
 class Config:
     """Read config file and get information from it."""
@@ -163,6 +177,46 @@ class Config:
         :return: Dictionary mapping raw file names to a list of scan numbers.
         """
         return {str(k): list(map(int, v)) for k, v in self.data.get("mirror_plots", {}).items()}
+
+    @property
+    def report(self) -> dict:
+        """
+        Get the settings for the standalone HTML/PDF investigation report written after rescoring.
+
+        The report is opt-in. The config value is either a boolean shorthand (``"report": true``) or a
+        dictionary overriding any of the keys in :py:data:`REPORT_DEFAULTS`, e.g.
+        ``"report": {"enabled": true, "spectra": false, "pdf": true}``. For the ``max_*`` guard rails,
+        a value of 0 (or below) means "no limit".
+
+        :raises ValueError: if the value is neither a boolean nor a dictionary, or if it contains an
+            unknown key (a typo would otherwise silently leave the report switched off)
+        :return: dictionary with all report settings, defaults filled in for the keys not provided
+        """
+        value = self.data.get("report", False)
+        if isinstance(value, bool):
+            value = {"enabled": value}
+        if not isinstance(value, dict):
+            raise ValueError(
+                f"Invalid value for config option 'report': expected a boolean or a dictionary, got {value!r}."
+            )
+        unknown = set(value) - set(REPORT_DEFAULTS)
+        if unknown:
+            raise ValueError(
+                f"Unknown key(s) {sorted(unknown)} in config option 'report'. "
+                f"Valid keys are {sorted(REPORT_DEFAULTS)}."
+            )
+        settings = dict(REPORT_DEFAULTS)
+        for key, default in REPORT_DEFAULTS.items():
+            if key not in value:
+                continue
+            try:
+                settings[key] = bool(value[key]) if isinstance(default, bool) else int(value[key])
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"Invalid value {value[key]!r} for config option 'report.{key}', "
+                    f"expected {type(default).__name__}."
+                ) from e
+        return settings
 
     ###########################
     # these are input options #
@@ -446,6 +500,7 @@ class Config:
     def check(self):
         """Validate the configuration."""
         self._check_tmt()
+        _ = self.report  # raises on a malformed "report" option, before any compute is spent
 
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()

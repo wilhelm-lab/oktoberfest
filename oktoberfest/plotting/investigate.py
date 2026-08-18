@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Oktoberfest RUN INVESTIGATOR — one script, one self-contained HTML.
+"""Oktoberfest RUN INVESTIGATOR — one module, one self-contained HTML.
 
-Point it at an Oktoberfest Rescoring output folder (`<run>/out`, or directly a percolator dir) and it
-builds a single HTML report bundling:
+Point it at an Oktoberfest Rescoring output folder (`<run>/out`, or directly the percolator/mokapot
+output dir) and it builds a single HTML report bundling:
   * identification yield vs FDR threshold, +Prosit vs no-Prosit (the headline comparison),
   * rescore-vs-original per-PSM score movement, coloured by what was gained/lost/kept,
   * identifications per raw file — whether the gain is uniform across files,
@@ -16,7 +16,14 @@ builds a single HTML report bundling:
     unmatched observed peaks drawn near-black, full info per spectrum (raw/scan/peptide/charge/RT/CE/
     SA/score/q/m-over-z).
 
-Generic across search engines: every optional feature column / SVG is used only if present.
+Generic across search engines and FDR methods: percolator and mokapot output are both read, and every
+optional feature column / SVG is used only if present.
+
+Written inside a rescoring run when the "report" config option is enabled (see
+:py:data:`oktoberfest.utils.config.REPORT_DEFAULTS`), which is also where its guard rails are set. Those
+matter because the same report has to hold up on a bulk run: see the "scale guards" section below for
+what is capped, and note that the caps only ever thin what is DRAWN or EMBEDDED — every count, median
+and yield number in the report is computed on all of the data.
 
 CLARITY RULE (enforced on every non-native panel): a legend or annotation DEFINES every colour and
 mark, every axis has units, every distribution shows n, and each panel has a one-line "what is this".
@@ -24,23 +31,21 @@ EARN-YOUR-PLACE RULE: a panel that restates a native Oktoberfest plot, a KPI car
 panel does not go in. Deliberate omissions are recorded as comments where they would otherwise be
 re-added out of habit (see fig_sa_features, fig_calibration).
 
-Usage (cluster compute node, mp26_test env — needs mzML + Koina for the spectra section):
-    python oktoberfest_investigate.py <run>/out [out.html] [--n-per-group 20] [--no-spectra]
-Runs locally too (on a synced percolator dir); the spectra section auto-skips if mzML/Koina absent.
-For a printable PDF of an already-built report, see tools/report_to_pdf.py.
+Also runs standalone on a finished run (needs mzML + Koina for the spectra section, which auto-skips
+if either is absent):
+    python -m oktoberfest.plotting.investigate <run>/out [out.html] [--no-spectra] [--pdf]
+For a printable PDF of an already-built report, see :py:mod:`oktoberfest.plotting.report_pdf`.
 """
 import argparse
 import base64
-import glob
 import io
 import json
 import re
-import sys
 from datetime import datetime
 from pathlib import Path
 
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use("Agg", force=False)  # force=False: never steal a backend the caller already set up
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
@@ -75,81 +80,259 @@ def grid(ax, axis="both"):
     ax.grid(axis=axis, color=GRID, lw=0.7); ax.set_axisbelow(True)
 
 
+# ============================== scale guards ==============================
+# This report is built inside a rescoring run, so every stage has to stay bounded when that run is a
+# BULK experiment rather than a single-cell one: hundreds of raw files and tens of millions of PSMs
+# instead of a few hundred thousand. The constants below cap what is parsed into memory, fitted,
+# drawn and embedded. None of them changes what a panel shows on a small run.
+CHUNK_ROWS = 200_000         # rows parsed per chunk -> parse memory is O(chunk), not O(file)
+MAX_KDE_POINTS = 200_000     # violins fit a gaussian KDE, which costs O(n) per evaluation point
+MAX_SCATTER_POINTS = 55_000  # points actually drawn in a density scatter (file size, not accuracy)
+MAX_SPECTRA_FILES = 8        # mzML files opened for the spectra viewer
+MAX_SVG_MB = 8.0             # a single native SVG above this is a scatter of millions of vector points
+
+# Columns of rescore.tab, by how they are stored. Everything else becomes float32: on 10^7 PSMs the
+# difference between float32 and the float64 default is gigabytes, and no panel resolves 7 digits.
+F64_COLS = {"ScanNr", "Mass", "ExpMass"}  # exactness matters: scan numbers and precursor mass
+CAT_COLS = {"filename", "Peptide"}        # few distinct values per run -> integer codes + levels
+HASH_COLS = {"SpecId"}                    # only ever joined on -> 64-bit hashes, never kept as text
+
+
+class ReportTooLargeError(RuntimeError):
+    """Raised when a run exceeds a guard rail, so the report is skipped deliberately, not attempted."""
+
+
 # ============================== data loading ==============================
+FDR_METHODS = ("percolator", "mokapot")
+# Percolator and mokapot write the same set of files with different column names; the report reads both.
+ID_COLS = ("PSMId", "SpecId")
+SCORE_COLS = ("score", "mokapot score")
+Q_COLS = ("q-value", "mokapot q-value")
+PEPTIDE_COLS = ("peptide", "Peptide")
+
+
+def _pick(header, names, path):
+    """Index of the first of `names` present in `header`, so percolator and mokapot files both parse."""
+    for name in names:
+        if name in header:
+            return header.index(name)
+    raise KeyError(f"none of the columns {names} found in {path}")
+
+
+def _hash_ids(values):
+    """64-bit hashes of a sequence of identifier strings.
+
+    PSM and peptide identifiers are only ever compared for equality (joining rescore.tab against the
+    percolator/mokapot output, intersecting accepted sets) and never displayed, so they are stored as
+    8-byte hashes instead of ~100-byte Python strings: on a bulk run that is the difference between a
+    gigabyte-scale dict and a numpy array, and it turns every join into a vectorised operation.
+    A collision (~1e-6 likely at 10^7 ids) would misplace one PSM in one diagnostic panel.
+    """
+    return np.fromiter((hash(v) for v in values), dtype=np.int64, count=len(values)).view(np.uint64)
+
+
+def _lookup(keys, table_keys, table_values):
+    """Vectorised dict-like lookup: table_values for each key, NaN where the key is absent."""
+    out = np.full(keys.size, np.nan, dtype=np.float32)
+    if keys.size == 0 or table_keys.size == 0:
+        return out
+    order = np.argsort(table_keys, kind="stable")
+    sorted_keys = table_keys[order]
+    pos = np.clip(np.searchsorted(sorted_keys, keys), 0, sorted_keys.size - 1)
+    hit = sorted_keys[pos] == keys
+    out[hit] = table_values[order][pos[hit]]
+    return out
+
+
+def _to_float(values, dtype):
+    """Parse a chunk of string cells to floats, tolerating the odd empty or non-numeric one."""
+    try:
+        return np.array(values, dtype=dtype)
+    except ValueError:  # one bad cell must cost that cell, not the whole column
+        def one(v):
+            try:
+                return float(v)
+            except ValueError:
+                return np.nan
+        return np.fromiter((one(v) for v in values), dtype=dtype, count=len(values))
+
+
+def _column_chunk(col, values, code_map):
+    if col in HASH_COLS:
+        return _hash_ids(values)
+    if col in CAT_COLS:
+        return np.fromiter((code_map.setdefault(v, len(code_map)) for v in values),
+                           dtype=np.int32, count=len(values))
+    return _to_float(values, np.float64 if col in F64_COLS else np.float32)
+
+
 def find_paths(base):
+    """Locate the FDR-method output dir, the spectra dir and the config of a run, from any of its dirs."""
     base = Path(base).resolve()
-    # percolator dir = the dir that actually holds rescore.percolator.psms.txt
-    cand = [base, base / "results" / "percolator", base / "percolator"]
-    cand += [p.parent for p in base.rglob("rescore.percolator.psms.txt")]
-    perc = next((c for c in cand if (c / "rescore.percolator.psms.txt").exists()), None)
-    if perc is None:
-        raise FileNotFoundError(f"could not find rescore.percolator.psms.txt under {base}")
+    cand = [base]
+    cand += [base / "results" / m for m in FDR_METHODS]
+    cand += [base / m for m in FDR_METHODS]
+    hit = next(((c, m) for c in cand for m in FDR_METHODS if (c / f"rescore.{m}.psms.txt").exists()), None)
+    if hit is None:  # last resort: walk the tree, which on a bulk run's output dir is not cheap
+        for m in FDR_METHODS:
+            found = next(base.rglob(f"rescore.{m}.psms.txt"), None)
+            if found is not None:
+                hit = (found.parent, m)
+                break
+    if hit is None:
+        raise FileNotFoundError(f"could not find rescore.({'|'.join(FDR_METHODS)}).psms.txt under {base}")
+    fdr_dir, method = hit
     # spectra dir + config: look near an `out` root
-    out_root = base if (base / "spectra").exists() else perc.parent.parent
+    out_root = base if (base / "spectra").exists() else fdr_dir.parent.parent
     spectra = next((d for d in [out_root / "spectra", base / "spectra"] if d.exists()), None)
     run_dir = out_root.parent
     config = next((c for c in [run_dir / "config.json", out_root / "config.json",
                                base / "config.json"] if c.exists()), None)
-    results = perc.parent  # out/results (holds the CE-violin SVGs) is perc.parent
-    return dict(perc=perc, spectra=spectra, config=config, run_dir=run_dir,
+    results = fdr_dir.parent  # out/results (holds the CE-violin SVGs) is the FDR dir's parent
+    return dict(fdr_dir=fdr_dir, method=method, spectra=spectra, config=config, run_dir=run_dir,
                 out_root=out_root, results_dir=out_root / "results" if (out_root / "results").exists() else results)
 
 
-def read_tab(path, wanted):
-    """Ragged-safe manual parse; returns dict col->np.array for the wanted cols that EXIST."""
-    with open(path) as f:
-        header = f.readline().rstrip("\n").split("\t")
-    cols = [c for c in wanted if c in header]
-    idx = [header.index(c) for c in cols]
+def _chunks_pandas(path, header, cols, idx):
+    """Chunks of raw cell values via pandas' C tokenizer.
+
+    It parses numbers straight into arrays instead of building a Python object per cell, which on a
+    bulk-size rescore.tab is several times faster and a fraction of the memory. Positional names plus
+    index_col=False are what let it read a file whose trailing Proteins column carries extra tabs:
+    the wanted columns are addressed by position, and everything past them is ignored rather than
+    shifted into an index.
+    """
+    import pandas as pd
+
+    as_text = {i for c, i in zip(cols, idx) if c in CAT_COLS | HASH_COLS}  # ids stay strings, never numbers
+    reader = pd.read_csv(path, sep="\t", names=range(len(header)), skiprows=1, usecols=idx,
+                         index_col=False, engine="c", chunksize=CHUNK_ROWS, dtype={i: str for i in as_text},
+                         float_precision="round_trip")  # exact: this path must match the fallback bit for bit
+    for chunk in reader:
+        yield {c: chunk[i] for c, i in zip(cols, idx)}
+
+
+def _chunks_python(path, cols, idx):
+    """Chunks of raw cell values, parsed here. The fallback for a file pandas cannot tokenize."""
     mx = max(idx)
     buf = {c: [] for c in cols}
     with open(path) as f:
         f.readline()
         for line in f:
             p = line.rstrip("\n").split("\t")
-            if len(p) <= mx:
+            if len(p) <= mx:  # truncated line (e.g. an interrupted write): skip the row, keep the file
                 continue
             for c, i in zip(cols, idx):
                 buf[c].append(p[i])
-    out = {}
-    for c in cols:
-        if c in ("SpecId", "Peptide", "filename", "Proteins"):
-            out[c] = np.array(buf[c], dtype=object)
-        else:
-            out[c] = np.array(buf[c], float)
-    return out, header
+            if len(buf[cols[0]]) >= CHUNK_ROWS:
+                yield buf
+                buf = {c: [] for c in cols}
+    if buf[cols[0]]:
+        yield buf
 
 
-def load_perc(path):
-    """PSMId -> (score, q). Manual parse (proteinIds carries extra tabs)."""
-    d = {}
+def _read_columns(path, cols, idx, header, max_rows=0, log=None):
+    """Assemble the columns at positions `idx` of a ragged tab file into arrays.
+
+    Columns in CAT_COLS come back as int32 codes plus a `<col>_levels` array of the distinct strings,
+    columns in HASH_COLS as 64-bit hashes, everything else as float32 (float64 for F64_COLS). The fast
+    path is pandas' C tokenizer; if it cannot tokenize the file, the hand parser takes over and
+    produces bit-identical arrays.
+
+    :param path: the file to read
+    :param cols: names to key the result on — they decide the dtype, see the module constants
+    :param idx: column position in the file for each name
+    :param header: the file's header line, already split
+    :param max_rows: refuse files longer than this many rows (0 = no limit)
+    :param log: optional progress sink, used to report a fallback to the slower parser
+    :raises ReportTooLargeError: if the file holds more than max_rows rows
+    :return: (dict of arrays, number of rows read)
+    """
+    def assemble(chunks):
+        code_maps = {c: {} for c in cols if c in CAT_COLS}
+        parts = {c: [] for c in cols}
+        n = 0
+        for raw in chunks:
+            n += len(raw[cols[0]])
+            if 0 < max_rows < n:
+                raise ReportTooLargeError(
+                    f"{Path(path).name} holds more than {max_rows:,} PSMs; raise the report option "
+                    f"'max_psms' to build the report for a run this size"
+                )
+            for c in cols:
+                parts[c].append(_column_chunk(c, raw[c], code_maps.get(c)))
+        out = {}
+        for c in cols:
+            done = parts.pop(c)  # released column by column: holding chunks and result at once doubles the peak
+            out[c] = np.concatenate(done) if done else _column_chunk(c, [], code_maps.get(c))
+            del done
+            if c in code_maps:
+                out[f"{c}_levels"] = np.array(list(code_maps[c]), dtype=object)
+        return out, n
+
+    try:
+        return assemble(_chunks_pandas(path, header, cols, idx))
+    except ReportTooLargeError:
+        raise
+    except Exception as e:  # a file the C tokenizer chokes on is still readable by hand
+        if log:
+            log(f"[investigate]   fast parse of {Path(path).name} failed ({e}), falling back")
+        return assemble(_chunks_python(path, cols, idx))
+
+
+def read_tab(path, wanted, max_rows=0, log=None):
+    """Read the wanted columns of rescore.tab that EXIST; see :py:func:`_read_columns` for the dtypes.
+
+    Only the wanted columns are ever materialised: a bulk run's rescore.tab has tens of millions of
+    rows and a hundred-odd feature columns, and reading it whole is not an option.
+
+    :param path: the rescore.tab to read
+    :param wanted: columns to keep, if present
+    :param max_rows: refuse files longer than this many rows (0 = no limit)
+    :param log: optional progress sink
+    :raises ValueError: if none of the wanted columns is present
+    :return: (dict of arrays, header, number of rows read)
+    """
     with open(path) as f:
-        h = f.readline().rstrip("\n").split("\t")
-        pi, si, qi = h.index("PSMId"), h.index("score"), h.index("q-value")
-        for line in f:
-            p = line.rstrip("\n").split("\t")
-            d[p[pi]] = (float(p[si]), float(p[qi]))
-    return d
+        header = f.readline().rstrip("\n").split("\t")
+    cols = [c for c in wanted if c in header]
+    if not cols:
+        raise ValueError(f"none of the expected columns found in {path}")
+    out, n = _read_columns(path, cols, [header.index(c) for c in cols], header, max_rows=max_rows, log=log)
+    return out, header, n
 
 
-def ids_at_fdr(path, keycol, fdr=FDR):
-    ids = set()
+def load_scores(path, key="id", log=None):
+    """Read (id-hash, score, q-value) arrays from a percolator/mokapot psms or peptides output.
+
+    `key` selects what the id hashes identify: the PSM ("id") or the peptide sequence ("peptide"),
+    which is what the peptide-level files are keyed on. Rows whose score or q-value is unparseable
+    come back as NaN, which places them outside every threshold the report applies.
+
+    :param path: the psms/peptides output file to read
+    :param key: "id" or "peptide"
+    :param log: optional progress sink
+    :return: (id hashes, scores, q-values)
+    """
     with open(path) as f:
-        h = f.readline().rstrip("\n").split("\t")
-        ki, qi = h.index(keycol), h.index("q-value")
-        for line in f:
-            p = line.rstrip("\n").split("\t")
-            try:
-                if float(p[qi]) <= fdr:
-                    ids.add(p[ki])
-            except (IndexError, ValueError):
-                pass
-    return ids
+        header = f.readline().rstrip("\n").split("\t")
+    idx = [_pick(header, PEPTIDE_COLS if key == "peptide" else ID_COLS, path),
+           _pick(header, SCORE_COLS, path), _pick(header, Q_COLS, path)]
+    out, _ = _read_columns(path, ["SpecId", "score", "q"], idx, header, log=log)  # SpecId -> hashed id
+    return out["SpecId"], out["score"], out["q"]
+
+
+def ids_at_fdr(path, key="id", fdr=FDR):
+    """Sorted unique id hashes accepted at `fdr` — set arithmetic on these is exact and vectorised."""
+    ids, _, q = load_scores(path, key=key)
+    return np.unique(ids[q <= fdr])
 
 
 def parse_weights(path):
     """Percolator weights.csv -> (feature_names, mean normalized weight per feature).
-    Layout after the 3 comment lines: (names, normalized, raw) repeated per CV bin."""
+
+    Layout after the 3 comment lines: (names, normalized, raw) repeated per CV bin.
+    """
     lines = [ln.rstrip("\n") for ln in Path(path).read_text().splitlines() if not ln.startswith("#")]
     if not lines:
         return [], {}
@@ -171,45 +354,71 @@ def strip_pep(p):
     return p[2:-2] if isinstance(p, str) and p.startswith("_.") and p.endswith("._") else p
 
 
+def subsample(*arrays, k):
+    """Deterministic uniform thinning to at most k rows, applied to every array in step.
+
+    Used where a panel's message is a SHAPE (a density, a violin, a cloud) rather than a count: those
+    are unchanged by thinning, while the cost of drawing or fitting them is not.
+    """
+    n = arrays[0].size
+    if n <= k:
+        return arrays if len(arrays) > 1 else arrays[0]
+    sel = np.linspace(0, n - 1, k).astype(np.int64)
+    out = tuple(a[sel] for a in arrays)
+    return out if len(out) > 1 else out[0]
+
+
 # ============================== load everything ==============================
-def load_data(P):
-    perc = P["perc"]
+def load_data(P, max_psms=0, log=None):
+    """Load rescore.tab and join the rescored / original scores and q-values onto every row.
+
+    :param P: paths of the run, as returned by :py:func:`find_paths`
+    :param max_psms: refuse runs with more PSMs than this (0 = no limit)
+    :param log: optional progress sink
+    :raises ValueError: if rescore.tab lacks the columns everything else is keyed on
+    :return: dict of per-PSM arrays, plus `<col>_levels` for the coded columns and n / header
+    """
+    fdr_dir, method = P["fdr_dir"], P["method"]
     wanted = ["SpecId", "Label", "ScanNr", "filename", "ExpMass", "Mass", "RT", "iRT", "pred_RT",
               "abs_rt_diff", "collision_energy_aligned", "missedCleavages", "sequence_length", "KR",
               "delta_mass_ppm", "mean_ppm_error", "max_ppm_error", "log10_evalue", "pearson_corr",
               "spectral_angle", "spectral_angle_no_b1", "spectral_angle_noise_aware",
               "fraction_observed_and_predicted", "count_observed_and_predicted", "count_predicted",
               "Peptide", "Charge1", "Charge2", "Charge3", "Charge4", "Charge5", "Charge6"]
-    t, header = read_tab(perc / "rescore.tab", wanted)
-    n = len(t["SpecId"])
-    charge = np.zeros(n, int)
+    t, header, n = read_tab(fdr_dir / "rescore.tab", wanted, max_rows=max_psms, log=log)
+    for required in ("SpecId", "Label"):
+        if required not in t:
+            raise ValueError(f"rescore.tab has no {required} column, cannot build the report")
+    # a truncated or garbled row has no usable label; drop it rather than let it count as a third class
+    usable = np.isin(t["Label"], (-1, 1))
+    if not usable.all():
+        levels = {k: v for k, v in t.items() if k.endswith("_levels")}  # per-column, not per-row
+        t = {k: v[usable] for k, v in t.items() if k not in levels}
+        t.update(levels)
+        if log:
+            log(f"[investigate]   dropped {int((~usable).sum()):,} row(s) without a valid Label")
+        n = int(usable.sum())
+    charge = np.zeros(n, np.int8)
     for c in range(1, 7):
         key = f"Charge{c}"
         if key in t:
             charge[t[key] == 1] = c
-    label = t["Label"].astype(int)
+    label = t["Label"].astype(np.int8)
 
-    tgt = load_perc(perc / "rescore.percolator.psms.txt")
-    decp = perc / "rescore.percolator.decoy.psms.txt"
-    dec = load_perc(decp) if decp.exists() else {}
-    score = np.full(n, np.nan); q = np.full(n, np.nan)
-    for i, sid in enumerate(t["SpecId"]):
-        rec = tgt.get(sid) if label[i] == 1 else dec.get(sid)
-        if rec is not None:
-            score[i] = rec[0]; q[i] = rec[1] if label[i] == 1 else np.nan
+    def scores_of(prefix):
+        """(score, q) per row from this run's `prefix` output; q stays target-only, as every panel means it."""
+        psms = fdr_dir / f"{prefix}.{method}.psms.txt"
+        if not psms.exists():
+            return np.full(n, np.nan, np.float32), np.full(n, np.nan, np.float32)
+        tid, tscore, tq = load_scores(psms)
+        decoys = fdr_dir / f"{prefix}.{method}.decoy.psms.txt"
+        did, dscore = load_scores(decoys)[:2] if decoys.exists() else (np.empty(0, np.uint64), np.empty(0, np.float32))
+        # target and decoy ids are disjoint, so one table serves both label classes
+        score = _lookup(t["SpecId"], np.concatenate([tid, did]), np.concatenate([tscore, dscore]))
+        return score, _lookup(t["SpecId"], tid, tq)
 
-    origp = perc / "original.percolator.psms.txt"
-    origd = load_perc(origp) if origp.exists() else {}
-    origdec = perc / "original.percolator.decoy.psms.txt"
-    origdd = load_perc(origdec) if origdec.exists() else {}
-    oscore = np.full(n, np.nan); oq = np.full(n, np.nan)
-    for i, sid in enumerate(t["SpecId"]):
-        rec = origd.get(sid) if label[i] == 1 else origdd.get(sid)
-        if rec is not None:
-            oscore[i] = rec[0]
-            if label[i] == 1:
-                oq[i] = rec[1]
-
+    score, q = scores_of("rescore")
+    oscore, oq = scores_of("original")
     t.update(dict(charge=charge, label=label, score=score, q=q, oscore=oscore, oq=oq, header=header, n=n))
     return t
 
@@ -231,8 +440,10 @@ def _sup(fig, main, y=0.998):
 
 
 def density_scatter(ax, x, y, title, xlabel, clip=(1, 99), ylab="spectral angle", ylim=(0, 1.02), trend=True):
-    """Native-Oktoberfest-style scatter: every point plotted, coloured by local 2-D density
-    (warm cmap, log scale, dense drawn on top) so sparse vs dense regions are legible."""
+    """Native-Oktoberfest-style scatter, coloured by local 2-D density.
+
+    Warm cmap, log scale, dense points drawn on top, so sparse vs dense regions stay legible.
+    """
     from scipy.stats import spearmanr
     m = np.isfinite(x) & np.isfinite(y); x, y = x[m], y[m]
     if x.size < 20:
@@ -255,8 +466,7 @@ def density_scatter(ax, x, y, title, xlabel, clip=(1, 99), ylab="spectral angle"
                 mx.append(x[s].mean()); my.append(np.median(y[s]))
     # scatter (subsample for file size, keeping the density ordering so dense stays on top)
     o = np.argsort(dens, kind="stable"); xs, ys, ds = x[o], y[o], dens[o]
-    if xs.size > 55000:
-        sel = np.linspace(0, xs.size - 1, 55000).astype(int); xs, ys, ds = xs[sel], ys[sel], ds[sel]
+    xs, ys, ds = subsample(xs, ys, ds, k=MAX_SCATTER_POINTS)  # thins the drawing, not the statistics
     sc = ax.scatter(xs, ys, c=np.log1p(ds), cmap="YlOrRd", s=5, linewidths=0, rasterized=True)
     cb = ax.figure.colorbar(sc, ax=ax, fraction=0.045, pad=0.02)
     cb.set_ticks([]); cb.ax.set_ylabel("point density", fontsize=8, color=INK2)
@@ -275,7 +485,9 @@ def density_scatter(ax, x, y, title, xlabel, clip=(1, 99), ylab="spectral angle"
 
 
 def _violins(ax, groups, positions, color, width=0.75):
-    v = ax.violinplot(groups, positions=positions, widths=width, showextrema=False)
+    # the KDE behind a violin costs O(n) per evaluation point; its shape is settled long before 200k
+    v = ax.violinplot([subsample(g, k=MAX_KDE_POINTS) for g in groups],
+                      positions=positions, widths=width, showextrema=False)
     for b in v["bodies"]:
         b.set_facecolor(color); b.set_edgecolor(INK2); b.set_alpha(0.55); b.set_linewidth(1)
     for g, p in zip(groups, positions):
@@ -287,7 +499,7 @@ def _violins(ax, groups, positions, color, width=0.75):
 def _split_violin(ax, left, right, colL, colR, pos=0.0, width=0.9):
     """One violin split in two: left half = `left` distribution, right half = `right`."""
     for data, side, col in [(left, "left", colL), (right, "right", colR)]:
-        v = ax.violinplot([data], positions=[pos], widths=width, showextrema=False)
+        v = ax.violinplot([subsample(data, k=MAX_KDE_POINTS)], positions=[pos], widths=width, showextrema=False)
         b = v["bodies"][0]
         verts = b.get_paths()[0].vertices
         if side == "left":
@@ -302,6 +514,8 @@ def _split_violin(ax, left, right, colL, colR, pos=0.0, width=0.9):
 
 
 def fig_sa_features(D, P):
+    if "spectral_angle" not in D:
+        return None  # a feature-ablation run can drop it; every SA panel is then vacuous
     acc = (D["label"] == 1) & (D["q"] <= FDR)
     sa = D["spectral_angle"]; saa = sa[acc]
     ch = D["charge"][acc]
@@ -355,8 +569,9 @@ def fig_sa_features(D, P):
 
 
 def fig_headroom(D, P):
-    sa, label, score, q = D["spectral_angle"], D["label"], D["score"], D["q"]
-    has = np.isfinite(score)
+    if "spectral_angle" not in D:
+        return None
+    sa, label, q = D["spectral_angle"], D["label"], D["q"]
     acc = (label == 1) & (q <= FDR); rej = (label == 1) & (q > FDR); isd = (label == -1)
     fig, axes = plt.subplots(1, 2, figsize=(14.5, 5.8)); bins = np.linspace(0, 1, 60)
     # (a)
@@ -374,11 +589,12 @@ def fig_headroom(D, P):
     x = np.arange(len(thr)); w = 0.38
     ax.bar(x - w / 2, rc, w, color=ORANGE, label="rejected targets (q>1%)")
     ax.bar(x + w / 2, dc, w, color=INK2, label="decoys")
+    top = max(max(rc), max(dc), 1)
     for i, (r, d) in enumerate(zip(rc, dc)):
-        ax.text(i, max(r, d) + max(rc) * 0.02, f"net {r - d:+,}", ha="center", va="bottom",
+        ax.text(i, max(r, d) + top * 0.02, f"net {r - d:+,}", ha="center", va="bottom",
                 fontsize=10, color=GREEN if r - d > 0 else RED, fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels([f"SA>{th}" for th in thr]); ax.set_ylabel("PSM count")
-    ax.set_ylim(0, max(rc) * 1.2); ax.legend(frameon=False, fontsize=9)
+    ax.set_ylim(0, max(max(rc), max(dc), 1) * 1.2); ax.legend(frameon=False, fontsize=9)
     _caption(ax, "(b) high-SA rejected targets vs high-SA decoys"); grid(ax, "y")
     _sup(fig, "Rescoring headroom — target PSMs NOT accepted at 1% FDR", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=2.5)
@@ -396,8 +612,9 @@ def fig_headroom(D, P):
 
 
 def fig_weights(D, P):
-    resc = P["perc"] / "rescore.percolator.weights.csv"
-    orig = P["perc"] / "original.percolator.weights.csv"
+    # weights.csv is a percolator artefact; mokapot writes none, so this panel is percolator-only
+    resc = P["fdr_dir"] / "rescore.percolator.weights.csv"
+    orig = P["fdr_dir"] / "original.percolator.weights.csv"
     if not resc.exists():
         return None
     rn, rw = parse_weights(resc)
@@ -432,17 +649,8 @@ def fig_weights(D, P):
 
 
 def _qvals(path):
-    """Sorted q-values of the target rows in a percolator output file."""
-    out = []
-    with open(path) as f:
-        qi = f.readline().rstrip("\n").split("\t").index("q-value")
-        for line in f:
-            p = line.rstrip("\n").split("\t")
-            try:
-                out.append(float(p[qi]))
-            except (IndexError, ValueError):
-                pass
-    return np.sort(np.asarray(out, float))
+    """Sorted q-values of the target rows in a percolator/mokapot output file."""
+    return np.sort(load_scores(path)[2])
 
 
 def fig_yield(D, P):
@@ -453,8 +661,8 @@ def fig_yield(D, P):
     """
     lv_have = []
     for lv, name in [("psms", "PSMs"), ("peptides", "Peptides")]:
-        r = P["perc"] / f"rescore.percolator.{lv}.txt"
-        o = P["perc"] / f"original.percolator.{lv}.txt"
+        r = P["fdr_dir"] / f"rescore.{P['method']}.{lv}.txt"
+        o = P["fdr_dir"] / f"original.{P['method']}.{lv}.txt"
         if r.exists():
             lv_have.append((name, _qvals(r), _qvals(o) if o.exists() else None))
     if not lv_have:
@@ -496,22 +704,23 @@ def fig_yield(D, P):
 
 
 def fig_movement(D, P):
-    label, score, oscore, q = D["label"], D["score"], D["oscore"], D["q"]
+    label, score, oscore = D["label"], D["score"], D["oscore"]
     m = (label == 1) & np.isfinite(score) & np.isfinite(oscore)
     if m.sum() < 50:
         return None
-    # accepted sets by PSMId
-    resc_acc = ids_at_fdr(P["perc"] / "rescore.percolator.psms.txt", "PSMId")
-    orig_acc = ids_at_fdr(P["perc"] / "original.percolator.psms.txt", "PSMId") if (P["perc"] / "original.percolator.psms.txt").exists() else set()
-    sid = D["SpecId"]
-    in_r = np.array([s in resc_acc for s in sid]); in_o = np.array([s in orig_acc for s in sid])
+    # acceptance at 1% FDR is what the per-row q-values already say: no id set membership needed
+    # (that was a Python loop over every PSM, plus two sets of every accepted id, at bulk scale)
+    in_r = D["q"] <= FDR
+    in_o = D["oq"] <= FDR
     gained = m & in_r & ~in_o; lost = m & ~in_r & in_o; common = m & in_r & in_o; neither = m & ~in_r & ~in_o
     fig, ax = plt.subplots(figsize=(8.6, 8))
     rng = np.random.default_rng(0)
     def sub(mask, k=8000):
         idx = np.where(mask)[0]
         return rng.choice(idx, size=min(k, idx.size), replace=False) if idx.size else idx
-    ax.scatter(oscore[sub(neither, 6000)], score[sub(neither, 6000)] if False else score[sub(neither, 6000)], s=4, color="#d0d0cc", alpha=0.4, linewidths=0, label=f"neither, n={int(neither.sum()):,}")
+    grey = sub(neither, 6000)  # one draw: x and y must come from the same PSMs
+    ax.scatter(oscore[grey], score[grey], s=4, color="#d0d0cc", alpha=0.4, linewidths=0,
+               label=f"neither, n={int(neither.sum()):,}")
     for mask, col, lbl in [(common, COMMON, f"kept (both), n={int(common.sum()):,}"),
                            (gained, GAINED, f"gained by Prosit, n={int(gained.sum()):,}"),
                            (lost, LOST, f"lost by Prosit, n={int(lost.sum()):,}")]:
@@ -528,6 +737,14 @@ def fig_movement(D, P):
     return "movement", "Rescore-vs-original movement", cap, fig_to_uri(fig)
 
 
+def _distinct_per_file(file_codes, pep_codes, mask, n_files):
+    """Distinct peptides per raw file among the masked rows, without materialising any per-file mask."""
+    pairs = np.stack([file_codes[mask].astype(np.int64), pep_codes[mask].astype(np.int64)], axis=1)
+    if pairs.size == 0:
+        return np.zeros(n_files, dtype=np.int64)
+    return np.bincount(np.unique(pairs, axis=0)[:, 0], minlength=n_files)
+
+
 def fig_per_file(D, P):
     """Identifications PER RAW FILE, +Prosit vs no-Prosit.
 
@@ -536,31 +753,30 @@ def fig_per_file(D, P):
     """
     if "filename" not in D or not np.isfinite(D["oq"]).any():
         return None
+    codes, n_files = D["filename"], D["filename_levels"].size
+    if n_files < 4:
+        return None  # a per-file view needs enough files to be a distribution rather than a list
     acc_r = (D["label"] == 1) & (D["q"] <= FDR)
     acc_o = (D["label"] == 1) & (D["oq"] <= FDR)
-    files = np.array(sorted(set(D["filename"])), dtype=object)
-    if files.size < 4:
-        return None  # a per-file view needs enough files to be a distribution rather than a list
-    pep = np.array([strip_pep(p) for p in D["Peptide"]], dtype=object) if "Peptide" in D else None
-    nr, no = [], []
-    for f in files:
-        inf = D["filename"] == f
-        if pep is None:
-            nr.append(int((inf & acc_r).sum())); no.append(int((inf & acc_o).sum()))
-        else:
-            nr.append(len(set(pep[inf & acc_r]))); no.append(len(set(pep[inf & acc_o])))
-    nr = np.array(nr, float); no = np.array(no, float)
-    unit = "distinct peptides" if pep is not None else "PSMs"
+    # counted on the integer peptide codes: identical to counting the strings, but a run with hundreds
+    # of files no longer costs one full-length mask per file (that loop is quadratic in the run size)
+    if "Peptide" in D:
+        unit = "distinct peptides"
+        nr, no = _distinct_per_file(codes, D["Peptide"], acc_r, n_files), _distinct_per_file(codes, D["Peptide"], acc_o, n_files)
+    else:
+        unit = "PSMs"
+        nr, no = np.bincount(codes[acc_r], minlength=n_files), np.bincount(codes[acc_o], minlength=n_files)
+    nr = nr.astype(float); no = no.astype(float)
     order = np.argsort(-nr)
-    x = np.arange(files.size)
+    x = np.arange(n_files)
     fig, axes = plt.subplots(1, 2, figsize=(15, 5.6))
     # (a) the per-file yield curve — dynamic range across files, and the lift on top of it
     ax = axes[0]
     ax.fill_between(x, no[order], nr[order], color=GAINED, alpha=0.18, lw=0, label="gain from Prosit")
     ax.plot(x, no[order], color=COMMON, lw=1.8, label="no Prosit")
     ax.plot(x, nr[order], color=GAINED, lw=1.8, label="+Prosit")
-    ax.set_xlabel(f"raw file, ranked by +Prosit yield  (n={files.size} files)")
-    ax.set_ylabel(f"{unit} @ 1% FDR"); ax.set_xlim(0, files.size - 1); ax.set_ylim(bottom=0)
+    ax.set_xlabel(f"raw file, ranked by +Prosit yield  (n={n_files} files)")
+    ax.set_ylabel(f"{unit} @ 1% FDR"); ax.set_xlim(0, n_files - 1); ax.set_ylim(bottom=0)
     ax.legend(frameon=False, fontsize=9)
     _caption(ax, f"(a) {unit} per raw file  ·  median {np.median(nr):,.0f} vs {np.median(no):,.0f}")
     grid(ax)
@@ -574,13 +790,16 @@ def fig_per_file(D, P):
     ax.axhline(med, color=ORANGE, ls="--", lw=1.5, label=f"median {med:+.1f}%")
     n_up = int((nr[ok] > no[ok]).sum()); n_dn = int((nr[ok] < no[ok]).sum())
     from scipy.stats import spearmanr
-    r, _ = spearmanr(no[ok], pct)
-    ax.text(0.97, 0.94, f"gained in {n_up}/{int(ok.sum())} files · lost in {n_dn}\nSpearman r={r:+.2f}",
+    # a rank correlation needs both axes to vary; with every file at the same yield or the same gain
+    # there is no trend to report, and scipy would return NaN
+    varies = np.unique(no[ok]).size > 1 and np.unique(pct).size > 1
+    corr = f"Spearman r={spearmanr(no[ok], pct)[0]:+.2f}" if varies else "Spearman r: n/a (no spread)"
+    ax.text(0.97, 0.94, f"gained in {n_up}/{int(ok.sum())} files · lost in {n_dn}\n{corr}",
             transform=ax.transAxes, ha="right", va="top", fontsize=9, color=INK,
             bbox=dict(boxstyle="round,pad=0.32", fc="white", ec="#cccccc", alpha=0.9))
     ax.set_xlabel(f"{unit} @ 1% FDR without Prosit  (per raw file)")
     ax.set_ylabel("relative gain from Prosit (%)")
-    lo = min(0.0, float(pct.min())); hi = float(pct.max())
+    lo = min(0.0, float(pct.min())); hi = max(float(pct.max()), lo + 1e-6)  # never a zero-height axis
     ax.set_ylim(lo - 0.08 * (hi - lo), hi + 0.18 * (hi - lo))
     ax.legend(frameon=False, fontsize=9, loc="lower left")
     _caption(ax, "(b) relative gain vs how well the file ran"); grid(ax)
@@ -598,7 +817,6 @@ def fig_per_file(D, P):
 
 
 def fig_calibration(D, P):
-    from scipy.stats import spearmanr
     label, q = D["label"], D["q"]
     acc = (label == 1) & (q <= FDR); dec = (label == -1)
     have_ard = "abs_rt_diff" in D
@@ -668,33 +886,69 @@ PROTON = 1.007276
 
 
 def select_spectra(D, n):
-    label, score, q = D["label"], D["score"], D["q"]
-    keep = ["SpecId", "filename", "ScanNr", "spectral_angle", "Peptide", "charge",
-            "collision_energy_aligned", "RT", "Mass", "score", "q", "label"]
+    """Pick which PSMs to show, n per group.
+
+    The groups are the extremes of the score distribution, both sides of the 1% cutoff, and decoys.
+
+    The selection runs on numpy indices, so only the ~6n chosen rows are ever materialised as a
+    DataFrame. On a bulk run, building a frame of every PSM here (with its peptide and file strings)
+    would cost more memory than the whole rest of the report.
+
+    :raises ValueError: if rescore.tab lacks a column the spectra viewer cannot work without, or if
+        no PSM is showable at all
+    :return: (one row per distinct spectrum, {(raw, scan): [group names]})
+    """
     import pandas as pd
-    df = pd.DataFrame({k: D[k] for k in keep if k in D})
-    df["pep"] = df.Peptide.map(strip_pep)
-    df["ce"] = (df.collision_energy_aligned * 100).round().astype(int)
-    df["scan"] = df.ScanNr.astype(int)
-    # Mass = theoretical neutral peptide mass (ExpMass in this tab is a bogus sequential index) -> precursor m/z
-    df["mz"] = (df.Mass + df.charge * PROTON) / df.charge
-    tgt = df[df.label == 1]; dec = df[df.label == -1]
-    conf = tgt[tgt.q <= FDR]; rej = tgt[tgt.q > FDR]
-    groups = {
-        "best_score": tgt.sort_values("score", ascending=False).head(n),
-        "worst_score": tgt.sort_values("score", ascending=True).head(n),
-        "cutoff_accepted": conf.sort_values("score", ascending=True).head(n),
-        "cutoff_rejected": rej.sort_values("score", ascending=False).head(n),
-        "decoy_high": dec.sort_values("score", ascending=False).head(n),
-        "decoy_low": dec.sort_values("score", ascending=True).head(n),
-    }
-    rows = []
-    for name, g in groups.items():
-        gg = g.copy(); gg["group"] = name; rows.append(gg)
-    picks = pd.concat(rows, ignore_index=True)
-    picks["key"] = list(zip(picks.filename, picks.scan))
-    grp_of = picks.groupby("key")["group"].apply(lambda s: sorted(set(s))).to_dict()
-    uniq = picks.drop_duplicates("key").reset_index(drop=True)
+    missing = [c for c in ("filename", "ScanNr", "Peptide", "collision_energy_aligned", "Mass") if c not in D]
+    if missing:
+        raise ValueError(f"rescore.tab has no {', '.join(missing)} column(s)")
+    label, score, q, charge = D["label"], D["score"], D["q"], D["charge"]
+    # a spectrum is only showable if we can score it, place its precursor, and re-query Koina for it
+    ok = np.isfinite(score) & (charge > 0) & np.isfinite(D["collision_energy_aligned"])
+    tgt = np.where(ok & (label == 1))[0]
+    dec = np.where(ok & (label == -1))[0]
+    conf, rej = tgt[q[tgt] <= FDR], tgt[q[tgt] > FDR]
+
+    def top(idx, largest):
+        """The n rows of `idx` with the largest (or smallest) score."""
+        if idx.size == 0:
+            return idx
+        k = min(n, idx.size)
+        v = -score[idx] if largest else score[idx]
+        part = np.argpartition(v, k - 1)[:k]
+        return idx[part[np.argsort(v[part])]]
+
+    groups = {"best_score": top(tgt, True), "worst_score": top(tgt, False),
+              "cutoff_accepted": top(conf, False), "cutoff_rejected": top(rej, True),
+              "decoy_high": top(dec, True), "decoy_low": top(dec, False)}
+    membership = {}
+    for name, idx in groups.items():
+        for row in idx.tolist():
+            membership.setdefault(row, []).append(name)
+    if not membership:
+        raise ValueError("no scored PSMs to show")
+    rows = np.array(sorted(membership), dtype=np.int64)
+    ch = charge[rows].astype(int)
+    mass = D["Mass"][rows]
+    df = pd.DataFrame({
+        "filename": D["filename_levels"][D["filename"][rows]],
+        "scan": D["ScanNr"][rows].astype(np.int64),
+        "pep": [strip_pep(x) for x in D["Peptide_levels"][D["Peptide"][rows]]],
+        "charge": ch,
+        "ce": np.rint(D["collision_energy_aligned"][rows] * 100).astype(int),
+        "RT": D["RT"][rows] if "RT" in D else np.full(rows.size, np.nan),
+        "score": score[rows], "q": q[rows], "label": label[rows],
+        "spectral_angle": D["spectral_angle"][rows] if "spectral_angle" in D else np.full(rows.size, np.nan),
+        # Mass = theoretical neutral peptide mass (ExpMass in this tab is a bogus sequential index)
+        "mz": (mass + ch * PROTON) / ch,
+    })
+    df["group"] = [membership[int(r)] for r in rows]
+    df["key"] = list(zip(df.filename, df.scan))
+    grp_of = {}
+    for key, names in zip(df.key, df.group):
+        grp_of.setdefault(key, set()).update(names)
+    grp_of = {k: sorted(v) for k, v in grp_of.items()}
+    uniq = df.drop_duplicates("key").reset_index(drop=True)
     return uniq, grp_of
 
 
@@ -709,14 +963,69 @@ def _stems(x, y):
     return xs, ys
 
 
+def _scan_of(spectrum_id):
+    """Scan number encoded in an mzML spectrum id ("... scan=1234"), or None if it carries none."""
+    m = re.search(r"scan=(\d+)", str(spectrum_id))
+    return int(m.group(1)) if m else None
+
+
+def _peaks(spectrum):
+    mz, it = spectrum.get("m/z array"), spectrum.get("intensity array")
+    if mz is None or it is None or len(mz) == 0:
+        return None
+    return np.asarray(mz, dtype=float), np.asarray(it, dtype=float)
+
+
+def _read_scans(mzml_path, scans):
+    """{scan: (m/z array, intensity array)} for the wanted scans of one mzML file.
+
+    Uses the file's own index when it has one: on a bulk-size mzML, seeking to a handful of scans is
+    the difference between milliseconds and a full pass over gigabytes. Falls back to reading through
+    the file (stopping as soon as everything wanted has been seen) when it has no usable index.
+    """
+    from pyteomics import mzml as pymzml
+
+    found = {}
+    try:
+        with pymzml.MzML(str(mzml_path), use_index=True) as rd:
+            wanted = {}
+            for spectrum_id in rd.index:
+                scan = _scan_of(spectrum_id)
+                if scan in scans:
+                    wanted[scan] = spectrum_id
+            for scan, spectrum_id in wanted.items():
+                peaks = _peaks(rd.get_by_id(spectrum_id))
+                if peaks is not None:
+                    found[scan] = peaks
+    except Exception:  # no index, an unreadable one, or an older pyteomics: fall through
+        found = {}
+    if len(found) == len(scans):
+        return found
+    with pymzml.MzML(str(mzml_path)) as rd:
+        for sp in rd:
+            if sp.get("ms level") != 2:
+                continue
+            scan = _scan_of(sp.get("id", ""))
+            if scan is None:
+                scan = sp.get("index", -1) + 1
+            if scan in scans and scan not in found:
+                peaks = _peaks(sp)
+                if peaks is not None:
+                    found[scan] = peaks
+                if len(found) == len(scans):
+                    break
+    return found
+
+
 def build_spectra_fig(D, P, model, n):
     try:
         import pandas as pd
-        from pyteomics import mzml as pymzml
+        from pyteomics import mzml as pymzml  # noqa: F401  # availability check for _read_scans
         from koinapy import Koina
         import plotly.graph_objects as go
     except Exception as e:
-        return None, f"spectra section skipped (missing dep: {e})"
+        return None, (f"spectra section skipped (missing dependency: {e}) — install the optional extra with "
+                      "`pip install oktoberfest[report]`")
     if P["spectra"] is None:
         return None, "spectra section skipped (no spectra/ dir with mzML)"
     uniq, grp_of = select_spectra(D, n)
@@ -736,25 +1045,24 @@ def build_spectra_fig(D, P, model, n):
     def pred_row(r):
         return lut.get((str(r.pep), int(r.charge), int(r.ce)), (np.array([]), np.array([]), []))
 
-    # read mzML
-    obs_by_key = {}
-    for raw, grp in uniq.groupby("filename"):
+    # read mzML, most-represented files first and CAPPED: the selected PSMs of a bulk run can span
+    # hundreds of raw files, and every file opened is at best a seek into a multi-gigabyte mzML
+    obs_by_key, opened, skipped_files, unreadable = {}, 0, 0, []
+    for raw, grp in sorted(uniq.groupby("filename"), key=lambda kv: -len(kv[1])):
         mzf = P["spectra"] / f"{raw}.mzML"
         if not mzf.exists():
             continue
-        need = {int(s): None for s in grp.scan}
-        with pymzml.MzML(str(mzf)) as rd:
-            for sp in rd:
-                if sp.get("ms level") != 2:
-                    continue
-                sid = sp.get("id", "")
-                sc = int(sid.split("scan=")[-1].split()[0]) if "scan=" in sid else sp.get("index", -1) + 1
-                if sc in need:
-                    need[sc] = (np.asarray(sp["m/z array"]), np.asarray(sp["intensity array"]))
-                if all(v is not None for v in need.values()):
-                    break
-        for s, v in need.items():
-            obs_by_key[(raw, s)] = v
+        if opened >= MAX_SPECTRA_FILES:
+            skipped_files += 1
+            continue
+        opened += 1
+        try:
+            scans = _read_scans(mzf, {int(sc) for sc in grp.scan})
+        except Exception as e:  # a truncated or unreadable mzML costs its own spectra, not the section
+            unreadable.append(f"{raw} ({e})")
+            continue
+        for scan, peaks in scans.items():
+            obs_by_key[(raw, scan)] = peaks
 
     data = []
     for _, r in uniq.iterrows():
@@ -845,7 +1153,13 @@ def build_spectra_fig(D, P, model, n):
         legend=dict(orientation="h", y=1.16, x=1.0, xanchor="right", font=dict(size=11)), hovermode="closest")
     fig.add_hline(y=0, line=dict(color="#cccccc", width=0.8))
     html = fig.to_html(full_html=False, include_plotlyjs="inline", div_id="spectra_div")
-    note = (f"{len(data)} spectra across groups: " + ", ".join(f"{k}={sum(1 for d in data if k in d['groups'])}" for k in GORDER))
+    note = (f"{len(data)} spectra across groups: "
+            + ", ".join(f"{k}={sum(1 for d in data if k in d['groups'])}" for k in GORDER))
+    if skipped_files:
+        note += (f" · {skipped_files} further raw file(s) left unopened "
+                 f"(cap of {MAX_SPECTRA_FILES} mzML files per report)")
+    if unreadable:
+        note += " · unreadable mzML: " + ", ".join(unreadable[:3])
     return html, note
 
 
@@ -856,9 +1170,16 @@ SUMMARY_ORDER = ["psm_1%_FDR", "peptide_1%_FDR", "rescore_original_joint_plot_ps
                  "rescore_target_vs_decoys_peptide_bins", "original_target_vs_decoys_peptide_bins"]
 
 
-def collect_svgs(P):
+def collect_svgs(P, max_gallery_files=0, max_embedded_mb=0):
+    """Native Oktoberfest SVGs to embed: (summary plots, {raw file: {plot: path}}, note).
+
+    Everything here is inlined as base64 into ONE html file, so the selection is budgeted. A bulk run
+    emits three SVGs per raw file and its pooled scatter plots hold millions of vector points; without
+    a cap the report would be a multi-gigabyte page that no browser opens. The summary plots are
+    served first (they carry the run-level message), the per-raw gallery gets what budget is left.
+    """
     svgs = {}
-    for d in {P["perc"], P["results_dir"]}:
+    for d in {P["fdr_dir"], P["results_dir"]}:
         if d and d.exists():
             for f in d.glob("*.svg"):
                 svgs.setdefault(f.name, f)
@@ -872,7 +1193,47 @@ def collect_svgs(P):
         elif stem in SUMMARY_ORDER or "target_vs_decoys" in stem or "FDR" in stem or "joint" in stem:
             summary.append((stem, path))
     summary.sort(key=lambda kv: SUMMARY_ORDER.index(kv[0]) if kv[0] in SUMMARY_ORDER else 99)
-    return summary, per_raw
+
+    notes = []
+    budget = max_embedded_mb * 1e6 * 0.75 if max_embedded_mb > 0 else float("inf")  # base64 costs 4/3
+    per_file_cap = MAX_SVG_MB * 1e6
+
+    def size(path):
+        try:
+            return path.stat().st_size
+        except OSError:
+            return per_file_cap + 1  # unreadable: treat as oversized and skip it
+
+    kept_summary, too_big, no_budget = [], 0, 0
+    for stem, path in summary:
+        n_bytes = size(path)
+        if n_bytes > per_file_cap:
+            too_big += 1
+            continue
+        if n_bytes > budget:
+            no_budget += 1
+            continue
+        budget -= n_bytes
+        kept_summary.append((stem, path))
+    if too_big:
+        notes.append(f"{too_big} native plot(s) omitted, each larger than {MAX_SVG_MB:.0f} MB")
+    if no_budget:
+        notes.append(f"{no_budget} further native plot(s) omitted: the {max_embedded_mb} MB embed budget was spent")
+
+    kept_raw, n_raw = {}, len(per_raw)
+    for raw in sorted(per_raw):
+        if max_gallery_files > 0 and len(kept_raw) >= max_gallery_files:
+            break
+        plots = {k: v for k, v in per_raw[raw].items() if size(v) <= per_file_cap}
+        need = sum(size(v) for v in plots.values())
+        if not plots or need > budget:
+            continue
+        budget -= need
+        kept_raw[raw] = plots
+    if len(kept_raw) < n_raw:
+        notes.append(f"gallery shows {len(kept_raw)} of {n_raw} raw files "
+                     f"(cap {max_gallery_files or 'none'}, {max_embedded_mb or 'unlimited'} MB embed budget)")
+    return kept_summary, kept_raw, "; ".join(notes)
 
 
 # ============================== HTML assembly ==============================
@@ -999,21 +1360,31 @@ def _kpi(v, l, s="", cls=""):
 
 
 def overview_stats(P, D):
+    """Headline numbers for the summary cards, counted from the FDR-method output itself."""
+    sa = D.get("spectral_angle")
     m = (D["label"] == 1) & (D["q"] <= FDR)
     s = dict(n_rows=D["n"], n_t=int((D["label"] == 1).sum()), n_d=int((D["label"] == -1).sum()),
-             median_sa=float(np.median(D["spectral_angle"][m])) if m.any() else float("nan"),
+             median_sa=float(np.median(sa[m])) if (sa is not None and m.any()) else float("nan"),
              cutoff=float(D["score"][m].min()) if m.any() else float("nan"))
-    rp = P["perc"]
-    rid = ids_at_fdr(rp / "rescore.percolator.psms.txt", "PSMId"); s["acc_psm"] = len(rid)
-    pep_f = rp / "rescore.percolator.peptides.txt"
-    rpep = ids_at_fdr(pep_f, "peptide") if pep_f.exists() else set(); s["acc_pep"] = len(rpep)
-    op, opep = rp / "original.percolator.psms.txt", rp / "original.percolator.peptides.txt"
+    fdir, method = P["fdr_dir"], P["method"]
+    # ids are compared as sorted hash arrays: set arithmetic stays exact and costs 8 bytes per id
+    empty = np.empty(0, dtype=np.uint64)
+    rid = ids_at_fdr(fdir / f"rescore.{method}.psms.txt")
+    s["acc_psm"] = int(rid.size)
+    pep_f = fdir / f"rescore.{method}.peptides.txt"
+    rpep = ids_at_fdr(pep_f, key="peptide") if pep_f.exists() else empty
+    s["acc_pep"] = int(rpep.size)
+    op, opep = fdir / f"original.{method}.psms.txt", fdir / f"original.{method}.peptides.txt"
     if op.exists():
-        oid = ids_at_fdr(op, "PSMId")
-        s.update(gain_psm=len(rid) - len(oid), gained_psm=len(rid - oid), lost_psm=len(oid - rid))
-    if opep.exists() and rpep:
-        oidp = ids_at_fdr(opep, "peptide")
-        s.update(gain_pep=len(rpep) - len(oidp), gained_pep=len(rpep - oidp), lost_pep=len(oidp - rpep))
+        oid = ids_at_fdr(op)
+        s.update(gain_psm=int(rid.size - oid.size),
+                 gained_psm=int(np.setdiff1d(rid, oid, assume_unique=True).size),
+                 lost_psm=int(np.setdiff1d(oid, rid, assume_unique=True).size))
+    if opep.exists() and rpep.size:
+        oidp = ids_at_fdr(opep, key="peptide")
+        s.update(gain_pep=int(rpep.size - oidp.size),
+                 gained_pep=int(np.setdiff1d(rpep, oidp, assume_unique=True).size),
+                 lost_pep=int(np.setdiff1d(oidp, rpep, assume_unique=True).size))
     return s
 
 
@@ -1026,9 +1397,11 @@ def kpi_cards(s):
     if "gain_pep" in s:
         c.append(_kpi(f"{s['gain_pep']:+,}", "Prosit net peptides", f"+{s['gained_pep']:,} / −{s['lost_pep']:,}",
                       "pos" if s["gain_pep"] >= 0 else "neg"))
-    c += [_kpi(f"{s['median_sa']:.3f}", "Median SA (accepted)"),
-          _kpi(f"{s['n_d']:,}", "Decoy PSMs"),
-          _kpi(f"{s['cutoff']:.2f}", "Score at 1% cutoff")]
+    if np.isfinite(s["median_sa"]):
+        c.append(_kpi(f"{s['median_sa']:.3f}", "Median SA (accepted)"))
+    c.append(_kpi(f"{s['n_d']:,}", "Decoy PSMs"))
+    if np.isfinite(s["cutoff"]):
+        c.append(_kpi(f"{s['cutoff']:.2f}", "Score at 1% cutoff"))
     return "<div class='kpis'>" + "".join(c) + "</div>"
 
 
@@ -1039,13 +1412,14 @@ def config_rows(cfg):
             ("iRT model", models.get("irt")), ("Prediction server", g("prediction_server")),
             ("Mass tolerance", f"{g('massTolerance')} {g('unitMassTolerance', '')}".strip() if g("massTolerance") is not None else None),
             ("FDR estimation", g("fdr_estimation_method")), ("Peak matching", g("matching_method")),
+            ("Matching params", str(g("matching_method_params")) if g("matching_method_params") else None),
             ("All features", str(g("allFeatures")) if g("allFeatures") is not None else None),
             ("TMT tag", g("tag"))]
     return [(k, v) for k, v in rows if v not in (None, "", "None", "None ")]
 
 
 def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html, spectra_note,
-                      summary_svgs, per_raw, want_spectra):
+                      summary_svgs, per_raw, want_spectra, svg_note=""):
     nav = [("summary", "Summary")] + [(sid, title) for sid, title, _, _ in sections]
     if spectra_html:
         nav.append(("spectra", "Spectra"))
@@ -1103,11 +1477,14 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
     if per_raw:
         n += 1
         n_full = sum(1 for r in per_raw.values() if len(r) >= 3)
-        note = ""
+        notes = []
         if n_full < len(per_raw):
-            note = (f"<div class='secdesc' style='margin:0 0 10px 0'>Note: Oktoberfest emitted the iRT-vs-RT plot for "
-                    f"only {n_full}/{len(per_raw)} raw files, so some entries show 2 plots (CE violin + mean) rather "
-                    f"than 3 — the missing SVG was never produced by the run.</div>")
+            notes.append(f"Oktoberfest emitted the iRT-vs-RT plot for only {n_full}/{len(per_raw)} of the raw files "
+                         "shown, so some entries have 2 plots (CE violin + mean) rather than 3 — the missing SVG "
+                         "was never produced by the run.")
+        if svg_note:
+            notes.append(svg_note[0].upper() + svg_note[1:] + ".")
+        note = ("<div class='secdesc' style='margin:0 0 10px 0'>Note: " + " ".join(notes) + "</div>") if notes else ""
         body = note + "".join(
             f"<details class='raw'><summary>{raw} · {len(per_raw[raw])} plots</summary>"
             f"<div class='grid2' style='margin:8px 0'>" +
@@ -1115,7 +1492,8 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
                     for k, v in sorted(per_raw[raw].items())) + "</div></details>"
             for raw in sorted(per_raw))
         h.append(_section(n, "gallery", "Per-raw gallery", body))
-    h.append(f"<footer>Generated by <b>oktoberfest_investigate.py</b> · source: {P['perc']} · "
+    h.append(f"<footer>Generated by <b>oktoberfest.plotting.investigate</b> · source: {P['fdr_dir']} "
+             f"({P['method']}) · "
              f"{datetime.now():%Y-%m-%d %H:%M}.<br>Non-native panels define every colour, mark, unit and n in-figure. "
              "Spectra are observed mzML vs a clean Koina re-query (not the rescoring's stored predictions). "
              "A diagnostic aid alongside — not a replacement for — the primary Oktoberfest outputs.</footer>")
@@ -1127,11 +1505,24 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
     return "\n".join(h)
 
 
-def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, log=print):
-    """Build the HTML report for an Oktoberfest run. `out_dir` may be the run's out/ folder or a
-    percolator dir. Returns the written path. Individual figures/spectra are already guarded; callers
-    that must never fail (e.g. inside the pipeline) should still wrap this in try/except (see
-    build_report_safe)."""
+def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, want_pdf=False,
+                 max_psms=0, max_gallery_files=0, max_embedded_mb=0, log=print):
+    """Build the HTML report for an Oktoberfest run.
+
+    :param out_dir: the run's out/ folder, or directly the percolator/mokapot output dir
+    :param out_html: where to write the report; defaults to investigate_<run>.html next to the run
+    :param n_per_group: spectra shown per selection group in the spectra viewer
+    :param want_spectra: build the interactive spectra viewer (needs mzML files and Koina)
+    :param want_pdf: additionally render a printable PDF of the report (needs headless Chrome)
+    :param max_psms: refuse to build the report above this many PSMs (0 = no limit)
+    :param max_gallery_files: raw files shown in the per-raw SVG gallery (0 = no limit)
+    :param max_embedded_mb: budget for all embedded native SVGs together (0 = no limit)
+    :param log: where progress goes; the pipeline passes its logger
+    :return: the path of the written HTML report
+
+    Individual figures and the spectra section are already guarded here; callers that must never fail
+    (e.g. inside the pipeline) should still use :py:func:`build_report_safe`.
+    """
     P = find_paths(out_dir)
     cfg = {}
     model = "Prosit_2025_intensity_40PTM"
@@ -1146,8 +1537,9 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, log=
     RUN_CTX["suffix"] = "  ·  ".join(x for x in [engine, model, run_name] if x)  # adaptive figure subtitles
     out_html = Path(out_html) if out_html else (P["run_dir"] / f"investigate_{run_name}.html")
 
-    log(f"[investigate] run={run_name} perc={P['perc']} model={model}")
-    D = load_data(P)
+    log(f"[investigate] run={run_name} dir={P['fdr_dir']} fdr={P['method']} model={model}")
+    D = load_data(P, max_psms=max_psms, log=log)
+    log(f"[investigate]   loaded {D['n']:,} PSMs")
 
     sections = []
     for fn in [fig_yield, fig_movement, fig_per_file, fig_weights, fig_sa_features, fig_headroom, fig_calibration]:
@@ -1166,22 +1558,40 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, log=
             spectra_html, spectra_note = None, f"spectra section skipped ({e})"
         log(f"[investigate]   {spectra_note}")
 
-    summary_svgs, per_raw = collect_svgs(P)
-    stats = overview_stats(P, D)
+    summary_svgs, per_raw, svg_note = collect_svgs(P, max_gallery_files, max_embedded_mb)
+    if svg_note:
+        log(f"[investigate]   {svg_note}")
+    try:
+        stats = overview_stats(P, D)
+    except Exception as e:  # a summary without its headline numbers still beats no report at all
+        log(f"[investigate]   summary numbers unavailable: {e}")
+        acc = (D["label"] == 1) & (D["q"] <= FDR)
+        stats = dict(n_rows=D["n"], n_t=int((D["label"] == 1).sum()), n_d=int((D["label"] == -1).sum()),
+                     median_sa=float("nan"), cutoff=float("nan"), acc_psm=int(acc.sum()), acc_pep=0)
     html = build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html, spectra_note,
-                             summary_svgs, per_raw, want_spectra)
+                             summary_svgs, per_raw, want_spectra, svg_note)
     out_html.parent.mkdir(parents=True, exist_ok=True)
     out_html.write_text(html)
     log(f"[investigate] wrote {out_html} ({out_html.stat().st_size / 1e6:.1f} MB, {len(sections)} figs, "
         f"{'spectra' if spectra_html else 'no spectra'}, {len(per_raw)} raw galleries)")
+
+    if want_pdf:
+        from oktoberfest.plotting.report_pdf import html_to_pdf
+
+        html_to_pdf(out_html, log=log)  # guarded internally: a missing Chrome costs the PDF, not the HTML
     return out_html
 
 
-def build_report_safe(out_dir, out_html=None, n_per_group=20, want_spectra=True, log=print):
-    """Never-raises wrapper for pipeline use: catches EVERYTHING and returns the path or None."""
+def build_report_safe(out_dir, out_html=None, n_per_group=20, want_spectra=True, want_pdf=False,
+                      max_psms=0, max_gallery_files=0, max_embedded_mb=0, log=print):
+    """Never-raises wrapper for pipeline use: catches EVERYTHING and returns the path or None.
+
+    Same arguments as :py:func:`build_report`.
+    """
     try:
-        return build_report(out_dir, out_html=out_html, n_per_group=n_per_group,
-                             want_spectra=want_spectra, log=log)
+        return build_report(out_dir, out_html=out_html, n_per_group=n_per_group, want_spectra=want_spectra,
+                            want_pdf=want_pdf, max_psms=max_psms, max_gallery_files=max_gallery_files,
+                            max_embedded_mb=max_embedded_mb, log=log)
     except Exception as e:  # noqa: BLE001 - deliberately swallow all errors so a report never breaks a run
         try:
             log(f"[investigate] report generation failed, skipped: {e}")
@@ -1191,13 +1601,20 @@ def build_report_safe(out_dir, out_html=None, n_per_group=20, want_spectra=True,
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("out_dir")
+    """Build a report from the command line, for a run that has already finished."""
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("out_dir", help="an Oktoberfest run's out/ folder, or its percolator/mokapot dir")
     ap.add_argument("out_html", nargs="?", default=None)
     ap.add_argument("--n-per-group", type=int, default=20)
-    ap.add_argument("--no-spectra", action="store_true")
+    ap.add_argument("--no-spectra", action="store_true", help="skip the interactive spectra viewer")
+    ap.add_argument("--pdf", action="store_true", help="also render a printable PDF (needs headless Chrome)")
+    ap.add_argument("--max-psms", type=int, default=0, help="refuse runs larger than this (0 = no limit)")
+    ap.add_argument("--max-gallery-files", type=int, default=25, help="raw files in the per-raw gallery")
+    ap.add_argument("--max-embedded-mb", type=int, default=60, help="embed budget for native SVGs")
     a = ap.parse_args()
-    build_report(a.out_dir, a.out_html, a.n_per_group, want_spectra=not a.no_spectra)
+    build_report(a.out_dir, a.out_html, a.n_per_group, want_spectra=not a.no_spectra, want_pdf=a.pdf,
+                 max_psms=a.max_psms, max_gallery_files=a.max_gallery_files,
+                 max_embedded_mb=a.max_embedded_mb)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -697,41 +697,73 @@ def plot_all(data_dir: Path, config: Config):
 
     pdf_path = data_dir / "mirror_plots.pdf"
 
-    # Guarded: mirror plots need abs_rt_diff and spectral_angle, which a feature-ablation run
-    # may have removed (and only run at all if mirror_plots is configured).
+    # Mirror plots only run if the config asks for them; without this guard every run that does not
+    # gets an empty mirror_plots.pdf. Guarded on top of that, because they need abs_rt_diff and
+    # spectral_angle, which a feature-ablation run may have removed.
+    if not mirror_plots_dict:
+        logger.info("Skipping mirror plots: none configured.")
+    else:
+        try:
+            with PdfPages(pdf_path) as pdf:
+                for raw_file, scan_numbers in mirror_plots_dict.items():
+                    mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+                    hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+
+                    mzml = ThermoRaw.read_mzml(source=mzml_path)
+                    spec_pred = Spectra.from_hdf5(hdf5_path)
+
+                    for scan_number in scan_numbers:
+                        plot_mirror_spectrum(
+                            spec_pred,
+                            mzml,
+                            raw_file,
+                            scan_number,
+                            config,
+                            prosit_df,
+                            prosit_psms_target,
+                            prosit_psms_decoy,
+                            pdf,
+                        )
+        except Exception as e:
+            logger.warning(f"Skipping mirror plots: {e}")
+
+    plot_investigation_report(data_dir, config)
+
+
+def plot_investigation_report(data_dir: Path, config: Config) -> Optional[Path]:
+    """
+    Write the standalone HTML (and optionally PDF) investigation report next to the native plots.
+
+    The report is opt-in via the ``report`` config option (see :py:data:`oktoberfest.utils.config.REPORT_DEFAULTS`)
+    and FULLY GUARDED: it is a diagnostic aid, so neither a malformed option, a missing optional
+    dependency nor a failure while building it may break a rescoring run.
+
+    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
+    :param config: the configuration object
+    :return: the path of the written report, or None if it was disabled or could not be built
+    """
     try:
-        with PdfPages(pdf_path) as pdf:
-            for raw_file, scan_numbers in mirror_plots_dict.items():
-                mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
-                hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+        settings = config.report
+        if not settings["enabled"]:
+            logger.info("Skipping HTML investigation report (not enabled in the config).")
+            return None
 
-                mzml = ThermoRaw.read_mzml(source=mzml_path)
-                spec_pred = Spectra.from_hdf5(hdf5_path)
-
-                for scan_number in scan_numbers:
-                    plot_mirror_spectrum(
-                        spec_pred,
-                        mzml,
-                        raw_file,
-                        scan_number,
-                        config,
-                        prosit_df,
-                        prosit_psms_target,
-                        prosit_psms_decoy,
-                        pdf,
-                    )
-    except Exception as e:
-        logger.warning(f"Skipping mirror plots: {e}")
-
-    # Standalone interactive HTML investigation report, written next to the native plots (data_dir).
-    # FULLY GUARDED: report generation must never break a rescoring run for any reason.
-    try:
         from oktoberfest.plotting.investigate import build_report_safe
 
-        build_report_safe(data_dir, out_html=data_dir / "investigate_report.html",
-                          want_spectra=True, log=logger.info)
+        return build_report_safe(
+            data_dir,
+            out_html=data_dir / "investigate_report.html",
+            n_per_group=settings["n_per_group"],
+            want_spectra=settings["spectra"],
+            want_pdf=settings["pdf"],
+            max_psms=settings["max_psms"],
+            max_gallery_files=settings["max_gallery_files"],
+            max_embedded_mb=settings["max_embedded_mb"],
+            log=logger.info,
+        )
     except Exception as e:
         logger.warning(f"Skipping HTML investigation report: {e}")
+        return None
 
 
 def plot_ce_ransac_model(

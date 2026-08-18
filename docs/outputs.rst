@@ -86,6 +86,13 @@ This section details the files located within the mokapot / percolator directroy
     +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | original.log                          | Log output from percolator / mokapot (original features)                                                                                                                                    |
     +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | investigate_report.html               | Self-contained interactive HTML report on the rescoring run: identification yield vs FDR with and without peptide property prediction, per-PSM score movement, identifications per raw      |
+    |                                       | file, feature weights, spectral-angle diagnostics, calibration, the native plots of this directory and an observed-vs-predicted spectra viewer. Only written if the "report" config option  |
+    |                                       | is enabled.                                                                                                                                                                                 |
+    +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | investigate_report.pdf                | Printable version of the same report, without the interactive spectra viewer. Only written if "pdf" is set in the "report" config option. A report of a finished run can also be rendered   |
+    |                                       | later with ``python -m oktoberfest.plotting.report_pdf <report.html>``.                                                                                                                     |
+    +---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 The following output files are specific to XL‑MS rescoring.
 

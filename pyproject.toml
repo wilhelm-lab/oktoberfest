@@ -32,6 +32,12 @@ repository = "https://github.com/wilhelm-lab/oktoberfest"
 documentation = "https://oktoberfest.readthedocs.io"
 
 [project.optional-dependencies]
+report = [
+    # only needed for the spectra viewer of the investigation report ("report" config option); the rest
+    # of the report, and all of Oktoberfest, works without them
+    "plotly>=5.18",
+    "pyteomics>=4.7.3",
+]
 docs = [
     "sphinx>=7.0",
     "sphinx-autobuild>=2024.10.3",

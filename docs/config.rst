@@ -104,6 +104,25 @@ Applicable to rescoring
    +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     library_input          | Path to fasta file for in-silico digestion (also see the required parameters for in-silico digestion above)                                                                                   |
    +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | report                     | Standalone HTML investigation report written next to the plots of a rescoring run (percolator and mokapot output are both supported); off by default. Either a boolean ("report": true) or a  |
+   |                            | dictionary overriding any of the following keys.                                                                                                                                              |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     enabled                | Write the report; default = false                                                                                                                                                             |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     spectra                | Include the interactive observed-vs-predicted spectra viewer. It needs the mzML files, a reachable Koina server and the report's optional dependencies ("pip install oktoberfest[report]");   |
+   |                            | if any is missing the section is skipped and the rest of the report is written as usual; default = true                                                                                       |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     n_per_group            | Spectra shown per selection group (best / worst / either side of the 1% cutoff / decoys); default = 20                                                                                        |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     pdf                    | Also render a printable PDF of the report, which needs a headless Chrome/Chromium on the PATH; default = false                                                                                |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     max_psms               | Skip the report if rescore.tab holds more PSMs than this, as a guard rail against spending a bulk run's memory on a diagnostic (budget roughly 0.5 GB per million PSMs); 0 = no limit,        |
+   |                            | default = 20000000                                                                                                                                                                            |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     max_gallery_files      | Raw files shown in the per-raw-file plot gallery; 0 = no limit, default = 25                                                                                                                  |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     max_embedded_mb        | Budget for all native Oktoberfest SVGs embedded in the report together — everything is inlined into one self-contained file; 0 = no limit, default = 60                                       |
+   +----------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Applicable to spectral library generation
 -----------------------------------------
