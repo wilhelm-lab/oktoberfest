@@ -237,9 +237,9 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
 
         else:
             if config.acquisition_method.lower() == "dia":
-                groupby_column = 'PRECURSOR_CHARGE'
+                groupby_column = "PRECURSOR_CHARGE"
             else:
-                groupby_column = 'ORIG_COLLISION_ENERGY'
+                groupby_column = "ORIG_COLLISION_ENERGY"
             ce_alignment = alignment_library.obs.groupby(by=[groupby_column, "COLLISION_ENERGY"])[
                 "SPECTRAL_ANGLE"
             ].mean()
@@ -859,9 +859,7 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "_",
             "which_pep",
         ]
-    ] = df_psm[
-        "index"
-    ].str.split("_", expand=True)
+    ] = df_psm["index"].str.split("_", expand=True)
     df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
@@ -1467,8 +1465,8 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
         "retention_time_sec"
     ].transform("mean")
 
-    peptide_df['charge'] = peptide_df['PSMId'].apply(lambda x: x.split('-')[-2])
-    peptide_df.drop_duplicates(['peptide','charge'],inplace=True)
+    peptide_df["charge"] = peptide_df["PSMId"].apply(lambda x: x.split("-")[-2])
+    peptide_df.drop_duplicates(["peptide", "charge"], inplace=True)
     accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] <= 0.01, "PSMId"]
     positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
 
@@ -1493,7 +1491,7 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
     ]
 
     rows = []
-    for pos, row in zip(positions, meta.itertuples(index=False)):
+    for pos, row in zip(positions, meta.itertuples(index=False), strict=True):
         mz = mz_layer[pos].toarray().ravel()
         intensity = int_layer[pos].toarray().ravel()
         keep = (mz > 0.0) & (intensity > 0.05)
@@ -1532,7 +1530,12 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
 
 
 def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
+    """Generate spectral library from experimental data.
 
+    :param config_path: Path to the configuration file.
+    :raises ValueError: If the FDR estimation method is not Percolator.
+    :raises FileNotFoundError: If the annotated spectra HDF5 for a file is missing.
+    """
     if isinstance(config_path, Config):
         config = config_path
     else:
@@ -1594,9 +1597,9 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         "FragmentSeriesNumber",
     ]
     df = df.explode(fragment_cols, ignore_index=True)
-    df.sort_values(by='LibraryIntensity',ascending=False)
-    df.drop_duplicates(['ModifiedPeptideSequence','PrecursorCharge','ProductMz','NormalizedRetentionTime'])
-    df.sort_values(by=['ModifiedPeptideSequence','PrecursorCharge','ProductMz'], inplace=True)
+    df.sort_values(by="LibraryIntensity", ascending=False)
+    df.drop_duplicates(["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz", "NormalizedRetentionTime"])
+    df.sort_values(by=["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz"], inplace=True)
     df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
 
 
