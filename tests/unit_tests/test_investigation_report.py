@@ -1,5 +1,6 @@
 """Tests for the HTML/PDF investigation report and the config option that switches it on."""
 
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -258,6 +259,117 @@ class TestReportBuild(unittest.TestCase):
                 parsed.append({c: np.concatenate(parts[c]) for c in cols})
             for c in cols:
                 self.assertTrue(np.array_equal(parsed[0][c], parsed[1][c]), f"parsers disagree on {c}")
+
+
+class TestRunParameters(unittest.TestCase):
+    """Reading the experiment's settings off the run's config instead of assuming them.
+
+    The report has to be as correct for a label-free bulk run as for a labelled single-cell one, so
+    nothing that is a property of the SAMPLE may be a constant in the code.
+    """
+
+    #: Monoisotopic reporter-ion m/z that each label's masking window has to cover.
+    REPORTERS = {"tmt": (126.1277, 131.1445), "tmtpro": (126.1277, 134.1548),
+                 "itraq4": (114.1112, 117.1150), "itraq8": (113.1078, 121.1220)}
+
+    def test_a_label_free_run_masks_nothing(self):
+        """Without a tag there is no reporter region: that m/z range holds real fragment ions."""
+        params = inv.run_params({"type": "Rescoring", "models": {"intensity": "Prosit_2020_intensity_HCD"}})
+        self.assertIsNone(params["reporter"])
+        self.assertEqual(params["tag"], "")
+        self.assertIn("label-free", params["label"])
+
+    def test_each_label_masks_its_own_reporter_region(self):
+        """Every supported tag gets a window that brackets that plex's reporter ions."""
+        for tag, (lowest, highest) in self.REPORTERS.items():
+            for spelling in (tag, tag.upper(), f"{tag}_msa"):  # the tags Oktoberfest accepts
+                lo, hi = inv.run_params({"tag": spelling})["reporter"]
+                self.assertLess(lo, lowest, f"{spelling} window starts above its first reporter")
+                self.assertGreater(hi, highest, f"{spelling} window ends below its last reporter")
+
+    def test_a_label_masks_only_its_own_region(self):
+        """The window is not a blanket low-m/z cut: b2/y1-sized fragments below it survive."""
+        lo, _ = inv.run_params({"tag": "tmt"})["reporter"]
+        self.assertGreater(lo, 121.2, "the TMT window reaches into the iTRAQ/immonium region")
+
+    def test_tolerance_is_the_one_the_run_annotated_with(self):
+        """An explicit massTolerance wins; otherwise the mass-analyzer fallback the run itself used."""
+        explicit = inv.run_params({"massTolerance": 10, "unitMassTolerance": "ppm"})
+        self.assertEqual((explicit["tol"], explicit["tol_unit"]), (10.0, "ppm"))
+        self.assertIn("massTolerance", explicit["tol_source"])
+        for analyzer, expected in (("FTMS", (20.0, "ppm")), ("TOF", (40.0, "ppm")), ("ITMS", (0.35, "da"))):
+            params = inv.run_params({"inputs": {"instrument_type": analyzer}})
+            self.assertEqual((params["tol"], params["tol_unit"]), expected, analyzer)
+            self.assertIn(analyzer, params["tol_source"])
+        unknown = inv.run_params({})  # no analyzer stated anywhere: FTMS, and said to be an assumption
+        self.assertEqual((unknown["tol"], unknown["tol_unit"]), (20.0, "ppm"))
+        self.assertIn("assumed", unknown["tol_source"])
+
+    def test_a_half_specified_tolerance_falls_back(self):
+        """A massTolerance without its unit is not usable — the same rule the annotation follows."""
+        params = inv.run_params({"massTolerance": 10, "inputs": {"instrument_type": "TOF"}})
+        self.assertEqual((params["tol"], params["tol_unit"]), (40.0, "ppm"))
+
+    def test_match_window_follows_the_unit(self):
+        """A ppm window scales with m/z, a dalton window does not."""
+        predicted = np.array([200.0, 200.004, 200.02])
+        ppm = inv.run_params({"massTolerance": 20, "unitMassTolerance": "ppm"})
+        dalton = inv.run_params({"massTolerance": 0.01, "unitMassTolerance": "da"})
+        self.assertEqual(inv.match_indices(200.0, predicted, ppm).tolist(), [0, 1])  # 20 ppm = 0.004 Da
+        self.assertEqual(inv.match_indices(200.0, predicted, dalton).tolist(), [0, 1])
+        self.assertEqual(inv.match_indices(2000.0, np.array([2000.0, 2000.02]), ppm).tolist(), [0, 1])
+        self.assertEqual(inv.match_indices(2000.0, np.array([2000.0, 2000.02]), dalton).tolist(), [0])
+
+    def test_koina_requery_uses_the_run_settings(self):
+        """The spectra viewer re-queries with the run's own fragmentation method and server."""
+        params = inv.run_params({"fragmentation_method": "hcd", "prediction_server": "example.org:443",
+                                 "ssl": False})
+        self.assertEqual(params["fragmentation"], "HCD")
+        self.assertEqual(params["server"], "example.org:443")
+        self.assertIs(params["ssl"], False)
+
+    def test_parameter_table_mirrors_the_config(self):
+        """Rows are keyed by their config path, and a value the config did not set is marked."""
+        cfg = {"type": "Rescoring", "tag": "tmt", "massTolerance": 20, "unitMassTolerance": "ppm",
+               "inputs": {"search_results_type": "msfragger"}, "matching_method": "global_ransac"}
+        rows = {key: (value, note) for _, _, key, value, note in inv.config_rows(cfg, inv.run_params(cfg))}
+        self.assertEqual(rows["inputs.search_results_type"], ("msfragger", ""))
+        self.assertEqual(rows["matching_method"], ("global_ransac", ""))
+        self.assertEqual(rows["massTolerance / unitMassTolerance"], ("20 ppm", ""))
+        self.assertEqual(rows["fdr_estimation_method"][1], "default")  # not set -> marked, not invented
+        self.assertEqual(rows["fdr_estimation_method"][0], "percolator")
+
+    def test_parameter_table_drops_what_the_run_did_not_do(self):
+        """Fasta digestion and custom modification rows appear only for a run that has them."""
+        plain = {"type": "Rescoring"}
+        keys = {key for _, _, key, _, _ in inv.config_rows(plain, inv.run_params(plain))}
+        self.assertFalse(any(k.startswith("fastaDigestOptions") for k in keys))
+        self.assertFalse(any("custom_modifications" in k for k in keys))
+        digested = {"type": "Rescoring", "fastaDigestOptions": {"enzyme": "lysc"}}
+        rows = {key: (value, note) for _, _, key, value, note in inv.config_rows(digested, inv.run_params(digested))}
+        self.assertEqual(rows["fastaDigestOptions.enzyme"], ("lysc", ""))
+        self.assertEqual(rows["fastaDigestOptions.missedCleavages"], ("2", "default"))
+
+    def test_label_free_report_says_label_free(self):
+        """End to end: a bulk run's report states the absence of a label rather than implying one."""
+        cfg = {"type": "Rescoring", "inputs": {"search_results_type": "msfragger", "instrument_type": "TOF"},
+               "models": {"intensity": "Prosit_2020_intensity_HCD"}}
+        table = inv.config_table(cfg, inv.run_params(cfg))
+        self.assertIn("label-free", table)
+        self.assertNotIn("TMT", table)
+        self.assertIn("40 ppm", table)  # the TOF tolerance the run annotated with
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out_dir = write_run(root)
+            (root / "config.json").write_text(json.dumps(cfg))
+            html = inv.build_report(out_dir, want_spectra=False, log=lambda m: None).read_text()
+            self.assertIn("label-free", html)
+
+    def test_report_without_a_config_admits_it(self):
+        """No config.json means the parameters are unknown — not that they are the defaults."""
+        table = inv.config_table({}, inv.run_params({}))
+        self.assertIn("No config.json", table)
+        self.assertNotIn("<table>", table)
 
 
 if __name__ == "__main__":

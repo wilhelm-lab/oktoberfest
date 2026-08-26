@@ -17,7 +17,10 @@ output dir) and it builds a single HTML report bundling:
     SA/score/q/m-over-z).
 
 Generic across search engines and FDR methods: percolator and mokapot output are both read, and every
-optional feature column / SVG is used only if present.
+optional feature column / SVG is used only if present. Generic across EXPERIMENTS too: the isobaric
+label (or its absence — bulk label-free runs included), the fragment mass tolerance, the fragmentation
+method and the prediction server are all read from the run's config.json rather than assumed, so
+nothing in the report is specific to one kind of sample. See the "run parameters" section below.
 
 Written inside a rescoring run when the "report" config option is enabled (see
 :py:data:`oktoberfest.utils.config.REPORT_DEFAULTS`), which is also where its guard rails are set. Those
@@ -695,7 +698,8 @@ def fig_yield(D, P):
         _caption(ax, f"{name} accepted vs FDR threshold"); grid(ax)
     _sup(fig, "Identification yield vs FDR — with and without Prosit", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=2.5)
-    cap = ("Number of target identifications accepted as the FDR threshold is relaxed, for Percolator WITH Prosit "
+    fdr = P["method"].capitalize()
+    cap = (f"Number of target identifications accepted as the FDR threshold is relaxed, for {fdr} WITH Prosit "
            "predictions (green) and WITHOUT them (blue); the shaded band between the curves is the gain. The dashed "
            "line marks the 1% operating point, annotated with both counts, the absolute and the relative gain. "
            "Reading: a curve that sits above the other ACROSS the whole range is a genuine discrimination "
@@ -731,7 +735,7 @@ def fig_movement(D, P):
     ax.set_xlabel("original score (no Prosit)"); ax.set_ylabel("rescored score (+Prosit)")
     ax.legend(frameon=False, fontsize=9, loc="upper left"); _caption(ax, "Per-PSM score movement: original → +Prosit"); grid(ax)
     _sup(fig, "What Prosit moved — original vs rescored score", y=0.99)
-    cap = ("Each point is a target PSM: x = its Percolator score without Prosit, y = with Prosit. Colour = acceptance "
+    cap = (f"Each point is a target PSM: x = its {P['method'].capitalize()} score without Prosit, y = with Prosit. Colour = acceptance "
            "at 1% FDR — green: accepted only after Prosit (gained), orange: accepted only before (lost), dark-blue: "
            "accepted both, grey: neither. Points above the dashed y=x line were pushed up by Prosit.")
     return "movement", "Rescore-vs-original movement", cap, fig_to_uri(fig)
@@ -811,7 +815,7 @@ def fig_per_file(D, P):
            "expressed relative to each file's own no-Prosit yield, plotted against that yield: a flat cloud means "
            "rescoring helps every file by roughly the same factor, a downward trend (negative Spearman r) means "
            "weak files benefit disproportionately. NB counts are distinct peptide sequences among PSMs accepted at "
-           "1% PSM-level FDR, which is a per-file proxy — Percolator's own peptide-level FDR is estimated globally, "
+           f"1% PSM-level FDR, which is a per-file proxy — {P['method'].capitalize()}'s own peptide-level FDR is estimated globally, "
            "not per file, so these do not sum to the peptide count in the summary.")
     return "perfile", "Per-raw-file identifications", cap, fig_to_uri(fig)
 
@@ -868,18 +872,108 @@ def fig_calibration(D, P):
     _sup(fig, "Calibration — retention time & mass accuracy", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.94 if nrow > 1 else 0.9), h_pad=2.5, w_pad=2.5)
     cap = ("Each panel contrasts accepted targets (green) with decoys (grey) — the separation between the two IS the "
-           "discriminative power that feature contributes to Percolator. RT panel: the pooling-safe per-PSM aligned RT "
+           f"discriminative power that feature contributes to {P['method'].capitalize()}. RT panel: the pooling-safe per-PSM aligned RT "
            "residual |aligned RT − predicted RT| (targets tight, decoys broad; medians dotted). The per-raw "
            "observed-vs-predicted iRT fits are in the gallery below, where the per-file alignment is not pooled away. "
            "ppm panels: mass error, zoomed to the TARGET core via a robust MAD window (isotope-error PSMs spill beyond).")
     return "calibration", "RT & mass-error calibration", cap, fig_to_uri(fig)
 
 
+# ============================== run parameters ==============================
+# Everything the report treats as a property of the EXPERIMENT rather than of the code — the isobaric
+# label, the fragment match tolerance, the fragmentation method, the prediction server — is read from
+# the run's own config.json here and passed around as one dict. Nothing downstream may hard-code such
+# a value: the same report has to be right for a label-free bulk run and for a TMT single-cell one,
+# and a constant that happens to fit the run in front of us silently misdescribes every other run.
+# Where the config is silent, the value falls back to the same default OKTOBERFEST would have used
+# (see :py:class:`oktoberfest.utils.config.Config`) and is MARKED as a default in the parameter
+# table, so a default is never displayed as though the user had chosen it.
+
+#: Oktoberfest's own defaults for the config keys the parameter table shows, by dotted path.
+CFG_DEFAULTS = {
+    "prediction_server": "koina.wilhelmlab.org:443", "ssl": True, "tag": "",
+    "fragmentation_method": "HCD", "ion_types": "yb", "p_window": 0.0,
+    "matching_method": "nearest", "matching_method_params": {},
+    "fdr_estimation_method": "percolator", "allFeatures": False, "add_feature_cols": "none",
+    "regressionMethod": "spline", "quantification": False,
+    "inputs.search_results_type": "maxquant", "inputs.spectra_type": "raw",
+    "ce_alignment_options.ce_range": [18, 50], "ce_alignment_options.use_ransac_model": False,
+    "fastaDigestOptions.digestion": "full", "fastaDigestOptions.enzyme": "trypsin",
+    "fastaDigestOptions.missedCleavages": 2, "fastaDigestOptions.minLength": 7,
+    "fastaDigestOptions.maxLength": 60, "fastaDigestOptions.db": "concat",
+}
+
+#: Isobaric reporter-ion regions, keyed by the ``tag`` values Oktoberfest accepts (the keys of
+#: spectrum_fundamentals' ``TMT_MODS``). Reporter ions are fragments of the LABEL, not of the peptide,
+#: so the spectra viewer hides them — but only for a run that actually carried that label: in a
+#: label-free (bulk) run the same region holds genuine immonium and low-mass fragment ions, and
+#: blanking it would misrepresent the spectrum. Each window brackets that plex's reporter masses with
+#: ~0.6 Da of margin: TMT 126.128–131.145, TMTpro 126.128–134.155, iTRAQ4 114.111–117.115,
+#: iTRAQ8 113.108–121.122.
+REPORTER_WINDOWS = {"tmt": (125.5, 132.0), "tmtpro": (125.5, 135.0),
+                    "itraq4": (113.5, 118.0), "itraq8": (112.0, 122.0)}
+LABEL_NAMES = {"tmt": "TMT (2/6/10/11-plex)", "tmtpro": "TMTpro (16/18-plex)",
+               "itraq4": "iTRAQ 4-plex", "itraq8": "iTRAQ 8-plex"}
+
+#: Fallback fragment tolerances per mass analyzer, mirroring
+#: :py:func:`spectrum_fundamentals.fragments.get_min_max_mass` — i.e. what the RUN itself annotated
+#: peaks with whenever the config set no explicit massTolerance/unitMassTolerance pair.
+ANALYZER_TOL = {"FTMS": (20.0, "ppm"), "TOF": (40.0, "ppm"), "ITMS": (0.35, "da")}
+
+
+def cfg_get(cfg, path, default=None):
+    """Value at a dotted config path ("inputs.spectra_type"), or `default` if absent, null or empty."""
+    node = cfg
+    for part in path.split("."):
+        if not isinstance(node, dict) or part not in node:
+            return default
+        node = node[part]
+    return default if node is None or node == "" else node
+
+
+def _norm_tag(tag):
+    """An Oktoberfest ``tag`` without its MSA-variant suffix ("tmtpro_msa" -> "tmtpro")."""
+    t = str(tag or "").strip().lower()
+    return t[:-4] if t.endswith("_msa") else t
+
+
+def run_params(cfg):
+    """The experiment-specific settings the report needs, resolved from the run's config.
+
+    Resolved once and passed around, so that no panel re-derives — or hard-codes — any of them.
+
+    :param cfg: the run's parsed config.json ({} if the run kept none)
+    :return: dict with the isobaric label and its reporter-ion window (``None`` when label-free), the
+        fragment match tolerance (value, unit, and where it came from), and the prediction settings
+    """
+    tag = _norm_tag(cfg_get(cfg, "tag", ""))
+    analyzer = str(cfg_get(cfg, "inputs.instrument_type", "") or "").upper()
+    tol, unit = cfg_get(cfg, "massTolerance"), str(cfg_get(cfg, "unitMassTolerance", "") or "").lower()
+    if tol is not None and unit in ("ppm", "da"):
+        tol, source = float(tol), "from massTolerance"
+    else:  # exactly the fallback the run's own fragment annotation used
+        tol, unit = ANALYZER_TOL.get(analyzer, ANALYZER_TOL["FTMS"])
+        source = f"{analyzer} default" if analyzer in ANALYZER_TOL else "FTMS default, assumed"
+    ion_types = cfg_get(cfg, "ion_types", CFG_DEFAULTS["ion_types"])
+    return dict(
+        tag=tag, label=LABEL_NAMES.get(tag, "none (label-free)"), reporter=REPORTER_WINDOWS.get(tag),
+        tol=tol, tol_unit=unit, tol_text=f"{tol:g} {'ppm' if unit == 'ppm' else 'Da'}", tol_source=source,
+        ion_types="".join(str(x) for x in ion_types).lower(),
+        fragmentation=str(cfg_get(cfg, "fragmentation_method", CFG_DEFAULTS["fragmentation_method"])).upper(),
+        server=str(cfg_get(cfg, "prediction_server", CFG_DEFAULTS["prediction_server"])),
+        ssl=bool(cfg_get(cfg, "ssl", True)),
+    )
+
+
+def match_indices(observed_mz, predicted_mz, params):
+    """Indices of `predicted_mz` within the run's fragment tolerance of one observed m/z."""
+    tol = observed_mz * params["tol"] / 1e6 if params["tol_unit"] == "ppm" else params["tol"]
+    return np.where(np.abs(predicted_mz - observed_mz) <= tol)[0]
+
+
 # ============================== SPECTRA ==============================
 GORDER = {"best_score": 0, "cutoff_accepted": 1, "cutoff_rejected": 2, "worst_score": 3,
           "decoy_high": 4, "decoy_low": 5}
-TOL_PPM = 20
-REPORTER_MIN, REPORTER_MAX = 124.0, 132.0
 B_COL, Y_COL, OTH_COL = "#1f6fb2", "#d1352b", "#8a8a85"  # b=blue, y=red, other=grey (mirror-plot convention)
 UNM_COL = "#141414"  # unmatched observed peaks: near-black (was light grey) so they read clearly
 PROTON = 1.007276
@@ -1017,7 +1111,7 @@ def _read_scans(mzml_path, scans):
     return found
 
 
-def build_spectra_fig(D, P, model, n):
+def build_spectra_fig(D, P, model, n, params):
     try:
         import pandas as pd
         from pyteomics import mzml as pymzml  # noqa: F401  # availability check for _read_scans
@@ -1031,9 +1125,10 @@ def build_spectra_fig(D, P, model, n):
     uniq, grp_of = select_spectra(D, n)
     # koina
     kin = pd.DataFrame({"peptide_sequences": uniq.pep.values, "precursor_charges": uniq.charge.values,
-                        "collision_energies": uniq.ce.values, "fragmentation_types": ["HCD"] * len(uniq)})
+                        "collision_energies": uniq.ce.values,
+                        "fragmentation_types": [params["fragmentation"]] * len(uniq)})
     try:
-        pred = Koina(model_name=model, server_url="koina.wilhelmlab.org:443", ssl=True).predict(kin)
+        pred = Koina(model_name=model, server_url=params["server"], ssl=params["ssl"]).predict(kin)
     except Exception as e:
         return None, f"spectra section skipped (Koina query failed: {e})"
     _dec = lambda a: a.decode() if isinstance(a, bytes) else str(a)
@@ -1084,14 +1179,16 @@ def build_spectra_fig(D, P, model, n):
         start = len(fig.data)
         r = d["row"]
         omz = np.array(d["obs"][0]); oin = np.array(d["obs"][1], float)
-        rep = (omz >= REPORTER_MIN) & (omz <= REPORTER_MAX); omz, oin = omz[~rep], oin[~rep]
+        if params["reporter"]:  # label fragments, not peptide fragments -- and only in a labelled run
+            lo, hi = params["reporter"]
+            keep_obs = (omz < lo) | (omz > hi); omz, oin = omz[keep_obs], oin[keep_obs]
         pmz = np.array(d["pmz"]); pin = np.array(d["pint"], float); pann = d["pann"]
         keep = (pmz > 0) & (pin > 0); pmz, pin, pann = pmz[keep], pin[keep], [a for a, k in zip(pann, keep) if k]
         oin = 100 * oin / oin.max() if oin.size and oin.max() > 0 else oin
         pin = 100 * pin / pin.max() if pin.size and pin.max() > 0 else pin
         otype = np.array(["u"] * len(omz), dtype=object)
         for i, m in enumerate(omz):
-            j = np.where(np.abs(pmz - m) <= m * TOL_PPM / 1e6)[0]
+            j = match_indices(m, pmz, params)
             if len(j):
                 otype[i] = _ion_type(pann[j[np.argmin(np.abs(pmz[j] - m))]])
         vis0 = len(spans) == 0
@@ -1140,7 +1237,12 @@ def build_spectra_fig(D, P, model, n):
         r = d["row"]; gs = "/".join(d["groups"])
         lab = f"{gs} | {r.pep[:22]} (score {float(r.score):+.2f}, SA {float(r.spectral_angle):.2f})"
         buttons.append(dict(label=lab, method="update", args=[{"visible": vis}, {"annotations": annos[si], "xaxis.range": xr[si]}]))
-    for col, nm in [(B_COL, "b ion"), (Y_COL, "y ion"), (UNM_COL, "observed, unmatched")]:
+    other = "".join(c for c in params["ion_types"] if c not in "by")
+    legend_traces = [(B_COL, "b ion"), (Y_COL, "y ion")]
+    if other:  # ion_types is configurable: a/c/x/z ions are drawn grey and have to be named
+        legend_traces.append((OTH_COL, f"other ion ({'/'.join(other)})"))
+    legend_traces.append((UNM_COL, "observed, unmatched"))
+    for col, nm in legend_traces:
         fig.add_trace(go.Scatter(x=[None], y=[None], mode="lines", line=dict(color=col, width=3), name=nm, showlegend=True))
     fig.update_layout(
         updatemenus=[dict(buttons=buttons, x=0.0, xanchor="left", y=1.20, yanchor="top", showactive=True,
@@ -1154,7 +1256,10 @@ def build_spectra_fig(D, P, model, n):
     fig.add_hline(y=0, line=dict(color="#cccccc", width=0.8))
     html = fig.to_html(full_html=False, include_plotlyjs="inline", div_id="spectra_div")
     note = (f"{len(data)} spectra across groups: "
-            + ", ".join(f"{k}={sum(1 for d in data if k in d['groups'])}" for k in GORDER))
+            + ", ".join(f"{k}={sum(1 for d in data if k in d['groups'])}" for k in GORDER)
+            + f" · matched at {params['tol_text']} ({params['tol_source']})")
+    if params["reporter"]:
+        note += f" · {params['label']} reporter region hidden"
     if skipped_files:
         note += (f" · {skipped_files} further raw file(s) left unopened "
                  f"(cap of {MAX_SPECTRA_FILES} mzML files per report)")
@@ -1284,6 +1389,11 @@ details.raw{margin:8px 0}
 .cfg td{padding:9px 18px;border-bottom:1px solid #f0efe7}.cfg tr:last-child td{border-bottom:none}
 .cfg td:first-child{color:var(--ink2);width:32%;white-space:nowrap;font-weight:600}
 .cfg td:last-child{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;word-break:break-word}
+.cfg tr.grp td{background:#faf8f1;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;padding:7px 18px;width:auto;white-space:normal;font-family:inherit}
+.cfg .cl{display:block}
+.cfg .ck{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted);font-weight:400}
+.cfg .dflt{font-family:Inter,Helvetica,Arial,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border:1px solid var(--line);padding:1px 5px;margin-left:8px}
+.cfgnote{padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.5}
 .figcard{background:var(--card);border:1px solid var(--line);padding:12px;margin:2px 0}
 .figcard img{width:100%;height:auto;display:block}
 .figcap{margin:13px 6px 4px;font-size:13px;color:var(--ink2);line-height:1.55;border-left:3px solid var(--accent);padding:2px 0 2px 13px}
@@ -1405,20 +1515,109 @@ def kpi_cards(s):
     return "<div class='kpis'>" + "".join(c) + "</div>"
 
 
-def config_rows(cfg):
-    g = cfg.get; models = cfg.get("models", {}) or {}; inp = cfg.get("inputs", {}) or {}
-    rows = [("Workflow", g("type")), ("Search engine", inp.get("search_results_type")),
-            ("Spectra type", inp.get("spectra_type")), ("Intensity model", models.get("intensity")),
-            ("iRT model", models.get("irt")), ("Prediction server", g("prediction_server")),
-            ("Mass tolerance", f"{g('massTolerance')} {g('unitMassTolerance', '')}".strip() if g("massTolerance") is not None else None),
-            ("FDR estimation", g("fdr_estimation_method")), ("Peak matching", g("matching_method")),
-            ("Matching params", str(g("matching_method_params")) if g("matching_method_params") else None),
-            ("All features", str(g("allFeatures")) if g("allFeatures") is not None else None),
-            ("TMT tag", g("tag"))]
-    return [(k, v) for k, v in rows if v not in (None, "", "None", "None ")]
+#: The Summary section's parameter table: groups of (dotted config key, label). The table mirrors the
+#: config file the user actually wrote — same keys, same nesting — so every row can be traced back to
+#: (or copied into) a config.json, rather than being a curated selection of what happened to matter
+#: for one experiment. Two rows are synthesised because no single key holds them:
+#: ``__tolerance`` (massTolerance + unitMassTolerance, or the mass-analyzer fallback) and ``__label``
+#: (``tag``, which is stated as "none (label-free)" instead of vanishing on an unlabelled run).
+#: A group whose parent key is absent is dropped entirely — a rescoring run digests no fasta. An entry
+#: may carry a third element, the unit its value is expressed in.
+CONFIG_GROUPS = [
+    ("Run", None, [("type", "Workflow"), ("inputs.search_results_type", "Search engine"),
+                   ("inputs.spectra_type", "Spectra format"),
+                   ("inputs.instrument_type", "Mass analyzer")]),
+    ("Prediction", None, [("models.intensity", "Intensity model"), ("models.irt", "iRT model"),
+                          ("models.proteotypicity", "Proteotypicity model"),
+                          ("prediction_server", "Prediction server"),
+                          ("fragmentation_method", "Fragmentation method"),
+                          ("ce_alignment_options.ce_range", "CE alignment range"),
+                          ("ce_alignment_options.use_ransac_model", "CE RANSAC model")]),
+    ("Fragment annotation", None, [("__tolerance", "Fragment mass tolerance"),
+                                   ("ion_types", "Ion types"),
+                                   ("p_window", "Precursor exclusion window", "Da"),
+                                   ("__label", "Isobaric label"),
+                                   ("matching_method", "Peak matching"),
+                                   ("matching_method_params", "Peak matching params")]),
+    ("Rescoring", None, [("fdr_estimation_method", "FDR estimation"), ("allFeatures", "All features"),
+                         ("add_feature_cols", "Extra feature columns"),
+                         ("regressionMethod", "RT regression"), ("quantification", "Quantification")]),
+    ("Fasta digestion", "fastaDigestOptions",
+     [("fastaDigestOptions.enzyme", "Enzyme"), ("fastaDigestOptions.digestion", "Digestion"),
+      ("fastaDigestOptions.missedCleavages", "Missed cleavages"),
+      ("fastaDigestOptions.minLength", "Min peptide length"),
+      ("fastaDigestOptions.maxLength", "Max peptide length"), ("fastaDigestOptions.db", "Database")]),
+    ("Custom modifications", "inputs.custom_modifications",
+     [("inputs.custom_modifications.static_mods", "Static mods"),
+      ("inputs.custom_modifications.var_mods", "Variable mods")]),
+]
 
 
-def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html, spectra_note,
+def _fmt_cfg(v):
+    """A config value as it reads in a config.json, flattened to one line."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, dict):
+        return ", ".join(f"{k}: {_fmt_cfg(x)}" for k, x in v.items()) if v else "—"
+    if isinstance(v, (list, tuple)):
+        return ", ".join(_fmt_cfg(x) for x in v) if len(v) else "—"
+    return str(v)
+
+
+def config_rows(cfg, params):
+    """The parameter table's rows: (group, label, config key, value, fallback note).
+
+    The note is empty for a value the config actually set, and otherwise names the fallback the run
+    used in its place ("default", or the mass analyzer whose tolerance stood in for a missing one).
+
+    :param cfg: the run's parsed config.json
+    :param params: resolved run settings from :py:func:`run_params`
+    :return: list of row tuples, groups in order, empty groups already dropped
+    """
+    rows = []
+    for group, parent, keys in CONFIG_GROUPS:
+        if parent is not None and cfg_get(cfg, parent) is None:
+            continue  # section the run never used (no fasta digestion, no custom mods)
+        for key, label, *unit in keys:
+            if key == "__tolerance":
+                explicit = params["tol_source"].startswith("from")
+                rows.append((group, label, "massTolerance / unitMassTolerance", params["tol_text"],
+                             "" if explicit else params["tol_source"]))
+                continue
+            if key == "__label":
+                rows.append((group, label, "tag", params["label"], "" if params["tag"] else "default"))
+                continue
+            given = cfg_get(cfg, key)
+            if given is None and key not in CFG_DEFAULTS:
+                continue  # optional and unset (e.g. no proteotypicity model, no instrument_type)
+            value = given if given is not None else CFG_DEFAULTS[key]
+            shown = _fmt_cfg(value) + (f" {unit[0]}" if unit and value != "" else "")
+            rows.append((group, label, key, shown, "" if given is not None else "default"))
+    return rows
+
+
+def config_table(cfg, params):
+    """The Summary section's parameter table, or a warning if the run kept no config."""
+    if not cfg:
+        return ("<div class='cfg'><div class='cfgnote warn'>No config.json was found next to this run, "
+                "so its parameters cannot be shown. Everything below is read from the run output "
+                "itself; the spectra viewer falls back to Oktoberfest's own defaults.</div></div>")
+    html, seen = [], None
+    for group, label, key, value, note in config_rows(cfg, params):
+        if group != seen:
+            html.append(f"<tr class='grp'><td colspan='2'>{group}</td></tr>")
+            seen = group
+        badge = f"<span class='dflt'>{note}</span>" if note else ""
+        html.append(f"<tr><td><span class='cl'>{label}</span><span class='ck'>{key}</span></td>"
+                    f"<td>{value}{badge}</td></tr>")
+    return ("<div class='cfg'><table>" + "".join(html) + "</table>"
+            "<div class='cfgnote'>Keys are the paths in this run's <b>config.json</b>, so every row can "
+            "be read straight off — or copied straight into — a config. A value carrying a "
+            "<span class='dflt'>default</span> marker was <i>not</i> set there: it is what Oktoberfest "
+            "fell back to, not a choice the config records.</div></div>")
+
+
+def build_report_html(P, D, model, run_name, cfg, params, stats, sections, spectra_html, spectra_note,
                       summary_svgs, per_raw, want_spectra, svg_note=""):
     nav = [("summary", "Summary")] + [(sid, title) for sid, title, _, _ in sections]
     if spectra_html:
@@ -1428,7 +1627,9 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
     if per_raw:
         nav.append(("gallery", "Per-raw gallery"))
     engine = (cfg.get("inputs", {}) or {}).get("search_results_type", "")
-    badges = "".join(f"<span class='badge'>{b}</span>" for b in [model] + ([engine] if engine else []))
+    labelled = [params["label"]] if params["tag"] else []
+    badges = "".join(f"<span class='badge'>{b}</span>"
+                     for b in [model] + ([engine] if engine else []) + labelled)
     badges += f"<span class='badge grey'>generated {datetime.now():%Y-%m-%d %H:%M}</span>"
 
     h = [f"<!doctype html><html lang='en'><head><meta charset='utf-8'>",
@@ -1442,9 +1643,8 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
     h.append("<nav class='toc'>" + "".join(f"<a href='#{sid}'>{t}</a>" for sid, t in nav) + "</nav>")
 
     n = 1
-    rows = config_rows(cfg)
-    cfg_html = ("<div class='cfg'><table>" + "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in rows) + "</table></div>") if rows else ""
-    h.append(_section(n, "summary", "Summary", kpi_cards(stats) + cfg_html, is_open=True))  # only Summary open
+    h.append(_section(n, "summary", "Summary", kpi_cards(stats) + config_table(cfg, params),
+                      is_open=True))  # only Summary open
     for sid, title, cap, uri in sections:
         n += 1
         body = (f"<div class='figcard'><img src='{uri}' alt='{title}'>"
@@ -1452,16 +1652,22 @@ def build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html,
         h.append(_section(n, sid, title, body))
     if spectra_html:
         n += 1
+        other = "".join(c for c in params["ion_types"] if c not in "by")
+        other_sw = (f"<span><span class='sw' style='background:{OTH_COL}'></span>"
+                    f"other ion ({'/'.join(other)})</span>") if other else ""
+        hidden = (f" · {params['label']} reporter ions "
+                  f"{params['reporter'][0]:.1f}–{params['reporter'][1]:.1f} m/z hidden") if params["reporter"] else ""
         legend = ("<div class='legendbar'>"
                   f"<span><span class='sw' style='background:{B_COL}'></span><b>b</b> ion (matched)</span>"
                   f"<span><span class='sw' style='background:{Y_COL}'></span><b>y</b> ion (matched)</span>"
-                  "<span><span class='sw' style='background:#141414'></span>observed, unmatched</span>"
-                  "<span>observed ↑ / predicted ↓ · TMT reporter 124–132 m/z removed · 20 ppm match window</span></div>")
+                  f"{other_sw}"
+                  f"<span><span class='sw' style='background:{UNM_COL}'></span>observed, unmatched</span>"
+                  f"<span>observed ↑ / predicted ↓{hidden} · {params['tol_text']} match window</span></div>")
         body = ("<div class='spectra-wrap'>" + legend +
                 "<div class='figcap' style='margin:0 0 8px'><b class='h'>How to read</b>"
                 "Observed spectrum (up, from mzML) mirrored against the clean Koina re-query (down). "
                 "Use the dropdown to switch PSM. Each header carries the full info line: "
-                "raw · scan · peptide(+mods) · charge · m/z · RT · NCE · SA · score · q. Groups: best/worst percolator "
+                f"raw · scan · peptide(+mods) · charge · m/z · RT · NCE · SA · score · q. Groups: best/worst {P['method']} "
                 "score, both sides of the score≈0 cutoff, plus high- and low-scoring decoys.</div>"
                 f"<div class='small' style='margin:0 0 8px'>{spectra_note}</div>" + spectra_html + "</div>")
         h.append(_section(n, "spectra", "Spectra viewer", body))
@@ -1533,11 +1739,13 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, want
         except Exception:
             cfg = {}
     run_name = P["run_dir"].name
+    params = run_params(cfg)  # label, tolerance, fragmentation, server: read once, never assumed
     engine = (cfg.get("inputs", {}) or {}).get("search_results_type", "")
     RUN_CTX["suffix"] = "  ·  ".join(x for x in [engine, model, run_name] if x)  # adaptive figure subtitles
     out_html = Path(out_html) if out_html else (P["run_dir"] / f"investigate_{run_name}.html")
 
-    log(f"[investigate] run={run_name} dir={P['fdr_dir']} fdr={P['method']} model={model}")
+    log(f"[investigate] run={run_name} dir={P['fdr_dir']} fdr={P['method']} model={model} "
+        f"label={params['tag'] or 'none'} tol={params['tol_text']} ({params['tol_source']})")
     D = load_data(P, max_psms=max_psms, log=log)
     log(f"[investigate]   loaded {D['n']:,} PSMs")
 
@@ -1553,7 +1761,7 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, want
     spectra_html, spectra_note = None, "spectra section disabled"
     if want_spectra:
         try:
-            spectra_html, spectra_note = build_spectra_fig(D, P, model, n_per_group)
+            spectra_html, spectra_note = build_spectra_fig(D, P, model, n_per_group, params)
         except Exception as e:
             spectra_html, spectra_note = None, f"spectra section skipped ({e})"
         log(f"[investigate]   {spectra_note}")
@@ -1568,8 +1776,8 @@ def build_report(out_dir, out_html=None, n_per_group=20, want_spectra=True, want
         acc = (D["label"] == 1) & (D["q"] <= FDR)
         stats = dict(n_rows=D["n"], n_t=int((D["label"] == 1).sum()), n_d=int((D["label"] == -1).sum()),
                      median_sa=float("nan"), cutoff=float("nan"), acc_psm=int(acc.sum()), acc_pep=0)
-    html = build_report_html(P, D, model, run_name, cfg, stats, sections, spectra_html, spectra_note,
-                             summary_svgs, per_raw, want_spectra, svg_note)
+    html = build_report_html(P, D, model, run_name, cfg, params, stats, sections, spectra_html,
+                             spectra_note, summary_svgs, per_raw, want_spectra, svg_note)
     out_html.parent.mkdir(parents=True, exist_ok=True)
     out_html.write_text(html)
     log(f"[investigate] wrote {out_html} ({out_html.stat().st_size / 1e6:.1f} MB, {len(sections)} figs, "
