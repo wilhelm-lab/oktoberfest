@@ -202,8 +202,7 @@ class Config:
         unknown = set(value) - set(REPORT_DEFAULTS)
         if unknown:
             raise ValueError(
-                f"Unknown key(s) {sorted(unknown)} in config option 'report'. "
-                f"Valid keys are {sorted(REPORT_DEFAULTS)}."
+                f"Unknown key(s) {sorted(unknown)} in config option 'report'. Valid keys are {sorted(REPORT_DEFAULTS)}."
             )
         settings = dict(REPORT_DEFAULTS)
         for key, default in REPORT_DEFAULTS.items():
@@ -213,8 +212,7 @@ class Config:
                 settings[key] = bool(value[key]) if isinstance(default, bool) else int(value[key])
             except (TypeError, ValueError) as e:
                 raise ValueError(
-                    f"Invalid value {value[key]!r} for config option 'report.{key}', "
-                    f"expected {type(default).__name__}."
+                    f"Invalid value {value[key]!r} for config option 'report.{key}', expected {type(default).__name__}."
                 ) from e
         return settings
 
@@ -402,6 +400,20 @@ class Config:
         return self.data.get("allFeatures", False)
 
     @property
+    def sc_features(self) -> bool:
+        """
+        Get sc_features flag, which adds the single-cell rescoring feature families.
+
+        These are the peak-matching quality metrics (ppm error), peak / intensity coverage, ion-series
+        continuity, the TMT reporter-ion features and the b1-excluded spectral angle. They are off by
+        default because they change the percolator feature set, and implied by ``allFeatures``.
+
+        Note that the reporter-ion features let quantification influence identification. That is
+        defensible as a spectrum-quality measure, but it has to be stated whenever they are used.
+        """
+        return self.data.get("sc_features", False) or self.all_features
+
+    @property
     def curve_fitting_method(self) -> str:
         """
         Get regressionMethod flag.
@@ -498,10 +510,22 @@ class Config:
     ########################
 
     def check(self):
-        """Validate the configuration."""
-        self._check_tmt()
-        _ = self.report  # raises on a malformed "report" option, before any compute is spent
+        """
+        Validate the configuration.
 
+        :raises ValueError: if matching_method does not name a registered peak-match resolver
+        """
+        # Cheap, purely local option checks first: a typo here would otherwise only surface hours
+        # into a run, deep inside annotation or after the plots are already being written. Imported
+        # here rather than at module level so that an older spectrum-fundamentals fails on this check
+        # instead of making `import oktoberfest` fail outright.
+        from spectrum_fundamentals.annotation.matchers import MATCHERS
+
+        if self.matching_method not in MATCHERS:
+            raise ValueError(f"Unknown matching_method '{self.matching_method}'. Available: {sorted(MATCHERS)}.")
+        _ = self.report  # raises on a malformed "report" option
+
+        self._check_tmt()
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
 

@@ -67,6 +67,10 @@ There are multiple optional dependencies depending on job types. Detailed notes 
     |                                                                  | `mono`              | required for ThermoRawFileParser to work on Linux/macOS |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
     | :ref:`Rescoring`                                                 | Percolator          |                                                         |
+    +                                                                  +---------------------+---------------------------------------------------------+
+    |                                                                  | oktoberfest[report] | only for the spectra viewer of the investigation report |
+    +                                                                  +---------------------+---------------------------------------------------------+
+    |                                                                  | headless Chrome     | only to render the investigation report as a PDF        |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
 
 **ThermoRawFileParser**
@@ -82,6 +86,22 @@ For ThermoRawFileParser to work on Linux, you also need to ensure `mono` is inst
    sudo apt -y update && sudo apt -y install mono-devel  # Debian / Ubuntu
 
 For MacOS, follow the instructions provided by `Mono <https://www.mono-project.com/docs/getting-started/install/mac/>`_.
+
+**oktoberfest[report]**
+The optional ``report`` config option writes a standalone HTML investigation report after rescoring
+(see :doc:`outputs`). Its interactive spectra viewer additionally needs `plotly` and `pyteomics`,
+installable with
+
+.. code-block:: bash
+
+   pip install "oktoberfest[report]"
+
+Without them the rest of the report is written as usual and only the viewer is skipped.
+
+**headless Chrome**
+Only needed if you also want a printable PDF of the report (``"pdf": true`` inside ``report``). Any of
+`google-chrome`, `google-chrome-stable`, `chromium`, `chromium-browser` or `chrome` on the ``PATH``
+works. Without one the HTML report is still written and only the PDF is skipped.
 
 **Percolator**
 `Percolator v3.06.1 <https://github.com/percolator/percolator/releases/tag/rel-3-06-01>`_:

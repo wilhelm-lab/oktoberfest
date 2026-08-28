@@ -464,34 +464,6 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-_MIRROR_GROUP_CACHE: dict[str, dict] = {}
-
-
-def _mirror_group_label(raw_file: str, scan_number: int) -> str:
-    """Return the selection-group label for a (raw_file, scan) mirror plot, or "".
-
-    Env-gated and default-off: only active when ``MIRROR_GROUP_TSV`` points at a
-    tab-separated file with ``group``, ``filename`` and ``ScanNr`` columns (as written
-    by ``runs/matcher_compare/plot_groups.py``). Lets each mirror-plot page be tagged
-    with the group it was picked for (best_sa / worst_sa / just in/outside 1% FDR). If
-    the env var is unset or the pair is absent, returns "" and the title is unchanged,
-    so all other callers of ``plot_mirror_spectrum`` are unaffected.
-    """
-    path = os.environ.get("MIRROR_GROUP_TSV")
-    if not path:
-        return ""
-    if path not in _MIRROR_GROUP_CACHE:
-        mapping: dict[tuple[str, int], list[str]] = {}
-        try:
-            df = pd.read_csv(path, sep="\t")
-            for _, r in df.iterrows():
-                mapping.setdefault((str(r["filename"]), int(r["ScanNr"])), []).append(str(r["group"]))
-        except (FileNotFoundError, KeyError, ValueError):
-            mapping = {}
-        _MIRROR_GROUP_CACHE[path] = mapping
-    return "+".join(_MIRROR_GROUP_CACHE[path].get((str(raw_file), int(scan_number)), []))
-
-
 def plot_mirror_spectrum(
     spec_pred: Spectra,
     mzml: pd.DataFrame,
@@ -583,9 +555,7 @@ def plot_mirror_spectrum(
     title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
     title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
     title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa:.2f}"
-    group = _mirror_group_label(raw_file, scan_number)
-    title_group = f"Selection group: {group}\n" if group else ""
-    ax_mirror.set_title(f"{title_group}{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
+    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
     sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
 
     # KDE score plot
@@ -649,8 +619,8 @@ def plot_all(data_dir: Path, config: Config):
         "psm",
         data_dir / "original_target_vs_decoys_psm_bins.svg",
     )
-    # Guarded individually: this plot needs the spectral_angle column, which a feature-ablation
-    # run (OKT_DROP_FEATURES) may have removed. Skipping it must not abort the remaining plots.
+    # Guarded individually: this plot needs the spectral_angle column, which is absent from a
+    # feature set that did not produce it. Skipping it must not abort the remaining plots.
     try:
         plot_sa_distribution(
             prosit_df,
@@ -680,7 +650,7 @@ def plot_all(data_dir: Path, config: Config):
     plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
     plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
 
-    # Guarded individually: needs RT/iRT/pred_RT, which a feature-ablation run may have removed.
+    # Guarded individually: needs RT/iRT/pred_RT, which are absent from some feature sets.
     try:
         plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
     except Exception as e:
@@ -699,7 +669,7 @@ def plot_all(data_dir: Path, config: Config):
 
     # Mirror plots only run if the config asks for them; without this guard every run that does not
     # gets an empty mirror_plots.pdf. Guarded on top of that, because they need abs_rt_diff and
-    # spectral_angle, which a feature-ablation run may have removed.
+    # spectral_angle, which are absent from some feature sets.
     if not mirror_plots_dict:
         logger.info("Skipping mirror plots: none configured.")
     else:

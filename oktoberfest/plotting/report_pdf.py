@@ -1,18 +1,12 @@
-"""Render an investigation report (``investigate_*.html``) as a printable PDF.
+"""Render an investigation report (``investigate_*.html``) as a printable PDF."""
 
-Works on an ALREADY-BUILT report — no re-run and no percolator dir needed. The HTML is rewritten for
-print and handed to headless Chrome:
-
-  * the interactive spectra viewer is dropped (a Plotly widget with one visible trace and a dropdown;
-    on paper it prints as a single arbitrary spectrum plus ~3 MB of dead JavaScript),
-  * every collapsed ``<details>`` is expanded, so nothing is hidden in a static document,
-  * print CSS is added: landscape pages, page breaks between sections, no sticky nav, figures kept
-    off the page seams.
-
-Everything is guarded: the PDF is a convenience on top of the HTML report, so a missing Chrome or a
-failed render costs the PDF only. Run it from the command line for an existing report with
-``python -m oktoberfest.plotting.report_pdf <report.html>``.
-"""
+# Works on an ALREADY-BUILT report: no re-run and no percolator dir needed. The HTML is rewritten for
+# print -- the interactive spectra viewer is dropped (on paper a Plotly widget prints as one arbitrary
+# spectrum plus megabytes of dead JavaScript), every collapsed <details> is expanded, and print CSS is
+# added -- then handed to headless Chrome. Everything is guarded: the PDF is a convenience on top of
+# the HTML, so a missing Chrome or a failed render costs the PDF only.
+#
+#     python -m oktoberfest.plotting.report_pdf <report.html>
 
 import argparse
 import logging
@@ -144,14 +138,26 @@ def html_to_pdf(
         tmpdir = Path(tempfile.mkdtemp(prefix="okt_pdf_"))
         tmp = tmpdir / "print.html"
         tmp.write_text(html)
-        log(f"[pdf] {report.name}: {', '.join(notes)} "
-            f"({report.stat().st_size / 1e6:.0f} MB -> {len(html) / 1e6:.0f} MB)")
-        cmd = [chrome, "--headless", "--disable-gpu", "--no-sandbox", "--no-pdf-header-footer",
-               "--virtual-time-budget=120000", f"--print-to-pdf={out}", tmp.as_uri()]
+        log(
+            f"[pdf] {report.name}: {', '.join(notes)} "
+            f"({report.stat().st_size / 1e6:.0f} MB -> {len(html) / 1e6:.0f} MB)"
+        )
+        cmd = [
+            chrome,
+            "--headless",
+            "--disable-gpu",
+            "--no-sandbox",
+            "--no-pdf-header-footer",
+            "--virtual-time-budget=120000",
+            f"--print-to-pdf={out}",
+            tmp.as_uri(),
+        ]
         # noqa justified: every element of cmd is either a constant of this module or a path we wrote
+        # a stale PDF from an earlier run would otherwise be reported as freshly written
+        out.unlink(missing_ok=True)
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=RENDER_TIMEOUT_S)  # noqa: S603
-        if not out.exists():
-            log(f"[pdf] chrome failed to write the PDF, skipping it:\n{r.stderr[-2000:]}")
+        if r.returncode != 0 or not out.exists():
+            log(f"[pdf] chrome failed to write the PDF (exit {r.returncode}), skipping it:\n{r.stderr[-2000:]}")
             return None
         log(f"[pdf] wrote {out} ({out.stat().st_size / 1e6:.1f} MB)")
         return out

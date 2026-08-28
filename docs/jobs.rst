@@ -165,6 +165,7 @@ Oktoberfest will:
 3. Use predicted spectra and retention time to generate features for rescoring.
 4. Run percolator or mokapot to rescore the search and perform FDR estimation.
 5. Generate summary plots.
+6. Optionally write a standalone HTML investigation report (see the ``report`` config option).
 
 .. note::
     You need to provide search results that were not filtered for a given FDR (i.e. 100% FDR), otherwise valid targets may be filtered out prior to rescoring.

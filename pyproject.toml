@@ -15,6 +15,10 @@ dependencies = [
     "mokapot>=0.9.1",
     "numpy>=1.26.4",
     "seaborn>=0.12.2",
+    # Imported directly (constants, annotation, metrics), not only through spectrum-io, so it is
+    # declared here. Raise this minimum to the release that carries sc_features_flag / SC_FEATURE_KEYS
+    # once spectrum-fundamentals has cut it.
+    "spectrum-fundamentals>=0.10.0",
     "spectrum-io>=0.8.0",
     "picked_group_fdr>=0.9.0",
     "koinapy>=0.0.10",
@@ -91,6 +95,10 @@ ignore = [
 "**/__init__.py" = ["F401", "F403"]  # Unused import / wildcard imports
 "docs/conf.py" = ["S404", "S607", "S603"]  # Security checks
 "oktoberfest/runner.py" = ["C901", "S301", "S403"]  # Complexity and security
+# The report builders are long straight-line assembly functions (section after section, each
+# optional), not tangled control flow -- splitting them would spread one document across many
+# functions without making it easier to follow.
+"oktoberfest/plotting/investigate.py" = ["C901"]  # Complexity
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

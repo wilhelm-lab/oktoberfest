@@ -997,9 +997,7 @@ def annotate_spectral_library(
     # Extracted from the sc_features dict column returned by annotate_spectra();
     # canonical key list lives in constants.SC_FEATURE_KEYS.
     for feat_name in c.SC_FEATURE_KEYS:
-        aspec.add_column(
-            df_annotated_spectra["sc_features"].apply(lambda x, k=feat_name: x[k]).values, feat_name
-        )
+        aspec.add_column(df_annotated_spectra["sc_features"].apply(lambda x, k=feat_name: x[k]).values, feat_name)
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")

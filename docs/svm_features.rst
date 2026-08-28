@@ -225,3 +225,49 @@ Features adopted from MS2PIP/MS2Rescore
     +-------------------------------------+--------------------------------------------------+
     | spearman_corr_y_ions                | Spearman correlation on y-ions                   |
     +-------------------------------------+--------------------------------------------------+
+
+Single-cell features (``sc_features``)
+--------------------------------------
+
+These features are **off by default**. They are added when the ``sc_features`` config option is set,
+and implied by ``allFeatures``. They were developed on low-input (single-cell) TMT data, where the
+standard Prosit features leave a lot of the target / decoy separation on the table, but nothing about
+them is specific to that setting.
+
+The reporter-ion features are only defined for TMT data and are NaN otherwise; the channels are
+matched using the run's own ``massTolerance`` when that is given in ppm, and a 20 ppm window
+otherwise. Note that they let quantification influence identification; that is defensible as a
+spectrum-quality measure, but it has to be stated whenever they are used.
+
+.. table::
+    :class: fixed-table
+
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | Feature                 | Description                                                                                                                                                        |
+    +=========================+====================================================================================================================================================================+
+    | mean_ppm_error          | Mean mass deviation of the matched fragments, in ppm                                                                                                               |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | max_ppm_error           | Largest mass deviation of the matched fragments, in ppm                                                                                                            |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | std_ppm_error           | Standard deviation of the matched fragments' mass deviation, in ppm                                                                                                |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | intensity_coverage      | (summed intensity of matched fragments) / (summed intensity of all observed peaks)                                                                                 |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | annotated_frac_avg20    | (number of matched peaks) / (matched + competing peaks), where a competing peak is an unmatched observed peak with at least 20% of the mean matched-peak intensity |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | annotated_frac_all      | (number of matched peaks) / (number of observed peaks), with no significance test on the unmatched ones                                                            |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | longest_b_series        | Longest run of consecutive b-ion positions with at least one matched charge state                                                                                  |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | longest_y_series        | Longest run of consecutive y-ion positions with at least one matched charge state                                                                                  |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | longest_series_frac     | max(longest_b_series, longest_y_series) / (peptide length - 1); percolator is a linear model and cannot form this ratio from the parts                             |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | n_reporter_channels     | Number of the 11 TMT reporter channels carrying a peak; NaN for non-TMT data                                                                                       |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | reporter_intensity_frac | (summed reporter-ion intensity) / (summed intensity of all observed peaks); NaN for non-TMT data                                                                   |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | reporter_max_frac       | (largest single reporter channel) / (summed reporter-ion intensity), i.e. carrier dominance; NaN for non-TMT data                                                  |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    | spectral_angle_no_b1    | Normalized spectral contrast angle with the b1 ions masked out; b1 is rarely observed under HCD, so its absence should not penalise a correct PSM                  |
+    +-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+

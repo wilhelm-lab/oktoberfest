@@ -32,6 +32,7 @@ def generate_features(
     remove_miss_cleavage_features: bool = False,
     task: str = "default",
     featured_ions: Optional[list] = None,
+    sc_features: bool = False,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -51,6 +52,9 @@ def generate_features(
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
     :param task: Flag to indicate whether to use multifrag features or not
     :param featured_ions: The ion series to use for calculating percolator features
+    :param sc_features: whether to add the single-cell feature families (peak-matching quality,
+        coverage, ion-series continuity, TMT reporter ions, b1-excluded spectral angle); implied
+        by all_features
 
     :Example:
 
@@ -109,6 +113,7 @@ def generate_features(
         mz=mz,
         input_type=search_type,
         all_features_flag=all_features,
+        sc_features_flag=sc_features,
         regression_method=regression_method,
         neutral_loss_flag=add_neutral_loss_features,
         drop_miss_cleavage_flag=remove_miss_cleavage_features,

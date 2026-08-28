@@ -1,6 +1,7 @@
 """Tests for the HTML/PDF investigation report and the config option that switches it on."""
 
 import json
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,23 +9,43 @@ from unittest.mock import patch
 
 import matplotlib
 import numpy as np
+import pandas as pd
 
 matplotlib.use("Agg")
 
 import oktoberfest.plotting as pl  # noqa: E402
 from oktoberfest.plotting import investigate as inv  # noqa: E402
+from oktoberfest.plotting import report_pdf as rp  # noqa: E402
 from oktoberfest.utils import Config  # noqa: E402
 from oktoberfest.utils.config import REPORT_DEFAULTS  # noqa: E402
 
 TAB_COLUMNS = [
-    "SpecId", "Label", "ScanNr", "filename", "ExpMass", "Mass", "RT", "abs_rt_diff",
-    "collision_energy_aligned", "missedCleavages", "sequence_length", "KR", "delta_mass_ppm",
-    "pearson_corr", "spectral_angle", "fraction_observed_and_predicted", "Peptide",
-    "Charge1", "Charge2", "Charge3",
+    "SpecId",
+    "Label",
+    "ScanNr",
+    "filename",
+    "ExpMass",
+    "Mass",
+    "RT",
+    "abs_rt_diff",
+    "collision_energy_aligned",
+    "missedCleavages",
+    "sequence_length",
+    "KR",
+    "delta_mass_ppm",
+    "pearson_corr",
+    "spectral_angle",
+    "fraction_observed_and_predicted",
+    "Peptide",
+    "Charge1",
+    "Charge2",
+    "Charge3",
 ]
 
 
-def write_run(root: Path, n: int = 400, n_files: int = 6, method: str = "percolator", ragged: bool = True) -> Path:
+def write_run(  # noqa: C901 - one straight-line branch per artefact the report reads
+    root: Path, n: int = 400, n_files: int = 6, method: str = "percolator", ragged: bool = True
+) -> Path:
     """Write a minimal rescoring output tree the report can be built from.
 
     :param root: directory to write the run into
@@ -48,14 +69,32 @@ def write_run(root: Path, n: int = 400, n_files: int = 6, method: str = "percola
     with open(fdr_dir / "rescore.tab", "w") as f:
         f.write("\t".join([*TAB_COLUMNS, "Proteins"]) + "\n")
         for i in range(n):
-            row = [spec_ids[i], label[i], (i + 1) * 2, files[i], i, 800 + i, i % 60, abs(rng.normal(2, 1)),
-                   0.3, i % 3, len(peptides[i]), 1, rng.normal(0, 3), rng.random(), spectral_angle[i],
-                   rng.random(), f"_.{peptides[i]}._", *(int(charge[i] == c) for c in (1, 2, 3))]
+            row = [
+                spec_ids[i],
+                label[i],
+                (i + 1) * 2,
+                files[i],
+                i,
+                800 + i,
+                i % 60,
+                abs(rng.normal(2, 1)),
+                0.3,
+                i % 3,
+                len(peptides[i]),
+                1,
+                rng.normal(0, 3),
+                rng.random(),
+                spectral_angle[i],
+                rng.random(),
+                f"_.{peptides[i]}._",
+                *(int(charge[i] == c) for c in (1, 2, 3)),
+            ]
             proteins = "\t".join(f"sp|P{i:04d}|PROT{j}" for j in range(1 + (i % 3 if ragged else 0)))
             f.write("\t".join(str(v) for v in row) + "\t" + proteins + "\n")
 
     id_col, score_col, q_col, pep_col = (
-        ("PSMId", "score", "q-value", "peptide") if method == "percolator"
+        ("PSMId", "score", "q-value", "peptide")
+        if method == "percolator"
         else ("SpecId", "mokapot score", "mokapot q-value", "Peptide")
     )
 
@@ -79,13 +118,94 @@ def write_run(root: Path, n: int = 400, n_files: int = 6, method: str = "percola
                 f.write(f"{id_col}\t{score_col}\t{q_col}\tposterior_error_prob\t{pep_col}\tproteinIds\n")
                 for i in rows:
                     trailing = "\tsp|Q{i:04d}|EXTRA" if ragged else ""
-                    f.write(f"{spec_ids[i]}\t{scores[i]:.6f}\t{q[i]:.6g}\t0.1\t_.{peptides[i]}._\t"
-                            f"sp|P{i:04d}|PROT{trailing}\n")
+                    f.write(
+                        f"{spec_ids[i]}\t{scores[i]:.6f}\t{q[i]:.6g}\t0.1\t_.{peptides[i]}._\t"
+                        f"sp|P{i:04d}|PROT{trailing}\n"
+                    )
+
+    # percolator weights.csv: 3 comment lines, then (names, normalized, raw) repeated per CV bin
+    if method == "percolator":
+        features = ["spectral_angle", "abs_rt_diff", "Charge2", "sequence_length", "missedCleavages"]
+        for prefix, scale in (("rescore", 1.0), ("original", 0.4)):
+            rows = ["# comment", "# comment", "# comment"]
+            for _cv_bin in range(3):
+                weights = rng.normal(0, scale, len(features))
+                rows += [
+                    "\t".join(features),
+                    "\t".join(f"{w:.6f}" for w in weights),
+                    "\t".join(f"{w * 10:.6f}" for w in weights),
+                ]
+            (fdr_dir / f"{prefix}.percolator.weights.csv").write_text("\n".join(rows) + "\n")
 
     svg = "<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><text x='4' y='20'>{}</text></svg>"
     for stem in ("psm_1%_FDR", "peptide_1%_FDR", "target_vs_decoys_sa_distribution"):
         (fdr_dir / f"{stem}.svg").write_text(svg.format(stem))
     return root / "out"
+
+
+class TestPlotAllGuards(unittest.TestCase):
+    """plot_all must survive a feature set that is missing a column some plot needs.
+
+    The fixture deliberately writes a rescore.tab without iRT / pred_RT, which is what a run whose
+    feature set never produced them looks like.
+    """
+
+    # written after the SA guard, so its presence proves plot_all carried on past a skipped panel
+    DOWNSTREAM = "rescore_original_joint_plot_psm.svg"
+
+    @staticmethod
+    def _run(tmp, **config_data):
+        # ragged=False: plot_all reads rescore.tab with a plain read_csv, and unlike percolator's own
+        # output files Oktoberfest writes that one with a fixed column count.
+        data_dir = write_run(Path(tmp), ragged=False) / "results" / "percolator"
+        config = Config()
+        config.data = dict(config_data)
+        return data_dir, config
+
+    def test_writes_the_native_plots(self):
+        """The baseline: a well-formed run produces the standard SVGs."""
+        with TemporaryDirectory() as tmp:
+            data_dir, config = self._run(tmp)
+            pl.plot_all(data_dir, config)
+            for name in ("target_vs_decoys_sa_distribution.svg", "psm_1%_FDR.svg", self.DOWNSTREAM):
+                self.assertTrue((data_dir / name).exists(), f"missing {name}")
+
+    def test_a_missing_spectral_angle_does_not_abort_the_other_plots(self):
+        """One unbuildable panel must cost that panel only, not the whole plotting step."""
+        with TemporaryDirectory() as tmp:
+            data_dir, config = self._run(tmp)
+            tab = pd.read_csv(data_dir / "rescore.tab", sep="\t").drop(columns=["spectral_angle"])
+            tab.to_csv(data_dir / "rescore.tab", sep="\t", index=False)
+            with self.assertLogs("oktoberfest.plotting.plotting", level="WARNING") as logs:
+                pl.plot_all(data_dir, config)
+            self.assertIn("Skipping SA distribution plot", "\n".join(logs.output))
+            self.assertTrue((data_dir / self.DOWNSTREAM).exists())
+
+    def test_missing_rt_columns_do_not_abort_the_other_plots(self):
+        """Same for the iRT-vs-predicted-RT panel, which the fixture's feature set cannot build."""
+        with TemporaryDirectory() as tmp:
+            data_dir, config = self._run(tmp)
+            with self.assertLogs("oktoberfest.plotting.plotting", level="WARNING") as logs:
+                pl.plot_all(data_dir, config)
+            self.assertIn("Skipping iRT-vs-pred-RT plot", "\n".join(logs.output))
+            self.assertFalse((data_dir / "irt_vs_pred_rt.svg").exists())
+            self.assertTrue((data_dir / "psm_1%_FDR.svg").exists())
+
+    def test_no_empty_mirror_pdf_when_none_are_configured(self):
+        """Without this guard every run that configures no mirror plots got an empty PDF."""
+        with TemporaryDirectory() as tmp:
+            data_dir, config = self._run(tmp)
+            pl.plot_all(data_dir, config)
+            self.assertFalse((data_dir / "mirror_plots.pdf").exists())
+
+    def test_unreadable_mirror_inputs_do_not_abort_the_run(self):
+        """Mirror plots need mzML and prediction files that a partial run may not have."""
+        with TemporaryDirectory() as tmp:
+            data_dir, config = self._run(tmp, mirror_plots={"raw_00": [2]})
+            with self.assertLogs("oktoberfest.plotting.plotting", level="WARNING") as logs:
+                pl.plot_all(data_dir, config)
+            self.assertIn("Skipping mirror plots", "\n".join(logs.output))
+            self.assertTrue((data_dir / self.DOWNSTREAM).exists())
 
 
 class TestReportConfig(unittest.TestCase):
@@ -103,7 +223,7 @@ class TestReportConfig(unittest.TestCase):
         self.assertFalse(self._config({}).report["enabled"])
 
     def test_boolean_shorthand(self):
-        """"report": true enables the report and leaves every other setting at its default."""
+        """A bare ``"report": true`` enables it and leaves every other setting at its default."""
         settings = self._config({"report": True}).report
         self.assertTrue(settings["enabled"])
         self.assertEqual(settings["n_per_group"], REPORT_DEFAULTS["n_per_group"])
@@ -124,8 +244,12 @@ class TestReportConfig(unittest.TestCase):
     def test_checked_before_the_run(self):
         """Config.check() validates the option, so a typo fails before the compute, not after it."""
         config = self._config({"report": {"enable": True}, "models": {"intensity": "x", "irt": "y"}, "tag": ""})
-        with patch.object(Config, "_check_tmt"), patch.object(Config, "_check_koina_model_availability"), \
-                patch.object(Config, "job_type", "Rescoring"), patch.object(Config, "quantification", False):
+        with (
+            patch.object(Config, "_check_tmt"),
+            patch.object(Config, "_check_koina_model_availability"),
+            patch.object(Config, "job_type", "Rescoring"),
+            patch.object(Config, "quantification", False),
+        ):
             with self.assertRaises(ValueError):
                 config.check()
 
@@ -149,8 +273,17 @@ class TestReportGate(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             data_dir = write_run(Path(tmp)) / "results" / "percolator"
             config = Config()
-            config.data = {"report": {"enabled": True, "spectra": False, "n_per_group": 3, "pdf": True,
-                                      "max_psms": 10, "max_gallery_files": 2, "max_embedded_mb": 5}}
+            config.data = {
+                "report": {
+                    "enabled": True,
+                    "spectra": False,
+                    "n_per_group": 3,
+                    "pdf": True,
+                    "max_psms": 10,
+                    "max_gallery_files": 2,
+                    "max_embedded_mb": 5,
+                }
+            }
             with patch("oktoberfest.plotting.investigate.build_report_safe") as build:
                 pl.plot_investigation_report(data_dir, config)
             kwargs = build.call_args.kwargs
@@ -221,8 +354,9 @@ class TestReportBuild(unittest.TestCase):
             tab = out_dir / "results" / "percolator" / "rescore.tab"
             lines = tab.read_text().splitlines()
             drop = lines[0].split("\t").index("spectral_angle")
-            tab.write_text("\n".join("\t".join(c for i, c in enumerate(ln.split("\t")) if i != drop)
-                                     for ln in lines) + "\n")
+            tab.write_text(
+                "\n".join("\t".join(c for i, c in enumerate(ln.split("\t")) if i != drop) for ln in lines) + "\n"
+            )
             html = inv.build_report(out_dir, want_spectra=False, log=lambda m: None).read_text()
             self.assertIn("id='summary'", html)
             self.assertNotIn("id='sa'", html)  # the SA panels have nothing to show
@@ -261,6 +395,167 @@ class TestReportBuild(unittest.TestCase):
                 self.assertTrue(np.array_equal(parsed[0][c], parsed[1][c]), f"parsers disagree on {c}")
 
 
+class TestWeightsPanel(unittest.TestCase):
+    """The feature-weights panel and the percolator weights.csv parser behind it."""
+
+    def test_parses_the_mean_normalized_weight_per_feature(self):
+        """Layout after the comment lines is (names, normalized, raw) repeated per CV bin."""
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "w.csv"
+            path.write_text("# a\n# b\n# c\nf1\tf2\n1.0\t3.0\n10\t30\nf1\tf2\n3.0\t5.0\n30\t50\n")
+            names, weights = inv.parse_weights(path)
+            self.assertEqual(names, ["f1", "f2"])
+            self.assertAlmostEqual(weights["f1"], 2.0)  # mean of the NORMALIZED rows, not the raw ones
+            self.assertAlmostEqual(weights["f2"], 4.0)
+
+    def test_an_empty_file_is_not_a_crash(self):
+        """A run that produced no weights must skip the panel, not abort the report."""
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "w.csv"
+            path.write_text("# only comments\n")
+            self.assertEqual(inv.parse_weights(path), ([], {}))
+
+    def test_unparseable_rows_are_skipped(self):
+        """A malformed CV bin costs that bin, not the panel."""
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "w.csv"
+            path.write_text("f1\tf2\nnot\tnumbers\n1\t2\n")
+            names, weights = inv.parse_weights(path)
+            self.assertEqual(names, ["f1", "f2"])
+            self.assertEqual(weights, {})
+
+    def test_panel_is_built_when_percolator_wrote_weights(self):
+        """The fixture writes both weights files, so the panel must appear in the report."""
+        with TemporaryDirectory() as tmp:
+            data_dir = write_run(Path(tmp)) / "results" / "percolator"
+            section = inv.fig_weights(inv.load_data(inv.find_paths(data_dir)), inv.find_paths(data_dir))
+            self.assertIsNotNone(section)
+            self.assertEqual(section[0], "weights")
+
+    def test_panel_is_skipped_when_there_are_no_weights(self):
+        """A mokapot run writes no weights.csv at all; that is a skip, not a failure."""
+        with TemporaryDirectory() as tmp:
+            data_dir = write_run(Path(tmp)) / "results" / "percolator"
+            (data_dir / "rescore.percolator.weights.csv").unlink()
+            paths = inv.find_paths(data_dir)
+            self.assertIsNone(inv.fig_weights(inv.load_data(paths), paths))
+
+
+class TestCommandLine(unittest.TestCase):
+    """Both modules are documented as runnable on a finished run; the flags must reach the builder."""
+
+    def test_investigate_forwards_every_flag(self):
+        """A flag the CLI accepts but does not forward is a silent lie in --help."""
+        argv = [
+            "investigate",
+            "/run/out",
+            "out/report.html",
+            "--n-per-group",
+            "3",
+            "--no-spectra",
+            "--pdf",
+            "--max-psms",
+            "11",
+            "--max-gallery-files",
+            "2",
+            "--max-embedded-mb",
+            "5",
+        ]
+        with patch.object(sys, "argv", argv), patch.object(inv, "build_report") as build:
+            inv.main()
+        args, kwargs = build.call_args
+        self.assertEqual(args[:3], ("/run/out", "out/report.html", 3))
+        self.assertFalse(kwargs["want_spectra"])
+        self.assertTrue(kwargs["want_pdf"])
+        self.assertEqual(kwargs["max_psms"], 11)
+        self.assertEqual(kwargs["max_gallery_files"], 2)
+        self.assertEqual(kwargs["max_embedded_mb"], 5)
+
+    def test_investigate_defaults(self):
+        """Only the run directory is required; everything else has a default."""
+        with patch.object(sys, "argv", ["investigate", "/run/out"]), patch.object(inv, "build_report") as build:
+            inv.main()
+        args, kwargs = build.call_args
+        self.assertEqual(args, ("/run/out", None, 20))
+        self.assertTrue(kwargs["want_spectra"])
+        self.assertFalse(kwargs["want_pdf"])
+
+    def test_report_pdf_cli_exits_nonzero_when_no_pdf_was_written(self):
+        """A shell caller must be able to tell that the PDF did not happen."""
+        with patch.object(sys, "argv", ["report_pdf", "r.html"]), patch.object(rp, "html_to_pdf", return_value=None):
+            with self.assertRaises(SystemExit) as ctx:
+                rp.main()
+        self.assertEqual(ctx.exception.code, 1)
+
+    def test_report_pdf_cli_forwards_the_gallery_flag(self):
+        """--no-gallery is the only knob; it must reach html_to_pdf inverted."""
+        with patch.object(sys, "argv", ["report_pdf", "r.html", "--no-gallery"]):
+            with patch.object(rp, "html_to_pdf", return_value=Path("r.pdf")) as convert:
+                rp.main()
+        self.assertFalse(convert.call_args.kwargs["keep_gallery"])
+
+
+class TestSelectSpectra(unittest.TestCase):
+    """Choosing which PSMs the spectra viewer shows. Pure selection logic, no mzML or Koina needed."""
+
+    @staticmethod
+    def _data(tmp):
+        return inv.load_data(inv.find_paths(write_run(Path(tmp)) / "results" / "percolator"))
+
+    def test_picks_every_group_and_caps_each_at_n(self):
+        """Each of the six groups contributes at most n spectra."""
+        with TemporaryDirectory() as tmp:
+            uniq, grp_of = inv.select_spectra(self._data(tmp), 5)
+            names = {name for names in grp_of.values() for name in names}
+            self.assertEqual(
+                names,
+                {"best_score", "worst_score", "cutoff_accepted", "cutoff_rejected", "decoy_high", "decoy_low"},
+            )
+            for group in names:
+                picked = [k for k, v in grp_of.items() if group in v]
+                self.assertLessEqual(len(picked), 5, f"{group} exceeded n")
+
+    def test_best_and_worst_are_actually_the_extremes(self):
+        """A selection that is not sorted by score would show arbitrary spectra."""
+        with TemporaryDirectory() as tmp:
+            data = self._data(tmp)
+            uniq, grp_of = inv.select_spectra(data, 5)
+            best = uniq[uniq.group.apply(lambda g: "best_score" in g)].score
+            worst = uniq[uniq.group.apply(lambda g: "worst_score" in g)].score
+            self.assertGreater(best.min(), worst.max())
+
+    def test_rows_are_unique_per_spectrum(self):
+        """A spectrum in two groups is still one spectrum to fetch and draw."""
+        with TemporaryDirectory() as tmp:
+            uniq, _ = inv.select_spectra(self._data(tmp), 20)
+            self.assertEqual(len(uniq), len(set(uniq.key)))
+
+    def test_precursor_mz_is_computed_from_the_theoretical_mass(self):
+        """ExpMass in rescore.tab is a sequential index, so m/z must come from Mass and charge."""
+        with TemporaryDirectory() as tmp:
+            uniq, _ = inv.select_spectra(self._data(tmp), 5)
+            expected = (uniq.iloc[0].mz - inv.PROTON) * uniq.iloc[0].charge
+            self.assertGreater(expected, 0)
+            self.assertTrue((uniq.mz > 0).all())
+
+    def test_a_missing_column_is_a_clear_error(self):
+        """The viewer cannot work without these; say which one is absent."""
+        with TemporaryDirectory() as tmp:
+            data = self._data(tmp)
+            del data["collision_energy_aligned"]
+            with self.assertRaises(ValueError) as ctx:
+                inv.select_spectra(data, 5)
+            self.assertIn("collision_energy_aligned", str(ctx.exception))
+
+    def test_nothing_showable_is_a_clear_error(self):
+        """All-unscored input must say so rather than produce an empty viewer."""
+        with TemporaryDirectory() as tmp:
+            data = self._data(tmp)
+            data["score"] = np.full(data["score"].shape, np.nan)
+            with self.assertRaises(ValueError):
+                inv.select_spectra(data, 5)
+
+
 class TestRunParameters(unittest.TestCase):
     """Reading the experiment's settings off the run's config instead of assuming them.
 
@@ -269,8 +564,12 @@ class TestRunParameters(unittest.TestCase):
     """
 
     #: Monoisotopic reporter-ion m/z that each label's masking window has to cover.
-    REPORTERS = {"tmt": (126.1277, 131.1445), "tmtpro": (126.1277, 134.1548),
-                 "itraq4": (114.1112, 117.1150), "itraq8": (113.1078, 121.1220)}
+    REPORTERS = {
+        "tmt": (126.1277, 131.1445),
+        "tmtpro": (126.1277, 134.1548),
+        "itraq4": (114.1112, 117.1150),
+        "itraq8": (113.1078, 121.1220),
+    }
 
     def test_a_label_free_run_masks_nothing(self):
         """Without a tag there is no reporter region: that m/z range holds real fragment ions."""
@@ -322,16 +621,21 @@ class TestRunParameters(unittest.TestCase):
 
     def test_koina_requery_uses_the_run_settings(self):
         """The spectra viewer re-queries with the run's own fragmentation method and server."""
-        params = inv.run_params({"fragmentation_method": "hcd", "prediction_server": "example.org:443",
-                                 "ssl": False})
+        params = inv.run_params({"fragmentation_method": "hcd", "prediction_server": "example.org:443", "ssl": False})
         self.assertEqual(params["fragmentation"], "HCD")
         self.assertEqual(params["server"], "example.org:443")
         self.assertIs(params["ssl"], False)
 
     def test_parameter_table_mirrors_the_config(self):
         """Rows are keyed by their config path, and a value the config did not set is marked."""
-        cfg = {"type": "Rescoring", "tag": "tmt", "massTolerance": 20, "unitMassTolerance": "ppm",
-               "inputs": {"search_results_type": "msfragger"}, "matching_method": "global_ransac"}
+        cfg = {
+            "type": "Rescoring",
+            "tag": "tmt",
+            "massTolerance": 20,
+            "unitMassTolerance": "ppm",
+            "inputs": {"search_results_type": "msfragger"},
+            "matching_method": "global_ransac",
+        }
         rows = {key: (value, note) for _, _, key, value, note in inv.config_rows(cfg, inv.run_params(cfg))}
         self.assertEqual(rows["inputs.search_results_type"], ("msfragger", ""))
         self.assertEqual(rows["matching_method"], ("global_ransac", ""))
@@ -352,8 +656,11 @@ class TestRunParameters(unittest.TestCase):
 
     def test_label_free_report_says_label_free(self):
         """End to end: a bulk run's report states the absence of a label rather than implying one."""
-        cfg = {"type": "Rescoring", "inputs": {"search_results_type": "msfragger", "instrument_type": "TOF"},
-               "models": {"intensity": "Prosit_2020_intensity_HCD"}}
+        cfg = {
+            "type": "Rescoring",
+            "inputs": {"search_results_type": "msfragger", "instrument_type": "TOF"},
+            "models": {"intensity": "Prosit_2020_intensity_HCD"},
+        }
         table = inv.config_table(cfg, inv.run_params(cfg))
         self.assertIn("label-free", table)
         self.assertNotIn("TMT", table)
