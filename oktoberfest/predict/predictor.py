@@ -396,8 +396,10 @@ class Predictor:
             >>> from oktoberfest import predict as pr
             >>> import pandas as pd
             >>> import numpy as np
-            >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+            >>> # Required columns: RAW_FILE, SCAN_NUMBER, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE,
+            >>> # REVERSE and SCORE
             >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+            >>>                         "SCAN_NUMBER": [1,2],
             >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
             >>>                         "COLLISION_ENERGY": [30,35],
             >>>                         "PRECURSOR_CHARGE": [1,2],
