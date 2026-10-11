@@ -40,6 +40,13 @@ docs = [
     "Pygments>=2.20.0",
 ]
 
+# dlomix[tf] extra installs tensorflow alongside dlomix
+# oktoberfest integration relies on dlomix models trained with keras/tensorflow
+# dlomix>=0.3.1 requires Python >=3.11
+dlomix = [
+    "dlomix[tf]>=0.3.1; python_version >= '3.11'"
+]
+
 [project.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 
