@@ -68,6 +68,8 @@ There are multiple optional dependencies depending on job types. Detailed notes 
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
     | :ref:`Rescoring`                                                 | Percolator          |                                                         |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
+    | Peptide property prediction with a local DLOmix model            | DLOmix, TensorFlow  | not required when predicting via Koina (the default)    |
+    +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
 
 **ThermoRawFileParser**
 `ThermoRawFileParser v1.4.3 <https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3>`_:
@@ -88,6 +90,14 @@ For MacOS, follow the instructions provided by `Mono <https://www.mono-project.c
 This is the tool Mokapot is based on. As it has more options and is generally more stable wrt. to FDR cutoffs and deduplication, it is recommended to use this tool instead of Mokapot.
 Installable packages are provided for Linux/MacOS/Windows.
 
+**DLOmix**
+By default, peptide property prediction is performed remotely via `Koina <https://koina.wilhelmlab.org>`_, which requires no extra dependencies.
+If you instead want to run a locally trained model (configured via the ``dlomix_intensity`` model, see :doc:`config`), install the ``dlomix`` optional extra, which pulls in `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ and TensorFlow:
+
+.. code-block:: bash
+
+   pip install "oktoberfest[dlomix]"
+
 Installing Oktoberfest
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -97,6 +107,12 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
 
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
+
+To also enable local DLOmix predictions, install the optional extra instead (see `DLOmix`_ above):
+
+.. code-block:: bash
+
+   pip install "oktoberfest[dlomix]" jupyterlab
 
 
 Installing xiFDR
