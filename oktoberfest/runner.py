@@ -145,7 +145,9 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         config_instrument_type = config.instrument_type
         if config_instrument_type is not None:
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
-        if config.fragmentation_method is not None:
+        # only override the per-spectrum fragmentation read from the spectra file if explicitly configured;
+        # config.fragmentation_method defaults to "HCD" for annotation, which would relabel CID spectra as HCD
+        if "fragmentation_method" in config.data and config.fragmentation_method is not None:
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
@@ -185,7 +187,10 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results"
     results_dir.mkdir(exist_ok=True)
-    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
+    # the calibrated CE only applies to HCD spectra; all other spectra (e.g. CID) are set to 35
+    is_hcd = library.obs["FRAGMENTATION"].str.endswith("HCD").to_numpy()
+    library.obs.loc[~is_hcd, "COLLISION_ENERGY"] = 35
+    if is_hcd.any():
         use_ransac_model = config.use_ransac_model
         predictor = pr.Predictor.from_config(config, model_type="intensity")
 
@@ -237,8 +242,10 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     title=title,
                 )
 
-            delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
-            library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
+            delta_ce = ransac.predict(library.obs.loc[is_hcd, ["MASS", "PRECURSOR_CHARGE"]])
+            library.obs.loc[is_hcd, "COLLISION_ENERGY"] = np.maximum(
+                0, library.obs.loc[is_hcd, "COLLISION_ENERGY"] + delta_ce
+            )
 
         else:
             ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
@@ -252,7 +259,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                 sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
                 filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
             )
-            library.obs["COLLISION_ENERGY"] = best_ce
+            library.obs.loc[is_hcd, "COLLISION_ENERGY"] = best_ce
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 f.write(str(best_ce))
                 f.close()
@@ -653,7 +660,9 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
 
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
+            re.rescore_with_percolator(
+                input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
+            )
             if xl:
                 output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
                 output_csms_original = xl_between_or_self(output_csms_original, score="score")
@@ -665,7 +674,9 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
             if config.ptm_localization:
                 _ptm_localization_rescore(fdr_dir, config)
             else:
-                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
+                re.rescore_with_percolator(
+                    input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
+                )
             if xl:
                 output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
                 output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")

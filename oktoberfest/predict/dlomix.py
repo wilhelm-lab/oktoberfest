@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
+import spectrum_fundamentals.constants as c
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -97,6 +98,15 @@ class DLOmixLocal:
                     raise ValueError("collision_energy column not found in Spectra.obs")
                 values = data.obs[col_name].values.astype(float)
                 input_data[feat] = (values / 100.0).astype(np.float32)
+            elif feat == "precursor_charge_onehot" and feat not in col_map:
+                charges = data.obs[col_map["precursor_charge"]].to_numpy().astype(int)
+                input_data[feat] = list(np.eye(c.NUM_CHARGES_ONEHOT, dtype=np.float32)[charges - 1])
+            elif feat == "method_onehot" and feat not in col_map:
+                # one-hot over (CID, HCD), matching FRAGMENTATION_ENCODING (CID=1, HCD=2) used in training
+                method_nbr = data.obs[col_map["fragmentation"]].map(c.FRAGMENTATION_ENCODING).to_numpy()
+                if not np.isin(method_nbr, [1, 2]).all():
+                    raise ValueError("method_onehot only supports CID and HCD fragmentation")
+                input_data[feat] = list(np.eye(2, dtype=np.float32)[method_nbr - 1])
             else:
                 feat_lower = feat.lower()
                 if feat_lower not in col_map:
@@ -136,11 +146,11 @@ class DLOmixLocal:
             col_map = {c.lower(): c for c in data.obs.columns}
             seq_col = col_map.get("modified_sequence") or col_map.get("sequence")
 
-            charges = input_df["precursor_charge"].values[:n_psms].astype(int)
+            charges = data.obs[col_map["precursor_charge"]].values[:n_psms].astype(int)
             onehot = np.zeros((len(charges), 6), dtype=np.float32)
-            for i, c in enumerate(charges):
-                if 1 <= c <= 6:
-                    onehot[i, c - 1] = 1.0
+            for i, charge in enumerate(charges):
+                if 1 <= charge <= 6:
+                    onehot[i, charge - 1] = 1.0
 
             norm_df = pd.DataFrame(
                 {

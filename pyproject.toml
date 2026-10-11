@@ -42,8 +42,9 @@ docs = [
 
 # dlomix[tf] extra installs tensorflow alongside dlomix
 # oktoberfest integration relies on dlomix models trained with keras/tensorflow
+# dlomix>=0.3.1 requires Python >=3.11
 dlomix = [
-    "dlomix[tf] @ git+https://github.com/wilhelm-lab/dlomix.git@feature/migration-to-keras-3-tf-2.16"
+    "dlomix[tf]>=0.3.1; python_version >= '3.11'"
 ]
 
 [project.scripts]
