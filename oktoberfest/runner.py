@@ -14,6 +14,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import spectrum_fundamentals.constants as c
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
@@ -1511,7 +1512,9 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
         "retention_time_sec"
     ].transform("mean")
 
-    peptide_df["charge"] = peptide_df["PSMId"].apply(lambda x: x.split("-")[-2])
+    # PSMId only ends with the charge if there is no SCAN_EVENT_NUMBER, so take the charge from the spectra
+    peptide_df = peptide_df.copy()
+    peptide_df["charge"] = peptide_df["PSMId"].map(obs.set_index("PSMId")["PRECURSOR_CHARGE"])
     peptide_df.drop_duplicates(["peptide", "charge"], inplace=True)
     accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] <= 0.01, "PSMId"]
     positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
@@ -1536,8 +1539,11 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
         ]
     ]
 
+    # precursor m/z, same definition as the ExpMass percolator feature
+    precursor_mz = (meta["MASS"] + meta["PRECURSOR_CHARGE"] * c.PARTICLE_MASSES["PROTON"]) / meta["PRECURSOR_CHARGE"]
+
     rows = []
-    for pos, row in zip(positions, meta.itertuples(index=False), strict=True):
+    for pos, row, mz_precursor in zip(positions, meta.itertuples(index=False), precursor_mz, strict=True):
         mz = mz_layer[pos].toarray().ravel()
         intensity = int_layer[pos].toarray().ravel()
         keep = (mz > 0.0) & (intensity > 0.05)
@@ -1551,7 +1557,7 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
 
         rows.append(
             [
-                row.ExpMass,
+                mz_precursor,
                 mz[keep],
                 annotations[keep].tolist(),
                 protein_list[0],
@@ -1643,8 +1649,9 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         "FragmentSeriesNumber",
     ]
     df = df.explode(fragment_cols, ignore_index=True)
-    df.sort_values(by="LibraryIntensity", ascending=False)
-    df.drop_duplicates(["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz", "NormalizedRetentionTime"])
+    # keep the most intense entry per fragment
+    df = df.sort_values(by="LibraryIntensity", ascending=False)
+    df = df.drop_duplicates(["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz", "NormalizedRetentionTime"])
     df.sort_values(by=["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz"], inplace=True)
     df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
 

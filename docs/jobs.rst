@@ -1,13 +1,13 @@
 Running Oktoberfest
 ===================
 
-This documentation provides an overview of the high-level job API and how to execute jobs for collision energy calibration, spectral library generation and rescoring.
+This documentation provides an overview of the high-level job API and how to execute jobs for collision energy calibration, spectral library generation, rescoring and training data generation.
 
 
 Executing a job
 ---------------
 
-Oktoberfest can be run in three different ways. The only input required is a configuration for setting up the job (we provide examples further down and a full documentation on the next page).
+Oktoberfest can be run in three different ways (or via the browser-based `web UI <webui.html>`_). The only input required is a configuration for setting up the job (we provide examples further down and a full documentation on the next page).
 
 The command for executing a job from terminal:
 
@@ -154,6 +154,8 @@ The example config can be loaded and viewed using
     json.dumps(config, indent=4)
 
 
+.. _rescoring:
+
 C. Rescoring
 ------------
 
@@ -273,3 +275,75 @@ In addition, XL-MS example configurations for non-cleavable and cleavable crossl
 
     config = ok.utils.example_configs.RESCORING_XL_NON_CLEAVABLE
     config = ok.utils.example_configs.RESCORING_XL_CLEAVABLE
+
+
+.. _training-data:
+
+D. Training Data Generation
+---------------------------
+
+This task generates training data from your own search results that can be used with `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ to train a new model or fine-tune any existing Prosit fragment intensity model, e.g. for a new instrument, fragmentation method or modification that the available models do not cover yet.
+The fine-tuned model can then be used for rescoring with Oktoberfest via the ``dlomix_intensity`` model (see `configuration <config.html>`_).
+Oktoberfest will:
+
+1. Convert the spectra and preprocess the search results like in the rescoring task.
+2. Annotate the experimental spectra and calibrate the CE against the provided spectra files (see `A. Collision Energy Calibration`_). The calibrated CE is stored in the training data, so the model specified in ``models.intensity`` is used for the calibration.
+3. Run percolator using only the features of the search engine (``original.tab``), i.e. without features from peptide property prediction, so the training data are not biased towards an existing model.
+4. Export the annotated spectra of every spectra file as parquet files to ``data/``: ``<spectra_file>.parquet`` contains all annotated PSMs and ``<spectra_file>.fdr1.parquet`` only the target PSMs that pass a PSM-level q-value < 0.01 (recommended for training).
+
+.. note::
+    Only percolator is supported, i.e. ``fdr_estimation_method`` must be set to ``"percolator"``.
+
+The parquet files follow the format expected by the DLOmix ``FragmentIonIntensityDataset`` and contain the following columns:
+
+- ``modified_sequence``: the modified peptide sequence in UNIMOD format with explicit termini (e.g. ``[]-PEPTIDEM[UNIMOD:35]K-[]``)
+- ``precursor_charge_onehot``: one-hot encoded precursor charge (charge 1 to 6)
+- ``collision_energy_aligned_normed``: calibrated collision energy divided by 100
+- ``method_nbr``: the encoded fragmentation method (``FRAGMENTATION_ENCODING`` in spectrum_fundamentals)
+- ``intensities_raw``: the annotated fragment intensities, -1 marks fragments that cannot exist (e.g. too short peptide or too high fragment charge) and 0 fragments that were not observed
+- ``mz_raw``: the m/z values of the annotated fragments
+- ``raw_file``, ``scan_number`` and ``package`` (fragmentation method) for traceability
+
+Example config file:
+
+.. code-block:: json
+
+    {
+        "type": "GenerateTrainingData",
+        "tag": "",
+        "output": "./out",
+        "inputs": {
+            "search_results": "./msms.txt",
+            "search_results_type": "Maxquant",
+            "spectra": "./",
+            "spectra_type": "raw"
+        },
+        "models": {
+            "intensity": "Prosit_2020_intensity_HCD",
+            "irt": "Prosit_2019_irt"
+        },
+        "prediction_server": "koina.wilhelmlab.org:443",
+        "numThreads": 1,
+        "fdr_estimation_method": "percolator",
+        "regressionMethod": "spline",
+        "ssl": true,
+        "thermoExe": "ThermoRawFileParser.exe",
+        "massTolerance": 20,
+        "unitMassTolerance": "ppm"
+    }
+
+The training data can then be loaded with DLOmix, e.g.:
+
+.. code-block:: python
+
+    from dlomix.data import FragmentIonIntensityDataset
+
+    dataset = FragmentIonIntensityDataset(
+        data_source=["out/data/<spectra_file>.fdr1.parquet"],
+        sequence_column="modified_sequence",
+        label_column="intensities_raw",
+        model_features=["precursor_charge_onehot", "collision_energy_aligned_normed"],
+        val_ratio=0.1,
+    )
+
+Use the dataset to train a new model or to fine-tune an existing Prosit model as described in the `DLOmix documentation <https://dlomix.readthedocs.io>`_.

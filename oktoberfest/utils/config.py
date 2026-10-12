@@ -309,7 +309,7 @@ class Config:
         except ImportError as e:
             logger.warning(
                 f"DLOmix is not installed, so the 'dlomix_intensity' model could not be loaded. "
-                f"Install the optional extra with `pip install oktoberfest[dlomix]`. ({e})"
+                f"Install the optional extra with `pip install oktoberfest[dlomix]` (requires python >=3.11). ({e})"
             )
             return None
         except Exception as e:

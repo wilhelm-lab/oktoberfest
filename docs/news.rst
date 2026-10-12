@@ -4,6 +4,16 @@ News
 .. role:: date
     :class: date
 
+Oktoberfest supports DIA data and local DLOmix models :date:`2026-10-12`
+------------------------------------------------------------------------
+
+| Oktoberfest 1.0.0 is published, adding support for data-independent acquisition (DIA). Set ``acquisitionMethod`` to ``"DIA"`` in the `configuration <config.html>`_ to calibrate the collision energy per precursor charge.
+| Collision energy calibration for DDA now calibrates each original collision energy separately. Only HCD spectra are calibrated, and all results and plots are stored in ``results/ce_calibration/``.
+| Fragment intensities can now be predicted locally with a trained `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ model instead of Koina. Install the optional extra with ``pip install "oktoberfest[dlomix]"`` (python >=3.11) and see the DLOmix integration tutorial in the `tutorials folder on GitHub <https://github.com/wilhelm-lab/oktoberfest/tree/development/tutorials>`_.
+| The new ``GenerateTrainingData`` job exports annotated spectra from your own search results as training data for DLOmix, which can be used to fine-tune any Prosit intensity model on your data (see `Training Data Generation <jobs.html#training-data>`_).
+| Oktoberfest now comes with a `web UI <webui.html>`_ that can be run locally via Docker to submit and monitor jobs without writing config files.
+| **Breaking changes:** Oktoberfest now requires spectrum_fundamentals >=1.0.0. The ``ExpMass`` column of the percolator / mokapot input is now the experimental precursor m/z (see `SVM features <svm_features.html>`_). The collision energy calibration results (``<spectra_file>_ce.txt``, now stored as JSON) and plots moved to ``results/ce_calibration/`` (see `outputs <outputs.html>`_).
+
 Oktoberfest supports rescoring XL-MS datasets :date:`2025-06-14`
 ----------------------------------------------------------------
 

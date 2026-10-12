@@ -2,12 +2,13 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 
 from oktoberfest.data.spectra import FragmentType, Spectra
-from oktoberfest.runner import _export_training_data_parquets
+from oktoberfest.runner import _export_training_data_parquets, run_generate_training_data
 from oktoberfest.utils.config import Config
 
 
@@ -86,21 +87,105 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
         self.assertTrue((self.data_dir / "run_a.parquet").exists())
         self.assertFalse((self.data_dir / "run_without_search_results.parquet").exists())
 
-    def _write_spectra_hdf5(self, run_name: str, scan_numbers: list[int]):
+    def test_export_parquet_columns_for_dlomix(self):
+        """Test the parquet columns follow the format expected by DLOmix for training."""
+        var_df = Spectra._gen_vars_df()
+        # internal convention: -1 = fragment cannot exist, 0 = fragment not observed
+        intensities = np.full((2, len(var_df)), -1.0)
+        intensities[:, 0] = 1.0
+        intensities[:, 1] = 0.0
+        self._write_spectra_hdf5(
+            "run_a",
+            [11, 12],
+            intensities=intensities,
+            modified_sequences=["PEPTIDEK", "[UNIMOD:737]-PEPTIDEK[UNIMOD:737]"],
+            charges=[2, 3],
+            fragmentation=["HCD", "CID"],
+        )
+        self._write_original_tab([("run_a-11-PEPTIDEK-2-0", "run_a"), ("run_a-12-PEPTIDEK-3-1", "run_a")])
+        self._write_original_psms([("run_a-11-PEPTIDEK-2-0", 0.001)])
+
+        _export_training_data_parquets(self.config)
+
+        full = pd.read_parquet(self.data_dir / "run_a.parquet")
+        self.assertEqual(full["modified_sequence"].tolist(), ["[]-PEPTIDEK-[]", "[UNIMOD:737]-PEPTIDEK[UNIMOD:737]-[]"])
+        np.testing.assert_array_equal(
+            np.stack(full["precursor_charge_onehot"]), [[0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]
+        )
+        np.testing.assert_allclose(full["collision_energy_aligned_normed"], [0.3, 0.3])
+        self.assertEqual(full["method_nbr"].tolist(), [2, 1])
+        self.assertEqual(full["package"].tolist(), ["HCD", "CID"])
+        self.assertEqual(full["raw_file"].tolist(), ["run_a", "run_a"])
+        raw = np.stack(full["intensities_raw"])
+        self.assertEqual(raw.shape, (2, len(var_df)))
+        # observed intensities are kept, not observed fragments are 0 and impossible fragments -1
+        np.testing.assert_array_equal(raw[:, 0], [1.0, 1.0])
+        np.testing.assert_array_equal(raw[:, 1], [0.0, 0.0])
+        self.assertTrue((raw[:, 2:] == -1).all())
+
+    def test_run_generate_training_data_requires_percolator(self):
+        """Test the job fails early for mokapot."""
+        self.config.data["fdr_estimation_method"] = "mokapot"
+        with patch.object(Config, "check"), patch("oktoberfest.runner.run_rescoring") as mock_rescoring:
+            with self.assertRaisesRegex(ValueError, "percolator"):
+                run_generate_training_data(self.config)
+        mock_rescoring.assert_not_called()
+
+    def test_run_generate_training_data_runs_original_rescoring_and_export(self):
+        """Test rescoring is run with the original features only before exporting the parquet files."""
+        run_original_during_rescoring = []
+        with (
+            patch.object(Config, "check"),
+            patch(
+                "oktoberfest.runner.run_rescoring",
+                side_effect=lambda config: run_original_during_rescoring.append(config._run_original),
+            ),
+            patch("oktoberfest.runner._export_training_data_parquets") as mock_export,
+        ):
+            run_generate_training_data(self.config)
+
+        self.assertEqual(run_original_during_rescoring, [True])
+        mock_export.assert_called_once_with(config=self.config)
+        self.assertFalse(self.config._run_original)
+
+    def test_run_generate_training_data_resets_flag_on_failure(self):
+        """Test the original-only flag is reset and nothing is exported if rescoring fails."""
+        with (
+            patch.object(Config, "check"),
+            patch("oktoberfest.runner.run_rescoring", side_effect=RuntimeError("percolator failed")),
+            patch("oktoberfest.runner._export_training_data_parquets") as mock_export,
+        ):
+            with self.assertRaises(RuntimeError):
+                run_generate_training_data(self.config)
+
+        mock_export.assert_not_called()
+        self.assertFalse(self.config._run_original)
+
+    def _write_spectra_hdf5(
+        self,
+        run_name: str,
+        scan_numbers: list[int],
+        intensities: np.ndarray = None,
+        modified_sequences: list[str] = None,
+        charges: list[int] = None,
+        fragmentation: list[str] = None,
+    ):
         var_df = Spectra._gen_vars_df()
         obs = pd.DataFrame(
             {
                 "RAW_FILE": [run_name] * len(scan_numbers),
                 "SCAN_NUMBER": scan_numbers,
-                "MODIFIED_SEQUENCE": [f"PEPTIDE{i}" for i in range(len(scan_numbers))],
-                "PRECURSOR_CHARGE": [2] * len(scan_numbers),
+                "MODIFIED_SEQUENCE": modified_sequences or [f"PEPTIDE{i}" for i in range(len(scan_numbers))],
+                "PRECURSOR_CHARGE": charges or [2] * len(scan_numbers),
                 "COLLISION_ENERGY": [30.0] * len(scan_numbers),
-                "FRAGMENTATION": ["HCD"] * len(scan_numbers),
+                "FRAGMENTATION": fragmentation or ["HCD"] * len(scan_numbers),
             }
         )
+        if intensities is None:
+            intensities = np.ones((len(scan_numbers), len(var_df)))
         spectra = Spectra(obs=obs, var=var_df)
         spectra.var_names = var_df.index
-        spectra.add_intensities_without_mapping(np.ones((len(scan_numbers), len(var_df))), FragmentType.RAW)
+        spectra.add_intensities_without_mapping(intensities, FragmentType.RAW)
         spectra.write_as_hdf5(self.data_dir / f"{run_name}.mzml.hdf5")
 
     def _write_original_tab(self, rows: list[tuple[str, str]]):
