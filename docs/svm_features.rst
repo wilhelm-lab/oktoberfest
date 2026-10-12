@@ -25,8 +25,10 @@ Always present
     +----------------+--------------------------------------------------------------------------------------+
     | Mass           | experimental mass                                                                    |
     +----------------+--------------------------------------------------------------------------------------+
-    | ExpMass        | fixed constant to allow PSMs with different theoretical mass to compete              |
-    |                | for the same PSM in target-decoy competition                                         |
+    | ExpMass        | experimental precursor m/z ((MASS + charge * proton mass) / charge); used by         |
+    |                | percolator together with filename and ScanNr to identify a spectrum, so PSMs with    |
+    |                | different precursor m/z from the same scan (e.g. DIA) are not competing against each |
+    |                | other in target-decoy competition                                                    |
     +----------------+--------------------------------------------------------------------------------------+
     | Label          | 1 indicates target, -1 decoy                                                         |
     +----------------+--------------------------------------------------------------------------------------+

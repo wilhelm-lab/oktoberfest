@@ -15,7 +15,16 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
+from spectrum_io.search_result import (
+    Mascot,
+    MaxQuant,
+    MSAmanda,
+    MSFragger,
+    OpenMS,
+    Sage,
+    Scout,
+    Xisearch,
+)
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -1149,3 +1158,56 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
     d_dir = Path(d_dir)
     output_file = Path(output_file)
     convert_d_hdf(input_path=d_dir, output_path=output_file)
+
+
+def _format_modified_sequence_for_parquet(modified_sequence: str) -> str:
+    """Convert modified sequences to explicit N/C-terminal marker format."""
+    sequence = str(modified_sequence)
+    if sequence.startswith("_") and sequence.endswith("_"):
+        sequence = sequence[1:-1]
+
+    if not re.match(r"^(\[\]|(\[UNIMOD:\d+\]))-", sequence):
+        sequence = f"[]-{sequence}"
+
+    if not re.search(r"-(\[\]|(\[UNIMOD:\d+\]))$", sequence):
+        sequence = f"{sequence}-[]"
+
+    return sequence
+
+
+def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[str, Path]):
+    """Convert AnnData from hdf5 to parquet required for DLOmix."""
+    library = Spectra.from_hdf5(hdf5_path)
+    df = pd.DataFrame()
+
+    optional_columns = {
+        "raw_file": lambda: library.obs["RAW_FILE"].astype(str),
+        "scan_number": lambda: library.obs["SCAN_NUMBER"].astype("int64"),
+        "method_nbr": lambda: library.obs["FRAGMENTATION"].map(c.FRAGMENTATION_ENCODING).astype("int64"),
+        "precursor_charge_onehot": lambda: list(
+            np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[library.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        ),
+        "collision_energy_aligned_normed": lambda: library.obs["COLLISION_ENERGY"].astype("float64") / 100.0,
+    }
+
+    for column_name, column_factory in optional_columns.items():
+        try:
+            df[column_name] = column_factory()
+        except (KeyError, ValueError, IndexError):
+            logger.warning(f"Optional column {column_name!r} could not be derived, excluded from output")
+
+    intensities = library.to_df(layer=library._resolve_layer_name(FragmentType.RAW))
+    intensities[intensities == 0] = -1
+    intensities[intensities == c.EPSILON] = 0
+    df["intensities_raw"] = list(intensities.to_numpy())
+
+    mz_layer = library._resolve_layer_name(FragmentType.MZ)
+    if mz_layer in library.layers:
+        df["mz_raw"] = list(library.to_df(layer=mz_layer).to_numpy())
+
+    if "FRAGMENTATION" in library.obs:
+        df["package"] = library.obs["FRAGMENTATION"].astype(str)
+
+    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet).values
+
+    df.to_parquet(output_file, index=False)

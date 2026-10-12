@@ -16,6 +16,8 @@ dependencies = [
     "numpy>=1.26.4",
     "seaborn>=0.12.2",
     "spectrum-io>=0.8.0",
+    # >=1.0.0 computes the ExpMass percolator feature (no longer added by oktoberfest)
+    "spectrum-fundamentals>=1.0.0",
     "picked_group_fdr>=0.9.0",
     "koinapy>=0.0.10",
     "spectrum-utils>=0.4.2",
@@ -38,6 +40,13 @@ docs = [
     "sphinx-autodoc-typehints>=3.0",
     "sphinx-rtd-theme>=3.0.2",
     "Pygments>=2.20.0",
+]
+
+# dlomix[tf] extra installs tensorflow alongside dlomix
+# oktoberfest integration relies on dlomix models trained with keras/tensorflow
+# dlomix>=0.3.1 requires Python >=3.11
+dlomix = [
+    "dlomix[tf]>=0.3.1; python_version >= '3.11'"
 ]
 
 [project.scripts]
