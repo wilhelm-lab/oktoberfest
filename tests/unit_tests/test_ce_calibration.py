@@ -95,6 +95,17 @@ class TestCECalibration(unittest.TestCase):
         np.testing.assert_array_equal(library.obs["COLLISION_ENERGY"].to_numpy(), [35.0] * 6)
         self.assertEqual(json.loads(self.ce_file.read_text()), 35)
 
+    def test_ce_calibration_only_calibrates_exact_hcd(self, mock_from_config, mock_pl):
+        """Test spectra with other labels, e.g. EThcD or unknown, are not calibrated like HCD spectra."""
+        self._set_mode("DDA", use_ransac_model=False)
+        library = _make_library()
+        library.obs["FRAGMENTATION"] = ["EThcD", "ETHCD", "unknown", "unknown", "CID", "CID"]
+
+        _get_best_ce(library, self.spectra_file, self.config)
+
+        mock_from_config.assert_not_called()
+        np.testing.assert_array_equal(library.obs["COLLISION_ENERGY"].to_numpy(), [35.0] * 6)
+
     def test_ce_calibration_hcd(self, mock_from_config, mock_pl):
         """Test ce calibration by highest scoring target PSMS without ransac for HCD data (DDA, per original CE)."""
         self._set_mode("DDA", use_ransac_model=False)
