@@ -120,6 +120,32 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
     return spectra_files_to_return
 
 
+def _get_annotation_fragmentation(spectra: pd.DataFrame, config: Config) -> str:
+    """
+    Get the fragmentation method used to annotate the fragment ions of a spectra file.
+
+    The fragmentation_method in the config takes precedence. Otherwise, the fragmentation read from the spectra file
+    is used if all spectra share one supported method. Unknown, unsupported or mixed fragmentation methods fall back
+    to HCD with a warning.
+
+    :param spectra: the spectra read from the spectra file
+    :param config: the configuration object
+    :return: the fragmentation method used for annotation
+    """
+    if config.data.get("fragmentation_method") is not None:
+        return config.fragmentation_method
+    # TODO: refine annotation for files with unknown, unsupported or mixed fragmentation methods, e.g. by annotating
+    #  each method with its own ion types instead of falling back to HCD
+    methods = spectra["FRAGMENTATION"].astype(str).str.upper().unique()
+    if len(methods) == 1 and methods[0] in c.FRAGMENTATION_TO_IONS_BY_PAIRS:
+        return methods[0]
+    logger.warning(
+        f"Found fragmentation methods {sorted(methods)} in the spectra, which are unknown, unsupported or mixed. "
+        "Fragment ions are annotated as HCD. Set fragmentation_method in the config to annotate them differently."
+    )
+    return "HCD"
+
+
 def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file: Optional[Path] = None) -> Spectra:
     data_dir = config.output / "data"
     data_dir.mkdir(exist_ok=True)
@@ -146,9 +172,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         config_instrument_type = config.instrument_type
         if config_instrument_type is not None:
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
-        # only override the per-spectrum fragmentation read from the spectra file if explicitly configured;
-        # config.fragmentation_method defaults to "HCD" for annotation, which would relabel CID spectra as HCD
-        if "fragmentation_method" in config.data and config.fragmentation_method is not None:
+        # only override the per-spectrum fragmentation read from the spectra file if explicitly configured
+        if config.data.get("fragmentation_method") is not None:
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
@@ -172,7 +197,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 psms=library,
                 mass_tol=config.mass_tolerance,
                 unit_mass_tol=config.unit_mass_tolerance,
-                fragmentation_method=config.fragmentation_method,
+                fragmentation_method=_get_annotation_fragmentation(library, config),
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
@@ -189,7 +214,8 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results/ce_calibration"
     results_dir.mkdir(parents=True, exist_ok=True)
     # the calibrated CE only applies to HCD spectra; all other spectra (e.g. CID) are set to 35
-    is_hcd = library.obs["FRAGMENTATION"].str.endswith("HCD").to_numpy(dtype=bool, na_value=False)
+    # same selection as in the CE alignment, which only uses HCD spectra
+    is_hcd = (library.obs["FRAGMENTATION"] == "HCD").to_numpy(dtype=bool)
     library.obs.loc[~is_hcd, "COLLISION_ENERGY"] = 35
     if is_hcd.any():
         use_ransac_model = config.use_ransac_model
