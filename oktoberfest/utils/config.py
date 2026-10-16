@@ -510,6 +510,40 @@ class Config:
         return {}
 
     @property
+    def ptm_decoy_residues(self) -> list[str]:
+        """
+        Get the decoy residues used to estimate the false localization rate (FLR) of PTM localization.
+
+        Localizations of the PTMs on these residues, which cannot carry the PTMs (e.g. A for phosphorylation), are
+        generated as additional candidates. Every spectrum localized on a decoy residue is a known false localization,
+        which is used to estimate the FLR. Empty if ptm_localization is disabled.
+        """
+        if not self.ptm_localization:
+            return []
+        return list(self.ptm_localization_options.get("decoy_residues", []))
+
+    @property
+    def ptm_permutation_sites(self) -> dict[int, list[str]]:
+        """Get the residues to generate localization candidates on: the possible sites and the decoy residues."""
+        decoys = self.ptm_decoy_residues
+        return {unimod_id: sites + [r for r in decoys if r not in sites] for unimod_id, sites in self.ptm_sites.items()}
+
+    @property
+    def ptm_decoy_proxies(self) -> dict[str, str]:
+        """
+        Get the replacements used to predict decoy localization candidates, e.g. {"A[UNIMOD:21]": "S[UNIMOD:21]"}.
+
+        Prediction models do not support PTMs on decoy residues, so these candidates are predicted with the PTM on
+        the first possible site residue at the same position. The fragment ions are annotated with the decoy masses.
+        """
+        return {
+            f"{decoy}[UNIMOD:{unimod_id}]": f"{sites[0]}[UNIMOD:{unimod_id}]"
+            for unimod_id, sites in self.ptm_sites.items()
+            for decoy in self.ptm_decoy_residues
+            if sites
+        }
+
+    @property
     def ptm_unimod_id(self) -> int:
         """Get the unimod id of the PTM to localize if exactly one PTM is localized, 0 otherwise."""
         ptm_sites = self.ptm_sites
@@ -583,6 +617,16 @@ class Config:
                     f"Invalid residues {invalid_sites} for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions. "
                     "Residues must be given as one-letter amino acid codes."
                 )
+        decoys = self.ptm_decoy_residues
+        invalid_decoys = [r for r in decoys if r not in valid_residues]
+        if invalid_decoys:
+            raise ValueError(f"Invalid decoy residues {invalid_decoys} in ptmLocalizationOptions.")
+        overlapping = [r for r in decoys if any(r in sites for sites in ptm_sites.values())]
+        if overlapping:
+            raise ValueError(
+                f"Decoy residues {overlapping} can also carry a localized PTM. Decoy residues must be residues the "
+                "PTMs cannot be located on, e.g. A for phosphorylation."
+            )
 
     def _check_koina_model_availability(self):
         """Check if Koina model is available."""

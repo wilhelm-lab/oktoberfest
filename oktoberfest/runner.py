@@ -64,7 +64,8 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         tmt_label = config.tag
         # PTM site permutations are only generated if localization is requested, otherwise PTMs are kept as
         # localized by the search engine
-        ptm_unimods = config.ptm_sites
+        # including decoy residues used to estimate the false localization rate
+        ptm_unimods = config.ptm_permutation_sites
         ptm_sites = None
         ptm_model = config.ptm_model
         search_results = pp.convert_search(
@@ -1317,13 +1318,53 @@ def _best_localization(df_rescore: pd.DataFrame, localization: pd.DataFrame) -> 
     return df_rescore[df_rescore["SpecId"].isin(best["PSMId"])]
 
 
-def _add_localization_probabilities(result_dir: Path, localization: pd.DataFrame):
-    """Write the percolator results of result_dir with localization probabilities (*_with_prob.*psms.txt)."""
+def _estimate_localization_flr(psms: pd.DataFrame, config: Config, fdr: float = 0.01) -> pd.DataFrame:
+    """
+    Estimate the false localization rate (FLR) from localizations on decoy residues.
+
+    PSMs (q-value <= fdr) are ranked by loc_prob_delta, then loc_prob. Every PSM localized on a decoy residue (e.g.
+    phosphorylation on A) is a false localization. The number of false localizations on the possible site residues
+    is estimated from the decoy localizations, scaled by the ratio of possible site to decoy residues in the
+    peptides: FLR = (decoy localizations * n_site_residues / n_decoy_residues) / site localizations.
+    The FLR is reported as q-value (localization_flr) for every PSM up to the rank of that PSM.
+
+    :param psms: percolator PSMs with loc_prob and loc_prob_delta
+    :param config: the configuration object
+    :param fdr: PSM level q-value cutoff for the PSMs used to estimate the FLR
+    :return: psms with the columns decoy_site and localization_flr (NaN for PSMs above the fdr)
+    """
+    decoys = config.ptm_decoy_residues
+    ptm_ids = "|".join(str(unimod_id) for unimod_id in config.ptm_sites)
+    psms["decoy_site"] = psms["peptide"].str.contains(rf"[{''.join(decoys)}]\[UNIMOD:(?:{ptm_ids})\]", regex=True)
+    psms["localization_flr"] = np.nan
+    passing = psms[(psms["q-value"] <= fdr) & psms["loc_prob"].notna()]
+    if passing.empty:
+        return psms
+    sequences = passing["peptide"].str.replace(r"^[^.]*\.|\.[^.]*$|\[UNIMOD:\d+\]|-", "", regex=True)
+    site_residues = "".join(sorted({site for sites in config.ptm_sites.values() for site in sites}))
+    n_sites = sequences.str.count(f"[{site_residues}]").sum()
+    n_decoys = max(1, sequences.str.count(f"[{''.join(decoys)}]").sum())
+    ranked = passing.sort_values(["loc_prob_delta", "loc_prob"], ascending=False, kind="mergesort")
+    n_decoy_hits = ranked["decoy_site"].cumsum().values
+    n_site_hits = (~ranked["decoy_site"]).cumsum().values
+    flr = n_decoy_hits * (n_sites / n_decoys) / np.maximum(n_site_hits, 1)
+    psms.loc[ranked.index, "localization_flr"] = np.minimum.accumulate(flr[::-1])[::-1]
+    return psms
+
+
+def _add_localization_probabilities(result_dir: Path, localization: pd.DataFrame, config: Config):
+    """
+    Write the percolator results of result_dir with localization probabilities (*_with_prob.*psms.txt).
+
+    If decoy residues are used, the target PSMs also get the decoy_site flag and the estimated localization_flr.
+    """
     for psm_type in ["psms", "decoy.psms"]:
         psms = pd.read_csv(result_dir / f"rescore.percolator.{psm_type}.txt", sep="\t")
         psms = psms.merge(
             localization[["PSMId", "loc_prob", "loc_prob_delta", "possible_sites"]], on="PSMId", how="left"
         )
+        if config.ptm_decoy_residues and psm_type == "psms":
+            psms = _estimate_localization_flr(psms, config)
         psms.to_csv(result_dir / f"rescore.percolator_with_prob.{psm_type}.txt", sep="\t", index=False)
 
 
@@ -1387,7 +1428,7 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
                 df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains(site + r"\[")]
                 df_rescore_fil.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
                 re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-                _add_localization_probabilities(new_rescore_dir, localization)
+                _add_localization_probabilities(new_rescore_dir, localization, config)
 
         else:
             new_rescore_dir = fdr_dir / ("localize_phospho")
@@ -1395,7 +1436,7 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
 
             df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
             re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-            _add_localization_probabilities(new_rescore_dir, localization)
+            _add_localization_probabilities(new_rescore_dir, localization, config)
 
     else:
         df_rescore_all = df_rescore
@@ -1413,7 +1454,7 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
 
         df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
         re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-        _add_localization_probabilities(new_rescore_dir, localization)
+        _add_localization_probabilities(new_rescore_dir, localization, config)
 
 
 def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
