@@ -1255,7 +1255,17 @@ def _scan_numbers(psms: pd.DataFrame) -> list[int]:
     ]
 
 
-def _localization_probabilities(candidates: pd.DataFrame, train_dir: Path, score_dir: Path) -> pd.DataFrame:
+def _decoy_site_pattern(config: Config) -> Optional[str]:
+    """Regex matching PTMs localized on decoy residues, e.g. A[UNIMOD:21]; None if no decoy residues are used."""
+    if not config.ptm_decoy_residues:
+        return None
+    ptm_ids = "|".join(str(unimod_id) for unimod_id in config.ptm_sites)
+    return rf"[{''.join(config.ptm_decoy_residues)}]\[UNIMOD:(?:{ptm_ids})\]"
+
+
+def _localization_probabilities(
+    candidates: pd.DataFrame, train_dir: Path, score_dir: Path, decoy_pattern: Optional[str] = None
+) -> pd.DataFrame:
     """
     Score all localization candidates of each spectrum and compute localization probabilities.
 
@@ -1265,11 +1275,17 @@ def _localization_probabilities(candidates: pd.DataFrame, train_dir: Path, score
     instead of only the best one (score_dir). The localization probability of a candidate is its inverse posterior
     error probability (PEP) normalized over all candidates of the same spectrum: loc_prob = (1 / PEP) / sum(1 / PEP).
 
+    Decoy candidates (PTM on a decoy residue, matched by decoy_pattern) are passive: they are not used for training
+    and not for the localization probabilities, so the localization is the same as without decoys. They are only
+    scored to flag spectra in which a decoy candidate would have won (decoy_win), used to estimate the FLR.
+
     :param candidates: rescore features of all localization candidates (one row per candidate)
     :param train_dir: directory for the percolator training on the localization features
     :param score_dir: directory for scoring all candidates with the trained weights
-    :return: one row per candidate with PSMId, filename, ScanNr, loc_prob, loc_prob_delta (difference between the
-        best and second best candidate of the spectrum) and possible_sites (number of candidates of the spectrum)
+    :param decoy_pattern: regex matching decoy candidates in the Peptide column, None if no decoys are used
+    :return: one row per (non decoy) candidate with PSMId, filename, ScanNr, loc_prob, loc_prob_delta (difference
+        between the best and second best candidate of the spectrum), possible_sites (number of candidates of the
+        spectrum) and decoy_win (a decoy candidate scores higher than all candidates of the spectrum)
     """
     columns = (
         ["SpecId", "Label", "ScanNr", "filename", "ExpMass"]
@@ -1278,8 +1294,14 @@ def _localization_probabilities(candidates: pd.DataFrame, train_dir: Path, score
     )
     df_candidates = candidates[columns].copy()
 
+    is_decoy = (
+        df_candidates["Peptide"].str.contains(decoy_pattern, regex=True)
+        if decoy_pattern
+        else pd.Series(False, index=df_candidates.index)
+    )
+
     train_dir.mkdir(parents=True, exist_ok=True)
-    df_candidates.to_csv(train_dir / "rescore.tab", sep="\t", index=False)
+    df_candidates[~is_decoy].to_csv(train_dir / "rescore.tab", sep="\t", index=False)
     re.rescore_with_percolator(input_file=train_dir / "rescore.tab", output_folder=train_dir)
 
     score_dir.mkdir(parents=True, exist_ok=True)
@@ -1303,13 +1325,20 @@ def _localization_probabilities(candidates: pd.DataFrame, train_dir: Path, score
     psms["ScanNr"] = _scan_numbers(psms)
     psms["score_prob"] = 1 / psms["posterior_error_prob"].clip(lower=1e-15)
     spectrum = ["filename", "ScanNr"]
+    if decoy_pattern:
+        decoys = psms["peptide"].str.contains(decoy_pattern, regex=True)
+        best_decoy = psms[decoys].groupby(spectrum)["score_prob"].max().rename("best_decoy")
+        psms = psms[~decoys].join(best_decoy, on=spectrum)
+        psms["decoy_win"] = psms["best_decoy"].fillna(0) > psms.groupby(spectrum)["score_prob"].transform("max")
+    else:
+        psms["decoy_win"] = False
     psms["loc_prob"] = psms["score_prob"] / psms.groupby(spectrum)["score_prob"].transform("sum")
     psms = psms.sort_values(spectrum + ["loc_prob"], ascending=[True, True, False])
     loc_probs = psms.groupby(spectrum)["loc_prob"]
     second_best = loc_probs.transform(lambda probs: probs.iloc[1] if len(probs) > 1 else 0.0)
     psms["loc_prob_delta"] = loc_probs.transform("first") - second_best
     psms["possible_sites"] = loc_probs.transform("size")
-    return psms[["PSMId", "filename", "ScanNr", "loc_prob", "loc_prob_delta", "possible_sites"]]
+    return psms[["PSMId", "filename", "ScanNr", "loc_prob", "loc_prob_delta", "possible_sites", "decoy_win"]]
 
 
 def _best_localization(df_rescore: pd.DataFrame, localization: pd.DataFrame) -> pd.DataFrame:
@@ -1320,22 +1349,20 @@ def _best_localization(df_rescore: pd.DataFrame, localization: pd.DataFrame) -> 
 
 def _estimate_localization_flr(psms: pd.DataFrame, config: Config, fdr: float = 0.01) -> pd.DataFrame:
     """
-    Estimate the false localization rate (FLR) from localizations on decoy residues.
+    Estimate the false localization rate (FLR) from decoy residues.
 
-    PSMs (q-value <= fdr) are ranked by loc_prob_delta, then loc_prob. Every PSM localized on a decoy residue (e.g.
-    phosphorylation on A) is a false localization. The number of false localizations on the possible site residues
-    is estimated from the decoy localizations, scaled by the ratio of possible site to decoy residues in the
-    peptides: FLR = (decoy localizations * n_site_residues / n_decoy_residues) / site localizations.
+    PSMs (q-value <= fdr) are ranked by loc_prob_delta, then loc_prob. In every spectrum flagged as decoy_win, a
+    candidate with the PTM on a decoy residue (e.g. phosphorylation on A) scored higher than all real candidates. The
+    number of false localizations among the possible site residues is estimated from these decoy wins, scaled by the
+    ratio of possible site to decoy residues in the peptides:
+    FLR = decoy wins * n_site_residues / n_decoy_residues / localizations.
     The FLR is reported as q-value (localization_flr) for every PSM up to the rank of that PSM.
 
-    :param psms: percolator PSMs with loc_prob and loc_prob_delta
+    :param psms: percolator PSMs with loc_prob, loc_prob_delta and decoy_win
     :param config: the configuration object
     :param fdr: PSM level q-value cutoff for the PSMs used to estimate the FLR
-    :return: psms with the columns decoy_site and localization_flr (NaN for PSMs above the fdr)
+    :return: psms with the column localization_flr (NaN for PSMs above the fdr)
     """
-    decoys = config.ptm_decoy_residues
-    ptm_ids = "|".join(str(unimod_id) for unimod_id in config.ptm_sites)
-    psms["decoy_site"] = psms["peptide"].str.contains(rf"[{''.join(decoys)}]\[UNIMOD:(?:{ptm_ids})\]", regex=True)
     psms["localization_flr"] = np.nan
     passing = psms[(psms["q-value"] <= fdr) & psms["loc_prob"].notna()]
     if passing.empty:
@@ -1343,11 +1370,10 @@ def _estimate_localization_flr(psms: pd.DataFrame, config: Config, fdr: float = 
     sequences = passing["peptide"].str.replace(r"^[^.]*\.|\.[^.]*$|\[UNIMOD:\d+\]|-", "", regex=True)
     site_residues = "".join(sorted({site for sites in config.ptm_sites.values() for site in sites}))
     n_sites = sequences.str.count(f"[{site_residues}]").sum()
-    n_decoys = max(1, sequences.str.count(f"[{''.join(decoys)}]").sum())
+    n_decoys = max(1, sequences.str.count(f"[{''.join(config.ptm_decoy_residues)}]").sum())
     ranked = passing.sort_values(["loc_prob_delta", "loc_prob"], ascending=False, kind="mergesort")
-    n_decoy_hits = ranked["decoy_site"].cumsum().values
-    n_site_hits = (~ranked["decoy_site"]).cumsum().values
-    flr = n_decoy_hits * (n_sites / n_decoys) / np.maximum(n_site_hits, 1)
+    n_decoy_wins = ranked["decoy_win"].astype(bool).cumsum().values
+    flr = n_decoy_wins * (n_sites / n_decoys) / np.arange(1, len(ranked) + 1)
     psms.loc[ranked.index, "localization_flr"] = np.minimum.accumulate(flr[::-1])[::-1]
     return psms
 
@@ -1356,12 +1382,14 @@ def _add_localization_probabilities(result_dir: Path, localization: pd.DataFrame
     """
     Write the percolator results of result_dir with localization probabilities (*_with_prob.*psms.txt).
 
-    If decoy residues are used, the target PSMs also get the decoy_site flag and the estimated localization_flr.
+    If decoy residues are used, the target PSMs also get the estimated localization_flr.
     """
     for psm_type in ["psms", "decoy.psms"]:
         psms = pd.read_csv(result_dir / f"rescore.percolator.{psm_type}.txt", sep="\t")
         psms = psms.merge(
-            localization[["PSMId", "loc_prob", "loc_prob_delta", "possible_sites"]], on="PSMId", how="left"
+            localization[["PSMId", "loc_prob", "loc_prob_delta", "possible_sites", "decoy_win"]],
+            on="PSMId",
+            how="left",
         )
         if config.ptm_decoy_residues and psm_type == "psms":
             psms = _estimate_localization_flr(psms, config)
@@ -1418,7 +1446,9 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
         df_rescore = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:21")]
 
         # score all localization candidates and keep the most likely localization per spectrum
-        localization = _localization_probabilities(df_rescore, new_rescore_dir, fdr_dir / "localize_scores")
+        localization = _localization_probabilities(
+            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", _decoy_site_pattern(config)
+        )
         df_rescore = _best_localization(df_rescore, localization)
 
         if "P" in ptm_sites[unimod_id] or "H" in ptm_sites[unimod_id]:
@@ -1442,7 +1472,9 @@ def _ptm_localization_rescore(fdr_dir: Path, config: Config):
         df_rescore_all = df_rescore
         df_rescore = df_rescore[df_rescore["Peptide"].str.contains(ptm_pattern, regex=True)]
         # score all localization candidates and keep the most likely localization per spectrum
-        localization = _localization_probabilities(df_rescore, new_rescore_dir, fdr_dir / "localize_scores")
+        localization = _localization_probabilities(
+            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", _decoy_site_pattern(config)
+        )
         df_rescore_psms = _best_localization(df_rescore, localization)[["SpecId"]]
         # keep the localized PSMs of the PTMs and all PSMs without them
         df_rescore = df_rescore_all[
