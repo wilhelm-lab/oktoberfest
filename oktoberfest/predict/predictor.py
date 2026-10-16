@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import importlib
 import inspect
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -12,25 +10,20 @@ import pandas as pd
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
 from .alignment import _alignment, _prepare_alignment_df
+from .dlomix import DLOmixLocal
 from .koina import Koina
 from .utils import ZeroPredictor
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING or importlib.util.find_spec("dlomix"):
-    from .dlomix import DLomix
-
-    PredictionInterface = Union[DLomix, Koina, ZeroPredictor]
-else:
-    PredictionInterface = Union[Koina, ZeroPredictor]
-    DLomix = None
+PredictionInterface = Union[Koina, DLOmixLocal, ZeroPredictor]
 
 
 class Predictor:
-    """Abstracts common prediction operations away from their actual implementation via the DLomix or Koina interface."""
+    """Abstracts common prediction operations away from their actual implementation via the Koina interface."""
 
     def __init__(self, predictor: PredictionInterface, model_name: str):
-        """Initialize from Koina or DLomix instance."""
+        """Initialize from Koina instance."""
         self._predictor = predictor
         self.model_name = model_name
 
@@ -55,48 +48,47 @@ class Predictor:
 
     @classmethod
     def from_dlomix(
-        cls, model_type: str, model_path: Path, output_path: Path, batch_size: int, download: bool = False
+        cls,
+        model_name: str,
+        pipeline: Any,
     ) -> Predictor:
-        """Create DLomix predictor."""
+        """Create local DLOmix predictor using InferencePipeline."""
         return Predictor(
-            DLomix(
-                model_type=model_type,
-                model_path=model_path,
-                output_path=output_path,
-                batch_size=batch_size,
-                download=download,
-            ),
-            model_name=model_path.stem,
+            DLOmixLocal(pipeline=pipeline),
+            model_name=model_name,
         )
 
     @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
+        # Intensity model: either DLOmix or Koina, not both
+        if model_type == "intensity":
+            if config.models.get("dlomix_intensity"):
+                pipeline = config.dlomix_pipeline
+                if pipeline is None:
+                    raise ValueError(f"Failed to load DLOmix pipeline from {config.models['dlomix_intensity']}")
+                logger.info("Using DLOmix intensity model")
+                return Predictor.from_dlomix(model_name="DLOmix_Intensity", pipeline=pipeline)
+            elif model_type in config.models:
+                model_name = config.models[model_type]
+                logger.info(f"Using model {model_name} via Koina")
+                return Predictor.from_koina(
+                    model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
+                )
+            else:
+                raise ValueError("Must specify either 'dlomix_intensity' or 'intensity' model in config")
+
+        # Other models (iRT, etc.)
         model_name = config.models[model_type]
 
         if model_type == "irt" and model_name == "zero_irt":
             logger.info("Using zero predictions for iRT")
             return Predictor(ZeroPredictor(), "zero_iRT")
-
-        if model_type == "irt" or not config.predict_intensity_locally:
+        else:
             logger.info(f"Using model {model_name} via Koina")
             return Predictor.from_koina(
                 model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
             )
-
-        # TODO actually pass the output folder through kwargs
-        output_folder = config.output / "data/dlomix"
-        output_folder.mkdir(parents=True, exist_ok=True)
-
-        if config.download_baseline_intensity_predictor:
-            model_path = output_folder / "prosit_baseline_model.keras"
-            download = True
-        else:
-            model_path = Path(model_name)
-            download = False
-        return Predictor.from_dlomix(
-            model_type, model_path, output_folder, config.dlomix_inference_batch_size, download
-        )
 
     def _filter_kwargs(self, **kwargs) -> dict[str, Any]:
         """
@@ -116,7 +108,7 @@ class Predictor:
         Generate intensity predictions and add them to the provided data object.
 
         This function takes a Spectra object containing information about PSMs and predicts intensities. The configuration
-        of Koina/DLomix is set using the kwargs. The function either predicts everything at once by concatenating all
+        of Koina is set using the kwargs. The function either predicts everything at once by concatenating all
         prediction results into single numpy arrays, or returns a list of individual numpy arrays, following the
         indices provided by optionally provided chunks of the dataframe.
 
@@ -127,7 +119,7 @@ class Predictor:
             e.g. if padding should be avoided when predicting peptides of different length.
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
-        :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
+        :param kwargs: Additional keyword arguments forwarded to Koina::predict
 
         :Example:
 
@@ -146,8 +138,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> intensity_predictor.predict_intensities(data=library)
             >>> print(library.layers["pred_int"])
         """
@@ -158,6 +149,10 @@ class Predictor:
                 data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
             else:
                 intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
+
+                # Zero out invalid m/z
+                intensities["intensities"][intensities["mz"] <= 0] = 0.0
+
                 data.add_intensities(
                     intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
                 )
@@ -174,6 +169,19 @@ class Predictor:
                 )
             else:
                 chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+
+                # Zero out invalid m/z
+                # TODO: this can be done better way
+                new_intensities = []
+
+                for mz_arr, inten_arr in zip(
+                    chunked_intensities["mz"], chunked_intensities["intensities"], strict=True
+                ):
+                    inten_arr[mz_arr <= 0] = 0.0
+                    new_intensities.append(inten_arr)
+
+                chunked_intensities["intensities"] = new_intensities
+
                 data.add_list_of_predicted_intensities(
                     chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
                 )
@@ -183,11 +191,11 @@ class Predictor:
         Generate retention time predictions and add them to the provided data object.
 
         This function takes a Spectra object containing information about PSMs and predicts retention times. The
-        configuration of Koina/DLomix is set using the kwargs.
+        configuration of Koina is set using the kwargs.
 
         :param data: Spectra object containing the data required for prediction and to store the
             predictions in after retrieval from the server.
-        :param kwargs: Additional keyword arguments forwarded to Koina/DLomix::predict
+        :param kwargs: Additional keyword arguments forwarded to Koina
 
         :Example:
 
@@ -222,12 +230,12 @@ class Predictor:
         Retrieve and return predictions in one go.
 
         This function takes a Spectra object containing information about PSMs and predicts peptide properties. The
-        configuration of Koina/DLomix is set using the kwargs.
-        See the Koina or DLomix predict functions for details. TODO, link this properly.
+        configuration of Koina is set using the kwargs.
+        See the Koina function for details. TODO, link this properly.
 
         :param data: Spectra containing the data for the prediction.
         :param xl: crosslinked or linear peptide
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+        :param kwargs: Additional parameters that are forwarded to Koina
 
         :return: a dictionary with targets (keys) and predictions (values)
 
@@ -247,8 +255,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
@@ -262,11 +269,11 @@ class Predictor:
         Retrieve and return predictions in one go.
 
         This function takes a dataframe containing information about PSMs and predicts peptide properties. The
-        configuration of Koina/DLomix is set using the kwargs.
-        See the Koina or DLomix predict functions for details. TODO, link this properly.
+        configuration of Koina is set using the kwargs.
+        See the Koina function for details. TODO, link this properly.
 
         :param data: dataframe containing the data for the prediction.
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+        :param kwargs: Additional parameters that are forwarded to Koina
 
         :return: a dictionary with targets (keys) and predictions (values)
 
@@ -286,8 +293,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_at_once(data=library)
             >>> print(predictions)
         """
@@ -300,8 +306,8 @@ class Predictor:
         Retrieve and return predictions in chunks.
 
         This function takes a Spectra object containing information about PSMs and predicts peptide properties.The
-        configuration of Koina/DLomix is set using the kwargs.
-        See the Koina or DLomix predict functions for details. TODO, link this properly.
+        configuration of Koina is set using the kwargs.
+        See the Koina function for details. TODO, link this properly.
 
         :param data: Spectra object containing the data for the prediction.
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
@@ -309,7 +315,7 @@ class Predictor:
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
         :param xl: crosslinked or linear peptide
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+        :param kwargs: Additional parameters that are forwarded to Koina
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
             to the number of chunks provided.
@@ -332,8 +338,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
@@ -350,8 +355,8 @@ class Predictor:
         Retrieve and return predictions in chunks.
 
         This function takes a Spectra object containing information about PSMs and predicts peptide properties.The
-        configuration of Koina/DLomix is set using the kwargs.
-        See the Koina or DLomix predict functions for details. TODO, link this properly.
+        configuration of Koina is set using the kwargs.
+        See the Koina function for details. TODO, link this properly.
 
         :param data: Spectra object containing the data for the prediction.
         :param chunk_idx: The chunked indices of the provided dataframe. This is required in some cases,
@@ -359,7 +364,7 @@ class Predictor:
             For alphapept, this is required as padding is only performed within one batch, leading to
             different sizes of arrays between individual prediction batches that cannot be concatenated.
         :param xl: crosslinked or linear peptide
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+        :param kwargs: Additional parameters that are forwarded to Koina
 
         :return: a dictionary with targets (keys) and list of predictions (values) with a length equal
             to the number of chunks provided.
@@ -382,8 +387,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> predictions = intensity_predictor.predict_in_chunks(data=library, chunk_idx=idx)
             >>> print(predictions)
         """
@@ -412,7 +416,7 @@ class Predictor:
         :param ce_range: the min and max CE to be tested during calibration
         :param group_by_charge: if true, select the top 1000 spectra independently for each precursor charge
         :param xl: crosslinked or linear peptide
-        :param kwargs: Additional parameters that are forwarded to Koina/DLomix::predict
+        :param kwargs: Additional parameters that are forwarded to Koina
         :return: a spectra object containing the spectral angle for each tested CE
 
         :Example:
@@ -423,8 +427,10 @@ class Predictor:
             >>> from oktoberfest import predict as pr
             >>> import pandas as pd
             >>> import numpy as np
-            >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+            >>> # Required columns: RAW_FILE, SCAN_NUMBER, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE,
+            >>> # REVERSE and SCORE
             >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+            >>>                         "SCAN_NUMBER": [1,2],
             >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
             >>>                         "COLLISION_ENERGY": [30,35],
             >>>                         "PRECURSOR_CHARGE": [1,2],
@@ -440,8 +446,7 @@ class Predictor:
             >>> intensity_predictor = pr.Predictor.from_koina(
             >>>                         model_name="Prosit_2020_intensity_HCD",
             >>>                         server_url="koina.wilhelmlab.org:443",
-            >>>                         ssl=True,
-            >>>                         targets=["intensities", "annotation"])
+            >>>                         ssl=True)
             >>> alignment_library = intensity_predictor.ce_calibration(library=library, ce_range=(15,30), group_by_charge=False)
             >>> print(alignment_library)
         """

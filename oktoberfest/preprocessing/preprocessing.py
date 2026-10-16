@@ -15,15 +15,21 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, Sage, Scout, Xisearch
+from spectrum_io.search_result import (
+    Mascot,
+    MaxQuant,
+    MSAmanda,
+    MSFragger,
+    OpenMS,
+    Sage,
+    Scout,
+    Xisearch,
+)
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
-
-
-# SpectralLibrary
 
 
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
@@ -267,6 +273,12 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
             "max_length": 35,
             "max_charge": 4,
         }
+    elif "local" in model.lower():
+        filter_kwargs = {
+            "min_length": 6,
+            "max_length": 30,
+            "max_charge": 6,
+        }
     else:
         raise ValueError(f"The model {model} is not known.")
 
@@ -340,8 +352,8 @@ def filter_xl_peptides(peptides: pd.DataFrame, min_length: int, max_length: int,
         & (df["PEPTIDE_LENGTH_A"] >= min_length)
         & (df["PEPTIDE_LENGTH_B"] >= min_length)
         & (df["PRECURSOR_CHARGE"] <= max_charge)
-        & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
-        & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]"))
+        & (df["MODIFIED_SEQUENCE_A"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]|\[UNIMOD:1898\]"))
+        & (df["MODIFIED_SEQUENCE_B"].str.contains(r"\[UNIMOD\:1896\]|\[UNIMOD\:1884\]|\[UNIMOD:1898\]"))
     )
 
     return peptides[peptide_filter]
@@ -435,9 +447,9 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
-    ptm_unimod_id: Optional[int] = 0,
+    ptm_unimod_id: Optional[Union[int, dict[int, list[str]]]] = 0,
     ptm_sites: Optional[list] = None,
-    ptm_model: Optional[bool] = False
+    ptm_model: Optional[bool] = False,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -456,8 +468,10 @@ def convert_search(
         static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
-    :param ptm_unimod_id: unimod id used for site localization
-    :param ptm_sites: possible sites that the ptm can exist on
+    :param ptm_unimod_id: unimod id used for site localization, or a mapping of unimod id to possible residues to
+        localize several PTMs. 0 or an empty mapping disables the generation of site permutations.
+    :param ptm_sites: possible sites that the ptm can exist on, if a single unimod id is given
+    :param ptm_model: whether a PTM-aware intensity model is used
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -532,18 +546,17 @@ def convert_search(
     """
     search_engine = search_engine.lower()
     search_result: Any
+    xl = False
     if search_engine == "maxquant":
         search_result = MaxQuant
-        xl = False
     elif search_engine == "msfragger":
         search_result = MSFragger
-        xl = False
     elif search_engine == "mascot":
         search_result = Mascot
-        xl = False
     elif search_engine == "sage":
         search_result = Sage
-        xl = False
+    elif search_engine == "openms":
+        search_result = OpenMS
     elif search_engine == "xisearch":
         search_result = Xisearch
         xl = True
@@ -552,7 +565,6 @@ def convert_search(
         xl = True
     elif search_engine == "msamanda":
         search_result = MSAmanda
-        xl = False
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
@@ -563,7 +575,7 @@ def convert_search(
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
         xl=xl,
-        ptm_model= ptm_model
+        ptm_model=ptm_model,
     )
 
 
@@ -907,10 +919,13 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
 def annotate_spectral_library(
     psms: pd.DataFrame,
     fragmentation_method: str = "HCD",
+    p_window: Optional[float] = 1.2,
     mass_tol: Optional[float] = None,
     unit_mass_tol: Optional[str] = None,
     custom_mods: Optional[dict[str, float]] = None,
     annotate_neutral_loss: Optional[bool] = False,
+    multifrag: Optional[bool] = False,
+    featured_ions: Optional[list[str]] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -927,8 +942,11 @@ def annotate_spectral_library(
     :param fragmentation_method: fragmentation method that was used
     :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
     :param annotate_neutral_loss: flag to indicate whether to annotate neutral loss peaks or not
+    :param multifrag: flag to indicate whether to annotate multifrag peaks or not
+    :param featured_ions: list of ions to be annotated
+    :param p_window: window size for precursor peak removal
 
-    :return: Spectra object containing the annotated b and y ion peaks including metadata
+    :return: Spectra object containing the annotated featured sion peaks including metadata
 
     :Example:
 
@@ -948,17 +966,26 @@ def annotate_spectral_library(
         >>> print(library)
     """
     logger.info("Annotating spectra...")
+    if multifrag:
+        ion_df = c.ION_DIC
+        ion_types = list(np.sort(ion_df["type"].unique()))
+        var_df = ion_df.copy()
+    else:
+        ion_df = None
+        ion_types = retrieve_ion_types(fragmentation_method)
+        var_df = Spectra._gen_vars_df(ion_types)
+
     df_annotated_spectra = annotate_spectra(
         un_annot_spectra=psms,
         mass_tolerance=mass_tol,
         unit_mass_tolerance=unit_mass_tol,
         fragmentation_method=fragmentation_method,
+        multifrag=multifrag,
+        p_window=p_window,
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
+        featured_ions=featured_ions,
     )
-
-    ion_types = retrieve_ion_types(fragmentation_method)
-    var_df = Spectra._gen_vars_df(ion_types)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
@@ -968,6 +995,7 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+    aspec.add_column(df_annotated_spectra["MOST_INTESE_PEAK"].values, "MOST_INTESE_PEAK")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")
@@ -976,7 +1004,7 @@ def annotate_spectral_library(
 
 
 def annotate_spectral_library_xl(
-    psms: pd.DataFrame, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
+    psms: pd.DataFrame, cms2: bool = False, mass_tol: Optional[float] = None, unit_mass_tol: Optional[str] = None
 ):
     """
     Annotate spectral library with peaks and mass for cross-linked peptides.
@@ -986,13 +1014,14 @@ def annotate_spectral_library_xl(
     The additional information is added to the provided spectral library.
 
     :param psms: Spectral library to be annotated.
+    :param cms2: cleavable or non-cleavable crosslinker.
     :param mass_tol: The mass tolerance allowed for retaining peaks
     :param unit_mass_tol: The unit in which the mass tolerance is given
     :return: Spectra object containing the annotated b and y ion peaks including metadata
     """
     logger.info("Annotating spectra...")
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(xl=True))
+    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(cms2=cms2))
     aspec.add_intensities(
         np.stack(df_annotated_spectra["INTENSITIES_A"]), aspec.var_names.values[None, ...], FragmentType.RAW_A
     )
@@ -1134,3 +1163,56 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
     d_dir = Path(d_dir)
     output_file = Path(output_file)
     convert_d_hdf(input_path=d_dir, output_path=output_file)
+
+
+def _format_modified_sequence_for_parquet(modified_sequence: str) -> str:
+    """Convert modified sequences to explicit N/C-terminal marker format."""
+    sequence = str(modified_sequence)
+    if sequence.startswith("_") and sequence.endswith("_"):
+        sequence = sequence[1:-1]
+
+    if not re.match(r"^(\[\]|(\[UNIMOD:\d+\]))-", sequence):
+        sequence = f"[]-{sequence}"
+
+    if not re.search(r"-(\[\]|(\[UNIMOD:\d+\]))$", sequence):
+        sequence = f"{sequence}-[]"
+
+    return sequence
+
+
+def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[str, Path]):
+    """Convert AnnData from hdf5 to parquet required for DLOmix."""
+    library = Spectra.from_hdf5(hdf5_path)
+    df = pd.DataFrame()
+
+    optional_columns = {
+        "raw_file": lambda: library.obs["RAW_FILE"].astype(str),
+        "scan_number": lambda: library.obs["SCAN_NUMBER"].astype("int64"),
+        "method_nbr": lambda: library.obs["FRAGMENTATION"].map(c.FRAGMENTATION_ENCODING).astype("int64"),
+        "precursor_charge_onehot": lambda: list(
+            np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[library.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        ),
+        "collision_energy_aligned_normed": lambda: library.obs["COLLISION_ENERGY"].astype("float64") / 100.0,
+    }
+
+    for column_name, column_factory in optional_columns.items():
+        try:
+            df[column_name] = column_factory()
+        except (KeyError, ValueError, IndexError):
+            logger.warning(f"Optional column {column_name!r} could not be derived, excluded from output")
+
+    intensities = library.to_df(layer=library._resolve_layer_name(FragmentType.RAW))
+    intensities[intensities == 0] = -1
+    intensities[intensities == c.EPSILON] = 0
+    df["intensities_raw"] = list(intensities.to_numpy())
+
+    mz_layer = library._resolve_layer_name(FragmentType.MZ)
+    if mz_layer in library.layers:
+        df["mz_raw"] = list(library.to_df(layer=mz_layer).to_numpy())
+
+    if "FRAGMENTATION" in library.obs:
+        df["package"] = library.obs["FRAGMENTATION"].astype(str)
+
+    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet).values
+
+    df.to_parquet(output_file, index=False)

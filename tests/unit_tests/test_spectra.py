@@ -7,9 +7,14 @@ import numpy as np
 import pandas as pd
 import spectrum_fundamentals.constants as c
 from anndata.tests.helpers import assert_equal
-from spectrum_fundamentals.fragments import format_fragment_ion_annotation, generate_fragment_ion_annotations
+from spectrum_fundamentals.fragments import (
+    format_fragment_ion_annotation,
+    generate_fragment_ion_annotations,
+)
 
 from oktoberfest.data.spectra import Spectra
+
+from .. import DATA_DIR
 
 
 class TestSpectra(unittest.TestCase):
@@ -17,10 +22,10 @@ class TestSpectra(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):  # noqa: D102
-        cls.mini_spectra = Spectra.from_hdf5(Path(__file__).parent / "data/spectra/test_spectra.hdf5")
+        cls.mini_spectra = Spectra.from_hdf5(DATA_DIR / "spectra" / "test_spectra.hdf5")
         cls.temp_dir = Path(tempfile.mkdtemp())
 
-        df = pd.read_csv(Path(__file__).parent / "data/spectra/df_for_parquet.csv", sep="\t", index_col="Unnamed: 0")
+        df = pd.read_csv(DATA_DIR / "spectra" / "df_for_parquet.csv", sep="\t", index_col="Unnamed: 0")
         df = df.astype({"method_nbr": "category", "modified_sequence": "category"})
         df["intensities_raw"] = df["intensities_raw"].map(
             lambda intens: np.fromstring(

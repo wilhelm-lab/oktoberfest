@@ -14,7 +14,7 @@ class TestCustomMods:
     def test_mods_maxquant(self, exp_data):
         """Test of custom modifications in Maxquant results."""
         config = Config()
-        config.read(Path(__file__).parent / "configs/mods.json")
+        config.read(Path(__file__).parents[1] / "configs/mods.json")
 
         msms_output = config.output / "msms"
         msms_output.mkdir(exist_ok=True, parents=True)
@@ -33,7 +33,7 @@ class TestCustomMods:
     def test_no_mods_maxquant(self, exp_data_no_mods):
         """Test of no custom modifications in Maxquant results."""
         config = Config()
-        config.read(Path(__file__).parent / "configs/no_custom_mods.json")
+        config.read(Path(__file__).parents[1] / "configs/no_custom_mods.json")
 
         msms_output = config.output / "msms"
         msms_output.mkdir(exist_ok=True, parents=True)

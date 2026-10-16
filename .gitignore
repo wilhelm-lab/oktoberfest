@@ -51,7 +51,6 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-./unit_tests/data/quantification
 
 # Translations
 *.mo
@@ -107,6 +106,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.global
 .venv
 env/
 venv/
@@ -130,6 +130,9 @@ venv.bak/
 dmypy.json
 .pytype/
 
+# ruff
+.ruff_cache/
+
 # Pyre type checker
 .pyre/
 
@@ -147,10 +150,27 @@ hash.file
 !tutorials/*.ipynb
 
 # example data
-data/
+/data/
+
+# Test-generated output files (not test fixtures)
+tests/data/**/rescore*.tab
+tests/data/**/rescore*.txt
+tests/data/**/evidence.txt
+tests/**/out/**
+tests/**/digest_out/**
 
 # Machine learning artifacts
 wandb/
 
 # doctest IO files
 tests/doctests/
+
+# vscode settings
+.vscode/
+
+# .DS_Store files
+.DS_Store
+
+CLAUDE.md
+.specs
+webui/frontend/node_modules/

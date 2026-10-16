@@ -4,10 +4,9 @@ from rich import traceback
 
 from oktoberfest import __version__, runner
 
-"""triqler.__main__: executed when bootstrap directory is called as script."""
+"""oktoberfest.__main__: executed when bootstrap directory is called as script."""
 
 """Command-line interface."""
-# import click
 
 
 def _parse_args():

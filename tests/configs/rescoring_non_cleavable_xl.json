@@ -1,0 +1,27 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "output": "../data/xl/non-cleavable/out",
+    "inputs": {
+        "search_results": "../data/xl/non-cleavable/inputs/XLpeplib_Beveridge_QEx-HFX_DSS_R1_msms.csv",
+        "search_results_type": "Xisearch",
+        "spectra": "../data/xl/non-cleavable/inputs/XLpeplib_Beveridge_QEx-HFX_DSS_R1.mzML",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2024_intensity_XL_NMS2",
+        "irt": ""
+    },
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "numThreads": 1,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "ssl": true,
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "ce_alignment_options": {
+        "ce_range": [19, 50],
+        "use_ransac_model": false
+    }
+}

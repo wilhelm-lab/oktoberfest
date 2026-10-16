@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Union
 
@@ -5,10 +6,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import spectrum_utils.plot as sup
+import spectrum_utils.spectrum as sus
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.gridspec import GridSpec
 from scipy import stats
+from spectrum_io.raw import ThermoRaw
+
+from oktoberfest.data.spectra import Spectra
+from oktoberfest.utils import Config
 
 # Set the default fontsize and linewidth
-plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
+plt.rcParams.update(
+    {
+        "font.size": 14,
+        "axes.linewidth": 1.5,
+        "xtick.major.width": 1.5,
+        "ytick.major.width": 1.5,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "font.family": "sans_serif",
+    }
+)
 
 
 def _check_columns(df: pd.DataFrame):
@@ -65,7 +84,7 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
         >>> pl.plot_score_distribution(target=target_df,
         >>>                             decoy=decoy_df,
         >>>                             level="psm",
-        >>>                             filename="./tests/doctests/output/score_distribution_plot.svg")
+        >>>                             filename="./tests/doctests/output/score_distribution_plot.pdf")
     """
     score_col, _, _, _ = _check_columns(target)
 
@@ -130,7 +149,7 @@ def joint_plot(
         >>>                 andromeda_target=andromeda_target_df,
         >>>                 andromeda_decoy=andromeda_decoy_df,
         >>>                 level="psm",
-        >>>                 filename="./tests/doctests/output/joint_plot.svg")
+        >>>                 filename="./tests/doctests/output/joint_plot.pdf")
     """
     score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
@@ -183,7 +202,13 @@ def joint_plot(
     plt.close()
 
 
-def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, level: str, filename: Union[str, Path]):
+def plot_gain_loss(
+    prosit_target: pd.DataFrame,
+    andromeda_target: pd.DataFrame,
+    level: str,
+    filename: Union[str, Path],
+    fdr_cutoff: float = 0.01,
+):
     """
     Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.
 
@@ -213,7 +238,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
         >>> pl.plot_gain_loss(prosit_target=prosit_df,
         >>>                     andromeda_target=andromeda_df,
         >>>                     level="psm",
-        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.svg")
+        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.pdf")
     """
     _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
@@ -224,8 +249,8 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     else:
         raise ValueError(f"level can only be peptide or psm. Given: {level}")
 
-    andromeda_target = andromeda_target[andromeda_target[qval_col] < 0.01]
-    prosit_target = prosit_target[prosit_target[qval_col] < 0.01]
+    andromeda_target = andromeda_target[andromeda_target[qval_col] < fdr_cutoff]
+    prosit_target = prosit_target[prosit_target[qval_col] < fdr_cutoff]
     merged_df = prosit_target.merge(andromeda_target, how="inner", on=join_col)
 
     shared = len(merged_df.index)
@@ -238,7 +263,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax2 = ax.bar(labels, gained, width=0.5, bottom=shared, color="#007D3E")
     ax3 = ax.bar(labels, -lost, color="#E17224", width=0.5)
 
-    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, [shared], [gained], [lost]):
+    for r1, r2, r3, v1, v2, v3 in zip(ax1, ax2, ax3, [shared], [gained], [lost], strict=True):
         h1 = r1.get_height()
         h2 = r2.get_height()
         plt.text(
@@ -274,7 +299,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel(f"number of target {level.lower()}s below 1% FDR")
+    ax.set_ylabel(f"number of target {level.lower()}s below " + str(fdr_cutoff * 100) + "% FDR")
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="black")
     ax.tick_params(axis="y", which="major")
@@ -303,7 +328,7 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> import pandas as pd
         >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
         >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
-        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.svg")
+        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.pdf")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.scatterplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax)
@@ -328,7 +353,7 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> import pandas as pd
         >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
         >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
-        >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.svg")
+        >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.pdf")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
@@ -436,7 +461,7 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
         >>> pl.plot_sa_distribution(prosit_df=prosit_df,
         >>>                         target_df=target_df,
         >>>                         decoy_df=decoy_df,
-        >>>                         filename="./tests/doctests/output/sa_distribution_plot.svg")
+        >>>                         filename="./tests/doctests/output/sa_distribution_plot.pdf")
     """
     _, _, _, psm_col = _check_columns(target_df)
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
@@ -452,13 +477,129 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
-def plot_all(data_dir: Path):
+def plot_mirror_spectrum(
+    spec_pred: Spectra,
+    mzml: pd.DataFrame,
+    raw_file: str,
+    scan_number: int,
+    config: Config,
+    prosit_df: pd.DataFrame,
+    target_df: pd.DataFrame,
+    decoy_df: pd.DataFrame,
+    pdf: PdfPages,
+):
+    """
+    Generate a mirror plot comparing an experimental and predicted MS/MS spectrum.
+
+    :param spec_pred: Spectra object containing predicted MS/MS spectra
+    :param mzml: ThermoRaw object containing experimental MS/MS spectra from an mzML file
+    :param raw_file: The name of the raw file being processed
+    :param scan_number: The scan number of the spectrum to be plotted
+    :param config: the configuration object
+    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
+    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param pdf: PDF file object for saving mirror plots
+    """
+    score_col, _, _, spec_col = _check_columns(target_df)
+    target_df["target"] = True
+    decoy_df["target"] = False
+    concat_target_decoy = pd.concat([target_df, decoy_df])
+    if spec_col == "PSMId":
+        concat_target_decoy["ScanNr"] = concat_target_decoy["PSMId"].str.split("-").str[1].astype(int)
+    filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
+    if filtered_obs.empty:
+        print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
+        return
+    obs = filtered_obs.iloc[0]
+
+    mod_sequence = obs["MODIFIED_SEQUENCE"].replace("[]-", "").replace("-[]", "")
+    charge = obs["PRECURSOR_CHARGE"]
+    mass = obs["MASS"]
+    mass_analyzer = obs["MASS_ANALYZER"]
+    fragm = obs["FRAGMENTATION"]
+    raw_file = obs["RAW_FILE"]
+    rt = obs["RETENTION_TIME"].round(2)
+    ce = obs["COLLISION_ENERGY"]
+    model = config.models["intensity"]
+    ion_types = "".join(i for i in config.ion_types if i.islower())
+    abs_rt_diff = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
+        "abs_rt_diff"
+    ].iloc[0]
+    sa = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)]["spectral_angle"].iloc[0]
+    ce = prosit_df[(prosit_df["ScanNr"] == scan_number) & (prosit_df["filename"] == raw_file)][
+        "collision_energy_aligned"
+    ].iloc[0]
+    score = concat_target_decoy[
+        (concat_target_decoy["ScanNr"] == scan_number) & (concat_target_decoy["filename"] == raw_file)
+    ][score_col].iloc[0]
+    fragment_tol_mass = config.mass_tolerance
+    fragment_tol_mode = config.unit_mass_tolerance
+
+    # Get experimental spectrum
+    mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
+    intensity_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["INTENSITIES"].iloc[0])
+
+    top_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_exp, intensity=intensity_exp)
+    top_spectrum = top_spectrum.annotate_proforma(
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types=ion_types, max_ion_charge=charge
+    )
+
+    # Get predicted spectrum
+    idx = spec_pred.obs.index.get_loc(spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number].index[0])
+    mz_pred = spec_pred.layers["mz"].toarray()[idx]
+    intensity_pred = spec_pred.layers["pred_int"].toarray()[idx]
+
+    bot_spectrum = sus.MsmsSpectrum("", mass, charge, mz=mz_pred, intensity=intensity_pred)
+    bot_spectrum = bot_spectrum.annotate_proforma(
+        mod_sequence, fragment_tol_mass, fragment_tol_mode, ion_types=ion_types, max_ion_charge=charge
+    )
+    fig = plt.figure(figsize=(12, 7))  # Adjust total figure size
+
+    gs = GridSpec(2, 2, width_ratios=[2, 1], wspace=0.2)
+
+    ax_mirror = fig.add_subplot(gs[:, 0])
+    ax_kde = fig.add_subplot(gs[3])
+    ax_rt = fig.add_subplot(gs[1])
+
+    # Mirror spectrum plot
+    ax_mirror.set_xlabel("m/z")
+    title = f"Modified sequence: {mod_sequence}, charge: {charge}, retention time: {rt}"
+    title_2 = f"Fragmentation: {fragm}, mass analyzer: {mass_analyzer}, collision energy aligned: {ce}"
+    title_top = f"Top: experimental, raw file: {raw_file}, scan number: {scan_number}"
+    title_bottom = f"Bottom: prediction, model: {model}, spectral angle: {sa:.2f}"
+    ax_mirror.set_title(f"{title}\n{title_2}\n{title_top}\n{title_bottom}", fontsize=10)
+    sup.mirror(top_spectrum, bot_spectrum, ax=ax_mirror)
+
+    # KDE score plot
+    sns.kdeplot(data=concat_target_decoy, x=score_col, hue="target", ax=ax_kde)
+
+    ax_kde.axvline(score, color="black", linestyle="--", linewidth=1, label=f"score: {score:.2f}")
+    ax_kde.legend(loc="upper right", fontsize=8)
+    ax_kde.set_xlabel(score_col, fontsize=10)
+    ax_kde.set_ylabel("Density", fontsize=10)
+
+    # KDE abs rt diff plot
+    sns.kdeplot(data=prosit_df, x="abs_rt_diff", ax=ax_rt)
+    ax_rt.axvline(abs_rt_diff, color="black", linestyle="--", linewidth=1, label=f"abs rt diff: {abs_rt_diff:.2f}")
+    ax_rt.legend(loc="upper right", fontsize=8)
+    ax_rt.set_xlabel("abs rt diff", fontsize=10)
+    ax_rt.set_ylabel("Density", fontsize=10)
+
+    pdf.savefig(fig)
+
+
+def plot_all(data_dir: Path, config: Config, fdr_cutoff: float = 0.01):
     """
     Generate all plots after a rescoring run.
 
-    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot.
+    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
+    :param config: the configuration object
+    :param fdr_cutoff: the FDR cutoff used for the gain / loss plots
     """
-    fdr_method = data_dir.stem
+    fdr_dir = data_dir.parent if data_dir.stem == "mod_fdr" else data_dir
+    fdr_method = fdr_dir.name
+
     prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
     prosit_pep_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.peptides.txt", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(data_dir / f"rescore.{fdr_method}.decoy.peptides.txt", delimiter="\t")
@@ -474,31 +615,31 @@ def plot_all(data_dir: Path):
         prosit_pep_target,
         prosit_pep_decoy,
         "peptide",
-        data_dir / "rescore_target_vs_decoys_peptide_bins.svg",
+        data_dir / "rescore_target_vs_decoys_peptide_bins.pdf",
     )
     plot_score_distribution(
         prosit_psms_target,
         prosit_psms_decoy,
         "psm",
-        data_dir / "rescore_target_vs_decoys_psm_bins.svg",
+        data_dir / "rescore_target_vs_decoys_psm_bins.pdf",
     )
     plot_score_distribution(
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        data_dir / "original_target_vs_decoys_peptide_bins.svg",
+        data_dir / "original_target_vs_decoys_peptide_bins.pdf",
     )
     plot_score_distribution(
         andromeda_psms_target,
         andromeda_psms_decoy,
         "psm",
-        data_dir / "original_target_vs_decoys_psm_bins.svg",
+        data_dir / "original_target_vs_decoys_psm_bins.pdf",
     )
     plot_sa_distribution(
         prosit_df,
         prosit_psms_target,
         prosit_psms_decoy,
-        data_dir / "target_vs_decoys_sa_distribution.svg",
+        data_dir / "target_vs_decoys_sa_distribution.pdf",
     )
     joint_plot(
         prosit_pep_target,
@@ -506,7 +647,7 @@ def plot_all(data_dir: Path):
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        data_dir / "rescore_original_joint_plot_peptide.svg",
+        data_dir / "rescore_original_joint_plot_peptide.pdf",
     )
     joint_plot(
         prosit_psms_target,
@@ -514,13 +655,53 @@ def plot_all(data_dir: Path):
         andromeda_psms_target,
         andromeda_psms_decoy,
         "psm",
-        data_dir / "rescore_original_joint_plot_psm.svg",
+        data_dir / "rescore_original_joint_plot_psm.pdf",
     )
 
-    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
-    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
+    plot_gain_loss(
+        prosit_pep_target,
+        andromeda_pep_target,
+        "peptide",
+        data_dir / ("peptide_" + str(fdr_cutoff * 100) + "%_FDR.pdf"),
+        fdr_cutoff=fdr_cutoff,
+    )
+    plot_gain_loss(
+        prosit_psms_target,
+        andromeda_psms_target,
+        "psm",
+        data_dir / ("psm_" + str(fdr_cutoff * 100) + "%_FDR.pdf"),
+        fdr_cutoff=fdr_cutoff,
+    )
 
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
+    if {"RT", "iRT", "pred_RT"}.issubset(prosit_df.columns):
+        plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.pdf")
+
+    base_mzml_path = os.path.abspath(os.path.join(fdr_dir, "../../spectra"))
+    base_hdf5_path = os.path.abspath(os.path.join(fdr_dir, "../../data"))
+    mirror_plots_dict = config.mirror_plots
+
+    pdf_path = data_dir / "mirror_plots.pdf"
+
+    with PdfPages(pdf_path) as pdf:
+        for raw_file, scan_numbers in mirror_plots_dict.items():
+            mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+            hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
+
+            mzml = ThermoRaw.read_mzml(source=mzml_path)
+            spec_pred = Spectra.from_hdf5(hdf5_path)
+
+            for scan_number in scan_numbers:
+                plot_mirror_spectrum(
+                    spec_pred,
+                    mzml,
+                    raw_file,
+                    scan_number,
+                    config,
+                    prosit_df,
+                    prosit_psms_target,
+                    prosit_psms_decoy,
+                    pdf,
+                )
 
 
 def plot_ce_ransac_model(

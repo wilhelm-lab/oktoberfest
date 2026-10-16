@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import mokapot
 import numpy as np
@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
+from ..utils import JobPool
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -26,9 +27,12 @@ def generate_features(
     additional_columns: str | list | None = None,
     all_features: bool = False,
     xl: bool = False,
+    cms2: bool = False,
     regression_method: str = "spline",
     add_neutral_loss_features: bool = False,
     remove_miss_cleavage_features: bool = False,
+    task: str = "default",
+    featured_ions: Optional[list] = None,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -42,9 +46,12 @@ def generate_features(
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
     :param xl: crosslinked or linear peptide
+    :param cms2: cleavable or non-cleavable crosslinker
     :param regression_method: The regression method to use for iRT alignment
     :param add_neutral_loss_features: Flag to indicate whether to add neutral loss features to percolator or not
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
+    :param task: Flag to indicate whether to use multifrag features or not
+    :param featured_ions: The ion series to use for calculating percolator features
 
     :Example:
 
@@ -85,56 +92,68 @@ def generate_features(
         >>>                         regression_method="spline",
         >>>                         output_file="./tests/doctests/output/original.tab")
     """
-    if xl:
-        pred_a = library.get_matrix(FragmentType.PRED_A)
-        pred_b = library.get_matrix(FragmentType.PRED_B)
-        raw_a = library.get_matrix(FragmentType.RAW_A)
-        raw_b = library.get_matrix(FragmentType.RAW_B)
-        mz_a = library.get_matrix(FragmentType.MZ_A)
-        mz_b = library.get_matrix(FragmentType.MZ_B)
-        perc_features = Percolator(
-            metadata=library.get_meta_data().reset_index(drop=True),
-            pred_intensities=sp.hstack([pred_a, pred_b]),
-            true_intensities=sp.hstack([raw_a, raw_b]),
-            mz=sp.hstack([mz_a, mz_b]),
-            input_type=search_type,
-            all_features_flag=all_features,
-            regression_method=regression_method,
-            neutral_loss_flag=add_neutral_loss_features,
-            drop_miss_cleavage_flag=remove_miss_cleavage_features,
-        )
+    meta = library.get_meta_data().reset_index(drop=True)
+
+    if search_type == "rescore" and xl:
+        pred = sp.hstack([library.get_matrix(FragmentType.PRED_A), library.get_matrix(FragmentType.PRED_B)])
+        raw = sp.hstack([library.get_matrix(FragmentType.RAW_A), library.get_matrix(FragmentType.RAW_B)])
+        mz = sp.hstack([library.get_matrix(FragmentType.MZ_A), library.get_matrix(FragmentType.MZ_B)])
+    elif search_type == "rescore":
+        pred = library.get_matrix(FragmentType.PRED)
+        raw = library.get_matrix(FragmentType.RAW)
+        mz = library.get_matrix(FragmentType.MZ)
     else:
-        perc_features = Percolator(
-            metadata=library.get_meta_data().reset_index(drop=True),
-            pred_intensities=library.get_matrix(FragmentType.PRED),
-            true_intensities=library.get_matrix(FragmentType.RAW),
-            mz=library.get_matrix(FragmentType.MZ),
-            input_type=search_type,
-            additional_columns=additional_columns,
-            all_features_flag=all_features,
-            regression_method=regression_method,
-            neutral_loss_flag=add_neutral_loss_features,
-            drop_miss_cleavage_flag=remove_miss_cleavage_features,
-        )
+        pred = None
+        raw = None
+        mz = None
+
+    perc_features = Percolator(
+        metadata=meta,
+        pred_intensities=pred,
+        true_intensities=raw,
+        mz=mz,
+        input_type=search_type,
+        all_features_flag=all_features,
+        regression_method=regression_method,
+        neutral_loss_flag=add_neutral_loss_features,
+        drop_miss_cleavage_flag=remove_miss_cleavage_features,
+        cms2=cms2,
+        additional_columns=additional_columns,
+        task=task,
+        featured_ions=featured_ions,
+        output_path=output_file,
+    )
+
     perc_features.calc()
     perc_features.write_to_file(str(output_file))
+
+
+def _fillna_tab_file(tab_file: Path, include_header: bool) -> bytes:
+    """Read a tab file, fill NaN values with 0, and return it serialized as tab-separated bytes."""
+    df = pd.read_csv(tab_file, sep="\t")
+    df = df.fillna(0)
+    content = df.to_csv(sep="\t", index=False, header=include_header).encode()
+    tab_file.unlink()
+    return content
 
 
 def merge_input(
     tab_files: list[Path],
     output_file: str | Path,
+    num_threads: int = 1,
 ):
     r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
 
-    The function takes a list of tab files and concatenates them before writing a combined tab file back to
-    the chosen output file location.
+    The function reads each tab file once, fills NaN values with 0 (optionally in parallel across files),
+    and writes the concatenated result directly to the chosen output file location.
 
     Fastest solution according to:
     https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
 
     :param tab_files: list of paths pointing to the individual tab files to be concatenated
     :param output_file: path to the generated output tab file
+    :param num_threads: number of threads used in parallel for filling NaN values per tab file
 
     :Example:
 
@@ -192,36 +211,27 @@ def merge_input(
         >>> filelist = [tabfile1,tabfile2]
         >>> re.merge_input(tab_files=filelist, output_file="./tests/doctests/output/merged_rescore.tab")
     """
+    if num_threads > 1:
+        fillna_pool = JobPool(processes=num_threads)
+        for i, tab_file in enumerate(tab_files):
+            fillna_pool.apply_async(_fillna_tab_file, [tab_file, i == 0])
+        contents = fillna_pool.check_pool()
+    else:
+        contents = [_fillna_tab_file(tab_file, i == 0) for i, tab_file in enumerate(tab_files)]
+
     with open(output_file, "wb") as fout:
-        first = True
-        for tab_file in tab_files:
-            with open(tab_file, "rb") as f:
-                if not first:
-                    next(f)  # skip the header
-                else:
-                    first = False
-                fout.write(f.read())
-            tab_file.unlink()
-
-    # TODO make this more efficient
-    df_prosit = pd.read_csv(output_file, sep="\t")
-    df_prosit = df_prosit.fillna(0)
-
-    # We exploit the expmass column here by assigning a unique id per filename+scannr group.
-    # This ensures percolator will not deduplicate scannrs between filenames, as it uses only
-    # filename+ExpMass for TDC.
-    df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
-
-    df_prosit.to_csv(output_file, sep="\t", index=False)
+        for content in contents:
+            fout.write(content)
 
 
 def rescore_with_percolator(
     input_file: str | Path,
     output_folder: str | Path | None = None,
-    num_threads: int = 3,
+    num_threads: int = 10,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
     xl: bool = False,
+    init_weights: str | Path | None = None,
 ):
     """
     Rescore using percolator.
@@ -235,6 +245,8 @@ def rescore_with_percolator(
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
     :param xl: crosslinked or linear peptide
+    :param init_weights: optional weights file of a previous percolator run. If given, the PSMs are scored with these
+        weights without training (percolator --init-weights --static)
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
@@ -255,17 +267,48 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
-    if xl:
+    if init_weights is not None:
+        cmd = f"percolator --init-weights {init_weights} \
+                        --static \
+                        --num-threads {num_threads} \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
+
+    elif xl:
         cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
                     --only-psms \
                     {input_file} 2> {log_file}"
 
+    elif "orig" in file_prefix:
+        # annotated_ions is only available for some search engines (e.g. MSFragger), fall back to search engine score
+        with open(input_file) as f:
+            header = f.readline().rstrip("\n").split("\t")
+        default_direction = "annotated_ions" if "annotated_ions" in header else "andromeda"
+        cmd = f"percolator --weights {weights_file} \
+                        --num-threads {num_threads} \
+                        --default-direction {default_direction} \
+                        --override \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
     else:
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
-                        --subset-max-train 500000 \
+                        --default-direction spectral_angle \
+                        --override \
                         --post-processing-tdc \
                         --testFDR {test_fdr} \
                         --trainFDR {train_fdr} \

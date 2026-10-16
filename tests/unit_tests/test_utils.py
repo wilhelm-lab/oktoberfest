@@ -3,7 +3,6 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 import pandas as pd
 
@@ -24,7 +23,7 @@ class TestJobPool(unittest.TestCase):
         pool = JobPool(2)
         for i in range(5):
             pool.apply_async(add_one, [i])
-        pool.check_pool()
+        self.assertEqual(pool.check_pool(), [1, 2, 3, 4, 5])
 
 
 class TestProcessStep(unittest.TestCase):
@@ -48,24 +47,15 @@ class TestConfig(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):  # noqa: D102
-        cls.config_path = Path(__file__).parent / "configs/rescoring_local_prediction.json"
+        cls.config_path = Path(__file__).parents[1] / "configs/rescoring_local_prediction.json"
         cls.temp_dir = Path(tempfile.mkdtemp())
 
     @classmethod
     def tearDownClass(cls):  # noqa: D102
         shutil.rmtree(cls.temp_dir)
 
-    @patch("pathlib.Path.exists", return_value=True)
-    @patch.dict("sys.modules", {"dlomix": None})
-    def test_check_dlomix_installed(self, mock_exists):
-        """Test if optional DLomix dependency is being checked."""
-        conf = Config()
-        conf.read(self.config_path)
-        with self.assertRaises(ModuleNotFoundError):
-            conf.check()
-
-    def test_check_model_path(self):
-        """Test if invalid model path is being checked."""
+    def test_check_model_availability(self):
+        """Test if invalid model is being checked."""
         with open(self.config_path) as f:
             raw_config = json.load(f)
         raw_config["models"]["intensity"] = "garbage"
@@ -78,6 +68,23 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(ValueError):
             conf.check()
         garbage_config_file.unlink()
+
+    def test_num_threads_defaults_to_one(self):
+        """Test that num_threads defaults to one when unset."""
+        conf = Config()
+        self.assertEqual(conf.num_threads, 1)
+
+    def test_num_threads_defaults_to_one_if_dlomix_model_is_configured(self):
+        """Test that num_threads defaults to one when a DLOmix model is configured."""
+        conf = Config()
+        conf.data["models"] = {"dlomix_intensity": "some_path"}
+        self.assertEqual(conf.num_threads, 1)
+
+    def test_num_threads_uses_config_key(self):
+        """Test that num_threads uses the numThreads config key."""
+        conf = Config()
+        conf.data["numThreads"] = 4
+        self.assertEqual(conf.num_threads, 4)
 
 
 class TestQuant(unittest.TestCase):
@@ -104,11 +111,11 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         apply_quant(config)
-        compare = pd.read_csv(Path(__file__).parent / "data/quantification/mq_proteinGroups.txt", sep="\t")
+        compare = pd.read_csv(Path(__file__).parents[1] / "data/quantification/mq_proteinGroups.txt", sep="\t")
         results = pd.read_csv(
-            Path(__file__).parent / "data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
+            Path(__file__).parents[1] / "data/quantification/picked_group_fdr/rescore.proteinGroups.txt", sep="\t"
         )
         pd.testing.assert_frame_equal(results, compare)
 
@@ -133,7 +140,7 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         # TODO add data for testing
         # apply_quant(config)
 
@@ -158,6 +165,6 @@ class TestQuant(unittest.TestCase):
                 "db": "target",
             },
         }
-        config.base_path = Path(__file__).parent
+        config.base_path = Path(__file__).parents[1]
         # TODO add data for testing
         # apply_quant(config)

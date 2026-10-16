@@ -1,4 +1,3 @@
-import importlib.util
 import json
 import logging
 import os
@@ -6,19 +5,51 @@ from pathlib import Path
 from sys import platform
 from typing import Optional, Union
 
-# from spectrum_io.search_result.search_results import parse_mods
+from koinapy.grpc import Koina
 
 logger = logging.getLogger(__name__)
 
-BASELINE_MODEL_KEYS = ["baseline", ""]
+# DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
+# pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
+_DLOMIX_PIPELINE_CACHE: dict = {}
 
 
 class Config:
     """Read config file and get information from it."""
 
+    def __init__(self):
+        """Initialize config file data."""
+        self.data = {}
+        self.data["models"] = {}
+        self._run_original = False
+
+    def read(self, config_path: Union[str, Path]):
+        """
+        Read config file.
+
+        :param config_path: path to config file as a string
+        """
+        logger.info(f"Reading configuration from {config_path}")
+        if isinstance(config_path, str):
+            config_path = Path(config_path)
+        with open(config_path) as f:
+            self.data = json.load(f)
+        self.base_path = config_path.parent
+
+    ###########################
+    # these are parameters    #
+    ###########################
+
     @property
     def num_threads(self) -> int:
-        """Get the number of threads from the config file; if not specified return 1."""
+        """Get the number of threads from the config file; if not specified return 1.
+
+        Forced to 1 when a DLOmix model is configured, since DLOmix's TensorFlow-based
+        pipeline is not safe to run with multiple worker threads/processes (see
+        ``dlomix_pipeline`` and ``check_dlomix``).
+        """
+        if self.models.get("dlomix_intensity"):
+            return 1
         return self.data.get("numThreads", 1)
 
     @property
@@ -34,33 +65,25 @@ class Config:
     @property
     def models(self) -> dict:
         """Get intensity, IRT, and proteotypicity models from the config file."""
-        if "models" in self.data:
-            return self.data["models"]
-        if "selectedIntensityModel" in self.data:
-            return {
-                "selectedIntensityModel": self.data["selectedIntensityModel"],
-                "selectedIRTModel": self.data["selectedIRTModel"],
-            }
-        else:
-            return self.data["models"]
+        return self.data["models"]
 
     @property
     def tag(self) -> str:
         """Get tag from the config file; if not specified return ""."""
-        if "tag" in self.data:
-            return self.data["tag"].lower()
-        else:
-            return ""
+        return self.data.get("tag", "").lower()
 
     @property
     def job_type(self) -> str:
-        """Get jobType flag (CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
-        if "jobType" in self.data:
-            return self.data["jobType"]
-        elif "type" in self.data:
-            return self.data["type"]
-        else:
+        """Get job type (GenerateTrainingData, CollisionEnergyAlignment, SpectralLibraryGeneration or Rescoring) from the config file."""
+        job_type = self.data.get("type")
+        if job_type is None:
             raise ValueError("No job type specified in config file.")
+        return job_type
+
+    @property
+    def acquisition_method(self) -> str:
+        """Get acquisition method from the config file; default is "DDA". Possible values are "DDA" or "DIA"."""
+        return self.data.get("acquisitionMethod", "DDA").lower()
 
     @property
     def quantification(self) -> bool:
@@ -73,9 +96,40 @@ class Config:
         return self.data.get("massTolerance", None)
 
     @property
+    def p_window(self) -> Optional[float]:
+        """Windows size for precursor peak removal."""
+        return self.data.get("p_window", 0.0)
+
+    @property
     def fragmentation_method(self) -> str:
         """Get fragmentation method from config file."""
         return self.data.get("fragmentation_method", "HCD")
+
+    @property
+    def ion_types(self) -> list[str]:
+        """
+        Return the fragment ion types used for fragment annotation and Percolator feature calculation.
+
+        Specify fragment ion types as a concatenated string in alphabetical order,
+        for example, ``"aAbcCxXyzZ"``. The default is ``"by"``.
+
+        :returns: A list representing the fragment ion types.
+        """
+        raw = self.data.get("ion_types", "yb")
+        # normalize to string
+        seq = "".join(map(str, raw)) if isinstance(raw, list) else str(raw)
+
+        # priority of ion in order
+        allowed = "ybaAcCxXzZ"
+        seen = set()
+        filtered = []
+        for ch in seq:
+            if ch in allowed and ch not in seen:
+                seen.add(ch)
+                filtered.append(ch)
+
+        filtered.sort(key=lambda ch: allowed.index(ch))
+        return filtered if filtered else ["y", "b"]
 
     @property
     def unit_mass_tolerance(self) -> Optional[str]:
@@ -102,6 +156,18 @@ class Config:
             return "ThermoRawFileParser.exe"
 
         return Path(self.data.get("thermoExe", default_thermo()))
+
+    @property
+    def mirror_plots(self) -> dict[str, list[int]]:
+        """
+        Get the raw files and scan numbers for which to generate mirror plots.
+
+        This function returns a dictionary where the keys are raw file names,
+        and the values are lists of scan numbers.
+
+        :return: Dictionary mapping raw file names to a list of scan numbers.
+        """
+        return {str(k): list(map(int, v)) for k, v in self.data.get("mirror_plots", {}).items()}
 
     ###########################
     # these are input options #
@@ -208,6 +274,48 @@ class Config:
             return None
         return _instrument_type.upper()
 
+    @property
+    def dlomix_pipeline(self):
+        """Return the DLOmix pipeline, loading it once per model path and caching it at module level.
+
+        Loaded once in the parent (via check_dlomix) before the worker pools fork, so workers
+        inherit the single load via copy-on-write instead of each reloading it. NOTE: this relies
+        on TF tolerating fork-after-init; _load_dlomix_pipeline pins TF to single-threaded execution
+        as a mitigation for the fork-after-init deadlock.
+        """
+        dlomix_path = self.models.get("dlomix_intensity")
+        if not dlomix_path:
+            return None
+        key = str(self.base_path / dlomix_path if not Path(dlomix_path).is_absolute() else Path(dlomix_path))
+        if key not in _DLOMIX_PIPELINE_CACHE:
+            _DLOMIX_PIPELINE_CACHE[key] = self._load_dlomix_pipeline()
+        return _DLOMIX_PIPELINE_CACHE[key]
+
+    def _load_dlomix_pipeline(self):
+        """Load the DLOmix InferencePipeline configured via ``dlomix_intensity``, or None."""
+        dlomix_path = self.models.get("dlomix_intensity")
+        if not dlomix_path:
+            return None
+        try:
+            # Disable GPU before importing DLOmix to avoid CUDA initialization errors in workers
+            os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+            from dlomix.pipelines.predictor import InferencePipeline
+
+            pipeline_path = Path(dlomix_path)
+            if not pipeline_path.is_absolute():
+                pipeline_path = self.base_path / pipeline_path
+            logger.info(f"Loading DLOmix pipeline from {pipeline_path} (pid {os.getpid()})")
+            return InferencePipeline.load(str(pipeline_path))
+        except ImportError as e:
+            logger.warning(
+                f"DLOmix is not installed, so the 'dlomix_intensity' model could not be loaded. "
+                f"Install the optional extra with `pip install oktoberfest[dlomix]` (requires python >=3.11). ({e})"
+            )
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to load DLOmix pipeline from {dlomix_path}: {e}")
+            return None
+
     #####################################
     # these are fasta digestion options #
     #####################################
@@ -284,10 +392,7 @@ class Config:
     @property
     def all_features(self) -> bool:
         """Get allFeatures flag (decides whether all features should be used as input for the chosen fdr estimation method)."""
-        if "allFeatures" in self.data:
-            return self.data["allFeatures"]
-        else:
-            return False
+        return self.data.get("allFeatures", False)
 
     @property
     def curve_fitting_method(self) -> str:
@@ -304,11 +409,8 @@ class Config:
 
     @property
     def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator)."""
-        if "fdr_estimation_method" in self.data:
-            return self.data["fdr_estimation_method"].lower()
-        else:
-            return "mokapot"
+        """Get peptide detection method from the config file (mokapot or percolator). Default is percolator."""
+        return self.data.get("fdr_estimation_method", "percolator").lower()
 
     ######################################
     # these are spectral library options #
@@ -360,8 +462,28 @@ class Config:
 
     @property
     def ptm_localization(self) -> bool:
-        """Get ptm localization flag from the config file."""
+        """
+        Get ptm localization flag from the config file.
+
+        If False, PTMs are rescored as localized by the search engine. If True, all possible localizations of the
+        PTMs given in ptmLocalizationOptions are generated and scored.
+        """
         return self.data.get("ptm_localization", False)
+
+    @property
+    def ptm_model(self) -> bool:
+        """Whether a PTM-aware intensity model (model name containing "PTM") is used."""
+        return "PTM" in self.models.get("intensity", "")
+
+    @property
+    def ptm_fdr_control(self) -> bool:
+        """
+        Get flag to run percolator separately on unmodified and modified PSMs (separate FDR control).
+
+        Defaults to true if a PTM model is used without PTM localization, false otherwise. Unlike localization,
+        this never generates site permutations.
+        """
+        return self.data.get("ptm_fdr_control", self.ptm_model and not self.ptm_localization)
 
     @property
     def ptm_localization_options(self) -> dict:
@@ -369,98 +491,39 @@ class Config:
         return self.data.get("ptmLocalizationOptions", {})
 
     @property
+    def ptm_sites(self) -> dict[int, list[str]]:
+        """
+        Get the PTMs to localize and the residues each of them can be located on.
+
+        PTMs are given as a mapping of unimod id to possible residues, e.g. {"21": ["S", "T", "Y"], "7": ["R"]}.
+        The legacy format with a single "unimod_id" and "possible_sites" is supported as well.
+        Returns an empty mapping if ptm_localization is disabled.
+        """
+        if not self.ptm_localization:
+            return {}
+        options = self.ptm_localization_options
+        if "ptms" in options:
+            return {int(unimod_id): list(sites) for unimod_id, sites in options["ptms"].items()}
+        unimod_id = options.get("unimod_id", 0)
+        if unimod_id:
+            return {int(unimod_id): list(options.get("possible_sites", []))}
+        return {}
+
+    @property
     def ptm_unimod_id(self) -> int:
-        """Get the unimod id required for localization."""
-        unimod_id = self.ptm_localization_options.get("unimod_id", 0)
-        return unimod_id
+        """Get the unimod id of the PTM to localize if exactly one PTM is localized, 0 otherwise."""
+        ptm_sites = self.ptm_sites
+        return next(iter(ptm_sites)) if len(ptm_sites) == 1 else 0
 
     @property
     def ptm_possible_sites(self) -> list:
-        """Get which sites ptm can exist on."""
-        return self.ptm_localization_options.get("possible_sites", [])
+        """Get all residues any of the localized PTMs can be located on."""
+        return sorted({site for sites in self.ptm_sites.values() for site in sites})
 
     @property
     def ptm_use_neutral_loss(self) -> bool:
-        """Get neutral loss flag to indicate whether to add a score for this or not."""
-        return self.ptm_localization_options.get("neutral_loss", False)
-
-    #####################################################################
-    # these are local prediction / transfer&refinement learning options #
-    #####################################################################
-
-    @property
-    def predict_intensity_locally(self) -> bool:
-        """Whether to predict intensity locally or using Koina."""
-        return (
-            self.models["intensity"] in BASELINE_MODEL_KEYS
-            or self.models["intensity"].endswith(".keras")
-            or Path(self.models["intensity"]).exists()
-        )
-
-    @property
-    def download_baseline_intensity_predictor(self) -> bool:
-        """Whether to download a baseline intensity predictor from GitHub."""
-        return self.predict_intensity_locally and not Path(self.models["intensity"]).exists()
-
-    @property
-    def dlomix_inference_batch_size(self) -> int:
-        """Batch size to use for local inference with DLomix."""
-        return self.data.get("dlomixInferenceBatchSize", 1024)
-
-    @property
-    def refinement_learning_options(self) -> dict:
-        """Get refinement learning parameter dictionary from config file."""
-        return self.data.get("refinementLearningOptions", {})
-
-    @property
-    def include_original_sequences(self) -> bool:
-        """Whether to keep unmodified peptide sequences in processed dataset."""
-        return self.refinement_learning_options.get("includeOriginalSequences", False)
-
-    @property
-    def training_batch_size(self) -> int:
-        """Batch size to use for refinement learning."""
-        return self.refinement_learning_options.get("batchSize", 1024)
-
-    @property
-    def do_refinement_learning(self) -> bool:
-        """Whether to do refinement learning for intensity predictor."""
-        return "refinementLearningOptions" in self.data
-
-    @property
-    def use_wandb(self) -> bool:
-        """Whether to use WandB for refinement learning training."""
-        return "wandbOptions" in self.refinement_learning_options
-
-    @property
-    def wandb_options(self) -> dict:
-        """Get WandB options from config file."""
-        return self.refinement_learning_options.get("wandbOptions", {})
-
-    @property
-    def wandb_project(self) -> str:
-        """Project to save WandB run to."""
-        return self.wandb_options.get("project", "DLomix_auto_RL_TL")
-
-    @property
-    def wandb_tags(self) -> list[str]:
-        """Tags to use for WandB run."""
-        return self.wandb_options.get("tags", [])
-
-    @property
-    def improve_further(self) -> bool:
-        """Whether to perform a third training phase for refinement learning."""
-        return self.refinement_learning_options.get("improveFurther", False)
-
-    @property
-    def search_engine_score_threshold(self) -> float:
-        """Search engine score threshold for filtering refinement learning training data."""
-        return self.refinement_learning_options.get("searchEngineScoreThreshold", 0.0)
-
-    @property
-    def num_duplicates(self) -> int:
-        """Number of (peptide, charge, collision energy) duplicates to allow in refinement learning training data."""
-        return self.refinement_learning_options.get("numDuplicates", 100)
+        """Get neutral loss flag to indicate whether to add a score for this or not (only used for localization)."""
+        return self.ptm_localization and self.ptm_localization_options.get("neutral_loss", False)
 
     ########################
     # functions start here #
@@ -473,20 +536,79 @@ class Config:
         if self.job_type == "SpectralLibraryGeneration":
             self._check_for_speclib()
 
-        if "alphapept" in self.models["intensity"].lower():
-            self._check_for_alphapept()
+        # Skip alphapept and Koina checks if using DLOmix
+        if self.models.get("dlomix_intensity"):
+            self.check_dlomix()
+        else:
+            if "alphapept" in self.models["intensity"].lower():
+                self._check_for_alphapept()
 
-        if self.predict_intensity_locally:
-            self._check_for_local_prediction()
-
-        if self.do_refinement_learning:
-            self._check_for_refinement_learning()
+            self._check_koina_model_availability()
 
         if self.quantification:
             self._check_quantification()
             self._check_fasta()
 
+        self._check_ptm_localization()
+
+    def _check_ptm_localization(self):
+        """Check that the PTMs and residues to localize are specified if PTM localization is enabled."""
+        options = self.ptm_localization_options
+        if not self.ptm_localization:
+            if "ptms" in options or options.get("unimod_id"):
+                logger.warning(
+                    "ptmLocalizationOptions are specified but ptm_localization is disabled. PTMs are rescored as "
+                    "localized by the search engine. Set ptm_localization to true to localize them."
+                )
+            return
+        if "ptms" in options and not isinstance(options["ptms"], dict):
+            raise ValueError(
+                'ptmLocalizationOptions.ptms must map unimod ids to possible residues, e.g. {"21": ["S", "T", "Y"]}.'
+            )
+        ptm_sites = self.ptm_sites
+        if not ptm_sites:
+            raise ValueError(
+                "ptm_localization is enabled but no PTM to localize is specified. Specify the PTMs and the residues "
+                'they can be located on in ptmLocalizationOptions, e.g. "ptms": {"21": ["S", "T", "Y"]}.'
+            )
+        valid_residues = set("ACDEFGHIKLMNPQRSTVWY")
+        for unimod_id, sites in ptm_sites.items():
+            if not sites:
+                raise ValueError(
+                    f"No possible residues specified for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions."
+                )
+            invalid_sites = [site for site in sites if site not in valid_residues]
+            if invalid_sites:
+                raise ValueError(
+                    f"Invalid residues {invalid_sites} for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions. "
+                    "Residues must be given as one-letter amino acid codes."
+                )
+
+    def _check_koina_model_availability(self):
+        """Check if Koina model is available."""
+        # This will give error automaticly in Koina if model is not available on the server.
+        # Koina has function called "_is_model_ready" that checks if model is available
+        _ = Koina(model_name=self.models["intensity"])
+
+    def check_dlomix(self):
+        """Load the DLOmix pipeline once in the parent process (from ``check``, before the worker pools).
+
+        Validates the path (fail fast on a bad model) and primes the module-level cache so the
+        fork-based Pool workers created afterwards reuse this single load instead of each reloading.
+        NOTE: loading TF in the parent and then forking can deadlock when a worker runs inference;
+        _load_dlomix_pipeline pins TF to single-threaded execution to mitigate that.
+        """
+        if self.dlomix_pipeline is None:
+            raise ValueError(
+                f"Could not load DLOmix pipeline from {self.models.get('dlomix_intensity')}. "
+                "Please check that 'dlomix_intensity' in your config points to a valid saved pipeline."
+            )
+
     def _check_tmt(self):
+        # Skip TMT check if using DLOmix (no intensity model requirement)
+        if self.models.get("dlomix_intensity"):
+            return
+
         int_model = self.models["intensity"].lower()
         irt_model = self.models["irt"].lower()
         if self.tag == "":
@@ -543,53 +665,11 @@ class Config:
                     f"You need to provide the fragmentation method when using the model {self.models['intensity']}."
                 )
         if "alphapept" in self.models["intensity"].lower():
-            instrument_type = self.instrument_type
-            valid_alphapept_instrument_types = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
-            if instrument_type is None:
-                raise AssertionError(
-                    f"The chosen intensity model {self.models['intensity']} requires an instrument type. "
-                    f"Provide one of {valid_alphapept_instrument_types}."
-                )
-            else:
-                if instrument_type not in valid_alphapept_instrument_types:
-                    raise ValueError(
-                        f"The chosen intensity model {self.models['intensity']} does not support the specified instrument type "
-                        f"{instrument_type}. Provide one of {valid_alphapept_instrument_types}."
-                    )
+            self._check_for_alphapept()
 
-    def _check_for_local_prediction(self):
-        if not self.models["intensity"] in BASELINE_MODEL_KEYS:
-            model_path = Path(self.models["intensity"])
-            if not model_path.exists():
-                raise FileNotFoundError(f"Model file {model_path} does not exist")
-            elif model_path.suffix != ".keras":
-                raise ValueError(f"Model file {model_path} exists, but is not a .keras file")
-
-        if not importlib.util.find_spec("dlomix"):
-            raise ModuleNotFoundError(
-                """Local prediction requested, but the DLomix package could not be found. Please verify that it has been
-                installed as an optional dependency."""
-            )
-
-    def _check_for_refinement_learning(self):
-        if not self.predict_intensity_locally:
-            raise ValueError(
-                "Refinement learning but not local intensity prediction requested. Koina models cannot be used for "
-                "refinement learning."
-            )
-        if not Path(self.models["intensity"]).exists():
-            if self.models["intensity"].lower() not in BASELINE_MODEL_KEYS:
-                raise ValueError(
-                    f"You requested the intensity model {self.models['intensity']}, but it is neither a path that exists"
-                    "nor the literal 'baseline'. Please verify that it is one of the two. Koina models can not be used"
-                    "for refinement learning."
-                )
-
-    def _find_file_in_subd(self, directory: Path, filename: str):
-        for _, _, files in os.walk(directory):
-            if filename in files:
-                return True
-        return False
+    def _find_file_in_subd(self, directory: Path, filename: str) -> bool:
+        """Return True if a file with the given name exists anywhere under directory."""
+        return any(path.name == filename for path in directory.rglob(filename))
 
     def _check_quantification(self):
         if Path(self.search_results).is_file():
@@ -632,22 +712,10 @@ class Config:
                 "For quantification a fasta file is needed."
             )
 
-    def __init__(self):
-        """Initialize config file data."""
-        self.data = {}
-
-    def read(self, config_path: Union[str, Path]):
-        """
-        Read config file.
-
-        :param config_path: path to config file as a string
-        """
-        logger.info(f"Reading configuration from {config_path}")
-        if isinstance(config_path, str):
-            config_path = Path(config_path)
-        with open(config_path) as f:
-            self.data = json.load(f)
-        self.base_path = config_path.parent
+    def check_multifrag(self) -> bool:
+        """Check if rescoring will be done on multifrag options."""
+        intensity_model = self.models.get("intensity", "").lower()
+        return "multifrag" in intensity_model
 
     def custom_to_unimod(self) -> dict[str, int]:
         """
@@ -677,8 +745,3 @@ class Config:
         for unimod_id, mass, _ in self.static_mods.values():
             unimod_to_mass[f"[UNIMOD:{unimod_id}]"] = mass
         return unimod_to_mass
-
-    """
-    def custom_for_dlomix(self):
-        return list(parse_mods(self.custom_to_unimod()).values())
-    """
