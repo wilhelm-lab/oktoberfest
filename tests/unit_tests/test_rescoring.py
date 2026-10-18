@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import numpy as np
@@ -139,3 +140,69 @@ class TestMergeInput(unittest.TestCase):
                 self.assertEqual(merged["spectral_angle"].tolist(), [0.7, 0.0, 0.5, 0.0, 0.9])
                 # the per spectra file inputs are removed after merging
                 self.assertFalse(any(tab_file.exists() for tab_file in tab_files))
+
+
+class TestPercolatorFdrModified(unittest.TestCase):
+    """Test the separate FDR estimation for unmodified and modified PSMs."""
+
+    def test_split_and_ptm_features(self):
+        """Test oxidation goes to the modified PSMs with a 0/1 feature per PTM, fixed modifications stay unmodified."""
+        features = pd.DataFrame(
+            {
+                "SpecId": ["a", "b", "c", "d", "e"],
+                "Label": [1, 1, -1, 1, -1],
+                "spectral_angle": [0.9, 0.8, 0.3, 0.7, 0.2],
+                "Peptide": [
+                    "_.AC[UNIMOD:4]K._",
+                    "_.AM[UNIMOD:35]K._",
+                    "_.AS[UNIMOD:21]K._",
+                    "_.AM[UNIMOD:35]S[UNIMOD:21]K._",
+                    "_.R[UNIMOD:267]AK._",
+                ],
+                "Proteins": ["P"] * 5,
+            }
+        )
+        with (
+            tempfile.TemporaryDirectory() as tmp_dir,
+            unittest.mock.patch.object(re.rescore, "rescore_with_percolator") as rescore,
+        ):
+            features_path = Path(tmp_dir) / "rescore.tab"
+            features.to_csv(features_path, sep="\t", index=False)
+
+            re.percolator_fdr_modified(features_path)
+
+            unmodified = pd.read_csv(features_path, sep="\t")
+            modified = pd.read_csv(Path(tmp_dir) / "mod_fdr" / "rescore.tab", sep="\t")
+        self.assertEqual(rescore.call_count, 2)
+        self.assertEqual(unmodified["SpecId"].tolist(), ["a", "e"])
+        self.assertEqual(unmodified.columns.tolist(), features.columns.tolist())
+        self.assertEqual(modified["SpecId"].tolist(), ["b", "c", "d"])
+        self.assertEqual(
+            modified.columns.tolist(),
+            ["SpecId", "Label", "spectral_angle", "ptm_UNIMOD_21", "ptm_UNIMOD_35", "Peptide", "Proteins"],
+        )
+        self.assertEqual(modified["ptm_UNIMOD_21"].tolist(), [0, 1, 1])
+        self.assertEqual(modified["ptm_UNIMOD_35"].tolist(), [1, 0, 1])
+
+    def test_single_ptm_has_no_constant_feature(self):
+        """Test a PTM carried by all modified PSMs adds no feature."""
+        features = pd.DataFrame(
+            {
+                "SpecId": ["a", "b"],
+                "Label": [1, -1],
+                "spectral_angle": [0.9, 0.3],
+                "Peptide": ["_.AM[UNIMOD:35]K._", "_.KM[UNIMOD:35]A._"],
+                "Proteins": ["P", "P"],
+            }
+        )
+        with (
+            tempfile.TemporaryDirectory() as tmp_dir,
+            unittest.mock.patch.object(re.rescore, "rescore_with_percolator"),
+        ):
+            features_path = Path(tmp_dir) / "rescore.tab"
+            features.to_csv(features_path, sep="\t", index=False)
+
+            re.percolator_fdr_modified(features_path)
+
+            modified = pd.read_csv(Path(tmp_dir) / "mod_fdr" / "rescore.tab", sep="\t")
+        self.assertEqual(modified.columns.tolist(), features.columns.tolist())

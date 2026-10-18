@@ -174,7 +174,7 @@ Applicable to PTM pipeline
    +============================+====================================================================================================================================================================+
    | ptm_localization           | false: PTMs are rescored as localized by the search engine. true: all localizations of the PTMs in ptmLocalizationOptions.ptms are scored; default = false         |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | ptm_fdr_control            | Separate FDR for unmodified and modified PSMs (in <fdr_dir>/mod_fdr), no permutations. Default: true for PTM models without localization, else false               |
+   | ptm_fdr_control            | Separate FDR for modified PSMs in <fdr_dir>/mod_fdr (0/1 feature per PTM; oxidation is a PTM). Default: true for PTM models without localization, else false       |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | ptmLocalizationOptions     | Settings for PTM localization, only used if ptm_localization is true (see following nested parameters)                                                             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
