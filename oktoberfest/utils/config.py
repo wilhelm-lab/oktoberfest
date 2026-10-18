@@ -9,6 +9,10 @@ from koinapy.grpc import Koina
 
 logger = logging.getLogger(__name__)
 
+# residues used as decoy sites next to the possible sites (decoy_selection "adjacent"): no possible phospho sites, and
+# not P, D, E, K, R, H, C and M, which change the fragmentation or are frequently modified
+ADJACENT_DECOY_RESIDUES = ["A", "G", "L", "V", "I", "F", "N", "Q", "W"]
+
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
 _DLOMIX_PIPELINE_CACHE: dict = {}
@@ -380,6 +384,14 @@ class Config:
         """Get whether or not to perform ce calibration using a ransac model."""
         return self.ce_alignment_options.get("use_ransac_model", False)
 
+    @property
+    def ce_calibration_dir(self) -> Optional[Path]:
+        """Get the results/ce_calibration folder of a previous run to reuse its calibrated CE per spectra file."""
+        ce_calibration_dir = self.ce_alignment_options.get("ce_calibration_dir")
+        if ce_calibration_dir is None:
+            return None
+        return self.base_path / Path(ce_calibration_dir)
+
     ###############################
     # these are rescoring options #
     ###############################
@@ -462,8 +474,28 @@ class Config:
 
     @property
     def ptm_localization(self) -> bool:
-        """Get ptm localization flag from the config file."""
+        """
+        Get ptm localization flag from the config file.
+
+        If False, PTMs are rescored as localized by the search engine. If True, all possible localizations of the
+        PTMs given in ptmLocalizationOptions are generated and scored.
+        """
         return self.data.get("ptm_localization", False)
+
+    @property
+    def ptm_model(self) -> bool:
+        """Whether a PTM-aware intensity model (model name containing "PTM") is used."""
+        return "PTM" in self.models.get("intensity", "")
+
+    @property
+    def ptm_fdr_control(self) -> bool:
+        """
+        Get flag to run percolator separately on unmodified and modified PSMs (separate FDR control).
+
+        Defaults to true if a PTM model is used without PTM localization, false otherwise. Unlike localization,
+        this never generates site permutations.
+        """
+        return self.data.get("ptm_fdr_control", self.ptm_model and not self.ptm_localization)
 
     @property
     def ptm_localization_options(self) -> dict:
@@ -471,20 +503,161 @@ class Config:
         return self.data.get("ptmLocalizationOptions", {})
 
     @property
+    def ptm_sites(self) -> dict[int, list[str]]:
+        """
+        Get the PTMs to localize and the residues each of them can be located on.
+
+        PTMs are given as a mapping of unimod id to possible residues, e.g. {"21": ["S", "T", "Y"], "7": ["R"]}.
+        The legacy format with a single "unimod_id" and "possible_sites" is supported as well.
+        Returns an empty mapping if ptm_localization is disabled.
+        """
+        if not self.ptm_localization:
+            return {}
+        options = self.ptm_localization_options
+        if "ptms" in options:
+            return {int(unimod_id): list(sites) for unimod_id, sites in options["ptms"].items()}
+        unimod_id = options.get("unimod_id", 0)
+        if unimod_id:
+            return {int(unimod_id): list(options.get("possible_sites", []))}
+        return {}
+
+    @property
+    def ptm_decoy_residues(self) -> list[str]:
+        """
+        Get the decoy residues used to estimate the false localization rate (FLR) of PTM localization.
+
+        Localizations of the PTMs on these residues, which cannot carry the PTMs (e.g. A for phosphorylation), are
+        scored as additional (passive) candidates. Spectra in which a decoy candidate would win are used to estimate
+        the FLR. The residues are given in order of priority: every peptide uses the first one it contains, e.g.
+        ["A", "G", "L", "V"]. Empty if ptm_localization is disabled.
+        """
+        if not self.ptm_localization:
+            return []
+        residues = list(self.ptm_localization_options.get("decoy_residues", []))
+        if self.ptm_decoy_selection == "adjacent":
+            residues += [aa for aa in ADJACENT_DECOY_RESIDUES if aa not in residues]
+        return residues
+
+    @property
+    def ptm_decoy_priority_residues(self) -> list[str]:
+        """Get the decoy residues given in ptmLocalizationOptions.decoy_residues, in order of priority."""
+        if not self.ptm_localization:
+            return []
+        return list(self.ptm_localization_options.get("decoy_residues", []))
+
+    @property
+    def ptm_decoy_selection(self) -> str:
+        """
+        Get how decoy sites are selected (ptmLocalizationOptions.decoy_selection).
+
+        "residue" (default): one decoy residue per peptide by priority (decoy_residues). "adjacent": additionally every
+        residue in ADJACENT_DECOY_RESIDUES within 2 residues of a possible site, so that wrong localizations on
+        neighboring sites have decoys at the same distance (decoy residues include ADJACENT_DECOY_RESIDUES).
+        """
+        return self.ptm_localization_options.get("decoy_selection", "residue")
+
+    @property
+    def ptm_flr_neighbor_split(self) -> bool:
+        """
+        Get whether the FLR is estimated separately for localizations with and without a possible site next to them.
+
+        Wrong localizations are mostly on a neighboring site, so localizations with a possible site next to the called
+        site have a higher FLR at the same localization score (ptmLocalizationOptions.flr_neighbor_split).
+        """
+        return bool(self.ptm_localization_options.get("flr_neighbor_split", False))
+
+    @property
+    def ptm_permutation_sites(self) -> dict[int, list[str]]:
+        """
+        Get the residues to generate localization candidates on: the possible sites and the decoy residues.
+
+        With decoy_selection "adjacent", the decoy candidates are added after the conversion of the search results
+        (add_adjacent_decoy_candidates), so only the possible sites are permuted.
+        """
+        decoys = self.ptm_decoy_residues if self.ptm_decoy_selection == "residue" else []
+        return {unimod_id: sites + [r for r in decoys if r not in sites] for unimod_id, sites in self.ptm_sites.items()}
+
+    @property
+    def ptm_decoy_proxies(self) -> dict[str, Union[str, dict[str, float]]]:
+        """
+        Get the replacements used to predict decoy localization candidates, e.g. {"A[UNIMOD:21]": "S[UNIMOD:21]"}.
+
+        Prediction models do not support PTMs on decoy residues, so these candidates are predicted with the PTM on a
+        possible site residue at the same position (ptmLocalizationOptions.decoy_proxy, default: the first possible
+        site residue of the PTM, e.g. S for phosphorylation). The fragment ions are annotated with the decoy masses.
+        With decoy_proxy "search", every decoy candidate is predicted on one of the residues in DECOY_PROXY_RESIDUES
+        (S or T for phosphorylation), chosen with the frequencies of these residues in the localizations of the search
+        engine (written by the preprocessing to decoy_proxy_fractions), e.g. {"A[UNIMOD:21]": {"S[UNIMOD:21]": 0.8,
+        "T[UNIMOD:21]": 0.2}}.
+        """
+        proxy_residue = self.ptm_localization_options.get("decoy_proxy")
+        fractions = self.ptm_decoy_proxy_fractions if proxy_residue == "search" else {}
+        proxies: dict[str, Union[str, dict[str, float]]] = {}
+        for unimod_id, sites in self.ptm_sites.items():
+            if not sites:
+                continue
+            proxy: Union[str, dict[str, float]] = proxy_residue if proxy_residue in sites else sites[0]
+            proxy = f"{proxy}[UNIMOD:{unimod_id}]"
+            if fractions.get(str(unimod_id)):
+                proxy = {f"{aa}[UNIMOD:{unimod_id}]": fraction for aa, fraction in fractions[str(unimod_id)].items()}
+            for decoy in self.ptm_decoy_residues:
+                proxies[f"{decoy}[UNIMOD:{unimod_id}]"] = proxy
+        return proxies
+
+    @property
+    def decoy_proxy_fractions_file(self) -> Path:
+        """Get the file with the frequencies of the proxy residues in the search engine localizations."""
+        return self.output / "msms" / "decoy_proxy_fractions.json"
+
+    @property
+    def ptm_decoy_proxy_fractions(self) -> dict[str, dict[str, float]]:
+        """Get the frequencies of the proxy residues per unimod id, empty if they were not determined."""
+        if not self.decoy_proxy_fractions_file.is_file():
+            return {}
+        return json.loads(self.decoy_proxy_fractions_file.read_text())
+
+    @property
     def ptm_unimod_id(self) -> int:
-        """Get the unimod id required for localization."""
-        unimod_id = self.ptm_localization_options.get("unimod_id", 0)
-        return unimod_id
+        """Get the unimod id of the PTM to localize if exactly one PTM is localized, 0 otherwise."""
+        ptm_sites = self.ptm_sites
+        return next(iter(ptm_sites)) if len(ptm_sites) == 1 else 0
 
     @property
     def ptm_possible_sites(self) -> list:
-        """Get which sites ptm can exist on."""
-        return self.ptm_localization_options.get("possible_sites", [])
+        """Get all residues any of the localized PTMs can be located on."""
+        return sorted({site for sites in self.ptm_sites.values() for site in sites})
 
     @property
     def ptm_use_neutral_loss(self) -> bool:
-        """Get neutral loss flag to indicate whether to add a score for this or not."""
-        return self.ptm_localization_options.get("neutral_loss", False)
+        """Get neutral loss flag to indicate whether to add a score for this or not (only used for localization)."""
+        return self.ptm_localization and self.ptm_localization_options.get("neutral_loss", False)
+
+    @property
+    def ptm_phospho_loss_residues(self) -> str:
+        """
+        Get the phosphorylated residues annotated with the neutral loss of phosphoric acid (H3PO4).
+
+        S and T lose phosphoric acid. With decoy_neutral_loss, phosphorylations on the decoy residues are annotated
+        like S and T as well, so that decoy candidates have the same neutral loss features as the S/T candidates
+        they stand in for.
+        """
+        residues = "ST"
+        if self.ptm_localization_options.get("decoy_neutral_loss", False):
+            residues += "".join(self.ptm_decoy_residues)
+        return residues
+
+    @property
+    def ptm_plain_loss_residues(self) -> Optional[str]:
+        """
+        Get the residues for counting the neutral losses of plain decoys, None if the decoys are already plain.
+
+        With decoy_neutral_loss, the neutral losses are counted a second time without the decoy residues, so that every
+        decoy candidate can also be scored as a plain decoy (used for the PSMs localized on Y, which do not lose
+        phosphoric acid).
+        """
+        if self.ptm_phospho_loss_residues == "ST":
+            return None
+        return "ST"
 
     ########################
     # functions start here #
@@ -509,6 +682,51 @@ class Config:
         if self.quantification:
             self._check_quantification()
             self._check_fasta()
+
+        self._check_ptm_localization()
+
+    def _check_ptm_localization(self):
+        """Check that the PTMs and residues to localize are specified if PTM localization is enabled."""
+        options = self.ptm_localization_options
+        if not self.ptm_localization:
+            if "ptms" in options or options.get("unimod_id"):
+                logger.warning(
+                    "ptmLocalizationOptions are specified but ptm_localization is disabled. PTMs are rescored as "
+                    "localized by the search engine. Set ptm_localization to true to localize them."
+                )
+            return
+        if "ptms" in options and not isinstance(options["ptms"], dict):
+            raise ValueError(
+                'ptmLocalizationOptions.ptms must map unimod ids to possible residues, e.g. {"21": ["S", "T", "Y"]}.'
+            )
+        ptm_sites = self.ptm_sites
+        if not ptm_sites:
+            raise ValueError(
+                "ptm_localization is enabled but no PTM to localize is specified. Specify the PTMs and the residues "
+                'they can be located on in ptmLocalizationOptions, e.g. "ptms": {"21": ["S", "T", "Y"]}.'
+            )
+        valid_residues = set("ACDEFGHIKLMNPQRSTVWY")
+        for unimod_id, sites in ptm_sites.items():
+            if not sites:
+                raise ValueError(
+                    f"No possible residues specified for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions."
+                )
+            invalid_sites = [site for site in sites if site not in valid_residues]
+            if invalid_sites:
+                raise ValueError(
+                    f"Invalid residues {invalid_sites} for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions. "
+                    "Residues must be given as one-letter amino acid codes."
+                )
+        decoys = self.ptm_decoy_residues
+        invalid_decoys = [r for r in decoys if r not in valid_residues]
+        if invalid_decoys:
+            raise ValueError(f"Invalid decoy residues {invalid_decoys} in ptmLocalizationOptions.")
+        overlapping = [r for r in decoys if any(r in sites for sites in ptm_sites.values())]
+        if overlapping:
+            raise ValueError(
+                f"Decoy residues {overlapping} can also carry a localized PTM. Decoy residues must be residues the "
+                "PTMs cannot be located on, e.g. A for phosphorylation."
+            )
 
     def _check_koina_model_availability(self):
         """Check if Koina model is available."""

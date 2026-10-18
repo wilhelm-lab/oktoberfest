@@ -121,6 +121,7 @@ def generate_features(
         additional_columns=additional_columns,
         task=task,
         featured_ions=featured_ions,
+        output_path=output_file,
     )
 
     perc_features.calc()
@@ -226,10 +227,11 @@ def merge_input(
 def rescore_with_percolator(
     input_file: str | Path,
     output_folder: str | Path | None = None,
-    num_threads: int = 3,
+    num_threads: int = 10,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
     xl: bool = False,
+    init_weights: str | Path | None = None,
 ):
     """
     Rescore using percolator.
@@ -243,6 +245,8 @@ def rescore_with_percolator(
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
     :param xl: crosslinked or linear peptide
+    :param init_weights: optional weights file of a previous percolator run. If given, the PSMs are scored with these
+        weights without training (percolator --init-weights --static)
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
@@ -263,17 +267,48 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
-    if xl:
+    if init_weights is not None:
+        cmd = f"percolator --init-weights {init_weights} \
+                        --static \
+                        --num-threads {num_threads} \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
+
+    elif xl:
         cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
                     --only-psms \
                     {input_file} 2> {log_file}"
 
+    elif "orig" in file_prefix:
+        # annotated_ions is only available for some search engines (e.g. MSFragger), fall back to search engine score
+        with open(input_file) as f:
+            header = f.readline().rstrip("\n").split("\t")
+        default_direction = "annotated_ions" if "annotated_ions" in header else "andromeda"
+        cmd = f"percolator --weights {weights_file} \
+                        --num-threads {num_threads} \
+                        --default-direction {default_direction} \
+                        --override \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
     else:
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
-                        --subset-max-train 500000 \
+                        --default-direction spectral_angle \
+                        --override \
                         --post-processing-tdc \
                         --testFDR {test_fdr} \
                         --trainFDR {train_fdr} \
@@ -336,3 +371,41 @@ def rescore_with_mokapot(
     results, models = mokapot.brew(psms, test_fdr=test_fdr)
     results.to_txt(dest_dir=output_folder, file_root=f"{input_file.stem}", decoys=True)
     logger.info("Finished rescoring using mokapot.")
+
+
+def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
+    """
+    Helper function for running percolator separately on unmodified and modified PSMs.
+
+    PSMs that are unmodified or only carry allowed modifications (carbamidomethyl, oxidation, SILAC heavy R)
+    are rescored in place, all other PSMs are rescored in a separate mod_fdr subfolder.
+
+    :param features_path: the features tab file path
+    :param num_threads: number of threads used by percolator
+    """
+    df_features = pd.read_csv(features_path, sep="\t")
+    # peptides with at least one allowed UNIMOD
+    has_allowed = df_features["Peptide"].str.contains(r"\[UNIMOD:(?:4|35|267)\]", regex=True, na=False)
+    # peptides with any disallowed UNIMOD
+    has_disallowed = df_features["Peptide"].str.contains(r"\[UNIMOD:(?!4\]|35\]|267\])\d+\]", regex=True, na=False)
+    # peptides with no UNIMOD at all
+    is_unmodified = ~df_features["Peptide"].str.contains(r"\[UNIMOD:", regex=True, na=False)
+
+    # final: either unmodified OR only allowed UNIMODs
+    has_allowed_or_unmodified = is_unmodified | (has_allowed & ~has_disallowed)
+
+    df_features_unmod = df_features[has_allowed_or_unmodified]
+    df_features_unmod.to_csv(features_path, sep="\t", index=False)
+    fdr_dir = features_path.parent
+    rescore_with_percolator(input_file=features_path, output_folder=fdr_dir, num_threads=num_threads)
+
+    df_features_mod = df_features[~has_allowed_or_unmodified]
+    if df_features_mod.empty:
+        logger.warning(f"No modified PSMs found in {features_path}, skipping separate FDR control for modified PSMs.")
+        return
+
+    mod_fdr_dir = fdr_dir / "mod_fdr"
+    tab_file_name = mod_fdr_dir / features_path.name
+    mod_fdr_dir.mkdir(parents=True, exist_ok=True)
+    df_features_mod.to_csv(tab_file_name, sep="\t", index=False)
+    rescore_with_percolator(input_file=tab_file_name, output_folder=mod_fdr_dir, num_threads=num_threads)

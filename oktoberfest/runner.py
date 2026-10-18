@@ -27,6 +27,7 @@ from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
+from .utils.config import ADJACENT_DECOY_RESIDUES
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,12 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         msms_output.mkdir(exist_ok=True)
         internal_search_file = msms_output / "msms.prosit"
         tmt_label = config.tag
-        ptm_unimods = config.ptm_unimod_id
-        ptm_sites = config.ptm_possible_sites
+        # PTM site permutations are only generated if localization is requested, otherwise PTMs are kept as
+        # localized by the search engine
+        # including decoy residues used to estimate the false localization rate
+        ptm_unimods = config.ptm_permutation_sites
+        ptm_sites = None
+        ptm_model = config.ptm_model
         search_results = pp.convert_search(
             input_path=config.search_results,
             search_engine=config.search_results_type,
@@ -72,6 +77,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             output_file=internal_search_file,
             ptm_unimod_id=ptm_unimods,
             ptm_sites=ptm_sites,
+            ptm_model=ptm_model,
         )
         if config.spectra_type.lower() in ["d", "hdf"]:
             timstof_metadata = pp.convert_timstof_metadata(
@@ -82,6 +88,16 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
 
         # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
+        if config.ptm_decoy_residues and config.ptm_decoy_selection == "adjacent":
+            search_results = re.add_adjacent_decoy_candidates(
+                search_results, config.ptm_sites, config.ptm_decoy_priority_residues, ADJACENT_DECOY_RESIDUES
+            )
+        elif config.ptm_decoy_residues:
+            search_results = re.select_decoy_candidates(search_results, config.ptm_sites, config.ptm_decoy_residues)
+        if config.ptm_decoy_residues:
+            if config.ptm_localization_options.get("decoy_proxy") == "search":
+                fractions = re.decoy_proxy_fractions(search_results, config.ptm_sites)
+                config.decoy_proxy_fractions_file.write_text(json.dumps(fractions))
 
         # Filter peptides only if using Koina intensity model
         if not config.models.get("dlomix_intensity"):
@@ -203,11 +219,78 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 annotate_neutral_loss=annotate_neutral_loss,
                 multifrag=config.check_multifrag(),
                 featured_ions=config.ion_types,
+                phospho_loss_residues=config.ptm_phospho_loss_residues,
+                plain_loss_residues=config.ptm_plain_loss_residues,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
 
     return aspec
+
+
+def _ce_calibration_library(library: Spectra, config: Config) -> Spectra:
+    """
+    Get the PSMs used for CE calibration.
+
+    If PTMs are localized, the library contains all site permutations of each PSM. They share the search engine score
+    of the original PSM, so the PSMs selected for calibration would mostly be wrong localizations. Only PSMs without
+    the localized PTMs are used for calibration in this case.
+
+    :param library: the library with all PSMs
+    :param config: the configuration object
+    :return: the PSMs to use for CE calibration
+    """
+    if not config.ptm_sites:
+        return library
+    ptm_pattern = r"UNIMOD:(?:" + "|".join(str(ptm) for ptm in config.ptm_sites) + r")\]"
+    without_ptm = ~library.obs["MODIFIED_SEQUENCE"].str.contains(ptm_pattern, regex=True).to_numpy(dtype=bool)
+    if not without_ptm.any():
+        logger.warning(
+            "No PSMs without the localized PTMs found, using all PSMs including permutations for CE calibration."
+        )
+        return library
+    logger.info(f"Using {without_ptm.sum()} PSMs without the localized PTMs for CE calibration.")
+    return Spectra(library[without_ptm].copy())
+
+
+def _map_best_ce(library: Spectra, best_ce_per_orig: pd.Series, is_hcd: np.ndarray, library_column: str):
+    # map from a snapshot of the original values in one step, so a CE that was just assigned is never
+    # matched again by another group (e.g. 30 -> 33 must not then be remapped by the 33 -> 35 group).
+    # Only HCD spectra are calibrated, so CID spectra set to 35 above are never remapped, even if an
+    # HCD group also had an original CE of 35. HCD groups without a calibration keep their original CE.
+    orig_values = library.obs.loc[is_hcd, library_column]
+    calibrated_ce = orig_values.map(best_ce_per_orig)
+    n_uncalibrated = int(calibrated_ce.isna().sum())
+    if n_uncalibrated > 0:
+        logger.warning(
+            f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} and keep their original CE"
+        )
+    library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
+        library.obs.loc[is_hcd, "COLLISION_ENERGY"]
+    ).to_numpy()
+
+
+def _stored_best_ce(spectra_file: Path, config: Config) -> Optional[pd.Series]:
+    """
+    Get the best CE per original CE (DDA) or per precursor charge (DIA) from a previous calibration.
+
+    :param spectra_file: the spectra file the calibration belongs to
+    :param config: the configuration object; ce_alignment_options.ce_calibration_dir points to the previous results
+    :return: the best CE per group, or None if no previous calibration is configured or found for this file
+    """
+    ce_calibration_dir = config.ce_calibration_dir
+    if ce_calibration_dir is None:
+        return None
+    ce_file = ce_calibration_dir / f"{spectra_file.stem}_ce.txt"
+    if not ce_file.is_file():
+        logger.warning(f"No previous CE calibration found for {spectra_file.stem} in {ce_calibration_dir}")
+        return None
+    with open(ce_file) as f:
+        best_ce = json.load(f)
+    if not isinstance(best_ce, dict):
+        return None
+    to_key = int if config.acquisition_method.lower() == "dia" else float
+    return pd.Series({to_key(float(group)): ce for group, ce in best_ce.items()})
 
 
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
@@ -217,7 +300,16 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     # same selection as in the CE alignment, which only uses HCD spectra
     is_hcd = (library.obs["FRAGMENTATION"] == "HCD").to_numpy(dtype=bool)
     library.obs.loc[~is_hcd, "COLLISION_ENERGY"] = 35
-    if is_hcd.any():
+    stored_best_ce = None
+    if is_hcd.any() and not config.use_ransac_model:
+        stored_best_ce = _stored_best_ce(spectra_file, config)
+    if stored_best_ce is not None:
+        logger.info(f"Using the previous CE calibration for {spectra_file.stem}: {stored_best_ce.to_dict()}")
+        library_column = "PRECURSOR_CHARGE" if config.acquisition_method.lower() == "dia" else "COLLISION_ENERGY"
+        _map_best_ce(library, stored_best_ce, is_hcd, library_column)
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            json.dump(stored_best_ce.to_dict(), f)
+    elif is_hcd.any():
         use_ransac_model = config.use_ransac_model
         if config.acquisition_method.lower() == "dia" or use_ransac_model:
             group_by_charge = True
@@ -239,7 +331,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             )
         else:
             alignment_library = predictor.ce_calibration(
-                library,
+                _ce_calibration_library(library, config),
                 config.ce_range,
                 group_by_charge,
                 dataset_name=spectra_file.stem + "_ce_calibration",
@@ -310,21 +402,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
                 )
 
-            # map from a snapshot of the original values in one step, so a CE that was just assigned is never
-            # matched again by another group (e.g. 30 -> 33 must not then be remapped by the 33 -> 35 group).
-            # Only HCD spectra are calibrated, so CID spectra set to 35 above are never remapped, even if an
-            # HCD group also had an original CE of 35. HCD groups without a calibration keep their original CE.
-            orig_values = library.obs.loc[is_hcd, library_column]
-            calibrated_ce = orig_values.map(best_ce_per_orig)
-            n_uncalibrated = int(calibrated_ce.isna().sum())
-            if n_uncalibrated > 0:
-                logger.warning(
-                    f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} "
-                    "and keep their original CE"
-                )
-            library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
-                library.obs.loc[is_hcd, "COLLISION_ENERGY"]
-            ).to_numpy()
+            _map_best_ce(library, best_ce_per_orig, is_hcd, library_column)
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 json.dump(best_ce_per_orig.to_dict(), f)
                 f.close()
@@ -725,9 +803,12 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
 
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(
-                input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
-            )
+            if config.ptm_fdr_control and not xl:
+                re.percolator_fdr_modified(fdr_dir / "original.tab", num_threads=config.num_threads)
+            else:
+                re.rescore_with_percolator(
+                    input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
+                )
             if xl:
                 output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
                 output_csms_original = xl_between_or_self(output_csms_original, score="score")
@@ -735,9 +816,10 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
 
             rescore_original_step.mark_done()
         if not config._run_original and not rescore_prosit_step.is_done():
-            logger.info(config.ptm_localization)
             if config.ptm_localization:
-                _ptm_localization_rescore(fdr_dir, config)
+                re.localize_ptms(fdr_dir, config.ptm_sites, config.ptm_decoy_residues, config.ptm_flr_neighbor_split)
+            elif config.ptm_fdr_control and not xl:
+                re.percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
             else:
                 re.rescore_with_percolator(
                     input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
@@ -1116,43 +1198,6 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     return input_psm_rescore
 
 
-def _ptm_localization_rescore(fdr_dir: Path, config: Config):
-    """
-     Helper function for running percolator to do PTM localization.
-
-    :param fdr_dir: the output directory
-    :param config: the configuration object
-    """
-    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
-    unimod_id = config.ptm_unimod_id
-    df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
-    df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
-    df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
-    df_rescore.drop(columns=["id"], inplace=True)
-    df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
-    new_rescore_dir = fdr_dir / "localize_mod"
-    new_rescore_dir.mkdir(parents=True, exist_ok=True)
-
-    if unimod_id == 7:
-        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
-        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
-        df_rescore_psms_targets = df_rescore_psms_targets[
-            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms_decoys = df_rescore_psms_decoys[
-            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
-        df_rescore_psms = df_rescore_psms[["PSMId"]]
-        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
-        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
-        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-    else:
-        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
-
-
 def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
     """
      Helper function to generate xiFDR input.
@@ -1400,6 +1445,13 @@ def run_rescoring(config_path: Union[str, Path, Config]):
         logger.info("Generating summary plots...")
         if not config.ptm_localization and not config._run_original:
             pl.plot_all(fdr_dir, config)
+            mod_fdr_dir = fdr_dir / "mod_fdr"
+            if (
+                config.ptm_fdr_control
+                and config.fdr_estimation_method == "percolator"
+                and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file()
+            ):
+                pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
         if config.quantification:

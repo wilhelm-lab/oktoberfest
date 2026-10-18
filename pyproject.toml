@@ -15,9 +15,10 @@ dependencies = [
     "mokapot>=0.9.1",
     "numpy>=1.26.4",
     "seaborn>=0.12.2",
-    "spectrum-io>=0.8.0",
+    # PTM pipeline requires the features/ptm_pipeline branches (based on spectrum-io>=0.8.0 / spectrum-fundamentals>=1.0.0)
+    "spectrum-io @ git+https://github.com/wilhelm-lab/spectrum_io.git@features/ptm_pipeline",
     # >=1.0.0 computes the ExpMass percolator feature (no longer added by oktoberfest)
-    "spectrum-fundamentals>=1.0.0",
+    "spectrum-fundamentals @ git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@features/ptm_pipeline",
     "picked_group_fdr>=0.9.0",
     "koinapy>=0.0.10",
     "spectrum-utils>=0.4.2",

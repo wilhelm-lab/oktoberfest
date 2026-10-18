@@ -257,7 +257,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
         return filter_xl_peptides(peptides, **filter_kwargs)
     if "prosit" in model.lower():
         filter_kwargs = {
-            "min_length": 7,
+            "min_length": 6,
             "max_length": 30,
             "max_charge": 6,
         }
@@ -447,8 +447,9 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
-    ptm_unimod_id: Optional[int] = 0,
+    ptm_unimod_id: Optional[Union[int, dict[int, list[str]]]] = 0,
     ptm_sites: Optional[list] = None,
+    ptm_model: Optional[bool] = False,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -467,8 +468,10 @@ def convert_search(
         static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
-    :param ptm_unimod_id: unimod id used for site localization
-    :param ptm_sites: possible sites that the ptm can exist on
+    :param ptm_unimod_id: unimod id used for site localization, or a mapping of unimod id to possible residues to
+        localize several PTMs. 0 or an empty mapping disables the generation of site permutations.
+    :param ptm_sites: possible sites that the ptm can exist on, if a single unimod id is given
+    :param ptm_model: whether a PTM-aware intensity model is used
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -572,6 +575,7 @@ def convert_search(
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
         xl=xl,
+        ptm_model=ptm_model,
     )
 
 
@@ -922,6 +926,8 @@ def annotate_spectral_library(
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
     featured_ions: Optional[list[str]] = None,
+    phospho_loss_residues: str = "ST",
+    plain_loss_residues: Optional[str] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -941,6 +947,9 @@ def annotate_spectral_library(
     :param multifrag: flag to indicate whether to annotate multifrag peaks or not
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
+    :param phospho_loss_residues: phosphorylated residues annotated with the neutral loss of phosphoric acid
+    :param plain_loss_residues: if given, the neutral losses are also counted with these residues (e.g. "ST" if
+        phospho_loss_residues contains decoy residues), stored as ANNOTATED_NL_COUNT_PLAIN and EXPECTED_NL_COUNT_PLAIN
 
     :return: Spectra object containing the annotated featured sion peaks including metadata
 
@@ -981,6 +990,8 @@ def annotate_spectral_library(
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
+        phospho_loss_residues=phospho_loss_residues,
+        plain_loss_residues=plain_loss_residues,
     )
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
@@ -991,6 +1002,10 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+    if plain_loss_residues is not None:
+        aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT_PLAIN"].values, "EXPECTED_NL_COUNT_PLAIN")
+        aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT_PLAIN"].values, "ANNOTATED_NL_COUNT_PLAIN")
+    aspec.add_column(df_annotated_spectra["MOST_INTESE_PEAK"].values, "MOST_INTESE_PEAK")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")

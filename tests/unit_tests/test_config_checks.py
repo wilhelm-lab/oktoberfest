@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -176,3 +177,111 @@ class TestCheck(unittest.TestCase):
         with patch.object(Config, "dlomix_pipeline", new_callable=PropertyMock, return_value=None):
             with self.assertRaisesRegex(ValueError, "Could not load DLOmix pipeline from some/path"):
                 config.check()
+
+
+class TestPTMLocalization(unittest.TestCase):
+    """Test the PTM settings with and without localization."""
+
+    def test_without_localization(self):
+        """Test PTMs are not localized if localization is disabled, even if PTMs are specified."""
+        config = _config(ptm_localization=False, ptmLocalizationOptions={"ptms": {"21": ["S", "T", "Y"]}})
+        self.assertEqual(config.ptm_sites, {})
+        self.assertEqual(config.ptm_unimod_id, 0)
+        self.assertEqual(config.ptm_possible_sites, [])
+        self.assertFalse(config.ptm_use_neutral_loss)
+        with self.assertLogs("oktoberfest.utils.config", level="WARNING"):
+            config._check_ptm_localization()
+
+    def test_multiple_ptms(self):
+        """Test several PTMs with their own residues can be localized."""
+        config = _config(
+            ptm_localization=True,
+            ptmLocalizationOptions={"ptms": {"21": ["S", "T", "Y"], "7": ["R"]}, "neutral_loss": True},
+        )
+        config._check_ptm_localization()
+        self.assertEqual(config.ptm_sites, {21: ["S", "T", "Y"], 7: ["R"]})
+        self.assertEqual(config.ptm_unimod_id, 0)
+        self.assertEqual(config.ptm_possible_sites, ["R", "S", "T", "Y"])
+        self.assertTrue(config.ptm_use_neutral_loss)
+
+    def test_legacy_single_ptm(self):
+        """Test the legacy format with a single unimod id and possible sites."""
+        config = _config(
+            ptm_localization=True, ptmLocalizationOptions={"unimod_id": 7, "possible_sites": ["R", "N", "Q"]}
+        )
+        config._check_ptm_localization()
+        self.assertEqual(config.ptm_sites, {7: ["R", "N", "Q"]})
+        self.assertEqual(config.ptm_unimod_id, 7)
+
+    def test_invalid_localization_settings(self):
+        """Test localization requires the user to specify PTMs and valid residues."""
+        for options, message in [
+            ({}, "no PTM to localize"),
+            ({"ptms": {}}, "no PTM to localize"),
+            ({"ptms": ["21"]}, "must map unimod ids"),
+            ({"ptms": {"21": []}}, "No possible residues"),
+            ({"ptms": {"21": ["S", "X"]}}, "Invalid residues"),
+        ]:
+            with self.subTest(options=options):
+                with self.assertRaisesRegex(ValueError, message):
+                    _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
+
+    def test_ptm_phospho_loss_residues(self):
+        """Test the phosphoric acid loss is annotated on S and T, and on the decoy residues with decoy_neutral_loss."""
+        options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A", "G"]}
+        self.assertEqual(_config(ptm_localization=True, ptmLocalizationOptions=options).ptm_phospho_loss_residues, "ST")
+        options["decoy_neutral_loss"] = True
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_phospho_loss_residues, "STAG")
+
+    def test_ptm_decoy_proxies(self):
+        """Test decoys are predicted on the first possible site residue, or on the residue given in decoy_proxy."""
+        options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A", "G"]}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_proxies, {"A[UNIMOD:21]": "S[UNIMOD:21]", "G[UNIMOD:21]": "S[UNIMOD:21]"})
+        options["decoy_proxy"] = "T"
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_proxies, {"A[UNIMOD:21]": "T[UNIMOD:21]", "G[UNIMOD:21]": "T[UNIMOD:21]"})
+
+    def test_ptm_decoy_proxy_search(self):
+        """Test decoys are predicted as a mixture of pS and pT with the frequencies of the search engine results."""
+        import pandas as pd
+
+        from oktoberfest.predict.predictor import _choose_proxy
+        from oktoberfest.rescore import decoy_proxy_fractions
+
+        search = pd.DataFrame(
+            {
+                "RAW_FILE": ["a", "a", "a", "a", "a"],
+                "SCAN_NUMBER": [1, 1, 2, 3, 4],
+                "REVERSE": [False, False, False, False, True],
+                "SEARCH_MODIFIED_SEQUENCE": ["PES[UNIMOD:21]K"] * 2
+                + ["PET[UNIMOD:21]K", "PEY[UNIMOD:21]K", "S[UNIMOD:21]K"],
+            }
+        )
+        # scan 1 counted once, Y is no proxy residue, the decoy PSM (scan 4) is not counted
+        fractions = decoy_proxy_fractions(search, {21: ["S", "T", "Y"]})
+        self.assertEqual(fractions, {"21": {"S": 0.5, "T": 0.5}})
+        with tempfile.TemporaryDirectory() as tmp:
+            options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A"], "decoy_proxy": "search"}
+            config = _config(ptm_localization=True, ptmLocalizationOptions=options, output=tmp)
+            config.base_path = Path(tmp)
+            config.decoy_proxy_fractions_file.parent.mkdir(parents=True)
+            config.decoy_proxy_fractions_file.write_text(json.dumps(fractions))
+            proxies = config.ptm_decoy_proxies["A[UNIMOD:21]"]
+        self.assertEqual(proxies, {"S[UNIMOD:21]": 0.5, "T[UNIMOD:21]": 0.5})
+        chosen = [_choose_proxy(f"PEPA[UNIMOD:21]{i}K", proxies) for i in range(2000)]
+        self.assertAlmostEqual(chosen.count("T[UNIMOD:21]") / len(chosen), 0.5, delta=0.05)
+        self.assertEqual(_choose_proxy("PEA[UNIMOD:21]K", proxies), _choose_proxy("PEA[UNIMOD:21]K", proxies))
+
+    def test_ptm_fdr_control_default(self):
+        """Test PTM models split unmodified and modified PSMs by default, but never permute without localization."""
+        ptm_models = {"intensity": "Prosit_2024_intensity_PTMs_gl", "irt": "Prosit_2024_irt_PTMs_gl"}
+        self.assertTrue(_config(models=ptm_models).ptm_fdr_control)
+        self.assertEqual(_config(models=ptm_models).ptm_sites, {})
+        self.assertFalse(_config(models=ptm_models, ptm_fdr_control=False).ptm_fdr_control)
+        self.assertFalse(_config(models={"intensity": "Prosit_2020_intensity_HCD"}).ptm_fdr_control)
+        localization = {"ptms": {"21": ["S", "T", "Y"]}}
+        config = _config(models=ptm_models, ptm_localization=True, ptmLocalizationOptions=localization)
+        self.assertFalse(config.ptm_fdr_control)
+        self.assertEqual(config.ptm_sites, {21: ["S", "T", "Y"]})

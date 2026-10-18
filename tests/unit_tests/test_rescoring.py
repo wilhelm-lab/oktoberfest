@@ -10,7 +10,13 @@ from .. import DATA_DIR
 from oktoberfest import rescore as re
 from oktoberfest.data import Spectra
 
-PREDICTION_FEATURES = ["spectral_angle", "pearson_corr", "pred_RT", "iRT", "abs_rt_diff", "count_predicted"]
+PREDICTION_FEATURES = [
+    "spectral_angle",
+    "abs_rt_diff",
+    "count_predicted",
+    "observed_intensity",
+    "sum_observed_and_predicted",
+]
 
 
 class TestRescoring(unittest.TestCase):
@@ -18,66 +24,30 @@ class TestRescoring(unittest.TestCase):
 
     def test_generate_features(self):
         """Test feature generation with internal results and additional columns."""
-        # load test library containing 100 psms
-        library = Spectra.from_hdf5(DATA_DIR / "library" / "library100.hdf5")
-
-        # all additional columns
-        re.generate_features(
-            library=library,
-            search_type="rescore",
-            output_file=DATA_DIR / "library" / "rescore_all.tab",
-            additional_columns="all",
-            all_features=False,
-            regression_method="spline",
-        )
-        expected_all = pd.read_csv(DATA_DIR / "library" / "expected_rescore_all.tab", sep="\t")
-        created_all = pd.read_csv(DATA_DIR / "library" / "rescore_all.tab", sep="\t")
-        pd.testing.assert_frame_equal(expected_all, created_all)
-
-        # no additional columns
-        re.generate_features(
-            library=library,
-            search_type="rescore",
-            output_file=DATA_DIR / "library" / "rescore_none.tab",
-            additional_columns="none",
-            all_features=False,
-            regression_method="spline",
-        )
-        expected_none = pd.read_csv(DATA_DIR / "library" / "expected_rescore_none.tab", sep="\t")
-        created_none = pd.read_csv(DATA_DIR / "library" / "rescore_none.tab", sep="\t")
-        pd.testing.assert_frame_equal(expected_none, created_none)
-
-        # list of additional columns
-        re.generate_features(
-            library=library,
-            search_type="rescore",
-            output_file=DATA_DIR / "library" / "rescore_list.tab",
-            additional_columns=["A"],
-            all_features=False,
-            regression_method="spline",
-        )
-        expected_list = pd.read_csv(DATA_DIR / "library" / "expected_rescore_list.tab", sep="\t")
-        created_list = pd.read_csv(DATA_DIR / "library" / "rescore_list.tab", sep="\t")
-        pd.testing.assert_frame_equal(expected_list, created_list)
-
-        # load test library containing 150 psms for multifrag
-        library = Spectra.from_hdf5(DATA_DIR / "library" / "library150_multifrag.hdf5")
-
-        # all additional columns
-        re.generate_features(
-            library=library,
-            search_type="rescore",
-            output_file=DATA_DIR / "library" / "rescore_all_multifrag.tab",
-            additional_columns=None,
-            all_features=False,
-            task="multifrag",
-            regression_method="spline",
-            featured_ions=["C", "z"],  # c,z ions
-        )
-
-        expected_all = pd.read_csv(DATA_DIR / "library" / "expected_rescore_multifrag.tab", sep="\t")
-        created_all = pd.read_csv(DATA_DIR / "library" / "rescore_all_multifrag.tab", sep="\t")
-        pd.testing.assert_frame_equal(expected_all, created_all)
+        cases = [
+            ("library100.hdf5", "expected_rescore_all.tab", {"additional_columns": "all"}),
+            ("library100.hdf5", "expected_rescore_none.tab", {"additional_columns": "none"}),
+            ("library100.hdf5", "expected_rescore_list.tab", {"additional_columns": ["A"]}),
+            (
+                "library150_multifrag.hdf5",
+                "expected_rescore_multifrag.tab",
+                {"additional_columns": None, "task": "multifrag", "featured_ions": ["C", "z"]},
+            ),
+        ]
+        for library_file, expected_file, kwargs in cases:
+            with self.subTest(expected=expected_file), tempfile.TemporaryDirectory() as tmp_dir:
+                # the retention time alignment model is cached next to the output file, keep it out of the test data
+                output_file = Path(tmp_dir) / "rescore.tab"
+                re.generate_features(
+                    library=Spectra.from_hdf5(DATA_DIR / "library" / library_file),
+                    search_type="rescore",
+                    output_file=output_file,
+                    all_features=False,
+                    regression_method="spline",
+                    **kwargs,
+                )
+                expected = pd.read_csv(DATA_DIR / "library" / expected_file, sep="\t")
+                pd.testing.assert_frame_equal(expected, pd.read_csv(output_file, sep="\t"))
 
     def test_generate_features_original_and_rescore(self):
         """Test original features exclude prediction based features and both keep the percolator column layout."""
@@ -97,10 +67,11 @@ class TestRescoring(unittest.TestCase):
             self.assertFalse(tab.isna().any().any())
         self.assertTrue(set(PREDICTION_FEATURES).isdisjoint(original.columns))
         self.assertTrue(set(PREDICTION_FEATURES).issubset(rescore.columns))
-        # the search engine score is only used without predictions (unless all_features is set)
+        # the search engine score is a feature of both, its delta score only without predictions
         self.assertTrue({"andromeda", "andromeda_delta_score"}.issubset(original.columns))
-        self.assertTrue({"andromeda", "andromeda_delta_score"}.isdisjoint(rescore.columns))
-        shared = ["Charge2", "Mass", "missedCleavages", "sequence_length"]
+        self.assertIn("andromeda", rescore.columns)
+        self.assertNotIn("andromeda_delta_score", rescore.columns)
+        shared = ["Charge2", "andromeda", "missedCleavages", "sequence_length"]
         pd.testing.assert_frame_equal(original[shared], rescore[shared])
 
         # ExpMass is the experimental precursor m/z, labels are 1 for targets and -1 for decoys

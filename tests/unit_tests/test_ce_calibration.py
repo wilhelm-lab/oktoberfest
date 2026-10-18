@@ -121,6 +121,35 @@ class TestCECalibration(unittest.TestCase):
         np.testing.assert_array_equal(library.obs["COLLISION_ENERGY"].to_numpy(), [33.0, 33.0, 35.0, 31.0, 35.0, 35.0])
         self.assertEqual(json.loads(self.ce_file.read_text()), {"30.0": 33, "33.0": 35, "35.0": 31})
 
+    def test_ce_calibration_reuses_previous_calibration(self, mock_from_config, mock_pl):
+        """Test a previous calibration is applied without predictions if ce_calibration_dir is configured."""
+        self._set_mode("DDA", use_ransac_model=False)
+        previous_dir = Path(self.tmp_dir.name) / "previous"
+        previous_dir.mkdir()
+        (previous_dir / "file1_ce.txt").write_text(json.dumps({"30.0": 33, "33.0": 35, "35.0": 31}))
+        self.config.data["ce_alignment_options"]["ce_calibration_dir"] = "previous"
+        library = _make_library()
+
+        _get_best_ce(library, self.spectra_file, self.config)
+
+        mock_from_config.assert_not_called()
+        np.testing.assert_array_equal(library.obs["COLLISION_ENERGY"].to_numpy(), [33.0, 33.0, 35.0, 31.0, 35.0, 35.0])
+        self.assertEqual(json.loads(self.ce_file.read_text()), {"30.0": 33, "33.0": 35, "35.0": 31})
+
+    def test_ce_calibration_missing_previous_calibration(self, mock_from_config, mock_pl):
+        """Test the CE is calibrated as usual if the previous calibration has no file for this spectra file."""
+        self._set_mode("DDA", use_ransac_model=False)
+        (Path(self.tmp_dir.name) / "previous").mkdir()
+        self.config.data["ce_alignment_options"]["ce_calibration_dir"] = "previous"
+        library = _make_library()
+        predictor = mock_from_config.return_value
+        predictor.ce_calibration.return_value = _make_alignment_library("ORIG_COLLISION_ENERGY", {30.0: 31, 33.0: 34})
+
+        _get_best_ce(library, self.spectra_file, self.config)
+
+        predictor.ce_calibration.assert_called_once()
+        np.testing.assert_array_equal(library.obs["COLLISION_ENERGY"].to_numpy(), [31.0, 31.0, 34.0, 35.0, 35.0, 35.0])
+
     def test_ce_calibration_hcd_uncalibrated_group(self, mock_from_config, mock_pl):
         """Test that HCD spectra whose original CE has no calibration keep their original CE."""
         self._set_mode("DDA", use_ransac_model=False)
