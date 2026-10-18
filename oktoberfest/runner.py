@@ -263,8 +263,7 @@ def _map_best_ce(library: Spectra, best_ce_per_orig: pd.Series, is_hcd: np.ndarr
     n_uncalibrated = int(calibrated_ce.isna().sum())
     if n_uncalibrated > 0:
         logger.warning(
-            f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} "
-            "and keep their original CE"
+            f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} and keep their original CE"
         )
     library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
         library.obs.loc[is_hcd, "COLLISION_ENERGY"]
