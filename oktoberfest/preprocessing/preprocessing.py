@@ -926,6 +926,8 @@ def annotate_spectral_library(
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
     featured_ions: Optional[list[str]] = None,
+    phospho_loss_residues: str = "ST",
+    plain_loss_residues: Optional[str] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -945,6 +947,9 @@ def annotate_spectral_library(
     :param multifrag: flag to indicate whether to annotate multifrag peaks or not
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
+    :param phospho_loss_residues: phosphorylated residues annotated with the neutral loss of phosphoric acid
+    :param plain_loss_residues: if given, the neutral losses are also counted with these residues (e.g. "ST" if
+        phospho_loss_residues contains decoy residues), stored as ANNOTATED_NL_COUNT_PLAIN and EXPECTED_NL_COUNT_PLAIN
 
     :return: Spectra object containing the annotated featured sion peaks including metadata
 
@@ -985,6 +990,8 @@ def annotate_spectral_library(
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
+        phospho_loss_residues=phospho_loss_residues,
+        plain_loss_residues=plain_loss_residues,
     )
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
@@ -995,6 +1002,9 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+    if plain_loss_residues is not None:
+        aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT_PLAIN"].values, "EXPECTED_NL_COUNT_PLAIN")
+        aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT_PLAIN"].values, "ANNOTATED_NL_COUNT_PLAIN")
     aspec.add_column(df_annotated_spectra["MOST_INTESE_PEAK"].values, "MOST_INTESE_PEAK")
     aspec.strings_to_categoricals()
 

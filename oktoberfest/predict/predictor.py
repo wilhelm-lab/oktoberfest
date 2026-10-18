@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import zlib
+
 import inspect
 import logging
 from contextlib import contextmanager
@@ -20,6 +22,16 @@ logger = logging.getLogger(__name__)
 PredictionInterface = Union[Koina, DLOmixLocal, ZeroPredictor]
 
 
+def _choose_proxy(sequence: str, fractions: dict[str, float]) -> str:
+    """Choose a proxy for a sequence with the given frequencies, deterministically from a hash of the sequence."""
+    position = (zlib.crc32(sequence.encode()) % 100000) / 100000 * sum(fractions.values())
+    for proxy, fraction in fractions.items():
+        position -= fraction
+        if position < 0:
+            return proxy
+    return proxy
+
+
 class Predictor:
     """Abstracts common prediction operations away from their actual implementation via the Koina interface."""
 
@@ -28,7 +40,7 @@ class Predictor:
         self._predictor = predictor
         self.model_name = model_name
         # replacements of modified residues the model does not support, e.g. decoy localizations {"A[UNIMOD:21]": ...}
-        self.sequence_proxies: dict[str, str] = {}
+        self.sequence_proxies: dict[str, Union[str, dict[str, float]]] = {}
 
     @contextmanager
     def _proxy_sequences(self, data: Spectra):
@@ -39,7 +51,14 @@ class Predictor:
         original = data.obs["MODIFIED_SEQUENCE"].copy()
         sequences = original.astype(str)
         for residue, proxy in self.sequence_proxies.items():
-            sequences = sequences.str.replace(residue, proxy, regex=False)
+            if isinstance(proxy, str):
+                sequences = sequences.str.replace(residue, proxy, regex=False)
+                continue
+            # a mixture of proxies {proxy: fraction}: every sequence gets one proxy, chosen deterministically
+            with_residue = sequences.str.contains(residue, regex=False)
+            sequences[with_residue] = [
+                sequence.replace(residue, _choose_proxy(sequence, proxy)) for sequence in sequences[with_residue]
+            ]
         data.obs["MODIFIED_SEQUENCE"] = sequences.values
         try:
             yield
@@ -172,9 +191,15 @@ class Predictor:
         with self._proxy_sequences(data):
             if chunk_idx is None:
                 if xl:
-                    intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs))
-                    data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
-                    data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
+                    intensities_a, intensities_b = self._predictor.predict_xl(
+                        data=data, **self._filter_kwargs(**kwargs)
+                    )
+                    data.add_intensities_without_mapping(
+                        intensities_a["intensities"], fragment_type=FragmentType.PRED_A
+                    )
+                    data.add_intensities_without_mapping(
+                        intensities_b["intensities"], fragment_type=FragmentType.PRED_B
+                    )
                 else:
                     intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
 

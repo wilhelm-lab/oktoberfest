@@ -27,6 +27,7 @@ from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
+from .utils.config import ADJACENT_DECOY_RESIDUES
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,16 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
 
         # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
+        if config.ptm_decoy_residues and config.ptm_decoy_selection == "adjacent":
+            search_results = re.add_adjacent_decoy_candidates(
+                search_results, config.ptm_sites, config.ptm_decoy_priority_residues, ADJACENT_DECOY_RESIDUES
+            )
+        elif config.ptm_decoy_residues:
+            search_results = re.select_decoy_candidates(search_results, config.ptm_sites, config.ptm_decoy_residues)
+        if config.ptm_decoy_residues:
+            if config.ptm_localization_options.get("decoy_proxy") == "search":
+                fractions = re.decoy_proxy_fractions(search_results, config.ptm_sites)
+                config.decoy_proxy_fractions_file.write_text(json.dumps(fractions))
 
         # Filter peptides only if using Koina intensity model
         if not config.models.get("dlomix_intensity"):
@@ -208,6 +219,8 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 annotate_neutral_loss=annotate_neutral_loss,
                 multifrag=config.check_multifrag(),
                 featured_ions=config.ion_types,
+                phospho_loss_residues=config.ptm_phospho_loss_residues,
+                plain_loss_residues=config.ptm_plain_loss_residues,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -240,6 +253,47 @@ def _ce_calibration_library(library: Spectra, config: Config) -> Spectra:
     return Spectra(library[without_ptm].copy())
 
 
+def _map_best_ce(library: Spectra, best_ce_per_orig: pd.Series, is_hcd: np.ndarray, library_column: str):
+    # map from a snapshot of the original values in one step, so a CE that was just assigned is never
+    # matched again by another group (e.g. 30 -> 33 must not then be remapped by the 33 -> 35 group).
+    # Only HCD spectra are calibrated, so CID spectra set to 35 above are never remapped, even if an
+    # HCD group also had an original CE of 35. HCD groups without a calibration keep their original CE.
+    orig_values = library.obs.loc[is_hcd, library_column]
+    calibrated_ce = orig_values.map(best_ce_per_orig)
+    n_uncalibrated = int(calibrated_ce.isna().sum())
+    if n_uncalibrated > 0:
+        logger.warning(
+            f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} "
+            "and keep their original CE"
+        )
+    library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
+        library.obs.loc[is_hcd, "COLLISION_ENERGY"]
+    ).to_numpy()
+
+
+def _stored_best_ce(spectra_file: Path, config: Config) -> Optional[pd.Series]:
+    """
+    Get the best CE per original CE (DDA) or per precursor charge (DIA) from a previous calibration.
+
+    :param spectra_file: the spectra file the calibration belongs to
+    :param config: the configuration object; ce_alignment_options.ce_calibration_dir points to the previous results
+    :return: the best CE per group, or None if no previous calibration is configured or found for this file
+    """
+    ce_calibration_dir = config.ce_calibration_dir
+    if ce_calibration_dir is None:
+        return None
+    ce_file = ce_calibration_dir / f"{spectra_file.stem}_ce.txt"
+    if not ce_file.is_file():
+        logger.warning(f"No previous CE calibration found for {spectra_file.stem} in {ce_calibration_dir}")
+        return None
+    with open(ce_file) as f:
+        best_ce = json.load(f)
+    if not isinstance(best_ce, dict):
+        return None
+    to_key = int if config.acquisition_method.lower() == "dia" else float
+    return pd.Series({to_key(float(group)): ce for group, ce in best_ce.items()})
+
+
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     results_dir = config.output / "results/ce_calibration"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -247,7 +301,16 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
     # same selection as in the CE alignment, which only uses HCD spectra
     is_hcd = (library.obs["FRAGMENTATION"] == "HCD").to_numpy(dtype=bool)
     library.obs.loc[~is_hcd, "COLLISION_ENERGY"] = 35
-    if is_hcd.any():
+    stored_best_ce = None
+    if is_hcd.any() and not config.use_ransac_model:
+        stored_best_ce = _stored_best_ce(spectra_file, config)
+    if stored_best_ce is not None:
+        logger.info(f"Using the previous CE calibration for {spectra_file.stem}: {stored_best_ce.to_dict()}")
+        library_column = "PRECURSOR_CHARGE" if config.acquisition_method.lower() == "dia" else "COLLISION_ENERGY"
+        _map_best_ce(library, stored_best_ce, is_hcd, library_column)
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            json.dump(stored_best_ce.to_dict(), f)
+    elif is_hcd.any():
         use_ransac_model = config.use_ransac_model
         if config.acquisition_method.lower() == "dia" or use_ransac_model:
             group_by_charge = True
@@ -340,21 +403,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
                 )
 
-            # map from a snapshot of the original values in one step, so a CE that was just assigned is never
-            # matched again by another group (e.g. 30 -> 33 must not then be remapped by the 33 -> 35 group).
-            # Only HCD spectra are calibrated, so CID spectra set to 35 above are never remapped, even if an
-            # HCD group also had an original CE of 35. HCD groups without a calibration keep their original CE.
-            orig_values = library.obs.loc[is_hcd, library_column]
-            calibrated_ce = orig_values.map(best_ce_per_orig)
-            n_uncalibrated = int(calibrated_ce.isna().sum())
-            if n_uncalibrated > 0:
-                logger.warning(
-                    f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} "
-                    "and keep their original CE"
-                )
-            library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
-                library.obs.loc[is_hcd, "COLLISION_ENERGY"]
-            ).to_numpy()
+            _map_best_ce(library, best_ce_per_orig, is_hcd, library_column)
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
                 json.dump(best_ce_per_orig.to_dict(), f)
                 f.close()
@@ -756,7 +805,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
             if config.ptm_fdr_control and not xl:
-                percolator_fdr_modified(fdr_dir / "original.tab", num_threads=config.num_threads)
+                re.percolator_fdr_modified(fdr_dir / "original.tab", num_threads=config.num_threads)
             else:
                 re.rescore_with_percolator(
                     input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
@@ -769,9 +818,9 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
             rescore_original_step.mark_done()
         if not config._run_original and not rescore_prosit_step.is_done():
             if config.ptm_localization:
-                _ptm_localization_rescore(fdr_dir, config)
+                re.localize_ptms(fdr_dir, config.ptm_sites, config.ptm_decoy_residues, config.ptm_flr_neighbor_split)
             elif config.ptm_fdr_control and not xl:
-                percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
+                re.percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
             else:
                 re.rescore_with_percolator(
                     input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
@@ -801,44 +850,6 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
         raise ValueError(
             'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
         )
-
-
-def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
-    """
-    Helper function for running percolator separately on unmodified and modified PSMs.
-
-    PSMs that are unmodified or only carry allowed modifications (carbamidomethyl, oxidation, SILAC heavy R)
-    are rescored in place, all other PSMs are rescored in a separate mod_fdr subfolder.
-
-    :param features_path: the features tab file path
-    :param num_threads: number of threads used by percolator
-    """
-    df_features = pd.read_csv(features_path, sep="\t")
-    # peptides with at least one allowed UNIMOD
-    has_allowed = df_features["Peptide"].str.contains(r"\[UNIMOD:(?:4|35|267)\]", regex=True, na=False)
-    # peptides with any disallowed UNIMOD
-    has_disallowed = df_features["Peptide"].str.contains(r"\[UNIMOD:(?!4\]|35\]|267\])\d+\]", regex=True, na=False)
-    # peptides with no UNIMOD at all
-    is_unmodified = ~df_features["Peptide"].str.contains(r"\[UNIMOD:", regex=True, na=False)
-
-    # final: either unmodified OR only allowed UNIMODs
-    has_allowed_or_unmodified = is_unmodified | (has_allowed & ~has_disallowed)
-
-    df_features_unmod = df_features[has_allowed_or_unmodified]
-    df_features_unmod.to_csv(features_path, sep="\t", index=False)
-    fdr_dir = features_path.parent
-    re.rescore_with_percolator(input_file=features_path, output_folder=fdr_dir, num_threads=num_threads)
-
-    df_features_mod = df_features[~has_allowed_or_unmodified]
-    if df_features_mod.empty:
-        logger.warning(f"No modified PSMs found in {features_path}, skipping separate FDR control for modified PSMs.")
-        return
-
-    mod_fdr_dir = fdr_dir / "mod_fdr"
-    tab_file_name = mod_fdr_dir / features_path.name
-    mod_fdr_dir.mkdir(parents=True, exist_ok=True)
-    df_features_mod.to_csv(tab_file_name, sep="\t", index=False)
-    re.rescore_with_percolator(input_file=tab_file_name, output_folder=mod_fdr_dir, num_threads=num_threads)
 
 
 def xl_fdr(df: pd.DataFrame, score: str) -> pd.DataFrame:
@@ -1186,307 +1197,6 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     input_psm_rescore = pd.concat([rescore_tab_file_a, rescore_tab_file_b], axis=0, ignore_index=True)
     input_psm_rescore["Proteins"].fillna("unknown", inplace=True)
     return input_psm_rescore
-
-
-# features used to score the localization candidates of a spectrum against each other
-LOCALIZATION_FEATURES = [
-    "fraction_observed",
-    "fraction_observed_mod",
-    "sum_observed_and_predicted",
-    "observed_intensity",
-    "spectral_angle",
-    "fraction_observed_and_predicted",
-    "observed_intensity_mod",
-    "sum_observed_and_predicted_mod",
-    "fraction_observed_but_not_predicted",
-    "NL_FRACTION",
-    "NL_NOT_POSSIBLE",
-    "observed_intensity_mod_relative",
-    "sum_observed_and_predicted_mod_relative",
-]
-
-
-# features that can only support a localization candidate: their percolator weights must not be negative
-LOCALIZATION_POSITIVE_FEATURES = [
-    "spectral_angle",
-    "fraction_observed_mod",
-    "observed_intensity_mod",
-    "sum_observed_and_predicted_mod",
-    "observed_intensity_mod_relative",
-    "sum_observed_and_predicted_mod_relative",
-    "NL_FRACTION",
-]
-
-
-def _constrain_weights(weights_file: Path, output_file: Path):
-    """
-    Set negative percolator weights of LOCALIZATION_POSITIVE_FEATURES to 0.
-
-    The weights file contains, for every cross validation bin, the feature names, the normalized and the raw weights.
-
-    :param weights_file: percolator weights file
-    :param output_file: path of the constrained weights file
-    """
-    lines = weights_file.read_text().splitlines()
-    names = None
-    constrained = []
-    for line in lines:
-        fields = line.split("\t")
-        if line.startswith("#"):
-            constrained.append(line)
-        elif names is None or fields == names:
-            names = fields
-            constrained.append(line)
-        else:
-            constrained.append(
-                "\t".join(
-                    str(max(0.0, float(value))) if name in LOCALIZATION_POSITIVE_FEATURES else value
-                    for name, value in zip(names, fields, strict=True)
-                )
-            )
-    output_file.write_text("\n".join(constrained) + "\n")
-
-
-def _scan_numbers(psms: pd.DataFrame) -> list[int]:
-    """Get scan numbers from the PSMId (<raw file>-<scan number>-...) of percolator results."""
-    return [
-        int(psm_id[len(raw_file) :].split("-")[1])
-        for psm_id, raw_file in zip(psms["PSMId"], psms["filename"], strict=True)
-    ]
-
-
-def _decoy_site_pattern(config: Config) -> Optional[str]:
-    """Regex matching PTMs localized on decoy residues, e.g. A[UNIMOD:21]; None if no decoy residues are used."""
-    if not config.ptm_decoy_residues:
-        return None
-    ptm_ids = "|".join(str(unimod_id) for unimod_id in config.ptm_sites)
-    return rf"[{''.join(config.ptm_decoy_residues)}]\[UNIMOD:(?:{ptm_ids})\]"
-
-
-def _localization_probabilities(
-    candidates: pd.DataFrame, train_dir: Path, score_dir: Path, decoy_pattern: Optional[str] = None
-) -> pd.DataFrame:
-    """
-    Score all localization candidates of each spectrum and compute localization probabilities.
-
-    First, percolator is trained on localization specific features of all candidates, where the candidates of a
-    spectrum compete against each other (train_dir). Second, all candidates are scored with the trained weights
-    (percolator --static), with a unique ExpMass per candidate so that percolator keeps all candidates of a spectrum
-    instead of only the best one (score_dir). The localization probability of a candidate is its inverse posterior
-    error probability (PEP) normalized over all candidates of the same spectrum: loc_prob = (1 / PEP) / sum(1 / PEP).
-
-    Decoy candidates (PTM on a decoy residue, matched by decoy_pattern) are passive: they are not used for training
-    and not for the localization probabilities, so the localization is the same as without decoys. They are only
-    scored to flag spectra in which a decoy candidate would have won (decoy_win), used to estimate the FLR.
-
-    :param candidates: rescore features of all localization candidates (one row per candidate)
-    :param train_dir: directory for the percolator training on the localization features
-    :param score_dir: directory for scoring all candidates with the trained weights
-    :param decoy_pattern: regex matching decoy candidates in the Peptide column, None if no decoys are used
-    :return: one row per (non decoy) candidate with PSMId, filename, ScanNr, loc_prob, loc_prob_delta (difference
-        between the best and second best candidate of the spectrum), possible_sites (number of candidates of the
-        spectrum) and decoy_win (a decoy candidate scores higher than all candidates of the spectrum)
-    """
-    columns = (
-        ["SpecId", "Label", "ScanNr", "filename", "ExpMass"]
-        + [feature for feature in LOCALIZATION_FEATURES if feature in candidates.columns]
-        + ["Peptide", "Proteins"]
-    )
-    df_candidates = candidates[columns].copy()
-
-    is_decoy = (
-        df_candidates["Peptide"].str.contains(decoy_pattern, regex=True)
-        if decoy_pattern
-        else pd.Series(False, index=df_candidates.index)
-    )
-
-    train_dir.mkdir(parents=True, exist_ok=True)
-    df_candidates[~is_decoy].to_csv(train_dir / "rescore.tab", sep="\t", index=False)
-    re.rescore_with_percolator(input_file=train_dir / "rescore.tab", output_folder=train_dir)
-
-    score_dir.mkdir(parents=True, exist_ok=True)
-    constrained_weights = score_dir / "constrained.weights.csv"
-    _constrain_weights(train_dir / "rescore.percolator.weights.csv", constrained_weights)
-    df_candidates["ExpMass"] = np.arange(1, len(df_candidates) + 1)
-    df_candidates.to_csv(score_dir / "rescore.tab", sep="\t", index=False)
-    re.rescore_with_percolator(
-        input_file=score_dir / "rescore.tab",
-        output_folder=score_dir,
-        init_weights=constrained_weights,
-    )
-    output_dir = score_dir
-
-    psms = pd.concat(
-        [
-            pd.read_csv(output_dir / "rescore.percolator.psms.txt", sep="\t"),
-            pd.read_csv(output_dir / "rescore.percolator.decoy.psms.txt", sep="\t"),
-        ]
-    )
-    psms["ScanNr"] = _scan_numbers(psms)
-    psms["score_prob"] = 1 / psms["posterior_error_prob"].clip(lower=1e-15)
-    spectrum = ["filename", "ScanNr"]
-    if decoy_pattern:
-        decoys = psms["peptide"].str.contains(decoy_pattern, regex=True)
-        best_decoy = psms[decoys].groupby(spectrum)["score_prob"].max().rename("best_decoy")
-        psms = psms[~decoys].join(best_decoy, on=spectrum)
-        psms["decoy_win"] = psms["best_decoy"].fillna(0) > psms.groupby(spectrum)["score_prob"].transform("max")
-    else:
-        psms["decoy_win"] = False
-    psms["loc_prob"] = psms["score_prob"] / psms.groupby(spectrum)["score_prob"].transform("sum")
-    psms = psms.sort_values(spectrum + ["loc_prob"], ascending=[True, True, False])
-    loc_probs = psms.groupby(spectrum)["loc_prob"]
-    second_best = loc_probs.transform(lambda probs: probs.iloc[1] if len(probs) > 1 else 0.0)
-    psms["loc_prob_delta"] = loc_probs.transform("first") - second_best
-    psms["possible_sites"] = loc_probs.transform("size")
-    return psms[["PSMId", "filename", "ScanNr", "loc_prob", "loc_prob_delta", "possible_sites", "decoy_win"]]
-
-
-def _best_localization(df_rescore: pd.DataFrame, localization: pd.DataFrame) -> pd.DataFrame:
-    """Keep the localization candidate with the highest localization probability per spectrum."""
-    best = localization.sort_values("loc_prob", ascending=False).drop_duplicates(["filename", "ScanNr"])
-    return df_rescore[df_rescore["SpecId"].isin(best["PSMId"])]
-
-
-def _estimate_localization_flr(psms: pd.DataFrame, config: Config, fdr: float = 0.01) -> pd.DataFrame:
-    """
-    Estimate the false localization rate (FLR) from decoy residues.
-
-    PSMs (q-value <= fdr) are ranked by loc_prob_delta, then loc_prob. In every spectrum flagged as decoy_win, a
-    candidate with the PTM on a decoy residue (e.g. phosphorylation on A) scored higher than all real candidates. The
-    number of false localizations among the possible site residues is estimated from these decoy wins, scaled by the
-    ratio of possible site to decoy residues in the peptides:
-    FLR = decoy wins * n_site_residues / n_decoy_residues / localizations.
-    The FLR is reported as q-value (localization_flr) for every PSM up to the rank of that PSM.
-
-    :param psms: percolator PSMs with loc_prob, loc_prob_delta and decoy_win
-    :param config: the configuration object
-    :param fdr: PSM level q-value cutoff for the PSMs used to estimate the FLR
-    :return: psms with the column localization_flr (NaN for PSMs above the fdr)
-    """
-    psms["localization_flr"] = np.nan
-    passing = psms[(psms["q-value"] <= fdr) & psms["loc_prob"].notna()]
-    if passing.empty:
-        return psms
-    sequences = passing["peptide"].str.replace(r"^[^.]*\.|\.[^.]*$|\[UNIMOD:\d+\]|-", "", regex=True)
-    site_residues = "".join(sorted({site for sites in config.ptm_sites.values() for site in sites}))
-    n_sites = sequences.str.count(f"[{site_residues}]").sum()
-    n_decoys = max(1, sequences.str.count(f"[{''.join(config.ptm_decoy_residues)}]").sum())
-    ranked = passing.sort_values(["loc_prob_delta", "loc_prob"], ascending=False, kind="mergesort")
-    n_decoy_wins = ranked["decoy_win"].astype(bool).cumsum().values
-    flr = n_decoy_wins * (n_sites / n_decoys) / np.arange(1, len(ranked) + 1)
-    psms.loc[ranked.index, "localization_flr"] = np.minimum.accumulate(flr[::-1])[::-1]
-    return psms
-
-
-def _add_localization_probabilities(result_dir: Path, localization: pd.DataFrame, config: Config):
-    """
-    Write the percolator results of result_dir with localization probabilities (*_with_prob.*psms.txt).
-
-    If decoy residues are used, the target PSMs also get the estimated localization_flr.
-    """
-    for psm_type in ["psms", "decoy.psms"]:
-        psms = pd.read_csv(result_dir / f"rescore.percolator.{psm_type}.txt", sep="\t")
-        psms = psms.merge(
-            localization[["PSMId", "loc_prob", "loc_prob_delta", "possible_sites", "decoy_win"]],
-            on="PSMId",
-            how="left",
-        )
-        if config.ptm_decoy_residues and psm_type == "psms":
-            psms = _estimate_localization_flr(psms, config)
-        psms.to_csv(result_dir / f"rescore.percolator_with_prob.{psm_type}.txt", sep="\t", index=False)
-
-
-def _ptm_localization_rescore(fdr_dir: Path, config: Config):
-    """
-    Helper function for running percolator to do PTM localization.
-
-    Citrullination (UNIMOD:7) and phosphorylation (UNIMOD:21) have dedicated workflows if they are the only PTM to
-    localize. Any other PTM or combination of PTMs is localized with the generic workflow.
-
-    :param fdr_dir: the output directory
-    :param config: the configuration object
-    """
-    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
-    ptm_sites = config.ptm_sites
-    unimod_id = config.ptm_unimod_id  # 0 if more than one PTM is localized
-    ptm_pattern = r"UNIMOD:(?:" + "|".join(str(ptm) for ptm in ptm_sites) + r")\]"
-
-    new_rescore_dir = fdr_dir / "localize_mod"
-    new_rescore_dir.mkdir(parents=True, exist_ok=True)
-
-    if unimod_id == 7:
-        df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
-        df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
-        df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
-        df_rescore.drop(columns=["id"], inplace=True)
-        df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
-        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
-        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
-        df_rescore_psms_targets = df_rescore_psms_targets[
-            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms_decoys = df_rescore_psms_decoys[
-            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
-        df_rescore_psms = df_rescore_psms[["PSMId"]]
-        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
-        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
-
-        remove_cols = []
-        for col in df_rescore.columns:
-            if "_mod" in col:
-                remove_cols.append(col)
-        df_rescore.drop(columns=remove_cols, inplace=True)
-
-        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-    elif unimod_id == 21:
-        df_rescore = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:21")]
-
-        # score all localization candidates and keep the most likely localization per spectrum
-        localization = _localization_probabilities(
-            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", _decoy_site_pattern(config)
-        )
-        df_rescore = _best_localization(df_rescore, localization)
-
-        if "P" in ptm_sites[unimod_id] or "H" in ptm_sites[unimod_id]:
-            for site in ptm_sites[unimod_id]:
-                new_rescore_dir = fdr_dir / ("localize_rt_all_" + site)
-                new_rescore_dir.mkdir(parents=True, exist_ok=True)
-                df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains(site + r"\[")]
-                df_rescore_fil.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-                re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-                _add_localization_probabilities(new_rescore_dir, localization, config)
-
-        else:
-            new_rescore_dir = fdr_dir / ("localize_phospho")
-            new_rescore_dir.mkdir(parents=True, exist_ok=True)
-
-            df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-            re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-            _add_localization_probabilities(new_rescore_dir, localization, config)
-
-    else:
-        df_rescore_all = df_rescore
-        df_rescore = df_rescore[df_rescore["Peptide"].str.contains(ptm_pattern, regex=True)]
-        # score all localization candidates and keep the most likely localization per spectrum
-        localization = _localization_probabilities(
-            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", _decoy_site_pattern(config)
-        )
-        df_rescore_psms = _best_localization(df_rescore, localization)[["SpecId"]]
-        # keep the localized PSMs of the PTMs and all PSMs without them
-        df_rescore = df_rescore_all[
-            df_rescore_all["SpecId"].isin(df_rescore_psms["SpecId"].values)
-            | ~df_rescore_all["Peptide"].str.contains(ptm_pattern, regex=True)
-        ]
-        new_rescore_dir = fdr_dir / "mod_fdr"
-        new_rescore_dir.mkdir(parents=True, exist_ok=True)
-
-        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-        _add_localization_probabilities(new_rescore_dir, localization, config)
 
 
 def input_xifdr(fdr_dir: str, xisearch_or_scout: str):

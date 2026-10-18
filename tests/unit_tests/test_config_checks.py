@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -224,6 +225,54 @@ class TestPTMLocalization(unittest.TestCase):
             with self.subTest(options=options):
                 with self.assertRaisesRegex(ValueError, message):
                     _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
+
+    def test_ptm_phospho_loss_residues(self):
+        """Test the phosphoric acid loss is annotated on S and T, and on the decoy residues with decoy_neutral_loss."""
+        options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A", "G"]}
+        self.assertEqual(_config(ptm_localization=True, ptmLocalizationOptions=options).ptm_phospho_loss_residues, "ST")
+        options["decoy_neutral_loss"] = True
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_phospho_loss_residues, "STAG")
+
+    def test_ptm_decoy_proxies(self):
+        """Test decoys are predicted on the first possible site residue, or on the residue given in decoy_proxy."""
+        options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A", "G"]}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_proxies, {"A[UNIMOD:21]": "S[UNIMOD:21]", "G[UNIMOD:21]": "S[UNIMOD:21]"})
+        options["decoy_proxy"] = "T"
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_proxies, {"A[UNIMOD:21]": "T[UNIMOD:21]", "G[UNIMOD:21]": "T[UNIMOD:21]"})
+
+    def test_ptm_decoy_proxy_search(self):
+        """Test decoys are predicted as a mixture of pS and pT with the frequencies of the search engine results."""
+        import pandas as pd
+
+        from oktoberfest.predict.predictor import _choose_proxy
+        from oktoberfest.rescore import decoy_proxy_fractions
+
+        search = pd.DataFrame(
+            {
+                "RAW_FILE": ["a", "a", "a", "a", "a"],
+                "SCAN_NUMBER": [1, 1, 2, 3, 4],
+                "REVERSE": [False, False, False, False, True],
+                "SEARCH_MODIFIED_SEQUENCE": ["PES[UNIMOD:21]K"] * 2
+                + ["PET[UNIMOD:21]K", "PEY[UNIMOD:21]K", "S[UNIMOD:21]K"],
+            }
+        )
+        # scan 1 counted once, Y is no proxy residue, the decoy PSM (scan 4) is not counted
+        fractions = decoy_proxy_fractions(search, {21: ["S", "T", "Y"]})
+        self.assertEqual(fractions, {"21": {"S": 0.5, "T": 0.5}})
+        with tempfile.TemporaryDirectory() as tmp:
+            options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A"], "decoy_proxy": "search"}
+            config = _config(ptm_localization=True, ptmLocalizationOptions=options, output=tmp)
+            config.base_path = Path(tmp)
+            config.decoy_proxy_fractions_file.parent.mkdir(parents=True)
+            config.decoy_proxy_fractions_file.write_text(json.dumps(fractions))
+            proxies = config.ptm_decoy_proxies["A[UNIMOD:21]"]
+        self.assertEqual(proxies, {"S[UNIMOD:21]": 0.5, "T[UNIMOD:21]": 0.5})
+        chosen = [_choose_proxy(f"PEPA[UNIMOD:21]{i}K", proxies) for i in range(2000)]
+        self.assertAlmostEqual(chosen.count("T[UNIMOD:21]") / len(chosen), 0.5, delta=0.05)
+        self.assertEqual(_choose_proxy("PEA[UNIMOD:21]K", proxies), _choose_proxy("PEA[UNIMOD:21]K", proxies))
 
     def test_ptm_fdr_control_default(self):
         """Test PTM models split unmodified and modified PSMs by default, but never permute without localization."""

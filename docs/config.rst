@@ -80,6 +80,8 @@ Applicable to CE calibration and rescoring
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     use_ransac_model       | Boolean that determines whether or not to use a ransac regression model for calibration refinement. This is recommended for timsTOF data. Default is false.                                                                                                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     ce_calibration_dir     | results/ce_calibration folder of a previous run on the same spectra files; its calibrated CE per file is reused instead of predicting the CE range again. Files without a previous calibration are calibrated as usual. Not used with use_ransac_model. Default is none.                   |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Applicable to rescoring
 -----------------------
@@ -183,6 +185,16 @@ Applicable to PTM pipeline
    |     possible_sites         | (legacy, single PTM) residues the PTM given in unimod_id can be located on, e.g. ['R','N','Q']. Use ptms instead                                                   |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     neutral_loss           | Flag to annotate neutral loss peaks and use them as a feature in percolator; default = false                                                                       |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_residues         | Residues that cannot carry the PTMs used as decoy sites to estimate the false localization rate, by priority, e.g. ["A", "G", "L", "V"]; default = []              |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_neutral_loss     | Annotate the phosphoric acid neutral loss on phosphorylated decoy residues like on S and T (requires neutral_loss); default = false                                |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_proxy            | Residue decoy candidates are predicted on, e.g. "S"; "search": S or T with their frequencies in the search engine localizations; default = first site              |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_selection        | "residue": decoys on the first decoy_residues residue of a peptide; "adjacent": also A,G,L,V,I,F,N,Q,W within 2 of a possible site; default = "residue"            |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_neighbor_split     | Estimate the FLR separately for localizations with and without a possible site next to the called site; default = false                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 PTMs can be rescored with or without localization. Without localization, PTMs are rescored as localized by the
