@@ -424,6 +424,20 @@ class Config:
         """Get peptide detection method from the config file (mokapot or percolator). Default is percolator."""
         return self.data.get("fdr_estimation_method", "percolator").lower()
 
+    @property
+    def perform_rescoring(self) -> bool:
+        """
+        Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
+
+        If set to False, the input tab files for rescoring are still created, but rescoring is not executed.
+        """
+        return self.data.get("perform_rescoring", True)
+
+    @property
+    def perform_plotting(self) -> bool:
+        """Get flag whether to generate the summary plots after rescoring. Default is True."""
+        return self.data.get("perform_plotting", True)
+
     ######################################
     # these are spectral library options #
     ######################################
