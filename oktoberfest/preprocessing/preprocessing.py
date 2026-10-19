@@ -461,7 +461,8 @@ def convert_search(
 
     :param input_path: Path to the directory or file containing the search results.
     :param search_engine: The search engine used to produce the search results,
-        currently supported are "Maxquant", "Mascot" and "MSFragger"
+        currently supported are "Maxquant", "Mascot" and "MSFragger". Use "custom_input" if the search results are
+        already in the internal Oktoberfest format, in which case they are only loaded (no conversion is performed).
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
     :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
@@ -545,6 +546,9 @@ def convert_search(
         >>> print(converted_results)
     """
     search_engine = search_engine.lower()
+    if search_engine == "custom_input":
+        return load_search(input_path)
+
     search_result: Any
     xl = False
     if search_engine == "maxquant":

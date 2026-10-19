@@ -13,6 +13,22 @@ from oktoberfest.data.spectra import FragmentType, Spectra
 class TestProcessing(unittest.TestCase):
     """Test class for preprocessing functions."""
 
+    def test_convert_search_custom_input(self):
+        """Test that search results in internal format are loaded as they are when using custom_input."""
+        search_results = pd.DataFrame(
+            {
+                "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ", "TAIASPEK"],
+                "SEQUENCE": ["AAACRFVQ", "TAIASPEK"],
+                "PEPTIDE_LENGTH": [8, 8],
+                "PRECURSOR_CHARGE": [1, 2],
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            search_file = Path(tmp_dir) / "search_results.csv"
+            search_results.to_csv(search_file, index=False)
+            converted = pp.convert_search(search_file, "custom_input")
+            pd.testing.assert_frame_equal(converted, pp.load_search(search_file))
+
     def test_list_spectra(self):
         """Test listing of spectra with expected user input."""
         spectra_path = Path(__file__).parent
