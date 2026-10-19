@@ -1423,7 +1423,8 @@ def run_rescoring(config_path: Union[str, Path, Config]):
             )
             prepare_tab_rescore_step.mark_done()
 
-    # rescoring
+    # rescoring (the original features are always rescored when generating training data)
+    perform_rescoring = config.perform_rescoring or config._run_original
     if "xl" in config.models.get("intensity", "").lower():  # xl-psm-level
         rescore_features_path = fdr_dir / "rescore_features_csm.tab"
         if not rescore_features_path.exists():
@@ -1436,6 +1437,10 @@ def run_rescoring(config_path: Union[str, Path, Config]):
             shutil.copy(fdr_dir / "original.tab", original_features_path)
             input_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
             input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
+
+        if not perform_rescoring:
+            logger.info("Skipping rescoring, as perform_rescoring is set to false.")
+            return
 
         _rescore(fdr_dir, config, xl=True)
 
@@ -1452,18 +1457,25 @@ def run_rescoring(config_path: Union[str, Path, Config]):
                 generate_xifdr_input_step.mark_done()
 
     else:
+        if not perform_rescoring:
+            logger.info("Skipping rescoring, plotting and quantification, as perform_rescoring is set to false.")
+            return
+
         _rescore(fdr_dir, config)
         # plotting
-        logger.info("Generating summary plots...")
-        if not config.ptm_localization and not config._run_original:
-            pl.plot_all(fdr_dir, config)
-            mod_fdr_dir = fdr_dir / "mod_fdr"
-            if (
-                config.ptm_fdr_control
-                and config.fdr_estimation_method == "percolator"
-                and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file()
-            ):
-                pl.plot_all(mod_fdr_dir, config)
+        if not config.perform_plotting:
+            logger.info("Skipping summary plots, as perform_plotting is set to false.")
+        else:
+            logger.info("Generating summary plots...")
+            if not config.ptm_localization and not config._run_original:
+                pl.plot_all(fdr_dir, config)
+                mod_fdr_dir = fdr_dir / "mod_fdr"
+                if (
+                    config.ptm_fdr_control
+                    and config.fdr_estimation_method == "percolator"
+                    and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file()
+                ):
+                    pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
         if config.quantification:
@@ -1789,7 +1801,7 @@ def run_job(config_path: Union[str, Path, Config]):
         elif job_type == "Rescoring":
             logger.info("Starting rescoring")
             run_rescoring(config_path)
-            if config.acquisition_method == "dia":
+            if config.acquisition_method == "dia" and config.perform_rescoring:
                 generate_spectral_lib_fdr_control(config_path)
         else:
             raise ValueError(f"Unknown job_type in config: {job_type}")
