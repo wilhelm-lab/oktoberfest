@@ -5693,7 +5693,7 @@ scikit-learn = "^1.5"
 type = "git"
 url = "https://github.com/wilhelm-lab/spectrum_fundamentals.git"
 reference = "features/ptm_pipeline"
-resolved_reference = "7e661426ff7e2d63fa48740833d067914d639f26"
+resolved_reference = "74065b010364e10578b533ea8f418e1f7c62d52e"
 
 [[package]]
 name = "spectrum-io"
