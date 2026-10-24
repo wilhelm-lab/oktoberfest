@@ -5,7 +5,7 @@ If the search engine you get your results from is not directly supported by Okto
 
 .. code-block:: json
 
-   "search_results_type": "internal",
+   "search_results_type": "custom_input",
 
 Internal file format specification
 ----------------------------------
