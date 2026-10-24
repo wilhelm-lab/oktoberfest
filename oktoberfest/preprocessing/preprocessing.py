@@ -7,6 +7,7 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
@@ -912,6 +913,11 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
         >>> print(psms)
     """
     logger.info("Merging rawfile and search result")
+    # raw files named by numbers only (e.g. 1.raw, PXD000138) are read as int from the search results: then use the
+    # file names as str on both sides
+    if not (is_string_dtype(search["RAW_FILE"]) and is_string_dtype(spectra["RAW_FILE"])):
+        search = search.assign(RAW_FILE=search["RAW_FILE"].astype(str))
+        spectra = spectra.assign(RAW_FILE=spectra["RAW_FILE"].astype(str))
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
     return psms
 

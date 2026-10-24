@@ -21,6 +21,22 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual([spectra_path / "test.mzml"], pp.list_spectra(spectra_path, input_format="mzml"))
         spectra_file.unlink()
 
+    def test_merge_spectra_and_peptides_numeric_raw_files(self):
+        """Test raw files named by numbers only match whether they are read as int or str."""
+        search = pd.DataFrame({"RAW_FILE": [1, 2], "SCAN_NUMBER": [10, 20], "MODIFIED_SEQUENCE": ["PEPK", "PEPR"]})
+        spectra = pd.DataFrame({"RAW_FILE": ["1", "2"], "SCAN_NUMBER": [10, 20], "RETENTION_TIME": [1.0, 2.0]})
+        psms = pp.merge_spectra_and_peptides(spectra=spectra, search=search)
+        self.assertEqual(psms["MODIFIED_SEQUENCE"].tolist(), ["PEPK", "PEPR"])
+        self.assertEqual(psms["RAW_FILE"].tolist(), ["1", "2"])
+
+    def test_merge_spectra_and_peptides_named_raw_files(self):
+        """Test raw files with regular names are merged unchanged."""
+        search = pd.DataFrame({"RAW_FILE": ["a", "b"], "SCAN_NUMBER": [10, 20], "MODIFIED_SEQUENCE": ["PEPK", "PEPR"]})
+        spectra = pd.DataFrame({"RAW_FILE": ["b", "a"], "SCAN_NUMBER": [20, 10], "RETENTION_TIME": [2.0, 1.0]})
+        psms = pp.merge_spectra_and_peptides(spectra=spectra, search=search)
+        self.assertEqual(psms["RETENTION_TIME"].tolist(), [1.0, 2.0])
+        self.assertEqual(psms["RAW_FILE"].tolist(), ["a", "b"])
+
     def test_list_spectra_with_empty_string_folder(self):
         """Test listing spectra in a string folder without matching files."""
         self.assertRaises(AssertionError, pp.list_spectra, str(Path(__file__).parent), "raw")

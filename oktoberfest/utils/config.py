@@ -13,6 +13,15 @@ logger = logging.getLogger(__name__)
 # not P, D, E, K, R, H, C and M, which change the fragmentation or are frequently modified
 ADJACENT_DECOY_RESIDUES = ["A", "G", "L", "V", "I", "F", "N", "Q", "W"]
 
+# decoy residues used to estimate the false localization rate if ptmLocalizationOptions.decoy_residues is not given
+DEFAULT_DECOY_RESIDUES = ["A", "G", "L", "V"]
+
+# options of ptmLocalizationOptions (first value is the default)
+LOCALIZATION_PROBABILITIES = ["pep", "score"]
+DECOY_WEIGHTINGS = ["count", "distance"]
+FLR_GROUPS = ["none", "residue"]
+FLR_ESTIMATORS = ["hybrid", "decoy"]
+
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
 _DLOMIX_PIPELINE_CACHE: dict = {}
@@ -528,22 +537,87 @@ class Config:
 
         Localizations of the PTMs on these residues, which cannot carry the PTMs (e.g. A for phosphorylation), are
         scored as additional (passive) candidates. Spectra in which a decoy candidate would win are used to estimate
-        the FLR. The residues are given in order of priority: every peptide uses the first one it contains, e.g.
-        ["A", "G", "L", "V"]. Empty if ptm_localization is disabled.
+        the FLR. The residues are given in order of priority: every peptide uses the first one it contains. Default:
+        DEFAULT_DECOY_RESIDUES (A, G, L, V) without the residues the localized PTMs can be located on; an empty list
+        disables the decoys. Empty if ptm_localization is disabled.
         """
         if not self.ptm_localization:
             return []
-        residues = list(self.ptm_localization_options.get("decoy_residues", []))
+        residues = self.ptm_decoy_priority_residues
         if self.ptm_decoy_selection == "adjacent":
             residues += [aa for aa in ADJACENT_DECOY_RESIDUES if aa not in residues]
         return residues
 
     @property
     def ptm_decoy_priority_residues(self) -> list[str]:
-        """Get the decoy residues given in ptmLocalizationOptions.decoy_residues, in order of priority."""
+        """Get the decoy residues of ptmLocalizationOptions.decoy_residues (or the defaults), in order of priority."""
         if not self.ptm_localization:
             return []
-        return list(self.ptm_localization_options.get("decoy_residues", []))
+        residues = self.ptm_localization_options.get("decoy_residues")
+        if residues is None:
+            sites = {aa for site_list in self.ptm_sites.values() for aa in site_list}
+            return [aa for aa in DEFAULT_DECOY_RESIDUES if aa not in sites]
+        return list(residues)
+
+    @property
+    def ptm_localization_probability(self) -> str:
+        """
+        Get how localization probabilities are computed (ptmLocalizationOptions.loc_probability).
+
+        "pep" (default): from the posterior error probabilities of all candidates, (1 / PEP) / sum(1 / PEP). "score":
+        from the scores with the slope of the PEP fit of the training step, robust to collapsed PEP estimates.
+        """
+        return self.ptm_localization_options.get("loc_probability", LOCALIZATION_PROBABILITIES[0])
+
+    @property
+    def ptm_decoy_weighting(self) -> str:
+        """
+        Get how many false localizations a decoy win stands for (ptmLocalizationOptions.decoy_weighting).
+
+        "count" (default): (number of real candidates - 1) / (number of decoy candidates) of the spectrum. "distance":
+        matched by the distance of the decoy and wrong real candidates to the called site.
+        """
+        return self.ptm_localization_options.get("decoy_weighting", DECOY_WEIGHTINGS[0])
+
+    @property
+    def ptm_flr_groups(self) -> str:
+        """
+        Get the groups of PSMs with separate FLR estimates (ptmLocalizationOptions.flr_groups).
+
+        "none" (default): one estimate over all PSMs. "residue": per residue of the called sites (e.g. S, T, Y).
+        """
+        return self.ptm_localization_options.get("flr_groups", FLR_GROUPS[0])
+
+    @property
+    def ptm_flr_estimator(self) -> str:
+        """
+        Get how the FLR is estimated (ptmLocalizationOptions.flr_estimator).
+
+        "hybrid" (default): the decoy estimate combined with model based estimates per called residue and neighbor
+        class, which stay reliable above 1-2% FLR (see hybrid_localization_flr). "decoy": from the decoy candidates.
+        """
+        return self.ptm_localization_options.get("flr_estimator", FLR_ESTIMATORS[0])
+
+    @property
+    def ptm_sdi_features(self) -> bool:
+        """
+        Get whether localization candidates are scored with site-determining ion features (ptmLocalizationOptions).
+
+        sdi_features: the stored predictions and annotation of the site-determining ions against the best competitor
+        of every candidate are used as additional localization features (see localization.sdi_features).
+        """
+        return self.ptm_localization_options.get("sdi_features", True)
+
+    @property
+    def ptm_ambiguity_check(self) -> bool:
+        """
+        Get whether ambiguous localizations are ranked last in the FLR estimation (ptmLocalizationOptions).
+
+        ambiguity_check: localizations without an observed site-determining ion against the runner-up, or whose
+        observed ones favour the runner-up, are ranked after all others of their group by the FLR estimates and
+        reported as localization_ambiguous with localization_runner_up (see localization.ambiguity_flags).
+        """
+        return self.ptm_localization_options.get("ambiguity_check", True)
 
     @property
     def ptm_decoy_selection(self) -> str:
@@ -717,6 +791,10 @@ class Config:
                     f"Invalid residues {invalid_sites} for PTM UNIMOD:{unimod_id} in ptmLocalizationOptions. "
                     "Residues must be given as one-letter amino acid codes."
                 )
+        self._check_ptm_decoys(ptm_sites, valid_residues)
+
+    def _check_ptm_decoys(self, ptm_sites: dict[int, list[str]], valid_residues: set[str]):
+        """Check the decoy residues and the options of the false localization rate estimation."""
         decoys = self.ptm_decoy_residues
         invalid_decoys = [r for r in decoys if r not in valid_residues]
         if invalid_decoys:
@@ -727,6 +805,17 @@ class Config:
                 f"Decoy residues {overlapping} can also carry a localized PTM. Decoy residues must be residues the "
                 "PTMs cannot be located on, e.g. A for phosphorylation."
             )
+        for option, value, allowed in (
+            ("loc_probability", self.ptm_localization_probability, LOCALIZATION_PROBABILITIES),
+            ("decoy_weighting", self.ptm_decoy_weighting, DECOY_WEIGHTINGS),
+            ("flr_groups", self.ptm_flr_groups, FLR_GROUPS),
+            ("flr_estimator", self.ptm_flr_estimator, FLR_ESTIMATORS),
+        ):
+            if value not in allowed:
+                raise ValueError(f"Invalid ptmLocalizationOptions.{option} {value!r}, must be one of {allowed}.")
+        for option, value in (("sdi_features", self.ptm_sdi_features), ("ambiguity_check", self.ptm_ambiguity_check)):
+            if not isinstance(value, bool):
+                raise ValueError(f"Invalid ptmLocalizationOptions.{option} {value!r}, must be true or false.")
 
     def _check_koina_model_availability(self):
         """Check if Koina model is available."""

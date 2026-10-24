@@ -226,6 +226,54 @@ class TestPTMLocalization(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
 
+    def test_ptm_decoy4_defaults(self):
+        """Test the decoy4 defaults: A/G/L/V decoys (without PTM sites), PEP probabilities, count weights, one group."""
+        config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"21": ["S", "T", "Y"]}})
+        self.assertEqual(config.ptm_decoy_residues, ["A", "G", "L", "V"])
+        self.assertEqual(config.ptm_localization_probability, "pep")
+        self.assertEqual(config.ptm_decoy_weighting, "count")
+        self.assertEqual(config.ptm_flr_groups, "none")
+        self.assertEqual(config.ptm_flr_estimator, "hybrid")
+        config._check_ptm_localization()
+        # residues the PTM can be located on are no decoys
+        config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"1": ["A", "K"]}})
+        self.assertEqual(config.ptm_decoy_residues, ["G", "L", "V"])
+        # an empty list disables the decoys
+        options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": []}
+        self.assertEqual(_config(ptm_localization=True, ptmLocalizationOptions=options).ptm_decoy_residues, [])
+        self.assertEqual(_config(ptmLocalizationOptions={"ptms": {"21": ["S"]}}).ptm_decoy_residues, [])
+
+    def test_ptm_flr_options_invalid(self):
+        """Test invalid FLR estimation options are rejected."""
+        for option, value in (
+            ("loc_probability", "max"),
+            ("decoy_weighting", "equal"),
+            ("flr_groups", "peptide"),
+            ("flr_estimator", "model"),
+        ):
+            with self.subTest(option=option):
+                options = {"ptms": {"21": ["S", "T", "Y"]}, option: value}
+                with self.assertRaisesRegex(ValueError, option):
+                    _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
+
+    def test_ptm_ambiguity_options(self):
+        """Test sdi_features and ambiguity_check are on by default and must be booleans."""
+        options = {"ptms": {"21": ["S", "T", "Y"]}}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertTrue(config.ptm_sdi_features)
+        self.assertTrue(config.ptm_ambiguity_check)
+        config = _config(
+            ptm_localization=True, ptmLocalizationOptions={**options, "sdi_features": False, "ambiguity_check": False}
+        )
+        config._check_ptm_localization()
+        self.assertFalse(config.ptm_sdi_features)
+        self.assertFalse(config.ptm_ambiguity_check)
+        for option in ("sdi_features", "ambiguity_check"):
+            with self.subTest(option=option):
+                config = _config(ptm_localization=True, ptmLocalizationOptions={**options, option: "yes"})
+                with self.assertRaisesRegex(ValueError, option):
+                    config._check_ptm_localization()
+
     def test_ptm_phospho_loss_residues(self):
         """Test the phosphoric acid loss is annotated on S and T, and on the decoy residues with decoy_neutral_loss."""
         options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": ["A", "G"]}

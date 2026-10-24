@@ -186,7 +186,7 @@ Applicable to PTM pipeline
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     neutral_loss           | Flag to annotate neutral loss peaks and use them as a feature in percolator; default = false                                                                       |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     decoy_residues         | Residues that cannot carry the PTMs used as decoy sites to estimate the false localization rate, by priority, e.g. ["A", "G", "L", "V"]; default = []              |
+   |     decoy_residues         | Residues that cannot carry the PTMs used as decoy sites to estimate the false localization rate, by priority; [] disables; default = ["A","G","L","V"]             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     decoy_neutral_loss     | Annotate the phosphoric acid neutral loss on phosphorylated decoy residues like on S and T (requires neutral_loss); default = false                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -196,6 +196,36 @@ Applicable to PTM pipeline
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     flr_neighbor_split     | Estimate the FLR separately for localizations with and without a possible site next to the called site; default = false                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     loc_probability        | "pep": (1/PEP) / sum(1/PEP) over the candidates of a spectrum; "score": softmax of the scores (robust to collapsed PEPs); default = "pep"                          |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_weighting        | False localizations per decoy win: "count": (real candidates - 1) / decoy candidates; "distance": matched by site distance; default = "count"                      |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_groups             | "none": one FLR estimate over all PSMs; "residue": per residue of the called site (e.g. S, T, Y); default = "none"                                                 |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_estimator          | "hybrid": max(model, min(decoy, mild model)) per called residue and neighbor class, reliable above 1%; "decoy": decoys only; default = "hybrid"                    |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     sdi_features           | Score the localization candidates with site-determining ion features (see "Ambiguous localizations"); default = true                                               |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     ambiguity_check        | Rank localizations without site-specific evidence after all others in the FLR estimation (see "Ambiguous localizations"); default = true                           |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Ambiguous localizations: with ``"sdi_features": true``, every localization candidate is additionally scored by its
+site-determining ions (the b/y ions that differ from its best competitor): the share of their predicted intensity that
+is observed and the predicted intensity that is missing. These features need a first scoring pass to find the best
+competitors, so the localization is scored twice. With ``"ambiguity_check": true``, a call is flagged as ambiguous if
+none of the site-determining ions between it and the runner-up is observed, or if the observed ones favour the
+runner-up. Ambiguous calls are ranked after all other calls of their group in the decoy and model based FLR
+estimates, without changing their error probabilities, and their FLR is at least the decoy FLR estimated over the
+ambiguous calls alone. They are reported in the columns ``localization_ambiguous`` and ``localization_runner_up``.
+Both options are on by default and use the stored annotation of the spectra, i.e. the matches at the configured
+fragment tolerance. The trade-off: on clean data with few missing site-determining ions, fewer calls pass an estimated
+FLR of 1%, since calls without site-specific evidence (often correct) move behind the others; when site-determining
+ions are often missing, the actual FLR of localizations next to another possible site is much lower at the same
+estimated FLR.
+
+The model based part of the "hybrid" FLR estimate turns the localization scores into error probabilities with a
+sharpness that depends on the neighbor class: calls with another possible site next to the called site use a milder
+one than calls without, since their candidates differ by fewer site-determining ions.
 
 PTMs can be rescored with or without localization. Without localization, PTMs are rescored as localized by the
 search engine:

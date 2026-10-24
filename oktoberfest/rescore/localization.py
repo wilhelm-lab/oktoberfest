@@ -17,12 +17,15 @@ __all__ = [
     "select_decoy_candidates",
     "localization_probabilities",
     "estimate_localization_flr",
+    "hybrid_localization_flr",
     "calibrate_localization_score",
     "localization_groups",
     "neighbor_classes",
     "decoy_proxy_fractions",
     "add_adjacent_decoy_candidates",
     "localize_ptms",
+    "sdi_features",
+    "ambiguity_flags",
 ]
 
 # features used to score the localization candidates of a spectrum against each other
@@ -40,12 +43,6 @@ LOCALIZATION_FEATURES = [
     "NL_NOT_POSSIBLE",
     "observed_intensity_mod_relative",
     "sum_observed_and_predicted_mod_relative",
-    # site determining ions: the ions that distinguish a localization from the closest alternative site
-    "fraction_observed_sdi",
-    "fraction_observed_and_predicted_sdi",
-    "fraction_not_observed_but_predicted_sdi",
-    "observed_intensity_sdi",
-    "sum_observed_and_predicted_sdi",
 ]
 
 # features that can only support a localization candidate: their percolator weights must not be negative
@@ -57,10 +54,6 @@ LOCALIZATION_POSITIVE_FEATURES = [
     "observed_intensity_mod_relative",
     "sum_observed_and_predicted_mod_relative",
     "NL_FRACTION",
-    "fraction_observed_sdi",
-    "fraction_observed_and_predicted_sdi",
-    "observed_intensity_sdi",
-    "sum_observed_and_predicted_sdi",
 ]
 
 # residues decoy candidates can be predicted on (decoy_proxy "search"), per unimod id; all sites for other PTMs.
@@ -77,6 +70,29 @@ PLAIN_DECOY_SUFFIX = "-plain_decoy"
 # residue groups of the called sites whose FLR is estimated from the plain decoys: Y does not lose phosphoric acid,
 # so plain decoys represent its wrong localizations; S and T (and mixed) use the decoys with the neutral loss
 PLAIN_DECOY_GROUPS = ("Y",)
+
+# site-determining ion (SDI) features of every localization candidate against its best competitor (sdi_features), from
+# the stored predictions and annotation of the spectra; the first two can only support a candidate
+SDI_FEATURES = ["sdi_pred_obs_frac", "sdi_pred_missing", "sdi_none"]
+SDI_POSITIVE_FEATURES = ["sdi_pred_obs_frac", "sdi_pred_missing"]
+# annotated intensities (raw_int) of the stored annotation: 0 = impossible ion, possible but unobserved ions are marked
+# with a small value (1e-7), observed ions are above this threshold
+OBSERVED_INTENSITY = 1e-5
+
+# sharpness of the model based error probabilities of the "hybrid" FLR estimator, in units of the slope of the PEP fit
+# of the training step: the high one is used for FLRs above about 1-2%, the low one at the low end. Calls without a
+# possible site next to the called site (neighbor_classes "no neighbor") use the sharper pair: their candidates differ
+# by many site-determining ions, so the scores separate them better than the training slope suggests
+MODEL_SHARPNESS_HIGH = 3.0
+MODEL_SHARPNESS_LOW = 2.0
+MODEL_SHARPNESS_HIGH_NO_NEIGHBOR = 5.0
+MODEL_SHARPNESS_LOW_NO_NEIGHBOR = 2.75
+MODEL_ERROR_SHARPNESS = {
+    "model_error_high": MODEL_SHARPNESS_HIGH,
+    "model_error_low": MODEL_SHARPNESS_LOW,
+    "model_error_high_no_neighbor": MODEL_SHARPNESS_HIGH_NO_NEIGHBOR,
+    "model_error_low_no_neighbor": MODEL_SHARPNESS_LOW_NO_NEIGHBOR,
+}
 
 
 def _ptm_ids(ptm_sites: dict[int, list[str]]) -> str:
@@ -264,15 +280,18 @@ def _average_fold_weights(weights_file: Path, output_file: Path):
     )
 
 
-def _constrain_weights(weights_file: Path, output_file: Path):
+def _constrain_weights(weights_file: Path, output_file: Path, positive_features: Optional[list[str]] = None):
     """
-    Set negative percolator weights of LOCALIZATION_POSITIVE_FEATURES to 0.
+    Set negative percolator weights of LOCALIZATION_POSITIVE_FEATURES (or positive_features) to 0.
 
     The weights file contains, for every cross validation bin, the feature names, the normalized and the raw weights.
 
     :param weights_file: percolator weights file
     :param output_file: path of the constrained weights file
+    :param positive_features: features whose weights must not be negative, LOCALIZATION_POSITIVE_FEATURES if None
     """
+    if positive_features is None:
+        positive_features = LOCALIZATION_POSITIVE_FEATURES
     lines = weights_file.read_text().splitlines()
     names = None
     constrained = []
@@ -286,7 +305,7 @@ def _constrain_weights(weights_file: Path, output_file: Path):
         else:
             constrained.append(
                 "\t".join(
-                    str(max(0.0, float(value))) if name in LOCALIZATION_POSITIVE_FEATURES else value
+                    str(max(0.0, float(value))) if name in positive_features else value
                     for name, value in zip(names, fields, strict=True)
                 )
             )
@@ -294,9 +313,9 @@ def _constrain_weights(weights_file: Path, output_file: Path):
 
 
 def _scan_numbers(psms: pd.DataFrame) -> list[int]:
-    """Get scan numbers from the PSMId (<raw file>-<scan number>-...) of percolator results."""
+    """Get scan numbers from the PSMId (<raw file>-<scan number>-...) of percolator results (raw file as str)."""
     return [
-        int(psm_id[len(raw_file) :].split("-")[1])
+        int(psm_id[len(str(raw_file)) :].split("-")[1])
         for psm_id, raw_file in zip(psms["PSMId"], psms["filename"], strict=True)
     ]
 
@@ -332,21 +351,30 @@ def _site_distance(sites: frozenset, called: frozenset) -> int:
     return min(MAX_SITE_DISTANCE, max(min(abs(p - q) for q in replaced) for p in moved))
 
 
-def _decoy_weights(psms: pd.DataFrame, decoys: pd.Series, ptm_pattern: str) -> pd.Series:
+def _decoy_weights(psms: pd.DataFrame, decoys: pd.Series, ptm_pattern: str, weighting: str = "count") -> pd.Series:
     """
-    Expected number of false localizations per spectrum in which a decoy candidate wins, matched by site distance.
+    Expected number of false localizations per spectrum in which a decoy candidate wins.
 
-    Wrong localizations are most often next to the true site, decoy sites can be anywhere in the peptide. The chance
-    q(d) that a candidate at distance d to the called sites scores above the called candidate is estimated from the
-    decoy candidates of all spectra. A decoy win stands for sum(q(d) of the wrong real candidates) / sum(q(d) of the
-    decoy candidates) expected false localizations in that spectrum.
+    "count" (default): every wrong real candidate is as likely to beat the called candidate as a decoy candidate, so
+    a decoy win stands for (number of real candidates - 1) / (number of decoy candidates) false localizations.
+    "distance": wrong localizations are most often next to the true site, decoy sites can be anywhere in the peptide.
+    The chance q(d) that a candidate at distance d to the called sites scores above the called candidate is estimated
+    from the decoy candidates of all spectra, and a decoy win stands for sum(q(d) of the wrong real candidates) /
+    sum(q(d) of the decoy candidates) false localizations.
 
     :param psms: all scored candidates (real and decoy) with filename, ScanNr, peptide and score_prob
     :param decoys: mask of the decoy candidates
     :param ptm_pattern: regex matching the localized PTMs
+    :param weighting: "count" or "distance"
     :return: per spectrum (filename, ScanNr) the expected false localizations of a decoy win
     """
     spectrum = ["filename", "ScanNr"]
+    if weighting == "count":
+        keys = [psms[column] for column in spectrum]
+        n_decoy = decoys.groupby(keys).sum()
+        n_real = (~decoys).groupby(keys).sum()
+        n_decoy = n_decoy[n_decoy > 0]
+        return ((n_real.reindex(n_decoy.index) - 1).clip(lower=0) / n_decoy).astype(float).rename("decoy_weight")
     psms = psms.assign(sites=_site_positions(psms["peptide"], ptm_pattern))
     # the called candidate of every spectrum: the best real candidate
     real = psms[~decoys]
@@ -392,6 +420,11 @@ def localization_probabilities(
     score_dir: Path,
     decoy_pattern: Optional[str] = None,
     ptm_pattern: str = r"\[UNIMOD:21\]",
+    probability: str = "pep",
+    decoy_weighting: str = "count",
+    extra_features: Optional[list[str]] = None,
+    extra_positive_features: Optional[list[str]] = None,
+    keep_scores: bool = False,
 ) -> pd.DataFrame:
     """
     Score all localization candidates of each spectrum and compute localization probabilities.
@@ -400,10 +433,11 @@ def localization_probabilities(
     spectrum compete against each other (train_dir). Second, all candidates are scored with the trained weights
     (percolator --static), with a unique ExpMass per candidate so that percolator keeps all candidates of a spectrum
     instead of only the best one (score_dir). The localization probability of a candidate is its probability
-    normalized over all candidates of the same spectrum, with the log odds a + b * score of the percolator PEP fit of
-    the training step: loc_prob = exp(b * score) / sum(exp(b * score)), i.e. (1 / PEP) / sum(1 / PEP) for PEP << 1.
-    The PEPs of the scoring step are not used, since percolator's PEP estimate on all candidates of all spectra can
-    collapse to a step function for large inputs, making the candidates of a spectrum indistinguishable.
+    normalized over all candidates of the same spectrum. With probability "pep" (default), it is the inverse posterior
+    error probability of the scoring step: loc_prob = (1 / PEP) / sum(1 / PEP). With probability "score", the PEPs of
+    the scoring step are not used, since percolator's PEP estimate on all candidates of all spectra can collapse to a
+    step function for large inputs; instead the log odds a + b * score of the PEP fit of the training step are used:
+    loc_prob = exp(b * score) / sum(exp(b * score)).
 
     Decoy candidates (PTM on a decoy residue, matched by decoy_pattern) are passive: they are not used for training
     and not for the localization probabilities, so the localization is the same as without decoys. They are only
@@ -416,14 +450,19 @@ def localization_probabilities(
     :param score_dir: directory for scoring all candidates with the trained weights
     :param decoy_pattern: regex matching decoy candidates in the Peptide column, None if no decoys are used
     :param ptm_pattern: regex matching the localized PTMs, used to match decoys and wrong candidates by site distance
+    :param extra_features: features used in addition to LOCALIZATION_FEATURES (e.g. SDI_FEATURES)
+    :param extra_positive_features: extra features whose weights must not be negative
+    :param keep_scores: also return the peptide and the percolator score of every candidate
     :return: one row per (non decoy) candidate with PSMId, filename, ScanNr, loc_prob, loc_prob_delta (difference
         between the best and second best candidate of the spectrum), possible_sites (number of candidates of the
         spectrum), decoy_win (a decoy candidate scores higher than all candidates of the spectrum) and decoy_weight,
-        and decoy_win_plain and decoy_weight_plain for the plain decoys (same as decoy_win / decoy_weight without them)
+        and decoy_win_plain and decoy_weight_plain for the plain decoys (same as decoy_win / decoy_weight without
+        them), and peptide and score with keep_scores
     """
+    features = LOCALIZATION_FEATURES + list(extra_features or [])
     columns = (
         ["SpecId", "Label", "ScanNr", "filename", "ExpMass"]
-        + [feature for feature in LOCALIZATION_FEATURES if feature in candidates.columns]
+        + [feature for feature in features if feature in candidates.columns]
         + ["Peptide", "Proteins"]
     )
     df_candidates = candidates[columns].copy()
@@ -459,7 +498,9 @@ def localization_probabilities(
     averaged_weights = score_dir / "averaged.weights.csv"
     _average_fold_weights(train_dir / "rescore.percolator.weights.csv", averaged_weights)
     constrained_weights = score_dir / "constrained.weights.csv"
-    _constrain_weights(averaged_weights, constrained_weights)
+    _constrain_weights(
+        averaged_weights, constrained_weights, LOCALIZATION_POSITIVE_FEATURES + list(extra_positive_features or [])
+    )
     df_candidates["ExpMass"] = np.arange(1, len(df_candidates) + 1)
     df_candidates.to_csv(score_dir / "rescore.tab", sep="\t", index=False)
     rescore_with_percolator(
@@ -470,15 +511,19 @@ def localization_probabilities(
 
     psms = pd.concat(
         [
-            pd.read_csv(score_dir / "rescore.percolator.psms.txt", sep="\t"),
-            pd.read_csv(score_dir / "rescore.percolator.decoy.psms.txt", sep="\t"),
+            pd.read_csv(score_dir / "rescore.percolator.psms.txt", sep="\t", dtype={"filename": str}),
+            pd.read_csv(score_dir / "rescore.percolator.decoy.psms.txt", sep="\t", dtype={"filename": str}),
         ],
         ignore_index=True,
     )
     psms["ScanNr"] = _scan_numbers(psms)
     spectrum = ["filename", "ScanNr"]
-    # probabilities relative to the best candidate of the spectrum (incl. decoys), from the log odds of the training
-    log_odds = _score_slope(train_dir / "rescore.percolator.psms.txt") * psms["score"]
+    # probabilities relative to the best candidate of the spectrum (incl. decoys)
+    if probability == "score":
+        # log odds of the PEP fit of the training step
+        log_odds = _score_slope(train_dir / "rescore.percolator.psms.txt") * psms["score"]
+    else:
+        log_odds = -np.log(psms["posterior_error_prob"].clip(lower=1e-15))
     psms["score_prob"] = np.exp(log_odds - log_odds.groupby([psms[column] for column in spectrum]).transform("max"))
     decoy_columns = ["decoy_win", "decoy_weight", "decoy_win_plain", "decoy_weight_plain"]
     if decoy_pattern:
@@ -489,7 +534,7 @@ def localization_probabilities(
         flags = {}
         for suffix, decoy_type in (("", decoys & ~plain), ("_plain", plain if use_plain else decoys & ~plain)):
             typed = psms[~decoys | decoy_type]
-            weight = _decoy_weights(typed, decoy_type[typed.index], ptm_pattern)
+            weight = _decoy_weights(typed, decoy_type[typed.index], ptm_pattern, decoy_weighting)
             best_decoy = psms[decoy_type].groupby(spectrum)["score_prob"].max()
             win = best_decoy.reindex(best_real.index).fillna(0) > best_real
             flags[f"decoy_win{suffix}"] = win
@@ -503,13 +548,196 @@ def localization_probabilities(
     second_best = loc_probs.transform(lambda probs: probs.iloc[1] if len(probs) > 1 else 0.0)
     psms["loc_prob_delta"] = loc_probs.transform("first") - second_best
     psms["possible_sites"] = loc_probs.transform("size")
-    return psms[["PSMId", "filename", "ScanNr", "loc_prob", "loc_prob_delta", "possible_sites"] + decoy_columns]
+    # model based error probabilities of every candidate: 1 - softmax of the scores of the real candidates of the
+    # spectrum, sharper than the training slope (see MODEL_ERROR_SHARPNESS), used by the "hybrid" FLR estimator
+    slope = _score_slope(train_dir / "rescore.percolator.psms.txt")
+    keys = [psms[column] for column in spectrum]
+    for column, sharpness in MODEL_ERROR_SHARPNESS.items():
+        logits = sharpness * slope * psms["score"]
+        maximum = logits.groupby(keys).transform("max")
+        log_sum = np.log(np.exp(logits - maximum).groupby(keys).transform("sum")) + maximum
+        psms[column] = 1 - np.exp(logits - log_sum)
+    return psms[
+        ["PSMId", "filename", "ScanNr"]
+        + (["peptide", "score"] if keep_scores else [])
+        + ["loc_prob", "loc_prob_delta", "possible_sites"]
+        + decoy_columns
+        + list(MODEL_ERROR_SHARPNESS)
+    ]
 
 
 def _best_localization(df_rescore: pd.DataFrame, localization: pd.DataFrame) -> pd.DataFrame:
     """Keep the localization candidate with the highest localization probability per spectrum."""
     best = localization.sort_values("loc_prob", ascending=False).drop_duplicates(["filename", "ScanNr"])
     return df_rescore[df_rescore["SpecId"].isin(best["PSMId"])]
+
+
+def _sequence_and_charge(psm_ids: pd.Series, filenames: pd.Series, scans: pd.Series) -> tuple[list[str], list[int]]:
+    """Modified sequence and precursor charge of PSM ids <filename>-<scan>-<sequence>-<charge>-<scan event>."""
+    rest = [
+        psm_id[len(f"{filename}-{scan}-") :] for psm_id, filename, scan in zip(psm_ids, filenames, scans, strict=True)
+    ]
+    parts = [r.rsplit("-", 2) for r in rest]
+    return [p[0] for p in parts], [int(p[1]) for p in parts]
+
+
+def _mod_prefix_counts(sequence: str) -> np.ndarray:
+    """Number of every modification on residues 1..k of the sequence (rows k = 1..n, one column per unimod id)."""
+    core = re.sub(r"^(?:\[UNIMOD:\d+\])+-", "", sequence)
+    tokens = _TOKEN.findall(core)
+    per_residue = [re.findall(r"UNIMOD:(\d+)", mods) for _, mods in tokens]
+    ids = sorted({u for mods in per_residue for u in mods})
+    counts = np.array([[mods.count(u) for u in ids] for mods in per_residue], dtype=int).reshape(len(tokens), len(ids))
+    return np.cumsum(counts, axis=0)
+
+
+def _differing_ions(sequence_a: str, sequence_b: str, charge: int) -> np.ndarray:
+    """
+    Site-determining ions of two localizations of the same peptide, in the Prosit order (y1+1, y1+2, y1+3, b1+1, ...).
+
+    A b or y ion differs if it carries a different set of modifications in the two localizations; only fragment
+    charges up to min(3, precursor charge) are considered.
+    """
+    prefix_a, prefix_b = _mod_prefix_counts(sequence_a), _mod_prefix_counts(sequence_b)
+    n = len(prefix_a)
+    if prefix_a.shape != prefix_b.shape or n < 2:
+        return np.zeros(max(n - 1, 0) * 6, dtype=bool)
+    differs = (prefix_a != prefix_b).any(axis=1)  # b_k differs for k = 1..n
+    k = np.arange(1, n)
+    b_differs, y_differs = differs[k - 1], differs[n - k - 1]  # y_k carries residues n-k+1..n: differs like b_(n-k)
+    return np.repeat(np.concatenate([y_differs[:, None], b_differs[:, None]], axis=1), 3, axis=1).ravel() & (
+        _charge_mask(n - 1, charge)
+    )
+
+
+def _charge_mask(n_positions: int, charge: int) -> np.ndarray:
+    """Fragment charges up to min(3, precursor charge), in the Prosit order (y1+1, y1+2, y1+3, b1+1, ...)."""
+    return np.tile(np.arange(1, 4) <= min(3, charge), 2 * n_positions)
+
+
+def _stored_annotation(data_dir: Path, filename: str):
+    """Predicted and annotated intensities of the stored library of a raw file, with the row of every PSM."""
+    from ..data import Spectra
+
+    library = Spectra.from_hdf5(data_dir / f"{filename}.mzml.pred.hdf5")
+    obs = library.obs.reset_index(drop=True)
+    rows = {
+        (int(scan), sequence, int(charge)): i
+        for i, (scan, sequence, charge) in enumerate(
+            zip(obs["SCAN_NUMBER"], obs["MODIFIED_SEQUENCE"], obs["PRECURSOR_CHARGE"], strict=True)
+        )
+    }
+    dense = [library.layers[name] for name in ("pred_int", "raw_int")]
+    dense = [layer.toarray() if hasattr(layer, "toarray") else np.asarray(layer) for layer in dense]
+    return rows, np.clip(dense[0], 0, None), dense[1]
+
+
+def sdi_features(
+    candidates: pd.DataFrame, first_pass: pd.DataFrame, data_dir: Path, decoy_pattern: Optional[str] = None
+) -> pd.DataFrame:
+    """
+    Site-determining ion (SDI) features of all localization candidates (SDI_FEATURES).
+
+    A and B are the two best real candidates of a spectrum by the first pass scores (localization_probabilities
+    without these features); the competitor of A is B, of every other candidate (decoys included) A. The SDIs of a
+    candidate c are the possible b / y ions (see _differing_ions) that differ between c and its competitor. From the
+    stored predictions (pred_int) and annotation (raw_int, i.e. the matches at the configured fragment tolerance):
+    sdi_pred_obs_frac = predicted intensity of the observed SDIs / of all SDIs of c, sdi_pred_missing = 1 - predicted
+    intensity of the unobserved SDIs / of all ions of c, sdi_none = 1 if c has no predicted SDI (or no competitor or
+    no stored prediction), then both other features are 1 (no penalty).
+
+    :param candidates: rescore features of all localization candidates (SpecId, filename, ScanNr, Peptide)
+    :param first_pass: localization_probabilities of the candidates without the SDI features (PSMId, score)
+    :param data_dir: directory with the stored libraries <filename>.mzml.pred.hdf5
+    :param decoy_pattern: regex matching decoy candidates in the Peptide column, None if no decoys are used
+    :return: SpecId and SDI_FEATURES of every candidate
+    """
+    cand = candidates[["SpecId", "filename", "ScanNr", "Peptide"]].copy()
+    cand["seq"], cand["charge"] = _sequence_and_charge(cand["SpecId"], cand["filename"], cand["ScanNr"])
+    cand = cand.merge(first_pass[["PSMId", "score"]].rename(columns={"PSMId": "SpecId"}), on="SpecId", how="left")
+    cand["decoy"] = cand["Peptide"].str.contains(decoy_pattern, regex=True) if decoy_pattern else False
+    result = []
+    for filename, file_candidates in cand.groupby("filename", sort=False):
+        rows, pred, raw = _stored_annotation(data_dir, filename)
+        for scan, group in file_candidates.groupby("ScanNr", sort=False):
+            reals = group[~group["decoy"] & group["score"].notna()].sort_values("score", ascending=False)
+            best = list(reals["SpecId"].iloc[:2])
+            info = {}
+            for spec_id, seq, charge in zip(group["SpecId"], group["seq"], group["charge"], strict=True):
+                i = rows.get((int(scan), seq, charge))
+                info[spec_id] = None if i is None else (seq, charge, i)
+            a = best[0] if best else None
+            b = best[1] if len(best) > 1 else None
+            for spec_id in group["SpecId"]:
+                competitor = b if spec_id == a else a
+                c, q = info[spec_id], info.get(competitor) if competitor else None
+                if c is None or q is None:
+                    result.append((spec_id, 1.0, 1.0, 1.0))
+                    continue
+                differs = _differing_ions(c[0], q[0], c[1])
+                n = len(differs)
+                p, o, o_q = pred[c[2], :n], raw[c[2], :n], raw[q[2], :n]
+                possible = (o > 0) & _charge_mask(n // 6, c[1])
+                sdi = possible & (o_q > 0) & differs
+                total, sdi_pred = p[possible].sum(), p[sdi].sum()
+                if sdi_pred <= 0 or total <= 0:
+                    result.append((spec_id, 1.0, 1.0, 1.0))
+                    continue
+                seen = sdi & (o > OBSERVED_INTENSITY)
+                result.append((spec_id, float(p[seen].sum() / sdi_pred), float(1 - p[sdi & ~seen].sum() / total), 0.0))
+    return pd.DataFrame(result, columns=["SpecId"] + SDI_FEATURES)
+
+
+def ambiguity_flags(localization: pd.DataFrame, data_dir: Path) -> pd.DataFrame:
+    """
+    Flag localizations without site-specific evidence against the runner-up (ambiguity_check).
+
+    The call A of a spectrum is its candidate with the highest localization probability, the runner-up B the
+    highest scored other real candidate. From the stored annotation (raw_int, i.e. the matches at the configured
+    fragment tolerance) of the site-determining ions of A and B (_differing_ions): no_sdi = none of them is observed
+    for A or B, favours_B = the observed SDIs of B have more intensity than those of A (ions possible for both). The
+    call is ambiguous if no_sdi or favours_B. Spectra with a single real candidate or without stored annotation are
+    not flagged.
+
+    :param localization: localization_probabilities output (PSMId, filename, ScanNr, peptide, score, loc_prob)
+    :param data_dir: directory with the stored libraries <filename>.mzml.pred.hdf5
+    :return: localization with localization_ambiguous (bool, on the calls) and localization_runner_up (peptide of B
+        on the calls)
+    """
+    spectrum = ["filename", "ScanNr"]
+    localization = localization.copy()
+    called = localization.sort_values("loc_prob", ascending=False).drop_duplicates(spectrum)
+    others = localization[~localization["PSMId"].isin(called["PSMId"])]
+    runner_up = others.sort_values("score", ascending=False).drop_duplicates(spectrum)
+    pairs = called[spectrum + ["PSMId", "peptide"]].merge(
+        runner_up[spectrum + ["PSMId", "peptide"]], on=spectrum, suffixes=("", "_B")
+    )
+    pairs["seq"], pairs["charge"] = _sequence_and_charge(pairs["PSMId"], pairs["filename"], pairs["ScanNr"])
+    pairs["seq_B"] = _sequence_and_charge(pairs["PSMId_B"], pairs["filename"], pairs["ScanNr"])[0]
+    flagged = np.zeros(len(pairs), dtype=bool)
+    for filename, group in pairs.groupby("filename", sort=False):
+        rows, _, raw = _stored_annotation(data_dir, filename)
+        for i, scan, seq_a, seq_b, charge in zip(
+            group.index, group["ScanNr"], group["seq"], group["seq_B"], group["charge"], strict=True
+        ):  # pairs has a RangeIndex: i is the position
+            row_a, row_b = rows.get((int(scan), seq_a, charge)), rows.get((int(scan), seq_b, charge))
+            if row_a is None or row_b is None:
+                continue
+            differs = _differing_ions(seq_a, seq_b, charge)
+            n = len(differs)
+            ra, rb = raw[row_a, :n], raw[row_b, :n]
+            observed_a, observed_b = differs & (ra > OBSERVED_INTENSITY), differs & (rb > OBSERVED_INTENSITY)
+            both = differs & (ra > 0) & (rb > 0)
+            favours_b = rb[both & observed_b].sum() > ra[both & observed_a].sum()
+            flagged[i] = not (observed_a.any() or observed_b.any()) or favours_b
+    pairs["localization_ambiguous"] = flagged
+    localization = localization.merge(
+        pairs[["PSMId", "localization_ambiguous", "peptide_B"]].rename(columns={"peptide_B": "localization_runner_up"}),
+        on="PSMId",
+        how="left",
+    )
+    localization["localization_ambiguous"] = localization["localization_ambiguous"].eq(True)
+    return localization
 
 
 def localization_groups(peptides: pd.Series, ptm_pattern: str) -> pd.Series:
@@ -555,10 +783,80 @@ def neighbor_classes(peptides: pd.Series, ptm_pattern: str, possible_residues: s
 
 
 def _ranked_flr(psms: pd.DataFrame) -> pd.Series:
-    """FLR q-values of PSMs ranked by loc_prob_delta, then loc_prob: cumulative decoy_weight / number of PSMs."""
-    ranked = psms.sort_values(["loc_prob_delta", "loc_prob"], ascending=False, kind="mergesort")
+    """
+    FLR q-values of PSMs ranked by loc_prob_delta, then loc_prob: cumulative decoy_weight / number of PSMs.
+
+    With the column localization_ambiguous (ambiguity_check), ambiguous localizations are ranked after all others.
+    """
+    if "localization_ambiguous" in psms.columns:
+        ranked = psms.assign(_ambiguous=psms["localization_ambiguous"].eq(True)).sort_values(
+            ["_ambiguous", "loc_prob_delta", "loc_prob"], ascending=[True, False, False], kind="mergesort"
+        )
+    else:
+        ranked = psms.sort_values(["loc_prob_delta", "loc_prob"], ascending=False, kind="mergesort")
     flr = ranked["decoy_weight"].fillna(0).cumsum().values / np.arange(1, len(ranked) + 1)
     return pd.Series(np.minimum.accumulate(flr[::-1])[::-1], index=ranked.index)
+
+
+def _model_flr(psms: pd.DataFrame, error_column: str, group_column: str) -> pd.Series:
+    """
+    FLR q-values from model based error probabilities, per group.
+
+    Within every group, PSMs are ranked by their error probability and the FLR of the top k PSMs is the mean error
+    probability of these PSMs, reported as q-value. With the column localization_ambiguous (ambiguity_check),
+    ambiguous localizations are ranked after all others of their group, each part by its error probability.
+    """
+    flr = pd.Series(np.nan, index=psms.index)
+    ambiguous = "localization_ambiguous" in psms.columns
+    for _, group in psms.groupby(group_column):
+        if ambiguous:
+            order = group.assign(_ambiguous=group["localization_ambiguous"].eq(True)).sort_values(
+                ["_ambiguous", error_column], kind="mergesort"
+            )
+            ranked = order[error_column]
+        else:
+            ranked = group[error_column].sort_values(kind="mergesort")
+        running = ranked.cumsum().to_numpy() / np.arange(1, len(ranked) + 1)
+        flr.loc[ranked.index] = np.minimum.accumulate(running[::-1])[::-1]
+    return flr
+
+
+def hybrid_localization_flr(psms: pd.DataFrame, group_column: str, fdr: float = 0.01) -> pd.DataFrame:
+    """
+    Combine the decoy estimated FLR with model based FLRs, so that the estimate is reliable above 1-2% FLR.
+
+    Decoy candidates only reveal wrong localizations if a decoy scores above the called site, which rarely happens
+    once a wrong site has already beaten the true one, so the decoy estimate saturates for localizations with a
+    possible site next to the called site. The model based FLR uses the error probability of the call, 1 - softmax of
+    the scores of the real candidates of the spectrum, summed within groups of the called residue and whether a
+    possible site is next to the called site. localization_flr = max(model FLR (MODEL_SHARPNESS_HIGH),
+    min(decoy FLR, model FLR (MODEL_SHARPNESS_LOW))): at the low end, the less conservative of the decoy and the
+    model estimate, above about 1-2% the more conservative one. The decoy estimate is kept as localization_flr_decoy.
+
+    With the column localization_ambiguous (ambiguity_check), the ambiguous localizations are ranked after all others
+    of their group, and their FLR is at least the decoy FLR estimated over the ambiguous localizations alone (pooled
+    over all groups): the model errors of calls without site-specific evidence are too optimistic, while their decoys
+    still compete on equal terms.
+
+    :param psms: PSMs with localization_flr (decoy estimate), model_error_high, model_error_low and group_column
+    :param group_column: column with the group of the model based FLR
+    :param fdr: PSM level q-value cutoff for the PSMs used to estimate the FLR
+    :return: psms with localization_flr replaced by the hybrid estimate and localization_flr_decoy
+    """
+    psms["localization_flr_decoy"] = psms["localization_flr"]
+    passing = psms[(psms["q-value"] <= fdr) & psms["loc_prob"].notna()]
+    if passing.empty:
+        return psms
+    high = _model_flr(passing, "model_error_high", group_column)
+    low = _model_flr(passing, "model_error_low", group_column)
+    decoy = passing["localization_flr"]
+    hybrid = np.maximum(high, np.minimum(decoy, low))
+    if "localization_ambiguous" in passing.columns:
+        ambiguous = passing[passing["localization_ambiguous"].eq(True)]
+        if not ambiguous.empty:
+            hybrid.loc[ambiguous.index] = np.maximum(hybrid.loc[ambiguous.index], _ranked_flr(ambiguous))
+    psms.loc[passing.index, "localization_flr"] = hybrid
+    return psms
 
 
 def estimate_localization_flr(
@@ -656,32 +954,110 @@ def _add_localization_probabilities(
     use_decoys: bool,
     ptm_pattern: str = r"\[UNIMOD:21\]",
     possible_residues: Optional[str] = None,
+    flr_groups: str = "none",
+    flr_estimator: str = "hybrid",
+    ptm_residues: Optional[str] = None,
 ):
     """
     Write the percolator results of result_dir with localization probabilities (*_with_prob.*psms.txt).
 
     If decoy residues are used, the target PSMs also get the estimated localization_flr and the calibrated
-    localization_score, both per residue of the called sites (localization_group). The groups in PLAIN_DECOY_GROUPS
-    use the plain decoys (decoy_win_plain, decoy_weight_plain), the others the decoys as annotated. With
+    localization_score. With flr_groups "none" (default) they are estimated over all PSMs, with "residue" per residue
+    of the called sites. The called residues in PLAIN_DECOY_GROUPS use the plain decoys (decoy_win_plain,
+    decoy_weight_plain) if the decoys are annotated with the neutral loss, the others the decoys as annotated. With
     possible_residues, the groups are further split by whether a possible site is next to the called site
-    (neighbor_classes).
+    (neighbor_classes). With flr_estimator "hybrid", the decoy estimate is combined with model based estimates per
+    called residue and neighbor class of ptm_residues (see hybrid_localization_flr), with the sharper model errors for
+    calls without a neighboring possible site (see MODEL_ERROR_SHARPNESS). If the localization has the column
+    localization_ambiguous (ambiguity_check), the ambiguous localizations are ranked after all others of their group
+    by both estimates, and their FLR is at least the decoy FLR of the ambiguous localizations alone.
     """
     columns = ["PSMId", "loc_prob", "loc_prob_delta", "possible_sites", "decoy_win", "decoy_weight"]
-    columns += ["decoy_win_plain", "decoy_weight_plain"]
+    columns += ["decoy_win_plain", "decoy_weight_plain"] + list(MODEL_ERROR_SHARPNESS)
+    # ambiguity_check: ambiguous localizations are ranked after all others by both FLR estimates (see ambiguity_flags)
+    columns += [column for column in ("localization_ambiguous", "localization_runner_up") if column in localization]
     for psm_type in ["psms", "decoy.psms"]:
-        psms = pd.read_csv(result_dir / f"rescore.percolator.{psm_type}.txt", sep="\t")
+        psms = pd.read_csv(result_dir / f"rescore.percolator.{psm_type}.txt", sep="\t", dtype={"filename": str})
         psms = psms.merge(localization[columns], on="PSMId", how="left")
+        if "localization_ambiguous" in psms.columns:
+            psms["localization_ambiguous"] = psms["localization_ambiguous"].eq(True)
         if use_decoys and psm_type == "psms":
-            psms["localization_group"] = localization_groups(psms["peptide"], ptm_pattern)
-            plain = psms["localization_group"].isin(PLAIN_DECOY_GROUPS)
+            residues = localization_groups(psms["peptide"], ptm_pattern)
+            plain = residues.isin(PLAIN_DECOY_GROUPS)
             psms["decoy_win"] = psms["decoy_win"].where(~plain, psms["decoy_win_plain"])
             psms["decoy_weight"] = psms["decoy_weight"].where(~plain, psms["decoy_weight_plain"])
+            groups = [residues] if flr_groups == "residue" else []
             if possible_residues:
-                classes = neighbor_classes(psms["peptide"], ptm_pattern, possible_residues)
-                psms["localization_group"] = psms["localization_group"] + " " + classes
-            psms = estimate_localization_flr(psms, group_column="localization_group")
-            psms = calibrate_localization_score(psms, group_column="localization_group")
+                groups.append(neighbor_classes(psms["peptide"], ptm_pattern, possible_residues))
+            group_column = None
+            if groups:
+                psms["localization_group"] = groups[0] if len(groups) == 1 else groups[0] + " " + groups[1]
+                group_column = "localization_group"
+            psms = estimate_localization_flr(psms, group_column=group_column)
+            # the model based estimate needs the residues the PTMs can be located on for the neighbor classes
+            if flr_estimator == "hybrid" and ptm_residues:
+                neighbors = neighbor_classes(psms["peptide"], ptm_pattern, ptm_residues)
+                psms["model_group"] = residues + " " + neighbors
+                for column in ("model_error_high", "model_error_low"):
+                    psms[column] = psms[column].where(neighbors == "neighbor", psms[f"{column}_no_neighbor"])
+                psms = hybrid_localization_flr(psms, group_column="model_group")
+            psms = calibrate_localization_score(psms, group_column=group_column)
+        psms = psms.drop(columns=["model_error_high_no_neighbor", "model_error_low_no_neighbor"])
         psms.to_csv(result_dir / f"rescore.percolator_with_prob.{psm_type}.txt", sep="\t", index=False)
+
+
+def _localize_candidates(
+    candidates: pd.DataFrame,
+    fdr_dir: Path,
+    decoy_pattern: Optional[str],
+    ptm_pattern: str,
+    probability: str,
+    decoy_weighting: str,
+    data_dir: Optional[Path],
+    use_sdi_features: bool,
+    ambiguity_check: bool,
+) -> pd.DataFrame:
+    """
+    Score the localization candidates (localization_probabilities in localize_mod / localize_scores).
+
+    With use_sdi_features, the candidates are first scored without the SDI features (localize_mod_first_pass /
+    localize_scores_first_pass) to find the two best candidates of every spectrum, then scored with SDI_FEATURES
+    (see sdi_features). With ambiguity_check, the calls are flagged by ambiguity_flags. Both need the stored libraries
+    in data_dir.
+    """
+    if (use_sdi_features or ambiguity_check) and data_dir is None:
+        raise ValueError("sdi_features and ambiguity_check need the directory of the stored libraries (data_dir).")
+    extra, extra_positive = None, None
+    if use_sdi_features:
+        first_pass = localization_probabilities(
+            candidates,
+            fdr_dir / "localize_mod_first_pass",
+            fdr_dir / "localize_scores_first_pass",
+            decoy_pattern,
+            ptm_pattern,
+            probability,
+            decoy_weighting,
+            keep_scores=True,
+        )
+        features = sdi_features(candidates, first_pass, data_dir, decoy_pattern)
+        candidates = candidates.merge(features, on="SpecId", how="left")
+        candidates[SDI_FEATURES] = candidates[SDI_FEATURES].fillna(1.0)
+        extra, extra_positive = SDI_FEATURES, SDI_POSITIVE_FEATURES
+    localization = localization_probabilities(
+        candidates,
+        fdr_dir / "localize_mod",
+        fdr_dir / "localize_scores",
+        decoy_pattern,
+        ptm_pattern,
+        probability,
+        decoy_weighting,
+        extra,
+        extra_positive,
+        keep_scores=ambiguity_check,
+    )
+    if ambiguity_check:
+        localization = ambiguity_flags(localization, data_dir)
+    return localization
 
 
 def localize_ptms(
@@ -689,6 +1065,13 @@ def localize_ptms(
     ptm_sites: dict[int, list[str]],
     decoy_residues: Optional[list[str]] = None,
     neighbor_split: bool = False,
+    probability: str = "pep",
+    decoy_weighting: str = "count",
+    flr_groups: str = "none",
+    flr_estimator: str = "hybrid",
+    use_sdi_features: bool = False,
+    ambiguity_check: bool = False,
+    data_dir: Optional[Path] = None,
 ):
     """
     Rescore with percolator and localize PTMs.
@@ -701,15 +1084,25 @@ def localize_ptms(
     :param decoy_residues: decoy residues used to estimate the false localization rate, None if not used
     :param neighbor_split: estimate the FLR separately for localizations with and without a possible site next to
         the called site
+    :param probability: localization probabilities from the PEPs ("pep") or the scores ("score") of all candidates,
+        see localization_probabilities
+    :param decoy_weighting: expected false localizations of a decoy win, "count" or "distance", see _decoy_weights
+    :param flr_groups: estimate the FLR over all PSMs ("none") or per residue of the called sites ("residue")
+    :param flr_estimator: FLR from the decoys only ("decoy") or combined with model based estimates ("hybrid"), see
+        hybrid_localization_flr
+    :param use_sdi_features: score the candidates with site-determining ion features (SDI_FEATURES, see sdi_features)
+    :param ambiguity_check: rank localizations without site-specific evidence against the runner-up after all others
+        when estimating the FLR (see ambiguity_flags)
+    :param data_dir: directory with the stored libraries <raw file>.mzml.pred.hdf5, needed by use_sdi_features and
+        ambiguity_check
     """
-    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t", dtype={"filename": str})
     unimod_id = next(iter(ptm_sites)) if len(ptm_sites) == 1 else 0
     ptm_pattern = rf"UNIMOD:(?:{_ptm_ids(ptm_sites)})\]"
     decoy_pattern = _decoy_site_pattern(ptm_sites, decoy_residues)
     use_decoys = decoy_pattern is not None
-    possible_residues = (
-        "".join(sorted({aa for sites in ptm_sites.values() for aa in sites})) if neighbor_split else None
-    )
+    ptm_residues = "".join(sorted({aa for sites in ptm_sites.values() for aa in sites}))
+    possible_residues = ptm_residues if neighbor_split else None
 
     new_rescore_dir = fdr_dir / "localize_mod"
     new_rescore_dir.mkdir(parents=True, exist_ok=True)
@@ -721,8 +1114,12 @@ def localize_ptms(
         df_rescore.drop(columns=["id"], inplace=True)
         df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
         rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
-        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
+        df_rescore_psms_targets = pd.read_csv(
+            fdr_dir / "rescore.percolator.psms.txt", sep="\t", dtype={"filename": str}
+        )
+        df_rescore_psms_decoys = pd.read_csv(
+            fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t", dtype={"filename": str}
+        )
         df_rescore_psms_targets = df_rescore_psms_targets[
             df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
         ]
@@ -746,8 +1143,16 @@ def localize_ptms(
         df_rescore = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:21")]
 
         # score all localization candidates and keep the most likely localization per spectrum
-        localization = localization_probabilities(
-            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", decoy_pattern, rf"\[{ptm_pattern}"
+        localization = _localize_candidates(
+            df_rescore,
+            fdr_dir,
+            decoy_pattern,
+            rf"\[{ptm_pattern}",
+            probability,
+            decoy_weighting,
+            data_dir,
+            use_sdi_features,
+            ambiguity_check,
         )
         df_rescore = _best_localization(df_rescore, localization)
 
@@ -759,7 +1164,14 @@ def localize_ptms(
                 df_rescore_fil.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
                 rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
                 _add_localization_probabilities(
-                    new_rescore_dir, localization, use_decoys, rf"\[{ptm_pattern}", possible_residues
+                    new_rescore_dir,
+                    localization,
+                    use_decoys,
+                    rf"\[{ptm_pattern}",
+                    possible_residues,
+                    flr_groups,
+                    flr_estimator,
+                    ptm_residues,
                 )
 
         else:
@@ -769,15 +1181,30 @@ def localize_ptms(
             df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
             rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
             _add_localization_probabilities(
-                new_rescore_dir, localization, use_decoys, rf"\[{ptm_pattern}", possible_residues
+                new_rescore_dir,
+                localization,
+                use_decoys,
+                rf"\[{ptm_pattern}",
+                possible_residues,
+                flr_groups,
+                flr_estimator,
+                ptm_residues,
             )
 
     else:
         df_rescore_all = df_rescore
         df_rescore = df_rescore[df_rescore["Peptide"].str.contains(ptm_pattern, regex=True)]
         # score all localization candidates and keep the most likely localization per spectrum
-        localization = localization_probabilities(
-            df_rescore, new_rescore_dir, fdr_dir / "localize_scores", decoy_pattern, rf"\[{ptm_pattern}"
+        localization = _localize_candidates(
+            df_rescore,
+            fdr_dir,
+            decoy_pattern,
+            rf"\[{ptm_pattern}",
+            probability,
+            decoy_weighting,
+            data_dir,
+            use_sdi_features,
+            ambiguity_check,
         )
         df_rescore_psms = _best_localization(df_rescore, localization)[["SpecId"]]
         # keep the localized PSMs of the PTMs and all PSMs without them
@@ -791,5 +1218,12 @@ def localize_ptms(
         df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
         rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
         _add_localization_probabilities(
-            new_rescore_dir, localization, use_decoys, rf"\[{ptm_pattern}", possible_residues
+            new_rescore_dir,
+            localization,
+            use_decoys,
+            rf"\[{ptm_pattern}",
+            possible_residues,
+            flr_groups,
+            flr_estimator,
+            ptm_residues,
         )

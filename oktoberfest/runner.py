@@ -817,7 +817,19 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
             rescore_original_step.mark_done()
         if not config._run_original and not rescore_prosit_step.is_done():
             if config.ptm_localization:
-                re.localize_ptms(fdr_dir, config.ptm_sites, config.ptm_decoy_residues, config.ptm_flr_neighbor_split)
+                re.localize_ptms(
+                    fdr_dir,
+                    config.ptm_sites,
+                    config.ptm_decoy_residues,
+                    config.ptm_flr_neighbor_split,
+                    config.ptm_localization_probability,
+                    config.ptm_decoy_weighting,
+                    config.ptm_flr_groups,
+                    config.ptm_flr_estimator,
+                    config.ptm_sdi_features,
+                    config.ptm_ambiguity_check,
+                    config.output / "data",
+                )
             elif config.ptm_fdr_control and not xl:
                 re.percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
             else:
