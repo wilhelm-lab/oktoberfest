@@ -813,7 +813,9 @@ class Config:
         ):
             if value not in allowed:
                 raise ValueError(f"Invalid ptmLocalizationOptions.{option} {value!r}, must be one of {allowed}.")
-        for option, value in (("sdi_features", self.ptm_sdi_features), ("ambiguity_check", self.ptm_ambiguity_check)):
+        # read the raw options: the bool-annotated properties would trip typeguard before this check
+        for option in ("sdi_features", "ambiguity_check"):
+            value = self.ptm_localization_options.get(option, True)
             if not isinstance(value, bool):
                 raise ValueError(f"Invalid ptmLocalizationOptions.{option} {value!r}, must be true or false.")
 

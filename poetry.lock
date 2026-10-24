@@ -5693,7 +5693,7 @@ scikit-learn = "^1.5"
 type = "git"
 url = "https://github.com/wilhelm-lab/spectrum_fundamentals.git"
 reference = "features/ptm_pipeline"
-resolved_reference = "74065b010364e10578b533ea8f418e1f7c62d52e"
+resolved_reference = "488aca1c156c3175556aa9ed80c145e071dc6489"
 
 [[package]]
 name = "spectrum-io"
@@ -5717,13 +5717,13 @@ pyteomics = {version = "^4.3.3", extras = ["xml"]}
 rich = ">=10.3.0"
 scipy = ">=1.0.0"
 sortedcontainers = "^2.4.0"
-spectrum-fundamentals = ">=0.9.0"
+spectrum-fundamentals = {git = "https://github.com/wilhelm-lab/spectrum_fundamentals.git", branch = "features/ptm_pipeline"}
 
 [package.source]
 type = "git"
 url = "https://github.com/wilhelm-lab/spectrum_io.git"
-reference = "features/ptm_pipeline"
-resolved_reference = "7867021ed86825b8dfee170b1f5fbf49d00fbc17"
+reference = "development"
+resolved_reference = "a5b6fe2c7a3fcf589bd03c1723520b20728c377c"
 
 [[package]]
 name = "spectrum-utils"
@@ -7318,4 +7318,4 @@ docs = ["Pygments", "sphinx", "sphinx-autobuild", "sphinx-autodoc-typehints", "s
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "3320b035c9e564008f645664584fe724adc7c2931aca69633de604ec9739d8dc"
+content-hash = "79c1c22a55bd61631758801248aea4ef2a8e4ddac31e825e0dec3d2214f7dd6d"
