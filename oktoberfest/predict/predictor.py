@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import zlib
+
 import inspect
 import logging
+from contextlib import contextmanager
 from typing import Any, Optional, Union
 
 import numpy as np
@@ -10,12 +13,23 @@ import pandas as pd
 from ..data.spectra import FragmentType, Spectra
 from ..utils import Config, group_iterator
 from .alignment import _alignment, _prepare_alignment_df
+from .dlomix import DLOmixLocal
 from .koina import Koina
 from .utils import ZeroPredictor
 
 logger = logging.getLogger(__name__)
 
-PredictionInterface = Union[Koina, ZeroPredictor]
+PredictionInterface = Union[Koina, DLOmixLocal, ZeroPredictor]
+
+
+def _choose_proxy(sequence: str, fractions: dict[str, float]) -> str:
+    """Choose a proxy for a sequence with the given frequencies, deterministically from a hash of the sequence."""
+    position = (zlib.crc32(sequence.encode()) % 100000) / 100000 * sum(fractions.values())
+    for proxy, fraction in fractions.items():
+        position -= fraction
+        if position < 0:
+            return proxy
+    return proxy
 
 
 class Predictor:
@@ -25,6 +39,31 @@ class Predictor:
         """Initialize from Koina instance."""
         self._predictor = predictor
         self.model_name = model_name
+        # replacements of modified residues the model does not support, e.g. decoy localizations {"A[UNIMOD:21]": ...}
+        self.sequence_proxies: dict[str, Union[str, dict[str, float]]] = {}
+
+    @contextmanager
+    def _proxy_sequences(self, data: Spectra):
+        """Temporarily replace modified residues in MODIFIED_SEQUENCE with their prediction proxies."""
+        if not self.sequence_proxies or "MODIFIED_SEQUENCE" not in data.obs:
+            yield
+            return
+        original = data.obs["MODIFIED_SEQUENCE"].copy()
+        sequences = original.astype(str)
+        for residue, proxy in self.sequence_proxies.items():
+            if isinstance(proxy, str):
+                sequences = sequences.str.replace(residue, proxy, regex=False)
+                continue
+            # a mixture of proxies {proxy: fraction}: every sequence gets one proxy, chosen deterministically
+            with_residue = sequences.str.contains(residue, regex=False)
+            sequences[with_residue] = [
+                sequence.replace(residue, _choose_proxy(sequence, proxy)) for sequence in sequences[with_residue]
+            ]
+        data.obs["MODIFIED_SEQUENCE"] = sequences.values
+        try:
+            yield
+        finally:
+            data.obs["MODIFIED_SEQUENCE"] = original
 
     @classmethod
     def from_koina(
@@ -46,8 +85,46 @@ class Predictor:
         )
 
     @classmethod
+    def from_dlomix(
+        cls,
+        model_name: str,
+        pipeline: Any,
+    ) -> Predictor:
+        """Create local DLOmix predictor using InferencePipeline."""
+        return Predictor(
+            DLOmixLocal(pipeline=pipeline),
+            model_name=model_name,
+        )
+
+    @classmethod
     def from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
         """Load from config object."""
+        predictor = cls._from_config(config, model_type, **kwargs)
+        # decoy localization candidates are predicted with the PTM on a possible site at the same position
+        predictor.sequence_proxies = config.ptm_decoy_proxies
+        return predictor
+
+    @classmethod
+    def _from_config(cls, config: Config, model_type: str, **kwargs) -> Predictor:
+        """Create the predictor for the given model type from the config object."""
+        # Intensity model: either DLOmix or Koina, not both
+        if model_type == "intensity":
+            if config.models.get("dlomix_intensity"):
+                pipeline = config.dlomix_pipeline
+                if pipeline is None:
+                    raise ValueError(f"Failed to load DLOmix pipeline from {config.models['dlomix_intensity']}")
+                logger.info("Using DLOmix intensity model")
+                return Predictor.from_dlomix(model_name="DLOmix_Intensity", pipeline=pipeline)
+            elif model_type in config.models:
+                model_name = config.models[model_type]
+                logger.info(f"Using model {model_name} via Koina")
+                return Predictor.from_koina(
+                    model_name=model_name, server_url=config.prediction_server, ssl=config.ssl, **kwargs
+                )
+            else:
+                raise ValueError("Must specify either 'dlomix_intensity' or 'intensity' model in config")
+
+        # Other models (iRT, etc.)
         model_name = config.models[model_type]
 
         if model_type == "irt" and model_name == "zero_irt":
@@ -111,49 +188,56 @@ class Predictor:
             >>> intensity_predictor.predict_intensities(data=library)
             >>> print(library.layers["pred_int"])
         """
-        if chunk_idx is None:
-            if xl:
-                intensities_a, intensities_b = self._predictor.predict_xl(data=data, **self._filter_kwargs(**kwargs))
-                data.add_intensities_without_mapping(intensities_a["intensities"], fragment_type=FragmentType.PRED_A)
-                data.add_intensities_without_mapping(intensities_b["intensities"], fragment_type=FragmentType.PRED_B)
+        with self._proxy_sequences(data):
+            if chunk_idx is None:
+                if xl:
+                    intensities_a, intensities_b = self._predictor.predict_xl(
+                        data=data, **self._filter_kwargs(**kwargs)
+                    )
+                    data.add_intensities_without_mapping(
+                        intensities_a["intensities"], fragment_type=FragmentType.PRED_A
+                    )
+                    data.add_intensities_without_mapping(
+                        intensities_b["intensities"], fragment_type=FragmentType.PRED_B
+                    )
+                else:
+                    intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
+
+                    # Zero out invalid m/z
+                    intensities["intensities"][intensities["mz"] <= 0] = 0.0
+
+                    data.add_intensities(
+                        intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
+                    )
             else:
-                intensities = self._predictor.predict(data=data, **self._filter_kwargs(**kwargs))
+                if xl:
+                    chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks_xl(
+                        data=data, chunk_idx=chunk_idx, xl=xl, **kwargs
+                    )
+                    data.add_list_of_predicted_intensities(
+                        chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
+                    )
+                    data.add_list_of_predicted_intensities(
+                        chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
+                    )
+                else:
+                    chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
 
-                # Zero out invalid m/z
-                intensities["intensities"][intensities["mz"] <= 0] = 0.0
+                    # Zero out invalid m/z
+                    # TODO: this can be done better way
+                    new_intensities = []
 
-                data.add_intensities(
-                    intensities["intensities"], intensities["annotation"], fragment_type=FragmentType.PRED
-                )
-        else:
-            if xl:
-                chunked_intensities_a, chunked_intensities_b = self.predict_in_chunks_xl(
-                    data=data, chunk_idx=chunk_idx, xl=xl, **kwargs
-                )
-                data.add_list_of_predicted_intensities(
-                    chunked_intensities_a["intensities"], chunked_intensities_a["annotation"], chunk_idx
-                )
-                data.add_list_of_predicted_intensities(
-                    chunked_intensities_b["intensities"], chunked_intensities_b["annotation"], chunk_idx
-                )
-            else:
-                chunked_intensities = self.predict_in_chunks(data=data, chunk_idx=chunk_idx, xl=xl, **kwargs)
+                    for mz_arr, inten_arr in zip(
+                        chunked_intensities["mz"], chunked_intensities["intensities"], strict=True
+                    ):
+                        inten_arr[mz_arr <= 0] = 0.0
+                        new_intensities.append(inten_arr)
 
-                # Zero out invalid m/z
-                # TODO: this can be done better way
-                new_intensities = []
+                    chunked_intensities["intensities"] = new_intensities
 
-                for mz_arr, inten_arr in zip(
-                    chunked_intensities["mz"], chunked_intensities["intensities"], strict=True
-                ):
-                    inten_arr[mz_arr <= 0] = 0.0
-                    new_intensities.append(inten_arr)
-
-                chunked_intensities["intensities"] = new_intensities
-
-                data.add_list_of_predicted_intensities(
-                    chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
-                )
+                    data.add_list_of_predicted_intensities(
+                        chunked_intensities["intensities"], chunked_intensities["annotation"], chunk_idx
+                    )
 
     def predict_rt(self, data: Spectra, **kwargs):
         """
@@ -188,9 +272,10 @@ class Predictor:
             >>> irt_predictor.predict_rt(data=library)
             >>> print(library.obs["PREDICTED_IRT"])
         """
-        # If xl becomes available for an RT model, this need to be incorporated here
-        pred_irts = self._predictor.predict(data, **self._filter_kwargs(**kwargs))
-        data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
+        with self._proxy_sequences(data):
+            # If xl becomes available for an RT model, this need to be incorporated here
+            pred_irts = self._predictor.predict(data, **self._filter_kwargs(**kwargs))
+            data.add_column(pred_irts["irt"].squeeze(), name="PREDICTED_IRT")
 
     def predict_at_once(
         self, data: Spectra, xl: bool = False, **kwargs
@@ -396,8 +481,10 @@ class Predictor:
             >>> from oktoberfest import predict as pr
             >>> import pandas as pd
             >>> import numpy as np
-            >>> # Required columns: RAW_FILE, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE, REVERSE and SCORE
+            >>> # Required columns: RAW_FILE, SCAN_NUMBER, MODIFIED_SEQUENCE, COLLISION_ENERGY, PRECURSOR_CHARGE,
+            >>> # REVERSE and SCORE
             >>> meta_df = pd.DataFrame({"RAW_FILE": ["File1","File1"],
+            >>>                         "SCAN_NUMBER": [1,2],
             >>>                         "MODIFIED_SEQUENCE": ["AAAC[UNIMOD:4]RFVQ","RM[UNIMOD:35]PC[UNIMOD:4]HKPYL"],
             >>>                         "COLLISION_ENERGY": [30,35],
             >>>                         "PRECURSOR_CHARGE": [1,2],

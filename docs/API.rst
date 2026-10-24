@@ -111,6 +111,12 @@ Rescoring: :code:`re`
    re.merge_input
    re.rescore_with_mokapot
    re.rescore_with_percolator
+   re.percolator_fdr_modified
+   re.localize_ptms
+   re.localization_probabilities
+   re.estimate_localization_flr
+   re.calibrate_localization_score
+   re.select_decoy_candidates
 
 
 Plotting: :code:`pl`

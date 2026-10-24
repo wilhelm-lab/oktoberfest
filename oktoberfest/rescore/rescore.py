@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
+from ..utils import JobPool
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -93,14 +94,18 @@ def generate_features(
     """
     meta = library.get_meta_data().reset_index(drop=True)
 
-    if xl:
+    if search_type == "rescore" and xl:
         pred = sp.hstack([library.get_matrix(FragmentType.PRED_A), library.get_matrix(FragmentType.PRED_B)])
         raw = sp.hstack([library.get_matrix(FragmentType.RAW_A), library.get_matrix(FragmentType.RAW_B)])
         mz = sp.hstack([library.get_matrix(FragmentType.MZ_A), library.get_matrix(FragmentType.MZ_B)])
-    else:
+    elif search_type == "rescore":
         pred = library.get_matrix(FragmentType.PRED)
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
+    else:
+        pred = None
+        raw = None
+        mz = None
 
     perc_features = Percolator(
         metadata=meta,
@@ -116,27 +121,39 @@ def generate_features(
         additional_columns=additional_columns,
         task=task,
         featured_ions=featured_ions,
+        output_path=output_file,
     )
 
     perc_features.calc()
     perc_features.write_to_file(str(output_file))
 
 
+def _fillna_tab_file(tab_file: Path, include_header: bool) -> bytes:
+    """Read a tab file, fill NaN values with 0, and return it serialized as tab-separated bytes."""
+    df = pd.read_csv(tab_file, sep="\t")
+    df = df.fillna(0)
+    content = df.to_csv(sep="\t", index=False, header=include_header).encode()
+    tab_file.unlink()
+    return content
+
+
 def merge_input(
     tab_files: list[Path],
     output_file: str | Path,
+    num_threads: int = 1,
 ):
     r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
 
-    The function takes a list of tab files and concatenates them before writing a combined tab file back to
-    the chosen output file location.
+    The function reads each tab file once, fills NaN values with 0 (optionally in parallel across files),
+    and writes the concatenated result directly to the chosen output file location.
 
     Fastest solution according to:
     https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
 
     :param tab_files: list of paths pointing to the individual tab files to be concatenated
     :param output_file: path to the generated output tab file
+    :param num_threads: number of threads used in parallel for filling NaN values per tab file
 
     :Example:
 
@@ -194,36 +211,27 @@ def merge_input(
         >>> filelist = [tabfile1,tabfile2]
         >>> re.merge_input(tab_files=filelist, output_file="./tests/doctests/output/merged_rescore.tab")
     """
+    if num_threads > 1:
+        fillna_pool = JobPool(processes=num_threads)
+        for i, tab_file in enumerate(tab_files):
+            fillna_pool.apply_async(_fillna_tab_file, [tab_file, i == 0])
+        contents = fillna_pool.check_pool()
+    else:
+        contents = [_fillna_tab_file(tab_file, i == 0) for i, tab_file in enumerate(tab_files)]
+
     with open(output_file, "wb") as fout:
-        first = True
-        for tab_file in tab_files:
-            with open(tab_file, "rb") as f:
-                if not first:
-                    next(f)  # skip the header
-                else:
-                    first = False
-                fout.write(f.read())
-            tab_file.unlink()
-
-    # TODO make this more efficient
-    df_prosit = pd.read_csv(output_file, sep="\t")
-    df_prosit = df_prosit.fillna(0)
-
-    # We exploit the expmass column here by assigning a unique id per filename+scannr group.
-    # This ensures percolator will not deduplicate scannrs between filenames, as it uses only
-    # filename+ExpMass for TDC.
-    df_prosit.insert(loc=4, column="ExpMass", value=df_prosit.groupby(["filename", "ScanNr"]).ngroup())
-
-    df_prosit.to_csv(output_file, sep="\t", index=False)
+        for content in contents:
+            fout.write(content)
 
 
 def rescore_with_percolator(
     input_file: str | Path,
     output_folder: str | Path | None = None,
-    num_threads: int = 3,
+    num_threads: int = 10,
     test_fdr: float = 0.01,
     train_fdr: float = 0.01,
     xl: bool = False,
+    init_weights: str | Path | None = None,
 ):
     """
     Rescore using percolator.
@@ -237,6 +245,8 @@ def rescore_with_percolator(
     :param test_fdr: the fdr cutoff for the test set
     :param train_fdr: the fdr cutoff for the train set
     :param xl: crosslinked or linear peptide
+    :param init_weights: optional weights file of a previous percolator run. If given, the PSMs are scored with these
+        weights without training (percolator --init-weights --static)
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
@@ -257,17 +267,48 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
-    if xl:
+    if init_weights is not None:
+        cmd = f"percolator --init-weights {init_weights} \
+                        --static \
+                        --num-threads {num_threads} \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
+
+    elif xl:
         cmd = f"percolator --weights {weights_file} \
                     --results-psms {target_psms} \
                     --decoy-results-psms {decoy_psms} \
                     --only-psms \
                     {input_file} 2> {log_file}"
 
+    elif "orig" in file_prefix:
+        # annotated_ions is only available for some search engines (e.g. MSFragger), fall back to search engine score
+        with open(input_file) as f:
+            header = f.readline().rstrip("\n").split("\t")
+        default_direction = "annotated_ions" if "annotated_ions" in header else "andromeda"
+        cmd = f"percolator --weights {weights_file} \
+                        --num-threads {num_threads} \
+                        --default-direction {default_direction} \
+                        --override \
+                        --post-processing-tdc \
+                        --testFDR {test_fdr} \
+                        --trainFDR {train_fdr} \
+                        --results-psms {target_psms} \
+                        --decoy-results-psms {decoy_psms} \
+                        --results-peptides {target_peptides} \
+                        --decoy-results-peptides {decoy_peptides} \
+                        {input_file} 2> {log_file}"
     else:
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
-                        --subset-max-train 500000 \
+                        --default-direction spectral_angle \
+                        --override \
                         --post-processing-tdc \
                         --testFDR {test_fdr} \
                         --trainFDR {train_fdr} \
@@ -330,3 +371,42 @@ def rescore_with_mokapot(
     results, models = mokapot.brew(psms, test_fdr=test_fdr)
     results.to_txt(dest_dir=output_folder, file_root=f"{input_file.stem}", decoys=True)
     logger.info("Finished rescoring using mokapot.")
+
+
+def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
+    """
+    Helper function for running percolator separately on unmodified and modified PSMs.
+
+    PSMs that are unmodified or only carry fixed modifications and labels (STANDARD_UNIMOD_IDS of spectrum_fundamentals,
+    e.g. carbamidomethyl, TMT, SILAC) are rescored in place. All other PSMs, including those with oxidation, are rescored
+    in a separate mod_fdr subfolder, with a 0/1 feature per PTM (ptm_UNIMOD_<id>) so that percolator learns how reliable
+    the identifications of each PTM are.
+
+    :param features_path: the features tab file path
+    :param num_threads: number of threads used by percolator
+    """
+    df_features = pd.read_csv(features_path, sep="\t")
+    is_modified = Percolator.get_ptms(df_features["Peptide"]).map(bool)
+
+    df_features[~is_modified].to_csv(features_path, sep="\t", index=False)
+    fdr_dir = features_path.parent
+    rescore_with_percolator(input_file=features_path, output_folder=fdr_dir, num_threads=num_threads)
+
+    df_features_mod = df_features[is_modified]
+    if df_features_mod.empty:
+        logger.warning(f"No modified PSMs found in {features_path}, skipping separate FDR control for modified PSMs.")
+        return
+
+    indicators = Percolator.get_ptm_indicators(df_features_mod["Peptide"])
+    # a feature that is the same for all PSMs (e.g. a single PTM) carries no information
+    indicators = indicators.loc[:, indicators.nunique() > 1]
+    position = df_features_mod.columns.get_loc("Peptide")
+    df_features_mod = pd.concat(
+        [df_features_mod.iloc[:, :position], indicators, df_features_mod.iloc[:, position:]], axis=1
+    )
+
+    mod_fdr_dir = fdr_dir / "mod_fdr"
+    tab_file_name = mod_fdr_dir / features_path.name
+    mod_fdr_dir.mkdir(parents=True, exist_ok=True)
+    df_features_mod.to_csv(tab_file_name, sep="\t", index=False)
+    rescore_with_percolator(input_file=tab_file_name, output_folder=mod_fdr_dir, num_threads=num_threads)

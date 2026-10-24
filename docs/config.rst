@@ -12,7 +12,9 @@ Always applicable
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                                                                                                                                                                                                                      |
    +============================+==============================================================================================================================================================================================================================================================================================================+
-   | type                       | The type of job; can be one of "CollisionEnergCalibration", "SpectralLibraryGeneration" or "Rescoring"                                                                                                                                                                                                       |
+   | type                       | The type of job; can be one of "CollisionEnergyCalibration", "SpectralLibraryGeneration", "Rescoring" or "GenerateTrainingData" (see `Running Oktoberfest <./jobs.html>`_)                                                                                                                                   |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   | acquisitionMethod          | The acquisition method used to measure the spectra; can be one of "DDA" or "DIA"; default = "DDA"                                                                                                                                                                                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | tag                        | Optional mass tag Can be "tmt", "tmtpro", "itraq4" or "itraq8"; default is ""                                                                                                                                                                                                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -21,6 +23,8 @@ Always applicable
    |     intensity              | Name or path of the model used for fragment intensity prediction                                                                                                                                                                                                                                             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     irt                    | Name of the model used for indexed retention time prediction                                                                                                                                                                                                                                                 |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     dlomix_intensity       | Optional. Path to a locally trained DLOmix pipeline to use for fragment intensity prediction instead of ``intensity``. Requires the ``dlomix`` optional extra (``pip install oktoberfest[dlomix]``); see :doc:`installation`.                                                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | inputs                     | Contains information about inputs and the type of the inputs (see following nested parameter)                                                                                                                                                                                                                |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -75,6 +79,8 @@ Applicable to CE calibration and rescoring
    |     ce_range               | Min and max collision energy (end-exclusive) used for calibration; i.e. (5,10) tests every CE from 5 to 9. Default is (19,50)                                                                                                                                                              |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    |     use_ransac_model       | Boolean that determines whether or not to use a ransac regression model for calibration refinement. This is recommended for timsTOF data. Default is false.                                                                                                                                |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     ce_calibration_dir     | results/ce_calibration folder of a previous run on the same spectra files; its calibrated CE per file is reused instead of predicting the CE range again. Files without a previous calibration are calibrated as usual. Not used with use_ransac_model. Default is none.                   |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Applicable to rescoring
@@ -166,13 +172,80 @@ Applicable to PTM pipeline
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Parameter                  |                             Description                                                                                                                            |
    +============================+====================================================================================================================================================================+
-   | ptm_localization           | Flag to indicate whether the user want to run the PTM localization pipeline or not.                                                                                |
+   | ptm_localization           | false: PTMs are rescored as localized by the search engine. true: all localizations of the PTMs in ptmLocalizationOptions.ptms are scored; default = false         |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | ptmLocalizationOptions     | Contains specific settings for the ptm pipele (see following 2 nested parameters)                                                                                  |
+   | ptm_fdr_control            | Separate FDR for modified PSMs in <fdr_dir>/mod_fdr (0/1 feature per PTM; oxidation is a PTM). Default: true for PTM models without localization, else false       |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     unimod_id              | unimod_id from unimod.org to indicate the target ptm. e.g (7 for citrullination/deamidation)                                                                       |
+   | ptmLocalizationOptions     | Settings for PTM localization, only used if ptm_localization is true (see following nested parameters)                                                             |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     possible_sites         | List of Possible sites where the PTM can happen. e.g (['R','N','Q'] for citrullination/deamidation)                                                                |
+   |     ptms                   | PTMs to localize: unimod id -> residues, e.g. {"21": ["S", "T", "Y"], "7": ["R"]}. Required if ptm_localization is true                                            |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   |     neutral_loss           | Flag to annotate neutral loss peaks and use it as a feaure in percolator.                                                                                          |
+   |     unimod_id              | (legacy, single PTM) unimod id of the PTM to localize, e.g. 7 for citrullination/deamidation. Use ptms instead                                                     |
    +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     possible_sites         | (legacy, single PTM) residues the PTM given in unimod_id can be located on, e.g. ['R','N','Q']. Use ptms instead                                                   |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     neutral_loss           | Flag to annotate neutral loss peaks and use them as a feature in percolator; default = false                                                                       |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_residues         | Residues that cannot carry the PTMs used as decoy sites to estimate the false localization rate, by priority; [] disables; default = ["A","G","L","V"]             |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_neutral_loss     | Annotate the phosphoric acid neutral loss on phosphorylated decoy residues like on S and T (requires neutral_loss); default = false                                |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_proxy            | Residue decoy candidates are predicted on, e.g. "S"; "search": S or T with their frequencies in the search engine localizations; default = first site              |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_selection        | "residue": decoys on the first decoy_residues residue of a peptide; "adjacent": also A,G,L,V,I,F,N,Q,W within 2 of a possible site; default = "residue"            |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_neighbor_split     | Estimate the FLR separately for localizations with and without a possible site next to the called site; default = false                                            |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     loc_probability        | "pep": (1/PEP) / sum(1/PEP) over the candidates of a spectrum; "score": softmax of the scores (robust to collapsed PEPs); default = "pep"                          |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     decoy_weighting        | False localizations per decoy win: "count": (real candidates - 1) / decoy candidates; "distance": matched by site distance; default = "count"                      |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_groups             | "none": one FLR estimate over all PSMs; "residue": per residue of the called site (e.g. S, T, Y); default = "none"                                                 |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     flr_estimator          | "hybrid": max(model, min(decoy, mild model)) per called residue and neighbor class, reliable above 1%; "decoy": decoys only; default = "hybrid"                    |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     sdi_features           | Score the localization candidates with site-determining ion features (see "Ambiguous localizations"); default = true                                               |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+   |     ambiguity_check        | Rank localizations without site-specific evidence after all others in the FLR estimation (see "Ambiguous localizations"); default = true                           |
+   +----------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+Ambiguous localizations: with ``"sdi_features": true``, every localization candidate is additionally scored by its
+site-determining ions (the b/y ions that differ from its best competitor): the share of their predicted intensity that
+is observed and the predicted intensity that is missing. These features need a first scoring pass to find the best
+competitors, so the localization is scored twice. With ``"ambiguity_check": true``, a call is flagged as ambiguous if
+none of the site-determining ions between it and the runner-up is observed, or if the observed ones favour the
+runner-up. Ambiguous calls are ranked after all other calls of their group in the decoy and model based FLR
+estimates, without changing their error probabilities, and their FLR is at least the decoy FLR estimated over the
+ambiguous calls alone. They are reported in the columns ``localization_ambiguous`` and ``localization_runner_up``.
+Both options are on by default and use the stored annotation of the spectra, i.e. the matches at the configured
+fragment tolerance. The trade-off: on clean data with few missing site-determining ions, fewer calls pass an estimated
+FLR of 1%, since calls without site-specific evidence (often correct) move behind the others; when site-determining
+ions are often missing, the actual FLR of localizations next to another possible site is much lower at the same
+estimated FLR.
+
+The model based part of the "hybrid" FLR estimate turns the localization scores into error probabilities with a
+sharpness that depends on the neighbor class: calls with another possible site next to the called site use a milder
+one than calls without, since their candidates differ by fewer site-determining ions.
+
+PTMs can be rescored with or without localization. Without localization, PTMs are rescored as localized by the
+search engine:
+
+.. code-block:: json
+
+   {
+       "ptm_localization": false,
+       "ptm_fdr_control": true
+   }
+
+With localization, all possible localizations of the PTMs you choose are generated on the residues you specify for
+each of them and scored, e.g. phosphorylation on S, T and Y together with citrullination on R:
+
+.. code-block:: json
+
+   {
+       "ptm_localization": true,
+       "ptmLocalizationOptions": {
+           "ptms": {"21": ["S", "T", "Y"], "7": ["R"]},
+           "neutral_loss": true
+       }
+   }
