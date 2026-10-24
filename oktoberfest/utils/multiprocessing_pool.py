@@ -41,7 +41,7 @@ class JobPool:
             res_len = len(self.results)
             with tqdm(total=res_len, desc="Waiting for tasks to complete", leave=True) as progress:
                 for future in as_completed(self.results):
-                    outputs[future_to_idx[future]] = future.result(timeout=10000)  # ~3 hours
+                    outputs[future_to_idx[future]] = future.result(timeout=100000)  # ~28 hours
                     progress.update(1)
             self.executor.shutdown(wait=True, cancel_futures=False)
             return outputs

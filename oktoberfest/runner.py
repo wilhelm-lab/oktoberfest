@@ -4,6 +4,7 @@ import logging
 import pickle
 import shutil
 import sys
+import tempfile
 import time
 from functools import partial
 from math import ceil
@@ -13,6 +14,7 @@ from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
+import spectrum_fundamentals.constants as c
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
 from tqdm.auto import tqdm
@@ -25,6 +27,7 @@ from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
 from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
+from .utils.config import ADJACENT_DECOY_RESIDUES
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +63,12 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         msms_output.mkdir(exist_ok=True)
         internal_search_file = msms_output / "msms.prosit"
         tmt_label = config.tag
-        ptm_unimods = config.ptm_unimod_id
-        ptm_sites = config.ptm_possible_sites
+        # PTM site permutations are only generated if localization is requested, otherwise PTMs are kept as
+        # localized by the search engine
+        # including decoy residues used to estimate the false localization rate
+        ptm_unimods = config.ptm_permutation_sites
+        ptm_sites = None
+        ptm_model = config.ptm_model
         search_results = pp.convert_search(
             input_path=config.search_results,
             search_engine=config.search_results_type,
@@ -70,6 +77,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             output_file=internal_search_file,
             ptm_unimod_id=ptm_unimods,
             ptm_sites=ptm_sites,
+            ptm_model=ptm_model,
         )
         if config.spectra_type.lower() in ["d", "hdf"]:
             timstof_metadata = pp.convert_timstof_metadata(
@@ -80,16 +88,29 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
 
         # TODO add support for internal timstof metadata
         logger.info(f"Read {len(search_results)} PSMs from {internal_search_file}")
-        model_type = config.models["intensity"]
-        try:
-            search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
-        except ValueError:
-            logger.exception(
-                ValueError(
-                    f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
-                    "If you're using local prediction, please ensure the model type is contained in the model file name."
-                )
+        if config.ptm_decoy_residues and config.ptm_decoy_selection == "adjacent":
+            search_results = re.add_adjacent_decoy_candidates(
+                search_results, config.ptm_sites, config.ptm_decoy_priority_residues, ADJACENT_DECOY_RESIDUES
             )
+        elif config.ptm_decoy_residues:
+            search_results = re.select_decoy_candidates(search_results, config.ptm_sites, config.ptm_decoy_residues)
+        if config.ptm_decoy_residues:
+            if config.ptm_localization_options.get("decoy_proxy") == "search":
+                fractions = re.decoy_proxy_fractions(search_results, config.ptm_sites)
+                config.decoy_proxy_fractions_file.write_text(json.dumps(fractions))
+
+        # Filter peptides only if using Koina intensity model
+        if not config.models.get("dlomix_intensity"):
+            model_type = config.models.get("intensity", "")
+            try:
+                search_results = pp.filter_peptides_for_model(peptides=search_results, model=model_type)
+            except ValueError:
+                logger.exception(
+                    ValueError(
+                        f"Unknown model {model_type}. Please ensure it is one of ['prosit', 'ms2pip', 'alphapept']."
+                        "If you're using local prediction, please ensure the model type is contained in the model file name."
+                    )
+                )
 
         # split search results
         searchfiles_found = pp.split_search(
@@ -113,6 +134,32 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             spectra_files_to_return.append(spectra_file)
 
     return spectra_files_to_return
+
+
+def _get_annotation_fragmentation(spectra: pd.DataFrame, config: Config) -> str:
+    """
+    Get the fragmentation method used to annotate the fragment ions of a spectra file.
+
+    The fragmentation_method in the config takes precedence. Otherwise, the fragmentation read from the spectra file
+    is used if all spectra share one supported method. Unknown, unsupported or mixed fragmentation methods fall back
+    to HCD with a warning.
+
+    :param spectra: the spectra read from the spectra file
+    :param config: the configuration object
+    :return: the fragmentation method used for annotation
+    """
+    if config.data.get("fragmentation_method") is not None:
+        return config.fragmentation_method
+    # TODO: refine annotation for files with unknown, unsupported or mixed fragmentation methods, e.g. by annotating
+    #  each method with its own ion types instead of falling back to HCD
+    methods = spectra["FRAGMENTATION"].astype(str).str.upper().unique()
+    if len(methods) == 1 and methods[0] in c.FRAGMENTATION_TO_IONS_BY_PAIRS:
+        return methods[0]
+    logger.warning(
+        f"Found fragmentation methods {sorted(methods)} in the spectra, which are unknown, unsupported or mixed. "
+        "Fragment ions are annotated as HCD. Set fragmentation_method in the config to annotate them differently."
+    )
+    return "HCD"
 
 
 def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file: Optional[Path] = None) -> Spectra:
@@ -141,13 +188,16 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         config_instrument_type = config.instrument_type
         if config_instrument_type is not None:
             spectra["INSTRUMENT_TYPES"] = config_instrument_type
-        if config.fragmentation_method is not None:
+        # only override the per-spectrum fragmentation read from the spectra file if explicitly configured
+        if config.data.get("fragmentation_method") is not None:
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
 
-        if "xl" in config.models["intensity"].lower():
-            if "cms2" in config.models["intensity"].lower():
+        # Check for crosslinked or local model (skip for DLOmix)
+        intensity_model = config.models.get("intensity", "").lower()
+        if "xl" in intensity_model:
+            if "cms2" in intensity_model:
                 cms2 = True
             else:
                 cms2 = False
@@ -163,12 +213,14 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 psms=library,
                 mass_tol=config.mass_tolerance,
                 unit_mass_tol=config.unit_mass_tolerance,
-                fragmentation_method=config.fragmentation_method,
+                fragmentation_method=_get_annotation_fragmentation(library, config),
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
                 annotate_neutral_loss=annotate_neutral_loss,
                 multifrag=config.check_multifrag(),
                 featured_ions=config.ion_types,
+                phospho_loss_residues=config.ptm_phospho_loss_residues,
+                plain_loss_residues=config.ptm_plain_loss_residues,
             )
 
         aspec.write_as_hdf5(hdf5_path)  # write_metadata_annotation
@@ -176,14 +228,100 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
     return aspec
 
 
+def _ce_calibration_library(library: Spectra, config: Config) -> Spectra:
+    """
+    Get the PSMs used for CE calibration.
+
+    If PTMs are localized, the library contains all site permutations of each PSM. They share the search engine score
+    of the original PSM, so the PSMs selected for calibration would mostly be wrong localizations. Only PSMs without
+    the localized PTMs are used for calibration in this case.
+
+    :param library: the library with all PSMs
+    :param config: the configuration object
+    :return: the PSMs to use for CE calibration
+    """
+    if not config.ptm_sites:
+        return library
+    ptm_pattern = r"UNIMOD:(?:" + "|".join(str(ptm) for ptm in config.ptm_sites) + r")\]"
+    without_ptm = ~library.obs["MODIFIED_SEQUENCE"].str.contains(ptm_pattern, regex=True).to_numpy(dtype=bool)
+    if not without_ptm.any():
+        logger.warning(
+            "No PSMs without the localized PTMs found, using all PSMs including permutations for CE calibration."
+        )
+        return library
+    logger.info(f"Using {without_ptm.sum()} PSMs without the localized PTMs for CE calibration.")
+    return Spectra(library[without_ptm].copy())
+
+
+def _map_best_ce(library: Spectra, best_ce_per_orig: pd.Series, is_hcd: np.ndarray, library_column: str):
+    # map from a snapshot of the original values in one step, so a CE that was just assigned is never
+    # matched again by another group (e.g. 30 -> 33 must not then be remapped by the 33 -> 35 group).
+    # Only HCD spectra are calibrated, so CID spectra set to 35 above are never remapped, even if an
+    # HCD group also had an original CE of 35. HCD groups without a calibration keep their original CE.
+    orig_values = library.obs.loc[is_hcd, library_column]
+    calibrated_ce = orig_values.map(best_ce_per_orig)
+    n_uncalibrated = int(calibrated_ce.isna().sum())
+    if n_uncalibrated > 0:
+        logger.warning(
+            f"{n_uncalibrated} HCD spectra have no calibrated CE for their {library_column} and keep their original CE"
+        )
+    library.obs.loc[is_hcd, "COLLISION_ENERGY"] = calibrated_ce.fillna(
+        library.obs.loc[is_hcd, "COLLISION_ENERGY"]
+    ).to_numpy()
+
+
+def _stored_best_ce(spectra_file: Path, config: Config) -> Optional[pd.Series]:
+    """
+    Get the best CE per original CE (DDA) or per precursor charge (DIA) from a previous calibration.
+
+    :param spectra_file: the spectra file the calibration belongs to
+    :param config: the configuration object; ce_alignment_options.ce_calibration_dir points to the previous results
+    :return: the best CE per group, or None if no previous calibration is configured or found for this file
+    """
+    ce_calibration_dir = config.ce_calibration_dir
+    if ce_calibration_dir is None:
+        return None
+    ce_file = ce_calibration_dir / f"{spectra_file.stem}_ce.txt"
+    if not ce_file.is_file():
+        logger.warning(f"No previous CE calibration found for {spectra_file.stem} in {ce_calibration_dir}")
+        return None
+    with open(ce_file) as f:
+        best_ce = json.load(f)
+    if not isinstance(best_ce, dict):
+        return None
+    to_key = int if config.acquisition_method.lower() == "dia" else float
+    return pd.Series({to_key(float(group)): ce for group, ce in best_ce.items()})
+
+
 def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
-    results_dir = config.output / "results"
-    results_dir.mkdir(exist_ok=True)
-    if library.obs["FRAGMENTATION"].str.endswith("HCD").any():
+    results_dir = config.output / "results/ce_calibration"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    # the calibrated CE only applies to HCD spectra; all other spectra (e.g. CID) are set to 35
+    # same selection as in the CE alignment, which only uses HCD spectra
+    is_hcd = (library.obs["FRAGMENTATION"] == "HCD").to_numpy(dtype=bool)
+    library.obs.loc[~is_hcd, "COLLISION_ENERGY"] = 35
+    stored_best_ce = None
+    if is_hcd.any() and not config.use_ransac_model:
+        stored_best_ce = _stored_best_ce(spectra_file, config)
+    if stored_best_ce is not None:
+        logger.info(f"Using the previous CE calibration for {spectra_file.stem}: {stored_best_ce.to_dict()}")
+        library_column = "PRECURSOR_CHARGE" if config.acquisition_method.lower() == "dia" else "COLLISION_ENERGY"
+        _map_best_ce(library, stored_best_ce, is_hcd, library_column)
+        with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
+            json.dump(stored_best_ce.to_dict(), f)
+    elif is_hcd.any():
         use_ransac_model = config.use_ransac_model
+        if config.acquisition_method.lower() == "dia" or use_ransac_model:
+            group_by_charge = True
+        else:
+            group_by_charge = False
         predictor = pr.Predictor.from_config(config, model_type="intensity")
 
-        if "xl" in config.models["intensity"].lower():
+        # Check for crosslinked model (skip for DLOmix)
+        intensity_model = config.models.get("intensity", "").lower()
+        is_xl = "xl" in intensity_model
+
+        if is_xl:
             alignment_library = predictor.ce_calibration(
                 library,
                 config.ce_range,
@@ -193,9 +331,9 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
             )
         else:
             alignment_library = predictor.ce_calibration(
-                library,
+                _ce_calibration_library(library, config),
                 config.ce_range,
-                use_ransac_model,
+                group_by_charge,
                 dataset_name=spectra_file.stem + "_ce_calibration",
             )
 
@@ -227,24 +365,46 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
                     title=title,
                 )
 
-            delta_ce = ransac.predict(library.obs[["MASS", "PRECURSOR_CHARGE"]])
-            library.obs["COLLISION_ENERGY"] = np.maximum(0, library.obs["COLLISION_ENERGY"] + delta_ce)
+            delta_ce = ransac.predict(library.obs.loc[is_hcd, ["MASS", "PRECURSOR_CHARGE"]])
+            library.obs.loc[is_hcd, "COLLISION_ENERGY"] = np.maximum(
+                0, library.obs.loc[is_hcd, "COLLISION_ENERGY"] + delta_ce
+            )
 
         else:
-            ce_alignment = alignment_library.obs.groupby(by=["COLLISION_ENERGY"])["SPECTRAL_ANGLE"].mean()
+            # DIA: one calibrated CE per precursor charge; DDA: one calibrated CE per original CE.
+            # library_column is the column in library.obs holding the same grouping values; for DDA the
+            # library's COLLISION_ENERGY still holds the original CE (ORIG_COLLISION_ENERGY only exists
+            # in alignment_library)
+            if config.acquisition_method.lower() == "dia":
+                groupby_column = "PRECURSOR_CHARGE"
+                library_column = "PRECURSOR_CHARGE"
+            else:
+                groupby_column = "ORIG_COLLISION_ENERGY"
+                library_column = "COLLISION_ENERGY"
+            ce_alignment = alignment_library.obs.groupby(by=[groupby_column, "COLLISION_ENERGY"])[
+                "SPECTRAL_ANGLE"
+            ].mean()
 
-            best_ce = ce_alignment.idxmax()
-            pl.plot_mean_sa_ce(
-                sa_ce_df=ce_alignment.to_frame().reset_index(),
-                filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce.svg",
-            )
-            pl.plot_violin_sa_ce(
-                sa_ce_df=alignment_library.obs[["COLLISION_ENERGY", "SPECTRAL_ANGLE"]],
-                filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce.svg",
-            )
-            library.obs["COLLISION_ENERGY"] = best_ce
+            best_ce_per_orig = ce_alignment.groupby(level=groupby_column).idxmax().apply(lambda x: x[1])
+            logger.info(f"Best CE per original CE: {best_ce_per_orig.to_dict()}")
+
+            for orig_ce in ce_alignment.groupby(level=groupby_column).groups.keys():
+                pl.plot_mean_sa_ce(
+                    sa_ce_df=ce_alignment.to_frame().reset_index()[
+                        ce_alignment.to_frame().reset_index()[groupby_column] == orig_ce
+                    ],
+                    filename=results_dir / f"{spectra_file.stem}_mean_spectral_angle_ce_{orig_ce}.svg",
+                )
+                pl.plot_violin_sa_ce(
+                    sa_ce_df=alignment_library.obs[alignment_library.obs[groupby_column] == orig_ce][
+                        ["COLLISION_ENERGY", "SPECTRAL_ANGLE"]
+                    ],
+                    filename=results_dir / f"{spectra_file.stem}_violin_spectral_angle_ce_{orig_ce}.svg",
+                )
+
+            _map_best_ce(library, best_ce_per_orig, is_hcd, library_column)
             with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-                f.write(str(best_ce))
+                json.dump(best_ce_per_orig.to_dict(), f)
                 f.close()
 
     else:
@@ -252,7 +412,7 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
         library.obs["COLLISION_ENERGY"] = best_ce
 
         with open(results_dir / f"{spectra_file.stem}_ce.txt", "w") as f:
-            f.write(str(best_ce))
+            json.dump(best_ce, f)
             f.close()
 
 
@@ -321,7 +481,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
     if not pp_and_filter_step.is_done():
         data_dir.mkdir(exist_ok=True)
         spec_library = pp.process_and_filter_spectra_data(
-            library=spec_library, model=config.models["intensity"], tmt_label=config.tag
+            library=spec_library, model=config.models.get("intensity", ""), tmt_label=config.tag
         )
         spec_library.write_as_hdf5(data_dir / f"{library_file.stem}_filtered.hdf5")
         pp_and_filter_step.mark_done()
@@ -396,15 +556,18 @@ def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, resul
         sys.exit(1)
 
 
-def generate_spectral_lib(config_path: Union[str, Path]):
+def generate_spectral_lib(config_path: Union[str, Path, Config]):
     """
     Create a SpectralLibrary object and generate the spectral library.
 
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     spec_library = _speclib_from_digestion(config)
@@ -418,7 +581,7 @@ def generate_spectral_lib(config_path: Union[str, Path]):
         failed_batch_file = config.output / "data" / "speclib_failed_batches.pkl"
         writer, out_file = _get_writer_and_output(results_path, config.output_format)
         batches, mode = _get_batches_and_mode(
-            out_file, failed_batch_file, spec_library.obs, batch_size, config.models["intensity"]
+            out_file, failed_batch_file, spec_library.obs, batch_size, config.models.get("intensity", "")
         )
         speclib = writer(out_file, mode=mode, min_intensity_threshold=config.min_intensity)
         n_batches = len(batches)
@@ -521,7 +684,7 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
 
 
 def run_ce_calibration(
-    config_path: Union[str, Path],
+    config_path: Union[str, Path, Config],
 ):
     """
     Create a CeCalibration object and run the CE calibration.
@@ -529,8 +692,11 @@ def run_ce_calibration(
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     # load spectra file names
@@ -555,13 +721,14 @@ def run_ce_calibration(
 
 def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cms2: bool = False):
     library = _ce_calib(spectra_file, config)
-    calc_feature_step = ProcessStep(config.output, "calculate_features." + spectra_file.stem)
+    calc_feature_step_name = "calculate_features_original." if config._run_original else "calculate_features."
+    calc_feature_step = ProcessStep(config.output, calc_feature_step_name + spectra_file.stem)
     if calc_feature_step.is_done():
         return
 
     predict_step = ProcessStep(config.output, "predict." + spectra_file.stem)
-    if not predict_step.is_done():
-        if "alphapept" in config.models["intensity"].lower():
+    if not config._run_original and not predict_step.is_done():
+        if "alphapept" in config.models.get("intensity", "").lower():
             chunk_idx = list(group_iterator(df=library.obs, group_by_column="PEPTIDE_LENGTH"))
         else:
             chunk_idx = None
@@ -603,20 +770,21 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
         featured_ions=None,
     )
 
-    re.generate_features(
-        library=library,
-        search_type="rescore",
-        output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
-        additional_columns=config.use_feature_cols,
-        all_features=config.all_features,
-        xl=xl,
-        cms2=cms2,
-        regression_method=config.curve_fitting_method,
-        add_neutral_loss_features=add_neutral_loss_features,
-        remove_miss_cleavage_features=remove_miss_cleavage_features,
-        task="multifrag" if config.check_multifrag() else "default",
-        featured_ions=config.ion_types,
-    )
+    if not config._run_original:
+        re.generate_features(
+            library=library,
+            search_type="rescore",
+            output_file=fdr_dir / spectra_file.with_suffix(".rescore.tab").name,
+            additional_columns=config.use_feature_cols,
+            all_features=config.all_features,
+            xl=xl,
+            cms2=cms2,
+            regression_method=config.curve_fitting_method,
+            add_neutral_loss_features=add_neutral_loss_features,
+            remove_miss_cleavage_features=remove_miss_cleavage_features,
+            task="multifrag" if config.check_multifrag() else "default",
+            featured_ions=config.ion_types,
+        )
 
     calc_feature_step.mark_done()
 
@@ -635,19 +803,39 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
 
     if config.fdr_estimation_method == "percolator":
         if not rescore_original_step.is_done():
-            re.rescore_with_percolator(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
+            if config.ptm_fdr_control and not xl:
+                re.percolator_fdr_modified(fdr_dir / "original.tab", num_threads=config.num_threads)
+            else:
+                re.rescore_with_percolator(
+                    input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
+                )
             if xl:
                 output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
                 output_csms_original = xl_between_or_self(output_csms_original, score="score")
                 xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "percolator")
 
             rescore_original_step.mark_done()
-        if not rescore_prosit_step.is_done():
-            logger.info(config.ptm_localization)
+        if not config._run_original and not rescore_prosit_step.is_done():
             if config.ptm_localization:
-                _ptm_localization_rescore(fdr_dir, config)
+                re.localize_ptms(
+                    fdr_dir,
+                    config.ptm_sites,
+                    config.ptm_decoy_residues,
+                    config.ptm_flr_neighbor_split,
+                    config.ptm_localization_probability,
+                    config.ptm_decoy_weighting,
+                    config.ptm_flr_groups,
+                    config.ptm_flr_estimator,
+                    config.ptm_sdi_features,
+                    config.ptm_ambiguity_check,
+                    config.output / "data",
+                )
+            elif config.ptm_fdr_control and not xl:
+                re.percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
             else:
-                re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
+                re.rescore_with_percolator(
+                    input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
+                )
             if xl:
                 output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
                 output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
@@ -662,7 +850,7 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
                 xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "mokapot")
 
             rescore_original_step.mark_done()
-        if not rescore_prosit_step.is_done():
+        if not config._run_original and not rescore_prosit_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
             if xl:
                 output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
@@ -1022,43 +1210,6 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     return input_psm_rescore
 
 
-def _ptm_localization_rescore(fdr_dir: Path, config: Config):
-    """
-     Helper function for running percolator to do PTM localization.
-
-    :param fdr_dir: the output directory
-    :param config: the configuration object
-    """
-    df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
-    unimod_id = config.ptm_unimod_id
-    df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
-    df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
-    df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
-    df_rescore.drop(columns=["id"], inplace=True)
-    df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
-    new_rescore_dir = fdr_dir / "localize_mod"
-    new_rescore_dir.mkdir(parents=True, exist_ok=True)
-
-    if unimod_id == 7:
-        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
-        df_rescore_psms_targets = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
-        df_rescore_psms_decoys = pd.read_csv(fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t")
-        df_rescore_psms_targets = df_rescore_psms_targets[
-            df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms_decoys = df_rescore_psms_decoys[
-            df_rescore_psms_decoys["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
-        ]
-        df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
-        df_rescore_psms = df_rescore_psms[["PSMId"]]
-        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
-        df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
-        df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        re.rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
-    else:
-        re.rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=new_rescore_dir)
-
-
 def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
     """
      Helper function to generate xiFDR input.
@@ -1193,15 +1344,18 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
         df_scout_xifdr_input.to_csv(str(fdr_dir) + "/scout_xifdr_input.csv", sep=",", index=False)
 
 
-def run_rescoring(config_path: Union[str, Path]):
+def run_rescoring(config_path: Union[str, Path, Config]):
     """
     Create a ReScore object and run the rescoring.
 
     # TODO full description
     :param config_path: path to config file
     """
-    config = Config()
-    config.read(config_path)
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
     config.check()
 
     # load spectra file names
@@ -1226,8 +1380,8 @@ def run_rescoring(config_path: Union[str, Path]):
     if worker_count > 1:
         processing_pool = JobPool(processes=worker_count)
         for spectra_file in spectra_files:
-            if "xl" in config.models["intensity"].lower():
-                if "cms2" in config.models["intensity"].lower():
+            if "xl" in config.models.get("intensity", "").lower():
+                if "cms2" in config.models.get("intensity", "").lower():
                     cms2 = True
                 else:
                     cms2 = False
@@ -1237,8 +1391,8 @@ def run_rescoring(config_path: Union[str, Path]):
         processing_pool.check_pool()
     else:
         for spectra_file in spectra_files:
-            if "xl" in config.models["intensity"].lower():
-                if "cms2" in config.models["intensity"].lower():
+            if "xl" in config.models.get("intensity", "").lower():
+                if "cms2" in config.models.get("intensity", "").lower():
                     cms2 = True
                 else:
                     cms2 = False
@@ -1249,23 +1403,28 @@ def run_rescoring(config_path: Union[str, Path]):
     # prepare rescoring
     fdr_dir = config.output / "results" / config.fdr_estimation_method
     original_tab_files = [fdr_dir / spectra_file.with_suffix(".original.tab").name for spectra_file in spectra_files]
-    rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
 
     prepare_tab_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_original")
-    prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
 
     if not prepare_tab_original_step.is_done():
         logger.info("Merging input tab files for rescoring without peptide property prediction")
-        re.merge_input(tab_files=original_tab_files, output_file=fdr_dir / "original.tab")
+        re.merge_input(
+            tab_files=original_tab_files, output_file=fdr_dir / "original.tab", num_threads=config.num_threads
+        )
         prepare_tab_original_step.mark_done()
 
-    if not prepare_tab_rescore_step.is_done():
-        logger.info("Merging input tab files for rescoring with peptide property prediction")
-        re.merge_input(tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab")
-        prepare_tab_rescore_step.mark_done()
+    if not config._run_original:
+        rescore_tab_files = [fdr_dir / spectra_file.with_suffix(".rescore.tab").name for spectra_file in spectra_files]
+        prepare_tab_rescore_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prepare_tab_prosit")
+        if not prepare_tab_rescore_step.is_done():
+            logger.info("Merging input tab files for rescoring with peptide property prediction")
+            re.merge_input(
+                tab_files=rescore_tab_files, output_file=fdr_dir / "rescore.tab", num_threads=config.num_threads
+            )
+            prepare_tab_rescore_step.mark_done()
 
     # rescoring
-    if "xl" in config.models["intensity"].lower():  # xl-psm-level
+    if "xl" in config.models.get("intensity", "").lower():  # xl-psm-level
         rescore_features_path = fdr_dir / "rescore_features_csm.tab"
         if not rescore_features_path.exists():
             shutil.copy(fdr_dir / "rescore.tab", rescore_features_path)
@@ -1273,7 +1432,7 @@ def run_rescoring(config_path: Union[str, Path]):
             input_psm_rescore.to_csv(str(fdr_dir) + "/rescore.tab", sep="\t", index=None)
 
         original_features_path = fdr_dir / "original_features_csm.tab"
-        if not original_features_path.exists():
+        if not config._run_original and not original_features_path.exists():
             shutil.copy(fdr_dir / "original.tab", original_features_path)
             input_psm_original = prepare_rescore_xl_psm_level(str(fdr_dir), "original")
             input_psm_original.to_csv(str(fdr_dir) + "/original.tab", sep="\t", index=None)
@@ -1281,22 +1440,30 @@ def run_rescoring(config_path: Union[str, Path]):
         _rescore(fdr_dir, config, xl=True)
 
         logger.info("Finished rescoring.")
-        generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
-        if not generate_xifdr_input_step.is_done():
-            logger.info("Generating xiFDR input.")
-            if config.inputs["search_results_type"].lower() == "xisearch":
-                input_xifdr(str(fdr_dir), "xisearch")
-            elif config.inputs["search_results_type"].lower() == "scout":
-                input_xifdr(str(fdr_dir), "scout")
-            logger.info("Finished Generating xiFDR input.")
-            generate_xifdr_input_step.mark_done()
+        if not config._run_original:
+            generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
+            if not generate_xifdr_input_step.is_done():
+                logger.info("Generating xiFDR input.")
+                if config.inputs["search_results_type"].lower() == "xisearch":
+                    input_xifdr(str(fdr_dir), "xisearch")
+                elif config.inputs["search_results_type"].lower() == "scout":
+                    input_xifdr(str(fdr_dir), "scout")
+                logger.info("Finished Generating xiFDR input.")
+                generate_xifdr_input_step.mark_done()
 
     else:
         _rescore(fdr_dir, config)
         # plotting
         logger.info("Generating summary plots...")
-        if not config.ptm_localization:
+        if not config.ptm_localization and not config._run_original:
             pl.plot_all(fdr_dir, config)
+            mod_fdr_dir = fdr_dir / "mod_fdr"
+            if (
+                config.ptm_fdr_control
+                and config.fdr_estimation_method == "percolator"
+                and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file()
+            ):
+                pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
         if config.quantification:
@@ -1306,19 +1473,295 @@ def run_rescoring(config_path: Union[str, Path]):
             logger.info("Finished quantification")
 
 
-def run_job(config_path: Union[str, Path]):
+def run_generate_training_data(config_path: Union[str, Path, Config]):
+    """Generate training data for Prosit from the rescoring results. This function will run rescoring with the original features and then export the training data as parquet files."""
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
+    config.check()
+
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData requires fdr_estimation_method to be 'percolator'.")
+
+    try:
+        config._run_original = True
+        run_rescoring(config)
+    finally:
+        config._run_original = False
+
+    _export_training_data_parquets(config=config)
+
+
+def _export_training_data_parquets(config: Config, fdr_threshold: float = 0.01):
+    """
+    Export full and original Percolator 1% FDR filtered training data parquet files.
+
+    :param config: Parsed Oktoberfest configuration
+    :param fdr_threshold: Strict q-value threshold used for the filtered output
+    """
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
+
+    data_dir = config.output / "data"
+    fdr_dir = config.output / "results" / "percolator"
+    original_psms_path = fdr_dir / "original.percolator.psms.txt"
+    original_tab_path = fdr_dir / "original.tab"
+
+    if not original_psms_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator target PSM output not found: {original_psms_path}")
+    if not original_tab_path.is_file():
+        raise FileNotFoundError(f"Expected Percolator original tab file not found: {original_tab_path}")
+
+    original_psms = pd.read_csv(original_psms_path, sep="\t")
+    _require_columns(original_psms, ["PSMId", "q-value"], original_psms_path)
+    original_psms["q-value"] = pd.to_numeric(original_psms["q-value"])
+    accepted_psm_ids = set(original_psms.loc[original_psms["q-value"] < fdr_threshold, "PSMId"].astype(str))
+
+    original_tab = pd.read_csv(original_tab_path, sep="\t")
+    _require_columns(original_tab, ["SpecId", "filename"], original_tab_path)
+    original_tab["SpecId"] = original_tab["SpecId"].astype(str)
+    original_tab["filename"] = original_tab["filename"].astype(str)
+
+    for run_name in original_tab["filename"].drop_duplicates():
+        hdf5_path = data_dir / f"{run_name}.mzml.hdf5"
+        if not hdf5_path.is_file():
+            raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+        full_parquet_path = data_dir / f"{run_name}.parquet"
+        fdr_parquet_path = data_dir / f"{run_name}.fdr1.parquet"
+
+        logger.info(f"Writing full training parquet file to {full_parquet_path}")
+        pp.convert_anndata_to_parquet(hdf5_path, full_parquet_path)
+
+        library = Spectra.from_hdf5(hdf5_path)
+        run_tab = original_tab[original_tab["filename"] == run_name]
+        if len(run_tab) != library.n_obs:
+            raise ValueError(
+                f"Per-run original.tab row count for {run_name!r} ({len(run_tab)}) does not match "
+                f"HDF5 row count ({library.n_obs}) in {hdf5_path}."
+            )
+
+        accepted_run_rows = run_tab["SpecId"].isin(accepted_psm_ids).to_numpy()
+        filtered_library = Spectra(library[accepted_run_rows].copy())
+        with tempfile.TemporaryDirectory(dir=data_dir) as tmp_dir:
+            filtered_hdf5_path = Path(tmp_dir) / f"{run_name}.fdr1.hdf5"
+            filtered_library.write_as_hdf5(filtered_hdf5_path)
+            logger.info(f"Writing 1% FDR training parquet file to {fdr_parquet_path}")
+            pp.convert_anndata_to_parquet(filtered_hdf5_path, fdr_parquet_path)
+
+
+def _require_columns(df: pd.DataFrame, columns: list[str], file_path: Path):
+    missing_columns = [column for column in columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"{file_path} is missing required column(s): {', '.join(missing_columns)}")
+
+
+def _extract_gene_name(protein: str) -> Optional[str]:
+    """Extract the gene name from a UniProt-style FASTA header.
+
+    Expects the ``db|accession|entry`` format (e.g. ``sp|P16402|H13_HUMAN``) and returns
+    the gene portion of the entry name (``H13`` for the example). Returns ``None`` when the
+    header does not follow this format or no gene name can be extracted.
+
+    :param protein: single protein identifier / FASTA header
+    :return: extracted gene name, or ``None`` if it cannot be determined
+    """
+    parts = protein.split("|")
+    if len(parts) != 3:
+        return None
+    entry_name = parts[2]
+    gene = entry_name.split("_")[0]
+    return gene or None
+
+
+def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_dir: Path) -> list[list]:
+    """Build DIA spectral library rows for a single raw file.
+
+    :param filename: raw file name (without the .mzml.pred.hdf5 suffix)
+    :param peptide_df: percolator PSMs belonging to this file
+    :param data_dir: directory holding the annotated ``*.mzml.pred.hdf5`` files
+    :raises FileNotFoundError: if the annotated spectra HDF5 for the file is missing
+    :return: list of unexploded spectral library rows following ``_COLUMNS_DIA_SPECLIB``
+    """
+    hdf5_path = data_dir / f"{filename}.mzml.pred.hdf5"
+    if not hdf5_path.is_file():
+        raise FileNotFoundError(f"Expected annotated spectra HDF5 not found: {hdf5_path}")
+
+    library = Spectra.from_hdf5(hdf5_path)
+    obs = library.obs
+
+    spec_id_cols = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+    if "SCAN_EVENT_NUMBER" in obs.columns:
+        spec_id_cols.append("SCAN_EVENT_NUMBER")
+    obs["PSMId"] = obs[spec_id_cols].astype(str).agg("-".join, axis=1)
+
+    # Filter 1% FDR peptide level
+    obs["avg_retention_time_sec"] = obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"])[
+        "retention_time_sec"
+    ].transform("mean")
+
+    # PSMId only ends with the charge if there is no SCAN_EVENT_NUMBER, so take the charge from the spectra
+    peptide_df = peptide_df.copy()
+    peptide_df["charge"] = peptide_df["PSMId"].map(obs.set_index("PSMId")["PRECURSOR_CHARGE"])
+    peptide_df.drop_duplicates(["peptide", "charge"], inplace=True)
+    accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] <= 0.01, "PSMId"]
+    positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
+
+    mz_layer = library.layers["mz"]
+    int_layer = library.layers["pred_int"]
+    annotations = library.var.index.to_numpy()
+    ion_types = library.var["type"].to_numpy()
+    frag_charges = library.var["charge"].to_numpy()
+    frag_nums = library.var["num"].to_numpy()
+
+    meta = obs.iloc[positions][
+        [
+            "MASS",
+            "PROTEINS",
+            "RAW_FILE",
+            "SEQUENCE",
+            "MODIFIED_SEQUENCE",
+            "PRECURSOR_CHARGE",
+            "RETENTION_TIME",
+            "avg_retention_time_sec",
+        ]
+    ]
+
+    # precursor m/z, same definition as the ExpMass percolator feature
+    precursor_mz = (meta["MASS"] + meta["PRECURSOR_CHARGE"] * c.PARTICLE_MASSES["PROTON"]) / meta["PRECURSOR_CHARGE"]
+
+    rows = []
+    for pos, row, mz_precursor in zip(positions, meta.itertuples(index=False), precursor_mz, strict=True):
+        mz = mz_layer[pos].toarray().ravel()
+        intensity = int_layer[pos].toarray().ravel()
+        keep = (mz > 0.0) & (intensity > 0.05)
+
+        proteins = row.PROTEINS
+        protein_list = proteins.split(";")
+        proteotypic = 1 if len(protein_list) == 1 else 0
+
+        gene_list = [_extract_gene_name(protein) for protein in protein_list]
+        genes = ";".join(str(gene) for gene in gene_list)
+
+        rows.append(
+            [
+                mz_precursor,
+                mz[keep],
+                annotations[keep].tolist(),
+                protein_list[0],
+                gene_list[0],
+                row.SEQUENCE,
+                row.MODIFIED_SEQUENCE,
+                row.PRECURSOR_CHARGE,
+                intensity[keep] * 10000,
+                row.RETENTION_TIME,
+                None,  # PrecursorIonMobility
+                ion_types[keep].tolist(),
+                frag_charges[keep].tolist(),
+                frag_nums[keep].tolist(),
+                None,  # FragmentLossType
+                row.avg_retention_time_sec,
+                proteins,
+                genes,
+                proteotypic,
+            ]
+        )
+    return rows
+
+
+def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
+    """Generate spectral library from experimental data.
+
+    :param config_path: Path to the configuration file.
+    :raises ValueError: If the FDR estimation method is not Percolator.
+    :raises FileNotFoundError: If the annotated spectra HDF5 for a file is missing.
+    """
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
+    config.check()
+
+    if config.fdr_estimation_method != "percolator":
+        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
+
+    data_dir = config.output / "data"
+    fdr_dir = config.output / "results" / "percolator"
+    peptide_path = fdr_dir / "rescore.percolator.psms.txt"
+
+    peptide_df = pd.read_csv(peptide_path, sep="\t")
+    peptide_df["q-value"] = pd.to_numeric(peptide_df["q-value"], errors="coerce")
+    grouped_files = [(filename, group) for filename, group in peptide_df.groupby("filename")]
+
+    if config.num_threads > 1:
+        processing_pool = JobPool(processes=config.num_threads)
+        for filename, group in grouped_files:
+            processing_pool.apply_async(_build_speclib_rows_for_file, [filename, group, data_dir])
+        rows = [row for file_rows in processing_pool.check_pool() for row in file_rows]
+    else:
+        rows = []
+        for filename, group in grouped_files:
+            rows.extend(_build_speclib_rows_for_file(filename, group, data_dir))
+
+    df = pd.DataFrame(
+        rows,
+        columns=[
+            "PrecursorMz",
+            "ProductMz",
+            "Annotation",
+            "ProteinId",
+            "GeneName",
+            "PeptideSequence",
+            "ModifiedPeptideSequence",
+            "PrecursorCharge",
+            "LibraryIntensity",
+            "NormalizedRetentionTime",
+            "PrecursorIonMobility",
+            "FragmentType",
+            "FragmentCharge",
+            "FragmentSeriesNumber",
+            "FragmentLossType",
+            "AverageExperimentalRetentionTime",
+            "AllMappedProteins",
+            "AllMappedGenes",
+            "Proteotypic",
+        ],
+    )
+    fragment_cols = [
+        "ProductMz",
+        "Annotation",
+        "LibraryIntensity",
+        "FragmentType",
+        "FragmentCharge",
+        "FragmentSeriesNumber",
+    ]
+    df = df.explode(fragment_cols, ignore_index=True)
+    # keep the most intense entry per fragment
+    df = df.sort_values(by="LibraryIntensity", ascending=False)
+    df = df.drop_duplicates(["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz", "NormalizedRetentionTime"])
+    df.sort_values(by=["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz"], inplace=True)
+    df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
+
+
+def run_job(config_path: Union[str, Path, Config]):
     """
     Run oktoberfest based on job type given in the config file.
 
     :param config_path: Path to config file
     :raises ValueError: In case the job_type in the provided config file is not known
     """
-    conf = Config()
-    conf.read(config_path)
-    conf.check()
+    if isinstance(config_path, Config):
+        config = config_path
+    else:
+        config = Config()
+        config.read(config_path)
+    config.check()
 
-    output_folder = conf.output
-    job_type = conf.job_type
+    output_folder = config.output
+    job_type = config.job_type
 
     output_folder.mkdir(exist_ok=True)
 
@@ -1334,16 +1777,20 @@ def run_job(config_path: Union[str, Path]):
 
     logger.info(f"Oktoberfest version {__version__}\n{__copyright__}")
     logger.info("Job executed with the following config:")
-    logger.info(json.dumps(conf.data, indent=4))
+    logger.info(json.dumps(config.data, indent=4))
 
     try:
         if job_type == "SpectralLibraryGeneration":
             generate_spectral_lib(config_path)
+        elif job_type == "GenerateTrainingData":
+            run_generate_training_data(config_path)
         elif job_type == "CollisionEnergyCalibration":
             run_ce_calibration(config_path)
         elif job_type == "Rescoring":
             logger.info("Starting rescoring")
             run_rescoring(config_path)
+            if config.acquisition_method == "dia":
+                generate_spectral_lib_fdr_control(config_path)
         else:
             raise ValueError(f"Unknown job_type in config: {job_type}")
     finally:

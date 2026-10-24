@@ -65,7 +65,7 @@ clean_data_folder:
 check: lint test coverage typecheck doctest ## Run all quality checks in CI order
 
 install: ## Install project with all dev and docs dependencies
-	poetry install --with dev --extras docs
+	poetry install --with dev --extras docs --extras dlomix
 
 lint: ## Run pre-commit hooks (formatting, linting, security checks)
 	poetry run pre-commit run --all-files

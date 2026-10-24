@@ -7,6 +7,7 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
@@ -15,7 +16,16 @@ from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
+from spectrum_io.search_result import (
+    Mascot,
+    MaxQuant,
+    MSAmanda,
+    MSFragger,
+    OpenMS,
+    Sage,
+    Scout,
+    Xisearch,
+)
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
@@ -248,7 +258,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
         return filter_xl_peptides(peptides, **filter_kwargs)
     if "prosit" in model.lower():
         filter_kwargs = {
-            "min_length": 7,
+            "min_length": 6,
             "max_length": 30,
             "max_charge": 6,
         }
@@ -438,8 +448,9 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
-    ptm_unimod_id: Optional[int] = 0,
+    ptm_unimod_id: Optional[Union[int, dict[int, list[str]]]] = 0,
     ptm_sites: Optional[list] = None,
+    ptm_model: Optional[bool] = False,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -458,8 +469,10 @@ def convert_search(
         static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
-    :param ptm_unimod_id: unimod id used for site localization
-    :param ptm_sites: possible sites that the ptm can exist on
+    :param ptm_unimod_id: unimod id used for site localization, or a mapping of unimod id to possible residues to
+        localize several PTMs. 0 or an empty mapping disables the generation of site permutations.
+    :param ptm_sites: possible sites that the ptm can exist on, if a single unimod id is given
+    :param ptm_model: whether a PTM-aware intensity model is used
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -563,6 +576,7 @@ def convert_search(
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
         xl=xl,
+        ptm_model=ptm_model,
     )
 
 
@@ -899,6 +913,11 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
         >>> print(psms)
     """
     logger.info("Merging rawfile and search result")
+    # raw files named by numbers only (e.g. 1.raw, PXD000138) are read as int from the search results: then use the
+    # file names as str on both sides
+    if not (is_string_dtype(search["RAW_FILE"]) and is_string_dtype(spectra["RAW_FILE"])):
+        search = search.assign(RAW_FILE=search["RAW_FILE"].astype(str))
+        spectra = spectra.assign(RAW_FILE=spectra["RAW_FILE"].astype(str))
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
     return psms
 
@@ -913,6 +932,8 @@ def annotate_spectral_library(
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
     featured_ions: Optional[list[str]] = None,
+    phospho_loss_residues: str = "ST",
+    plain_loss_residues: Optional[str] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -932,6 +953,9 @@ def annotate_spectral_library(
     :param multifrag: flag to indicate whether to annotate multifrag peaks or not
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
+    :param phospho_loss_residues: phosphorylated residues annotated with the neutral loss of phosphoric acid
+    :param plain_loss_residues: if given, the neutral losses are also counted with these residues (e.g. "ST" if
+        phospho_loss_residues contains decoy residues), stored as ANNOTATED_NL_COUNT_PLAIN and EXPECTED_NL_COUNT_PLAIN
 
     :return: Spectra object containing the annotated featured sion peaks including metadata
 
@@ -972,6 +996,8 @@ def annotate_spectral_library(
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
+        phospho_loss_residues=phospho_loss_residues,
+        plain_loss_residues=plain_loss_residues,
     )
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
     aspec.uns["ion_types"] = ion_types
@@ -982,6 +1008,10 @@ def annotate_spectral_library(
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+    if plain_loss_residues is not None:
+        aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT_PLAIN"].values, "EXPECTED_NL_COUNT_PLAIN")
+        aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT_PLAIN"].values, "ANNOTATED_NL_COUNT_PLAIN")
+    aspec.add_column(df_annotated_spectra["MOST_INTESE_PEAK"].values, "MOST_INTESE_PEAK")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")
@@ -1149,3 +1179,56 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
     d_dir = Path(d_dir)
     output_file = Path(output_file)
     convert_d_hdf(input_path=d_dir, output_path=output_file)
+
+
+def _format_modified_sequence_for_parquet(modified_sequence: str) -> str:
+    """Convert modified sequences to explicit N/C-terminal marker format."""
+    sequence = str(modified_sequence)
+    if sequence.startswith("_") and sequence.endswith("_"):
+        sequence = sequence[1:-1]
+
+    if not re.match(r"^(\[\]|(\[UNIMOD:\d+\]))-", sequence):
+        sequence = f"[]-{sequence}"
+
+    if not re.search(r"-(\[\]|(\[UNIMOD:\d+\]))$", sequence):
+        sequence = f"{sequence}-[]"
+
+    return sequence
+
+
+def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[str, Path]):
+    """Convert AnnData from hdf5 to parquet required for DLOmix."""
+    library = Spectra.from_hdf5(hdf5_path)
+    df = pd.DataFrame()
+
+    optional_columns = {
+        "raw_file": lambda: library.obs["RAW_FILE"].astype(str),
+        "scan_number": lambda: library.obs["SCAN_NUMBER"].astype("int64"),
+        "method_nbr": lambda: library.obs["FRAGMENTATION"].map(c.FRAGMENTATION_ENCODING).astype("int64"),
+        "precursor_charge_onehot": lambda: list(
+            np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[library.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        ),
+        "collision_energy_aligned_normed": lambda: library.obs["COLLISION_ENERGY"].astype("float64") / 100.0,
+    }
+
+    for column_name, column_factory in optional_columns.items():
+        try:
+            df[column_name] = column_factory()
+        except (KeyError, ValueError, IndexError):
+            logger.warning(f"Optional column {column_name!r} could not be derived, excluded from output")
+
+    intensities = library.to_df(layer=library._resolve_layer_name(FragmentType.RAW))
+    intensities[intensities == 0] = -1
+    intensities[intensities == c.EPSILON] = 0
+    df["intensities_raw"] = list(intensities.to_numpy())
+
+    mz_layer = library._resolve_layer_name(FragmentType.MZ)
+    if mz_layer in library.layers:
+        df["mz_raw"] = list(library.to_df(layer=mz_layer).to_numpy())
+
+    if "FRAGMENTATION" in library.obs:
+        df["package"] = library.obs["FRAGMENTATION"].astype(str)
+
+    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet).values
+
+    df.to_parquet(output_file, index=False)
