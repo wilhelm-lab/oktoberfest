@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -12,7 +13,6 @@ import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
-from ..utils import JobPool
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -125,16 +125,14 @@ def generate_features(
     )
 
     perc_features.calc()
+    # missing feature values are 0 for percolator / mokapot (filled here, so that merge_input only concatenates);
+    # only columns with missing values are touched (categoricals become plain columns, as if read from the tab file)
+    features = perc_features.metrics_val
+    for column in features.columns[features.isna().any()]:
+        if isinstance(features[column].dtype, pd.CategoricalDtype):
+            features[column] = features[column].astype(object)
+        features[column] = features[column].fillna(0)
     perc_features.write_to_file(str(output_file))
-
-
-def _fillna_tab_file(tab_file: Path, include_header: bool) -> bytes:
-    """Read a tab file, fill NaN values with 0, and return it serialized as tab-separated bytes."""
-    df = pd.read_csv(tab_file, sep="\t")
-    df = df.fillna(0)
-    content = df.to_csv(sep="\t", index=False, header=include_header).encode()
-    tab_file.unlink()
-    return content
 
 
 def merge_input(
@@ -145,15 +143,13 @@ def merge_input(
     r"""
     Merge spectra file identifier specific tab files into one large file for combined percolation.
 
-    The function reads each tab file once, fills NaN values with 0 (optionally in parallel across files),
-    and writes the concatenated result directly to the chosen output file location.
-
-    Fastest solution according to:
-    https://stackoverflow.com/questions/44211461/what-is-the-fastest-way-to-combine-100-csv-files-with-headers-into-one
+    The tab files (written by generate_features, NaN already filled with 0, same columns in the same order) are
+    concatenated as bytes, streamed without parsing, with the header of the first file only, and deleted. A single
+    tab file is renamed.
 
     :param tab_files: list of paths pointing to the individual tab files to be concatenated
     :param output_file: path to the generated output tab file
-    :param num_threads: number of threads used in parallel for filling NaN values per tab file
+    :param num_threads: not used, kept for compatibility
 
     :Example:
 
@@ -211,17 +207,18 @@ def merge_input(
         >>> filelist = [tabfile1,tabfile2]
         >>> re.merge_input(tab_files=filelist, output_file="./tests/doctests/output/merged_rescore.tab")
     """
-    if num_threads > 1:
-        fillna_pool = JobPool(processes=num_threads)
-        for i, tab_file in enumerate(tab_files):
-            fillna_pool.apply_async(_fillna_tab_file, [tab_file, i == 0])
-        contents = fillna_pool.check_pool()
-    else:
-        contents = [_fillna_tab_file(tab_file, i == 0) for i, tab_file in enumerate(tab_files)]
-
+    tab_files = [Path(tab_file) for tab_file in tab_files]
+    if len(tab_files) == 1:
+        tab_files[0].replace(output_file)
+        return
     with open(output_file, "wb") as fout:
-        for content in contents:
-            fout.write(content)
+        for i, tab_file in enumerate(tab_files):
+            with open(tab_file, "rb") as fin:
+                if i > 0:
+                    fin.readline()  # header
+                shutil.copyfileobj(fin, fout, length=16 * 1024 * 1024)
+    for tab_file in tab_files:
+        tab_file.unlink()
 
 
 def rescore_with_percolator(
@@ -232,6 +229,7 @@ def rescore_with_percolator(
     train_fdr: float = 0.01,
     xl: bool = False,
     init_weights: str | Path | None = None,
+    subset_max_train: int | None = None,
 ):
     """
     Rescore using percolator.
@@ -247,6 +245,8 @@ def rescore_with_percolator(
     :param xl: crosslinked or linear peptide
     :param init_weights: optional weights file of a previous percolator run. If given, the PSMs are scored with these
         weights without training (percolator --init-weights --static)
+    :param subset_max_train: train percolator on at most this many PSMs and score all PSMs with the resulting weights
+        (percolator --subset-max-train), None to train on all PSMs. Not used with init_weights or xl.
     :raises FileNotFoundError: if the input file does not exist
     """
     if isinstance(input_file, str):
@@ -267,6 +267,7 @@ def rescore_with_percolator(
     target_peptides = output_folder / f"{file_prefix}.percolator.peptides.txt"
     decoy_peptides = output_folder / f"{file_prefix}.percolator.decoy.peptides.txt"
     log_file = output_folder / f"{file_prefix}.log"
+    subset_option = f"--subset-max-train {subset_max_train}" if subset_max_train else ""
     if init_weights is not None:
         cmd = f"percolator --init-weights {init_weights} \
                         --static \
@@ -294,6 +295,7 @@ def rescore_with_percolator(
         default_direction = "annotated_ions" if "annotated_ions" in header else "andromeda"
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
+                        {subset_option} \
                         --default-direction {default_direction} \
                         --override \
                         --post-processing-tdc \
@@ -307,6 +309,7 @@ def rescore_with_percolator(
     else:
         cmd = f"percolator --weights {weights_file} \
                         --num-threads {num_threads} \
+                        {subset_option} \
                         --default-direction spectral_angle \
                         --override \
                         --post-processing-tdc \
@@ -373,7 +376,7 @@ def rescore_with_mokapot(
     logger.info("Finished rescoring using mokapot.")
 
 
-def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
+def percolator_fdr_modified(features_path: Path, num_threads: int = 3, subset_max_train: int | None = None):
     """
     Helper function for running percolator separately on unmodified and modified PSMs.
 
@@ -384,13 +387,16 @@ def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
 
     :param features_path: the features tab file path
     :param num_threads: number of threads used by percolator
+    :param subset_max_train: train percolator on at most this many PSMs (all PSMs are scored), None for all
     """
     df_features = pd.read_csv(features_path, sep="\t")
     is_modified = Percolator.get_ptms(df_features["Peptide"]).map(bool)
 
     df_features[~is_modified].to_csv(features_path, sep="\t", index=False)
     fdr_dir = features_path.parent
-    rescore_with_percolator(input_file=features_path, output_folder=fdr_dir, num_threads=num_threads)
+    rescore_with_percolator(
+        input_file=features_path, output_folder=fdr_dir, num_threads=num_threads, subset_max_train=subset_max_train
+    )
 
     df_features_mod = df_features[is_modified]
     if df_features_mod.empty:
@@ -409,4 +415,6 @@ def percolator_fdr_modified(features_path: Path, num_threads: int = 3):
     tab_file_name = mod_fdr_dir / features_path.name
     mod_fdr_dir.mkdir(parents=True, exist_ok=True)
     df_features_mod.to_csv(tab_file_name, sep="\t", index=False)
-    rescore_with_percolator(input_file=tab_file_name, output_folder=mod_fdr_dir, num_threads=num_threads)
+    rescore_with_percolator(
+        input_file=tab_file_name, output_folder=mod_fdr_dir, num_threads=num_threads, subset_max_train=subset_max_train
+    )
