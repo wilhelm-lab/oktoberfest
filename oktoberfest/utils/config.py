@@ -798,8 +798,10 @@ class Config:
 
     def _check_chimeric_peak_subtraction(self):
         """Check that chimericPeakSubtraction is a boolean."""
-        if not isinstance(self.chimeric_peak_subtraction, bool):
-            raise ValueError(f"chimericPeakSubtraction must be true or false, got {self.chimeric_peak_subtraction!r}.")
+        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        value = self.data.get("chimericPeakSubtraction", False)
+        if not isinstance(value, bool):
+            raise ValueError(f"chimericPeakSubtraction must be true or false, got {value!r}.")
 
     def _check_percolator_subset(self):
         """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""
