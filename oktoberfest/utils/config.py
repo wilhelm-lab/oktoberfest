@@ -434,6 +434,27 @@ class Config:
         return self.data.get("fdr_estimation_method", "percolator").lower()
 
     @property
+    def percolator_subset_max_train(self) -> Optional[int]:
+        """
+        Get the maximum number of PSMs percolator trains on (percolator --subset-max-train), None for all PSMs.
+
+        Only used for rescoring (original and rescore percolator runs, also with separate FDR for modified peptides),
+        never for the PTM localization models. Default is None.
+        """
+        return self.data.get("percolatorSubsetMaxTrain")
+
+    @property
+    def chimeric_peak_subtraction(self) -> bool:
+        """
+        Get flag whether to remove the peaks of better candidates of the same spectrum before the rescore features.
+
+        Within every spectrum with several candidates, the peaks matched by a candidate with a higher spectral angle
+        are removed before the intensity features of the next candidate are calculated (chimeric spectra, e.g. Sage
+        chimera or MSFragger DDA+ searches). Not used for crosslinks. Default is False.
+        """
+        return self.data.get("chimericPeakSubtraction", False)
+
+    @property
     def perform_rescoring(self) -> bool:
         """
         Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
@@ -772,6 +793,22 @@ class Config:
             self._check_fasta()
 
         self._check_ptm_localization()
+        self._check_percolator_subset()
+        self._check_chimeric_peak_subtraction()
+
+    def _check_chimeric_peak_subtraction(self):
+        """Check that chimericPeakSubtraction is a boolean."""
+        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        value = self.data.get("chimericPeakSubtraction", False)
+        if not isinstance(value, bool):
+            raise ValueError(f"chimericPeakSubtraction must be true or false, got {value!r}.")
+
+    def _check_percolator_subset(self):
+        """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""
+        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        subset = self.data.get("percolatorSubsetMaxTrain")
+        if subset is not None and (isinstance(subset, bool) or not isinstance(subset, int) or subset <= 0):
+            raise ValueError(f"percolatorSubsetMaxTrain must be a positive number of PSMs, got {subset!r}.")
 
     def _check_ptm_localization(self):
         """Check that the PTMs and residues to localize are specified if PTM localization is enabled."""

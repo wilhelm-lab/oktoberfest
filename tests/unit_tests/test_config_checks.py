@@ -333,3 +333,41 @@ class TestPTMLocalization(unittest.TestCase):
         config = _config(models=ptm_models, ptm_localization=True, ptmLocalizationOptions=localization)
         self.assertFalse(config.ptm_fdr_control)
         self.assertEqual(config.ptm_sites, {21: ["S", "T", "Y"]})
+
+
+class TestPercolatorSubset(unittest.TestCase):
+    """Test the maximum number of PSMs percolator trains on."""
+
+    def test_default(self):
+        """Test percolator trains on all PSMs by default."""
+        config = _config()
+        self.assertIsNone(config.percolator_subset_max_train)
+        config._check_percolator_subset()
+
+    def test_subset(self):
+        """Test a positive number of PSMs is accepted and anything else is rejected."""
+        config = _config(percolatorSubsetMaxTrain=500000)
+        self.assertEqual(config.percolator_subset_max_train, 500000)
+        config._check_percolator_subset()
+        for value in [0, -1, 1.5, "500000", True]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "percolatorSubsetMaxTrain"):
+                    _config(percolatorSubsetMaxTrain=value)._check_percolator_subset()
+
+
+class TestChimericPeakSubtraction(unittest.TestCase):
+    """Test the flag for removing the peaks of better candidates in chimeric spectra."""
+
+    def test_default(self):
+        """Test the peaks are not subtracted by default."""
+        config = _config()
+        self.assertFalse(config.chimeric_peak_subtraction)
+        config._check_chimeric_peak_subtraction()
+
+    def test_flag(self):
+        """Test a boolean is accepted and anything else is rejected."""
+        self.assertTrue(_config(chimericPeakSubtraction=True).chimeric_peak_subtraction)
+        for value in [1, "true", None]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
+                    _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()

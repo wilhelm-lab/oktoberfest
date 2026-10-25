@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import spectrum_fundamentals.constants as c
-from scipy.sparse import csr_matrix, dok_matrix
+from scipy.sparse import csr_matrix
 from spectrum_fundamentals.fragments import (
     format_fragment_ion_annotation,
     generate_fragment_ion_annotations,
@@ -241,11 +241,12 @@ class Spectra(anndata.AnnData):
 
         annotation_to_index = {annot: index for index, annot in enumerate(self.var_names)}
         col_index = np.vectorize(annotation_to_index.get)(annotation[0].astype(str))
-        sparse_intensity_matrix = dok_matrix(self.shape)
-        sparse_intensity_matrix[:, col_index] = intensities
+        # reorder densely (the input is dense already), much faster than filling a dok_matrix
+        intensity_matrix = np.zeros(self.shape)
+        intensity_matrix[:, col_index] = intensities
 
         layer = self._resolve_layer_name(fragment_type)
-        self.layers[layer] = csr_matrix(sparse_intensity_matrix)
+        self.layers[layer] = csr_matrix(intensity_matrix)
 
     def add_intensities_without_mapping(self, intensities: np.ndarray, fragment_type: FragmentType):
         """
@@ -276,41 +277,39 @@ class Spectra(anndata.AnnData):
         This function takes three lists of numpy arrays, containing intensities, the fragment ion annotations
         in ProForma notation representing the column index, and a numeric index representing the row index.
         Each intensity array is reordered using the corresponding annotation element to match the order of the
-        fragment ion annotations in self.var_names and stored to the appropriate rows of a dok_matrix,
-        incrementally creating the full, sparse intensity matrix ordered by fragment types. The function then
-        converts the matrix to csr format.
+        fragment ion annotations in self.var_names and stored to the appropriate rows,
+        incrementally creating the full, sparse intensity matrix ordered by fragment types (as coordinates of the
+        non-zero values, every row and fragment ion must occur only once). The function then converts the matrix to
+        csr format.
 
         :param intensities: List of intensity numpy arrays to add with shapes (n_1 x m_1), ..., (n_N x m_N)
         :param annotations: List of fragment ion annotations in ProForma notation with shapes (m_1), ..., (m_N)
         :param chunk_indices: List of row numbers with shapes (n_1), ..., (n_N)
         """
-        sparse_intensity_matrix = dok_matrix(self.shape)
-
-        for ints, annots, chunk in zip(intensities, annotations, chunk_indices, strict=True):
-            self._add_predicted_intensites(
-                mat=sparse_intensity_matrix,
-                intensity_data=ints,
-                annotation=annots.astype(str),
-                index=chunk,
-            )
+        coordinates = [
+            self._add_predicted_intensites(intensity_data=ints, annotation=annots.astype(str), index=chunk)
+            for ints, annots, chunk in zip(intensities, annotations, chunk_indices, strict=True)
+        ]
+        rows, cols, values = (
+            (np.concatenate(part) for part in zip(*coordinates, strict=True)) if coordinates else ([], [], [])
+        )
 
         layer = self._resolve_layer_name(FragmentType.PRED)
-        self.layers[layer] = csr_matrix(sparse_intensity_matrix)
+        self.layers[layer] = csr_matrix((values, (rows, cols)), shape=self.shape)
 
     def _add_predicted_intensites(
         self,
-        mat: dok_matrix,
         intensity_data: np.ndarray,
         annotation: np.ndarray,
         index: np.ndarray,
-    ) -> None:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Concatenate intensity df as a sparse matrix to our data.
+        Get the coordinates of a chunk of predicted intensities in the sparse matrix of our data.
 
-        :param mat: The dok_matrix into which to store the data
         :param intensity_data: Intensity numpy array to add with shape (n x m)
         :param annotation: Fragment ion annotations in ProForma notation with shape (m)
         :param index: Row numbers with shape (n)
+        :return: row indices, column indices and values of the non-zero intensities
         """
         # ensure intensities are properly masked where required (alphapept does not do that)
         annotation_to_index = {annotation: index for index, annotation in enumerate(self.var_names)}
@@ -323,9 +322,9 @@ class Spectra(anndata.AnnData):
         # change the -1 values to 0 (for better performance when converted to sparse representation)
         intensity_data[intensity_data == 0] = c.EPSILON
         intensity_data[intensity_data == -1] = 0.0
-        mat[row_index, col_index] = intensity_data
-
-        # self.obs.iloc[index]["done"] = True
+        rows, cols = np.broadcast_arrays(row_index, col_index)
+        non_zero = intensity_data != 0
+        return rows[non_zero], cols[non_zero], intensity_data[non_zero].astype(float)
 
     def get_matrix(self, fragment_type: FragmentType) -> csr_matrix:
         """
