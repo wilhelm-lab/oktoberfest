@@ -444,6 +444,17 @@ class Config:
         return self.data.get("percolatorSubsetMaxTrain")
 
     @property
+    def chimeric_peak_subtraction(self) -> bool:
+        """
+        Get flag whether to remove the peaks of better candidates of the same spectrum before the rescore features.
+
+        Within every spectrum with several candidates, the peaks matched by a candidate with a higher spectral angle
+        are removed before the intensity features of the next candidate are calculated (chimeric spectra, e.g. Sage
+        chimera or MSFragger DDA+ searches). Not used for crosslinks. Default is False.
+        """
+        return self.data.get("chimericPeakSubtraction", False)
+
+    @property
     def perform_rescoring(self) -> bool:
         """
         Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
@@ -783,6 +794,12 @@ class Config:
 
         self._check_ptm_localization()
         self._check_percolator_subset()
+        self._check_chimeric_peak_subtraction()
+
+    def _check_chimeric_peak_subtraction(self):
+        """Check that chimericPeakSubtraction is a boolean."""
+        if not isinstance(self.chimeric_peak_subtraction, bool):
+            raise ValueError(f"chimericPeakSubtraction must be true or false, got {self.chimeric_peak_subtraction!r}.")
 
     def _check_percolator_subset(self):
         """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""

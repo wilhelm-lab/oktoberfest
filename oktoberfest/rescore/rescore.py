@@ -13,6 +13,7 @@ import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
 
 from ..data import FragmentType
+from .chimeric import subtract_shared_peaks
 
 if TYPE_CHECKING:
     from ..data import Spectra
@@ -33,6 +34,7 @@ def generate_features(
     remove_miss_cleavage_features: bool = False,
     task: str = "default",
     featured_ions: Optional[list] = None,
+    subtract_peaks: bool = False,
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -52,6 +54,8 @@ def generate_features(
     :param remove_miss_cleavage_features: Flag to indicate whether to remove miss cleavage features from percolator or not
     :param task: Flag to indicate whether to use multifrag features or not
     :param featured_ions: The ion series to use for calculating percolator features
+    :param subtract_peaks: whether to remove the peaks of better candidates of the same spectrum before the rescore
+        features are calculated (see subtract_shared_peaks; not for crosslinks)
 
     :Example:
 
@@ -102,6 +106,8 @@ def generate_features(
         pred = library.get_matrix(FragmentType.PRED)
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
+        if subtract_peaks:
+            raw, mz, meta = subtract_shared_peaks(meta, raw, mz, pred)
     else:
         pred = None
         raw = None

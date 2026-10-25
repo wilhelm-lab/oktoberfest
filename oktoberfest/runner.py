@@ -786,6 +786,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             remove_miss_cleavage_features=remove_miss_cleavage_features,
             task="multifrag" if config.check_multifrag() else "default",
             featured_ions=config.ion_types,
+            subtract_peaks=config.chimeric_peak_subtraction,
         )
 
     calc_feature_step.mark_done()

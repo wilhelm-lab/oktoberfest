@@ -353,3 +353,21 @@ class TestPercolatorSubset(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaisesRegex(ValueError, "percolatorSubsetMaxTrain"):
                     _config(percolatorSubsetMaxTrain=value)._check_percolator_subset()
+
+
+class TestChimericPeakSubtraction(unittest.TestCase):
+    """Test the flag for removing the peaks of better candidates in chimeric spectra."""
+
+    def test_default(self):
+        """Test the peaks are not subtracted by default."""
+        config = _config()
+        self.assertFalse(config.chimeric_peak_subtraction)
+        config._check_chimeric_peak_subtraction()
+
+    def test_flag(self):
+        """Test a boolean is accepted and anything else is rejected."""
+        self.assertTrue(_config(chimericPeakSubtraction=True).chimeric_peak_subtraction)
+        for value in [1, "true", None]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
+                    _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()
