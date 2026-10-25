@@ -434,6 +434,16 @@ class Config:
         return self.data.get("fdr_estimation_method", "percolator").lower()
 
     @property
+    def percolator_subset_max_train(self) -> Optional[int]:
+        """
+        Get the maximum number of PSMs percolator trains on (percolator --subset-max-train), None for all PSMs.
+
+        Only used for rescoring (original and rescore percolator runs, also with separate FDR for modified peptides),
+        never for the PTM localization models. Default is None.
+        """
+        return self.data.get("percolatorSubsetMaxTrain")
+
+    @property
     def perform_rescoring(self) -> bool:
         """
         Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
@@ -772,6 +782,14 @@ class Config:
             self._check_fasta()
 
         self._check_ptm_localization()
+        self._check_percolator_subset()
+
+    def _check_percolator_subset(self):
+        """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""
+        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        subset = self.data.get("percolatorSubsetMaxTrain")
+        if subset is not None and (isinstance(subset, bool) or not isinstance(subset, int) or subset <= 0):
+            raise ValueError(f"percolatorSubsetMaxTrain must be a positive number of PSMs, got {subset!r}.")
 
     def _check_ptm_localization(self):
         """Check that the PTMs and residues to localize are specified if PTM localization is enabled."""

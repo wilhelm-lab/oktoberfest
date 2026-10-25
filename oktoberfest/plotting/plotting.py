@@ -30,6 +30,22 @@ plt.rcParams.update(
 )
 
 
+# columns of rescore.tab used by plot_all
+RESCORE_TAB_PLOT_COLUMNS = {
+    "SpecId",
+    "spectral_angle",
+    "RT",
+    "iRT",
+    "pred_RT",
+    "ScanNr",
+    "filename",
+    "abs_rt_diff",
+    "collision_energy_aligned",
+}
+# PSMs per raw file shown in the RT alignment plot
+MAX_RT_PLOT_POINTS = 50000
+
+
 def _check_columns(df: pd.DataFrame):
     """
     Check columns to make plotting work for mokapot.
@@ -409,6 +425,9 @@ def plot_pred_rt_vs_irt(
     for rawfile in targets["rawfile"].unique():
         fig, ax = plt.subplots(figsize=(8, 8))
         data = targets[targets["rawfile"] == rawfile]
+        # the density estimate is quadratic in the number of points: plot a random subset of large files
+        if len(data) > MAX_RT_PLOT_POINTS:
+            data = data.sample(MAX_RT_PLOT_POINTS, random_state=42)
 
         if (data["predicted iRT"] == data["experimental RT"]).all():
             # this can now happen if we skip the iRT prediction as we then use a perfect prediction as replacement
@@ -600,7 +619,10 @@ def plot_all(data_dir: Path, config: Config, fdr_cutoff: float = 0.01):
     fdr_dir = data_dir.parent if data_dir.stem == "mod_fdr" else data_dir
     fdr_method = fdr_dir.name
 
-    prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
+    # only the columns used by the plots (the full table holds all features of all PSMs)
+    prosit_df = pd.read_csv(
+        data_dir / "rescore.tab", delimiter="\t", usecols=lambda col: col in RESCORE_TAB_PLOT_COLUMNS
+    )
     prosit_pep_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.peptides.txt", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(data_dir / f"rescore.{fdr_method}.decoy.peptides.txt", delimiter="\t")
     prosit_psms_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.psms.txt", delimiter="\t")
