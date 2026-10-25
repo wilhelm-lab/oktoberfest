@@ -786,7 +786,8 @@ class Config:
 
     def _check_percolator_subset(self):
         """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""
-        subset = self.percolator_subset_max_train
+        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        subset = self.data.get("percolatorSubsetMaxTrain")
         if subset is not None and (isinstance(subset, bool) or not isinstance(subset, int) or subset <= 0):
             raise ValueError(f"percolatorSubsetMaxTrain must be a positive number of PSMs, got {subset!r}.")
 
