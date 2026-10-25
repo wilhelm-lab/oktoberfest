@@ -78,6 +78,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             ptm_unimod_id=ptm_unimods,
             ptm_sites=ptm_sites,
             ptm_model=ptm_model,
+            num_threads=config.num_threads,
         )
         if config.spectra_type.lower() in ["d", "hdf"]:
             timstof_metadata = pp.convert_timstof_metadata(
