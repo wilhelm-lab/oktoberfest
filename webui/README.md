@@ -72,7 +72,7 @@ docker compose down
 
 ## Local development (no Docker)
 
-Prerequisites: Python 3.10+, Node 18+, Redis, `oktoberfest` installed, and a local Python environment of your choice.
+Prerequisites: Python 3.11+, Node 18+, Redis, `oktoberfest` installed, and a local Python environment of your choice.
 
 Create and activate a Python environment first if you do not already have one. Then install poetry and the backend dependencies:
 

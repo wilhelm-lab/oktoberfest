@@ -6,7 +6,7 @@ authors = ["Wilhelm Lab"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.11,<3.13"
 fastapi = ">=0.111.0"
 uvicorn = {extras = ["standard"], version = ">=0.29.0"}
 sqlalchemy = ">=2.0.0"
@@ -18,6 +18,8 @@ pydantic-settings = ">=2.3.0"
 aiofiles = ">=23.0.0"
 python-multipart = ">=0.0.9"
 oktoberfest = ">=0.11.0"
+# transitive (via matplotlib); pinned to a patched release for security advisories
+pillow = ">=13.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"

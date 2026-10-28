@@ -17,7 +17,7 @@ on:
                 required: false
                 default: "3.12"
                 type: choice
-                options: ["3.10", "3.11", "3.12"]
+                options: ["3.11", "3.12"]
             pytest-extra-args:
                 description: "Extra pytest arguments (e.g. -k test_my_feature)"
                 required: false

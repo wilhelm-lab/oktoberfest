@@ -44,7 +44,7 @@ This is a step-by-step guide for the manual installation of all mandatory and op
 Install Python
 ~~~~~~~~~~~~~~
 
-Oktoberfest requires python >=3.10 and <=3.12 (>=3.11 for local DLOmix predictions, see `DLOmix`_ below). Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
+Oktoberfest requires python >=3.11 and <=3.12. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
 Follow the installation guide for your operating system, then create a new environment using
 
 .. code-block:: bash
@@ -93,7 +93,7 @@ Installable packages are provided for Linux/MacOS/Windows.
 **DLOmix**
 By default, peptide property prediction is performed remotely via `Koina <https://koina.wilhelmlab.org>`_, which requires no extra dependencies.
 If you instead want to run a locally trained model (configured via the ``dlomix_intensity`` model, see :doc:`config`), install the ``dlomix`` optional extra, which pulls in `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ and TensorFlow.
-The extra requires python >=3.11; on python 3.10 it is skipped and local DLOmix predictions are not available:
+Install it with:
 
 .. code-block:: bash
 

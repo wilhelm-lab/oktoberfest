@@ -32,7 +32,7 @@ Request features on the `Issue Tracker`_.
 How to set up your development environment
 ------------------------------------------
 
-You need Python 3.10+ and Poetry_:
+You need Python 3.11+ and Poetry_:
 
 .. code:: console
 

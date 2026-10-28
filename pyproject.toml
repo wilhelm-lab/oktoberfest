@@ -5,7 +5,7 @@ description = "Public repo oktoberfest"
 authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
 readme = "README.rst"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 dependencies = [
     "rich>=15.0.0",
     "PyYAML>=5.4.1",
@@ -26,7 +26,6 @@ dependencies = [
     "spectrum-utils>=0.4.2",
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
@@ -47,9 +46,8 @@ docs = [
 
 # dlomix[tf] extra installs tensorflow alongside dlomix
 # oktoberfest integration relies on dlomix models trained with keras/tensorflow
-# dlomix>=0.3.1 requires Python >=3.11
 dlomix = [
-    "dlomix[tf]>=0.3.1; python_version >= '3.11'"
+    "dlomix[tf]>=0.3.1"
 ]
 
 [project.scripts]
@@ -78,7 +76,7 @@ openpyxl = ">=3.0.10"
 testpaths = ["tests/unit_tests"] # run only unit tests by default
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]
