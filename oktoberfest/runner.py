@@ -935,6 +935,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             featured_ions=config.ion_types,
             subtract_peaks=config.chimeric_peak_subtraction,
             search_engine_features=config.search_engine_features,
+            subtract_order=config.chimeric_peak_order,
         )
 
     calc_feature_step.mark_done()

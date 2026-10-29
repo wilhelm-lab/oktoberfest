@@ -373,6 +373,25 @@ class TestChimericPeakSubtraction(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
                     _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()
 
+    def test_order(self):
+        """Test the candidate order defaults to the spectral angle, known orders are accepted and others rejected."""
+        self.assertEqual(_config().chimeric_peak_order, "spectral_angle")
+        for value in ["spectral_angle", "exclusive_spectral_angle"]:
+            with self.subTest(value=value):
+                config = _config(chimericPeakSubtraction=True, chimericPeakOrder=value)
+                self.assertEqual(config.chimeric_peak_order, value)
+                config._check_chimeric_peak_subtraction()
+        for value in ["score", "", None, 1]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "chimericPeakOrder"):
+                    _config(chimericPeakSubtraction=True, chimericPeakOrder=value)._check_chimeric_peak_subtraction()
+
+    def test_order_without_subtraction(self):
+        """Test an order without chimericPeakSubtraction only warns."""
+        with self.assertLogs("oktoberfest.utils.config", level="WARNING") as logs:
+            _config(chimericPeakOrder="exclusive_spectral_angle")._check_chimeric_peak_subtraction()
+        self.assertIn("chimericPeakOrder", logs.output[0])
+
 
 class TestSearchInputs(unittest.TestCase):
     """Test search results of one or several search engines and the searchEngineFeatures flag."""

@@ -48,6 +48,7 @@ def generate_features(
     featured_ions: Optional[list] = None,
     subtract_peaks: bool = False,
     search_engine_features: bool = True,
+    subtract_order: str = "spectral_angle",
 ):
     """
     Generate features to be used for percolator or mokapot target decoy separation.
@@ -71,6 +72,8 @@ def generate_features(
         features are calculated (see subtract_shared_peaks; not for crosslinks)
     :param search_engine_features: whether the rescore features include the search engine scores
         (SEARCH_ENGINE_FEATURES); the original features always do
+    :param subtract_order: how the candidates of a spectrum are picked for subtract_peaks, "spectral_angle" or
+        "exclusive_spectral_angle" (see subtract_shared_peaks)
 
     :Example:
 
@@ -122,7 +125,7 @@ def generate_features(
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
         if subtract_peaks:
-            raw, mz, meta = subtract_shared_peaks(meta, raw, mz, pred)
+            raw, mz, meta = subtract_shared_peaks(meta, raw, mz, pred, order=subtract_order)
     else:
         pred = None
         raw = None

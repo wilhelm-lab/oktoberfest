@@ -22,6 +22,9 @@ DECOY_WEIGHTINGS = ["count", "distance"]
 FLR_GROUPS = ["none", "residue"]
 FLR_ESTIMATORS = ["hybrid", "decoy"]
 
+# orders in which the candidates of a chimeric spectrum are picked (chimericPeakOrder, first value is the default)
+CHIMERIC_PEAK_ORDERS = ["spectral_angle", "exclusive_spectral_angle"]
+
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
 _DLOMIX_PIPELINE_CACHE: dict = {}
@@ -502,6 +505,17 @@ class Config:
         return self.data.get("chimericPeakSubtraction", False)
 
     @property
+    def chimeric_peak_order(self) -> str:
+        """
+        Get the order in which the candidates of a chimeric spectrum are picked for chimericPeakSubtraction.
+
+        "spectral_angle": best spectral angle on the peaks the candidates picked before left, recomputed after every
+        pick. "exclusive_spectral_angle": best spectral angle on the ions whose observed peak no other candidate of the
+        spectrum matched (fixed order). Only used with chimericPeakSubtraction. Default is "spectral_angle".
+        """
+        return self.data.get("chimericPeakOrder", "spectral_angle")
+
+    @property
     def perform_rescoring(self) -> bool:
         """
         Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
@@ -889,11 +903,16 @@ class Config:
                 raise ValueError(f"reuseLibraries: {path} is not the output folder of a previous run (no data folder).")
 
     def _check_chimeric_peak_subtraction(self):
-        """Check that chimericPeakSubtraction is a boolean."""
-        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        """Check that chimericPeakSubtraction is a boolean and chimericPeakOrder a known order."""
+        # read the raw values: the typed properties must not be called with invalid values (typeguard)
         value = self.data.get("chimericPeakSubtraction", False)
         if not isinstance(value, bool):
             raise ValueError(f"chimericPeakSubtraction must be true or false, got {value!r}.")
+        order = self.data.get("chimericPeakOrder", "spectral_angle")
+        if order not in CHIMERIC_PEAK_ORDERS:
+            raise ValueError(f"chimericPeakOrder must be one of {', '.join(CHIMERIC_PEAK_ORDERS)}, got {order!r}.")
+        if "chimericPeakOrder" in self.data and not value:
+            logger.warning("chimericPeakOrder is only used with chimericPeakSubtraction, which is not enabled.")
 
     def _check_percolator_subset(self):
         """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""

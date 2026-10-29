@@ -52,3 +52,57 @@ class TestSubtractSharedPeaks(unittest.TestCase):
         )
         np.testing.assert_array_equal(raw.toarray(), self.raw)
         np.testing.assert_array_equal(mz.toarray(), self.mz)
+
+
+class TestExclusiveSpectralAngleOrder(unittest.TestCase):
+    """Test picking the candidates of chimeric spectra by exclusive spectral angle."""
+
+    def setUp(self):
+        """Candidate 0 explains the shared peak at m/z 200 best, candidate 1 its own peak at m/z 300; scan 2 is single."""
+        self.meta = pd.DataFrame(
+            {"RAW_FILE": ["f", "f", "f"], "SCAN_NUMBER": [1, 1, 2], "MOST_INTESE_PEAK": [1000.0, 2000.0, 500.0]}
+        )
+        self.raw = np.array([[0.3, 1.0, EPSILON, EPSILON], [EPSILON, 1.0, 0.5, EPSILON], [1.0, 0.2, EPSILON, 0.0]])
+        self.mz = np.array([[100.0, 200.0, 0, 0], [0, 200.0, 300.0, 0], [150.0, 250.0, 0, 0]])
+        self.pred = np.array([[0.1, 1.0, 0.5, EPSILON], [EPSILON, 0.1, 0.5, EPSILON], [1.0, 0.2, 0.1, 0.0]])
+
+    def _subtract(self, order, meta=None, raw=None):
+        meta = self.meta if meta is None else meta
+        raw = self.raw if raw is None else raw
+        out, mz, meta = subtract_shared_peaks(
+            meta, sp.csr_matrix(raw), sp.csr_matrix(self.mz), sp.csr_matrix(self.pred), order=order
+        )
+        return out.toarray(), mz.toarray(), meta
+
+    def test_order_differs(self):
+        """Test the candidate with the better exclusive spectral angle keeps the shared peak, unlike by spectral angle."""
+        raw, mz, meta = self._subtract("spectral_angle")
+        np.testing.assert_array_equal(raw[0], self.raw[0])
+        np.testing.assert_array_equal(raw[1], [EPSILON, EPSILON, 1.0, EPSILON])
+        np.testing.assert_allclose(meta["MOST_INTESE_PEAK"], [1000.0, 1000.0, 500.0])
+
+        raw, mz, meta = self._subtract("exclusive_spectral_angle")
+        np.testing.assert_array_equal(raw[[1, 2]], self.raw[[1, 2]])
+        np.testing.assert_array_equal(mz[[1, 2]], self.mz[[1, 2]])
+        np.testing.assert_array_equal(raw[0], [1.0, EPSILON, EPSILON, EPSILON])
+        np.testing.assert_array_equal(mz[0], [100.0, 0, 0, 0])
+        np.testing.assert_allclose(meta["MOST_INTESE_PEAK"], [300.0, 2000.0, 500.0])
+
+    def test_ties(self):
+        """Test candidates without exclusive peaks (same exclusive spectral angle) are picked in their order."""
+        self.raw[0] = self.raw[1]
+        self.mz[0] = self.mz[1]
+        self.pred[0] = [EPSILON, 0.1, 1.0, EPSILON]  # worse spectral angle than candidate 1
+        raw, mz, meta = self._subtract("exclusive_spectral_angle")
+        np.testing.assert_array_equal(raw[[0, 2]], self.raw[[0, 2]])
+        np.testing.assert_array_equal(raw[1], [EPSILON] * 4)
+        np.testing.assert_array_equal(mz[1], [0] * 4)
+        np.testing.assert_allclose(meta["MOST_INTESE_PEAK"], [1000.0, np.nan, 500.0])
+        raw, _, _ = self._subtract("spectral_angle")
+        np.testing.assert_array_equal(raw[0], [EPSILON] * 4)
+        np.testing.assert_array_equal(raw[1], self.raw[1])
+
+    def test_unknown_order(self):
+        """Test an unknown order is rejected."""
+        with self.assertRaisesRegex(ValueError, "order"):
+            self._subtract("score")
