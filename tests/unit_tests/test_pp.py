@@ -177,3 +177,46 @@ class TestProcessing(unittest.TestCase):
             df["modified_sequence"].tolist(),
             ["[]-PEPTIDE-[UNIMOD:2]", "[UNIMOD:1]-PEPTIDE-[UNIMOD:2]"],
         )
+
+
+class TestMergeSearchResults(unittest.TestCase):
+    """Test merging the candidate PSMs of several search engines."""
+
+    def test_merge(self):
+        """Test shared candidates are kept once, with common columns only, and the engines of every candidate."""
+        msfragger = pd.DataFrame(
+            {
+                "RAW_FILE": ["F1", "F1", "F1"],
+                "SCAN_NUMBER": [1, 1, 2],
+                "MODIFIED_SEQUENCE": ["PEPTIDEK", "PEPTLDEK", "AAAAAAAK"],
+                "PRECURSOR_CHARGE": [2, 2, 3],
+                "SCORE": [10.0, 8.0, 5.0],
+                "EXPECT": [0.01, 0.1, 1.0],
+                "REVERSE": [False, False, True],
+            }
+        )
+        sage = pd.DataFrame(
+            {
+                "RAW_FILE": ["F1", "F1"],
+                "SCAN_NUMBER": [1, 3],
+                "MODIFIED_SEQUENCE": ["PEPTIDEK", "CCCCCCCK"],
+                "PRECURSOR_CHARGE": [2, 2],
+                "SCORE": [50.0, 40.0],
+                "REVERSE": [False, False],
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            engines_file = Path(tmp) / "search_engines.csv"
+            merged = pp.merge_search_results([msfragger, sage], ["msfragger", "sage"], engines_file=engines_file)
+            found = pd.read_csv(engines_file)
+        self.assertEqual(len(merged), 4)
+        self.assertNotIn("EXPECT", merged.columns)
+        # the shared candidate keeps the values of the first engine
+        self.assertEqual(merged.loc[merged["MODIFIED_SEQUENCE"] == "PEPTIDEK", "SCORE"].item(), 10.0)
+        self.assertEqual(found["msfragger"].tolist(), [True, True, True, False])
+        self.assertEqual(found["sage"].tolist(), [True, False, False, True])
+
+    def test_lengths_must_agree(self):
+        """Test every search result needs its engine name."""
+        with self.assertRaises(ValueError):
+            pp.merge_search_results([pd.DataFrame()], ["msfragger", "sage"])

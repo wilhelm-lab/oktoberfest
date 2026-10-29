@@ -586,6 +586,52 @@ def convert_search(
     )
 
 
+SEARCH_RESULT_KEY = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+
+
+def merge_search_results(
+    search_results: list[pd.DataFrame],
+    search_engines: list[str],
+    engines_file: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
+    """
+    Merge the converted search results of several search engines into one set of candidate PSMs.
+
+    The candidates of all engines are rescored together, so every spectrum keeps the candidates of every engine.
+    A candidate (raw file, scan number, modified sequence, precursor charge) found by several engines is kept once,
+    with the values of the first engine in the list. Only the columns all engines provide are kept (engine specific
+    columns, e.g. MSFragger's matched ions or e-value, would be missing for the candidates of the other engines).
+
+    :param search_results: converted search results (internal format) of every search engine
+    :param search_engines: name of the search engine of every search result, in the same order
+    :param engines_file: optional path of a csv file with the search engines that found every candidate
+        (candidate columns and one boolean column per engine); not used as rescoring input
+    :raises ValueError: if the number of search results and search engines differ
+    :return: the merged search results
+    """
+    if len(search_results) != len(search_engines):
+        raise ValueError("Every search result needs its search engine.")
+    columns = [column for column in search_results[0].columns if all(column in df for df in search_results[1:])]
+    frames = []
+    for df in search_results:
+        df = df[columns].copy()
+        df["RAW_FILE"] = df["RAW_FILE"].astype(str)
+        frames.append(df.drop_duplicates(SEARCH_RESULT_KEY))
+    merged = pd.concat(frames, ignore_index=True).drop_duplicates(SEARCH_RESULT_KEY).reset_index(drop=True)
+    candidates = pd.MultiIndex.from_frame(merged[SEARCH_RESULT_KEY])
+    found = merged[SEARCH_RESULT_KEY].copy()
+    for engine, df in zip(search_engines, frames, strict=True):
+        found[engine] = candidates.isin(pd.MultiIndex.from_frame(df[SEARCH_RESULT_KEY]))
+        logger.info(f"{engine}: {len(df)} candidate PSMs")
+    logger.info(
+        f"Merged {len(merged)} candidate PSMs of {', '.join(search_engines)} ({int(found[search_engines].all(axis=1).sum())} "
+        "found by all engines)"
+    )
+    if engines_file is not None:
+        found.to_csv(engines_file, index=False)
+    return merged
+
+
 def convert_timstof_metadata(
     input_path: Union[str, Path], search_engine: str, output_file: Optional[Union[str, Path]] = None
 ) -> pd.DataFrame:

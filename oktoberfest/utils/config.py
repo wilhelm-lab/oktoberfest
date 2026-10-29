@@ -193,22 +193,65 @@ class Config:
 
     @property
     def search_results(self) -> Path:
-        """Get path to the search results file from the config file."""
-        search_results_path = self.inputs.get("search_results")
-        if search_results_path is not None:
-            # check if search_results_path is absolute and if not, append with the directory
-            # of the config file to resolve paths relative to the config location. This is
-            # required to make sure it always works no matter from which working directory
-            # oktoberfest is executed in case a relative path is provided, which would
-            # otherwise be relative to the working directory.
-            return self.base_path / search_results_path
-        else:
-            raise ValueError("No path to a msms.txt specified in config file.")
+        """Get path to the search results file from the config file (the first one if several are given)."""
+        return self.search_inputs[0][0]
 
     @property
     def search_results_type(self) -> str:
-        """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
-        return self.inputs.get("search_results_type", "maxquant").lower()
+        """
+        Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file.
+
+        Several search engines are joined with "+" (e.g. "msfragger+sage").
+        """
+        search_results_type = self.inputs.get("search_results_type", "maxquant")
+        types = search_results_type if isinstance(search_results_type, list) else [search_results_type]
+        return "+".join(search_type.lower() for search_type in types)
+
+    @property
+    def search_inputs(self) -> list[tuple[Path, str]]:
+        """
+        Get the search results and their search engine types from the config file.
+
+        search_results and search_results_type are either single values or lists of the same length (one entry per
+        search engine, merged into one set of candidate PSMs, see preprocessing.merge_search_results).
+        """
+        search_results_path = self.inputs.get("search_results")
+        if search_results_path is None:
+            raise ValueError("No path to a msms.txt specified in config file.")
+        search_results_type = self.inputs.get("search_results_type", "maxquant")
+        paths = search_results_path if isinstance(search_results_path, list) else [search_results_path]
+        types = search_results_type if isinstance(search_results_type, list) else [search_results_type]
+        if len(paths) != len(types):
+            raise ValueError(
+                f"search_results ({len(paths)} entries) and search_results_type ({len(types)} entries) must have the "
+                "same number of entries."
+            )
+        # check if search_results_path is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return [(self.base_path / path, search_type.lower()) for path, search_type in zip(paths, types, strict=True)]
+
+    @property
+    def reuse_libraries(self) -> list[Path]:
+        """
+        Get the output folders of previous runs whose annotation and predictions are reused (reuseLibraries).
+
+        Previous runs on the same spectra files with the same annotation settings and models, e.g. one rescoring run per
+        search engine before rescoring their merged search results. Default is none.
+        """
+        return [self.base_path / Path(path) for path in self.data.get("reuseLibraries", [])]
+
+    @property
+    def search_engine_features(self) -> bool:
+        """
+        Get flag whether the search engine scores are used as rescore features (searchEngineFeatures).
+
+        If False, the rescore features are the peptide property prediction features only (the original features, i.e.
+        the search engine baseline, are unchanged). Default is True.
+        """
+        return self.data.get("searchEngineFeatures", True)
 
     @property
     def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
@@ -398,6 +441,10 @@ class Config:
         """Get the results/ce_calibration folder of a previous run to reuse its calibrated CE per spectra file."""
         ce_calibration_dir = self.ce_alignment_options.get("ce_calibration_dir")
         if ce_calibration_dir is None:
+            # reused libraries: the calibration of the first previous run, whose predictions are then all reused
+            reuse_libraries = self.data.get("reuseLibraries", [])
+            if reuse_libraries:
+                return self.base_path / Path(reuse_libraries[0]) / "results" / "ce_calibration"
             return None
         return self.base_path / Path(ce_calibration_dir)
 
@@ -795,6 +842,51 @@ class Config:
         self._check_ptm_localization()
         self._check_percolator_subset()
         self._check_chimeric_peak_subtraction()
+        self._check_search_inputs()
+        self._check_reuse_libraries()
+
+    def _check_search_inputs(self):
+        """Check searchEngineFeatures and that several search engines are only combined where supported."""
+        # the raw config value: the property is typed bool (typeguard would reject other values before this check)
+        search_engine_features = self.data.get("searchEngineFeatures", True)
+        if not isinstance(search_engine_features, bool):
+            raise ValueError(f"searchEngineFeatures must be true or false, got {search_engine_features!r}.")
+        if "search_results" not in self.inputs:  # e.g. spectral library generation
+            return
+        search_types = [search_type for _, search_type in self.search_inputs]
+        if len(search_types) == 1:
+            return
+        unsupported = sorted({"xisearch", "scout", "custom_input"} & set(search_types))
+        if unsupported:
+            raise ValueError(
+                f"Search results of {', '.join(unsupported)} cannot be combined with other search engines."
+            )
+        if self.quantification:
+            raise ValueError("Quantification is not supported for combined search results of several search engines.")
+        if self.spectra_type in ["d", "hdf"]:
+            raise ValueError("Combined search results of several search engines are not supported for timsTOF data.")
+        if search_engine_features:
+            logger.warning(
+                "Combining several search engines with searchEngineFeatures: the search engine scores of the "
+                "engines are on different scales; consider searchEngineFeatures false."
+            )
+
+    def _check_reuse_libraries(self):
+        """Check reuseLibraries is a list of previous run folders, for DDA rescoring of non-crosslinked peptides."""
+        reuse_libraries = self.data.get("reuseLibraries", [])
+        if not isinstance(reuse_libraries, list) or not all(isinstance(path, str) for path in reuse_libraries):
+            raise ValueError(
+                f"reuseLibraries must be a list of output folders of previous runs, got {reuse_libraries!r}."
+            )
+        if not reuse_libraries:
+            return
+        if self.acquisition_method.lower() == "dia" or "xl" in self.models.get("intensity", "").lower():
+            raise ValueError("reuseLibraries is only supported for DDA spectra of non-crosslinked peptides.")
+        if self.ptm_localization:
+            raise ValueError("reuseLibraries is not supported with ptm_localization.")
+        for path in self.reuse_libraries:
+            if not (path / "data").is_dir():
+                raise ValueError(f"reuseLibraries: {path} is not the output folder of a previous run (no data folder).")
 
     def _check_chimeric_peak_subtraction(self):
         """Check that chimericPeakSubtraction is a boolean."""

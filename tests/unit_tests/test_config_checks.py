@@ -9,6 +9,7 @@ from oktoberfest.utils import Config
 
 def _config(**data) -> Config:
     config = Config()
+    config.base_path = Path()
     config.data.update(data)
     return config
 
@@ -371,3 +372,57 @@ class TestChimericPeakSubtraction(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
                     _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()
+
+
+class TestSearchInputs(unittest.TestCase):
+    """Test search results of one or several search engines and the searchEngineFeatures flag."""
+
+    def test_single_engine(self):
+        """Test a single search result keeps its path and type."""
+        config = _config(inputs={"search_results": "/data/msms.txt", "search_results_type": "Maxquant"})
+        self.assertEqual(config.search_inputs, [(Path("/data/msms.txt"), "maxquant")])
+        self.assertEqual(config.search_results, Path("/data/msms.txt"))
+        self.assertEqual(config.search_results_type, "maxquant")
+        self.assertTrue(config.search_engine_features)
+        config._check_search_inputs()
+
+    def test_several_engines(self):
+        """Test lists of search results and types give one input per engine."""
+        config = _config(
+            inputs={
+                "search_results": ["/data/fragger", "/data/results.sage.tsv"],
+                "search_results_type": ["MSFragger", "Sage"],
+            },
+            searchEngineFeatures=False,
+        )
+        self.assertEqual(
+            config.search_inputs, [(Path("/data/fragger"), "msfragger"), (Path("/data/results.sage.tsv"), "sage")]
+        )
+        self.assertEqual(config.search_results_type, "msfragger+sage")
+        self.assertFalse(config.search_engine_features)
+        config._check_search_inputs()
+
+    def test_mismatched_lists(self):
+        """Test the number of search results and types must agree."""
+        config = _config(inputs={"search_results": ["/a", "/b"], "search_results_type": "Sage"})
+        with self.assertRaisesRegex(ValueError, "same number of entries"):
+            _ = config.search_inputs
+
+    def test_unsupported_combinations(self):
+        """Test crosslink engines, quantification and timsTOF data are rejected for several engines."""
+        inputs = {"search_results": ["/a", "/b"], "search_results_type": ["Xisearch", "Sage"]}
+        with self.assertRaisesRegex(ValueError, "xisearch cannot be combined"):
+            _config(inputs=inputs)._check_search_inputs()
+        inputs = {"search_results": ["/a", "/b"], "search_results_type": ["MSFragger", "Sage"]}
+        with self.assertRaisesRegex(ValueError, "Quantification"):
+            _config(inputs=inputs, quantification=True)._check_search_inputs()
+        with self.assertRaisesRegex(ValueError, "timsTOF"):
+            _config(inputs={**inputs, "spectra_type": "d"})._check_search_inputs()
+
+    def test_search_engine_features_flag(self):
+        """Test searchEngineFeatures must be a boolean."""
+        inputs = {"search_results": "/data/msms.txt"}
+        for value in [0, "false", None]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "searchEngineFeatures"):
+                    _config(inputs=inputs, searchEngineFeatures=value)._check_search_inputs()

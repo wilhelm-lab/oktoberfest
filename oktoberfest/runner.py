@@ -13,8 +13,10 @@ from multiprocessing import Manager, Process, pool
 from pathlib import Path
 from typing import Optional, Union
 
+import anndata
 import numpy as np
 import pandas as pd
+import scipy.sparse
 import spectrum_fundamentals.constants as c
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 from spectrum_io.spectral_library import MSP, DLib, SpectralLibrary, Spectronaut
@@ -31,6 +33,9 @@ from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
 from .utils.config import ADJACENT_DECOY_RESIDUES
 
 logger = logging.getLogger(__name__)
+
+# column of a library from previous runs (reuseLibraries): collision energy its intensities were predicted at
+REUSED_CE_COLUMN = "REUSED_CE"
 
 
 def _make_predictions_error_callback(failure_progress_tracker, failure_lock, error):
@@ -70,17 +75,35 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
         ptm_unimods = config.ptm_permutation_sites
         ptm_sites = None
         ptm_model = config.ptm_model
-        search_results = pp.convert_search(
-            input_path=config.search_results,
-            search_engine=config.search_results_type,
-            tmt_label=tmt_label,
-            custom_mods=config.custom_to_unimod(),
-            output_file=internal_search_file,
-            ptm_unimod_id=ptm_unimods,
-            ptm_sites=ptm_sites,
-            ptm_model=ptm_model,
-            num_threads=config.num_threads,
-        )
+        search_inputs = config.search_inputs
+        converted = [
+            pp.convert_search(
+                input_path=search_results_path,
+                search_engine=search_engine,
+                tmt_label=tmt_label,
+                custom_mods=config.custom_to_unimod(),
+                # several search engines: one internal file per engine, merged into msms.prosit
+                output_file=(
+                    internal_search_file
+                    if len(search_inputs) == 1
+                    else msms_output / f"msms_{i}_{search_engine}.prosit"
+                ),
+                ptm_unimod_id=ptm_unimods,
+                ptm_sites=ptm_sites,
+                ptm_model=ptm_model,
+                num_threads=config.num_threads,
+            )
+            for i, (search_results_path, search_engine) in enumerate(search_inputs)
+        ]
+        if len(search_inputs) == 1:
+            search_results = converted[0]
+        else:
+            search_results = pp.merge_search_results(
+                converted,
+                [search_engine for _, search_engine in search_inputs],
+                engines_file=msms_output / "search_engines.csv",
+            )
+            search_results.to_csv(internal_search_file, index=False)
         if config.spectra_type.lower() in ["d", "hdf"]:
             timstof_metadata = pp.convert_timstof_metadata(
                 input_path=config.search_results,
@@ -206,7 +229,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             aspec = pp.annotate_spectral_library_xl(
                 psms=library, cms2=cms2, mass_tol=config.mass_tolerance, unit_mass_tol=config.unit_mass_tolerance
             )
-            if config.inputs["search_results_type"].lower() == "xisearch":
+            if config.search_results_type == "xisearch":
                 aspec.obs["start_pos_p1"] = aspec.obs["start_pos_p1"].astype(str)
                 aspec.obs["start_pos_p2"] = aspec.obs["start_pos_p2"].astype(str)
         else:
@@ -663,6 +686,120 @@ def generate_spectral_lib(config_path: Union[str, Path, Config]):
         speclib_written_step.mark_done()
 
 
+def _candidate_index(df: pd.DataFrame) -> pd.MultiIndex:
+    """Candidate PSMs (raw file, scan number, modified sequence, precursor charge) of a search result / library."""
+    return pd.MultiIndex.from_frame(df[pp.SEARCH_RESULT_KEY].astype(str))
+
+
+def _previous_library(run_dir: Path, spectra_file: Path) -> Optional[Spectra]:
+    """
+    Annotated and predicted spectra of a spectra file from a previous run, with the original collision energy.
+
+    The collision energy the intensities were predicted at is kept in REUSED_CE_COLUMN; COLLISION_ENERGY is set back
+    to the original one of the spectrum (inverse of the run's CE calibration), so the CE calibration of this run applies.
+
+    :param run_dir: output folder of the previous run
+    :param spectra_file: the spectra file
+    :return: the library, or None if the run lacks the library or CE calibration of the file
+    """
+    path = run_dir / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name
+    ce_file = run_dir / "results" / "ce_calibration" / f"{spectra_file.stem}_ce.txt"
+    if not path.is_file() or not ce_file.is_file():
+        logger.warning(f"No library or CE calibration of {spectra_file.stem} in {run_dir}, annotating it again")
+        return None
+    with open(ce_file) as f:
+        best_ce = json.load(f)
+    original_ce = {float(ce): float(orig) for orig, ce in best_ce.items()}
+    if len(original_ce) != len(best_ce):
+        logger.warning(f"CE calibration of {spectra_file.stem} in {run_dir} cannot be inverted, annotating it again")
+        return None
+    library = Spectra.from_hdf5(path)
+    obs = library.obs
+    obs[REUSED_CE_COLUMN] = obs["COLLISION_ENERGY"].astype(float)
+    is_hcd = (obs["FRAGMENTATION"] == "HCD").to_numpy(dtype=bool)
+    original = obs.loc[is_hcd, REUSED_CE_COLUMN].map(original_ce)
+    if original.isna().any():
+        logger.warning(f"CE of {spectra_file.stem} in {run_dir} does not match its calibration, annotating it again")
+        return None
+    obs.loc[is_hcd, "COLLISION_ENERGY"] = original
+    return library
+
+
+def _library_from_previous_runs(spectra_file: Path, config: Config) -> Optional[Spectra]:
+    """
+    Annotated and predicted spectra of the candidates of a spectra file, from previous runs (reuseLibraries).
+
+    Previous runs on the same spectra with the same annotation settings and models, e.g. one run per search engine
+    before rescoring the merged search results. Every candidate PSM of this run is taken from the first previous run
+    that has it: annotation, predicted iRT and the predicted intensities (predicted again in _reuse_predictions if this
+    run's calibrated collision energy differs).
+
+    :param spectra_file: the spectra file
+    :param config: the configuration object
+    :return: the library, or None (annotate as usual) if a previous run lacks the file or a candidate is not found
+    """
+    wanted = _candidate_index(pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name))
+    libraries = [_previous_library(run_dir, spectra_file) for run_dir in config.reuse_libraries]
+    if any(library is None for library in libraries):
+        return None
+    if any(not library.var_names.equals(libraries[0].var_names) for library in libraries[1:]):
+        logger.warning(f"Previous runs of {spectra_file.stem} annotate different fragment ions, annotating it again")
+        return None
+    columns = [column for column in libraries[0].obs.columns if all(column in lib.obs for lib in libraries[1:])]
+    parts, taken = [], pd.MultiIndex.from_tuples([], names=pp.SEARCH_RESULT_KEY)
+    for library in libraries:
+        keys = _candidate_index(library.obs)
+        keep = np.flatnonzero(keys.isin(wanted) & ~keys.isin(taken) & ~keys.duplicated())
+        part = library[keep].copy()
+        part.obs = part.obs[columns]
+        part.obs_names = [f"{len(parts)}_{i}" for i in range(part.n_obs)]
+        parts.append(part)
+        taken = taken.append(keys[keep])
+    missing = len(wanted.unique()) - len(taken)
+    if missing:
+        logger.warning(f"{missing} candidates of {spectra_file.stem} not in the previous runs, annotating it again")
+        return None
+    combined = Spectra(anndata.concat(parts, join="inner", uns_merge="first"))
+    combined.obs_names = [str(i) for i in range(combined.n_obs)]
+    logger.info(
+        f"Reusing the annotation and predictions of {combined.n_obs} candidates of {spectra_file.stem} "
+        f"({', '.join(str(len(part)) for part in parts)} from {', '.join(map(str, config.reuse_libraries))})"
+    )
+    return combined
+
+
+def _reuse_predictions(library: Spectra, spectra_file: Path, config: Config):
+    """
+    Keep the reused predictions of a library from previous runs, predicting intensities again where the CE differs.
+
+    Predicted iRT does not depend on the collision energy and is kept for every candidate.
+
+    :param library: library of _library_from_previous_runs after the CE calibration of this run
+    :param spectra_file: the spectra file
+    :param config: the configuration object
+    """
+    redo = library.obs[REUSED_CE_COLUMN].to_numpy() != library.obs["COLLISION_ENERGY"].astype(float).to_numpy()
+    logger.info(
+        f"Reusing the predictions of {int((~redo).sum())} candidates of {spectra_file.stem}, predicting the intensities "
+        f"of {int(redo.sum())} at another collision energy"
+    )
+    if redo.any():
+        subset = Spectra(library[np.flatnonzero(redo)].copy())
+        subset.obs_names = [str(i) for i in range(subset.n_obs)]
+        chunk_idx = None
+        if "alphapept" in config.models.get("intensity", "").lower():
+            chunk_idx = list(group_iterator(df=subset.obs, group_by_column="PEPTIDE_LENGTH"))
+        intensity_predictor = pr.Predictor.from_config(config, model_type="intensity")
+        intensity_predictor.predict_intensities(
+            data=subset, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
+        )
+        layer = Spectra.INTENSITY_PRED_LAYER_NAME
+        kept, new = np.flatnonzero(~redo), np.flatnonzero(redo)
+        stacked = scipy.sparse.vstack([library.layers[layer][kept], subset.layers[layer]]).tocsr()
+        library.layers[layer] = stacked[np.argsort(np.concatenate([kept, new]))]
+    library.obs.drop(columns=REUSED_CE_COLUMN, inplace=True)
+
+
 def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     ce_calib_step = ProcessStep(config.output, "ce_calib." + spectra_file.stem)
     if ce_calib_step.is_done():
@@ -675,7 +812,12 @@ def _ce_calib(spectra_file: Path, config: Config) -> Spectra:
     tims_meta_file = None
     if config.spectra_type.lower() in ["hdf", "d"]:  # if it is timstof
         tims_meta_file = config.output / "msms" / spectra_file.with_suffix(".timsmeta").name
-    aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
+    aspec = None
+    if config.reuse_libraries and not (config.output / "data" / spectra_file.with_suffix(".mzml.hdf5").name).is_file():
+        (config.output / "data").mkdir(exist_ok=True)
+        aspec = _library_from_previous_runs(spectra_file, config)
+    if aspec is None:
+        aspec = _annotate_and_get_library(spectra_file, config, tims_meta_file=tims_meta_file)
     _get_best_ce(aspec, spectra_file, config)
 
     aspec.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
@@ -744,6 +886,11 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
             predict_step.mark_done()
 
+        elif REUSED_CE_COLUMN in library.obs:  # library of previous runs (reuseLibraries)
+            _reuse_predictions(library, spectra_file, config)
+            library.write_as_hdf5(config.output / "data" / spectra_file.with_suffix(".mzml.pred.hdf5").name)
+            predict_step.mark_done()
+
         else:
             intensity_predictor.predict_intensities(
                 data=library, chunk_idx=chunk_idx, dataset_name=spectra_file.stem, keep_dataset=False
@@ -787,6 +934,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             task="multifrag" if config.check_multifrag() else "default",
             featured_ions=config.ion_types,
             subtract_peaks=config.chimeric_peak_subtraction,
+            search_engine_features=config.search_engine_features,
         )
 
     calc_feature_step.mark_done()
@@ -1479,9 +1627,9 @@ def run_rescoring(config_path: Union[str, Path, Config]):
             generate_xifdr_input_step = ProcessStep(config.output, "generate_xifdr_input")
             if not generate_xifdr_input_step.is_done():
                 logger.info("Generating xiFDR input.")
-                if config.inputs["search_results_type"].lower() == "xisearch":
+                if config.search_results_type == "xisearch":
                     input_xifdr(str(fdr_dir), "xisearch")
-                elif config.inputs["search_results_type"].lower() == "scout":
+                elif config.search_results_type == "scout":
                     input_xifdr(str(fdr_dir), "scout")
                 logger.info("Finished Generating xiFDR input.")
                 generate_xifdr_input_step.mark_done()
