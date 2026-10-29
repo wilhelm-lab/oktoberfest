@@ -154,6 +154,24 @@ class TestAnnotateAndGetLibrary(unittest.TestCase):
                 mock_load_search.assert_called_with(self.config.output / "msms" / "run_a.rescore")
                 self.assertTrue(self.hdf5_path.is_file())
 
+    def test_raw_conversion_keeps_ms1_for_ms1_quantification(
+        self, mock_raw, mock_d, mock_load_spectra, mock_load_search, mock_merge, mock_annotate, mock_annotate_xl
+    ):
+        """Test RAW files keep their MS1 scans only if precursors are quantified on MS1."""
+        for data, ms_level in [
+            ({}, 2),
+            ({"quantification": True}, 2),
+            ({"quantification": True, "quantificationOptions": {"precursor": "flashlfq"}}, [1, 2]),
+        ]:
+            with self.subTest(data=data):
+                self.config.data.update(data)
+                self._set_up_mocks(mock_load_spectra, mock_annotate)
+                self.hdf5_path.unlink(missing_ok=True)
+
+                _annotate_and_get_library(Path("run_a.raw"), self.config)
+
+                self.assertEqual(mock_raw.call_args.kwargs["ms_level"], ms_level)
+
     def test_stored_library_is_reused(
         self, mock_raw, mock_d, mock_load_spectra, mock_load_search, mock_merge, mock_annotate, mock_annotate_xl
     ):

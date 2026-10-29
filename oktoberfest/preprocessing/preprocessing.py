@@ -1149,7 +1149,10 @@ def load_spectra(
 
 
 def convert_raw_to_mzml(
-    raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
+    raw_file: Union[str, Path],
+    output_file: Union[str, Path],
+    thermo_exe: Optional[Union[str, Path]] = None,
+    ms_level: Union[int, list[int]] = 2,
 ):
     """
     Convert raw to mzML format.
@@ -1162,6 +1165,7 @@ def convert_raw_to_mzml(
     :param thermo_exe: Path to the executable of ThermoRawFileParser, default depends on the OS:
         for Windows, it is "ThermoRawFileParser.exe", while for Linux and MacOS, it is
         "/opt/compomics/ThermoRawFileParser.exe".
+    :param ms_level: MS level(s) to keep, e.g. [1, 2] to keep the MS1 scans for MS1 quantification; default is 2
     """
     if thermo_exe is None:
         if "linux" in platform or platform == "darwin":
@@ -1170,7 +1174,7 @@ def convert_raw_to_mzml(
             thermo_exe = "ThermoRawFileParser.exe"
 
     raw = ThermoRaw()
-    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
+    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe, ms_level=ms_level)
 
 
 def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):

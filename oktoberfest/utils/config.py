@@ -22,9 +22,19 @@ DECOY_WEIGHTINGS = ["count", "distance"]
 FLR_GROUPS = ["none", "residue"]
 FLR_ESTIMATORS = ["hybrid", "decoy"]
 
+# options of quantificationOptions (first value is the default)
+QUANT_PRECURSOR_METHODS = ["search_engine", "flashlfq"]
+QUANT_PROTEIN_METHODS = ["directlfq", "none"]
+QUANT_NORMALIZATIONS = ["drift", "mode", "median", "none"]
+
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
 _DLOMIX_PIPELINE_CACHE: dict = {}
+
+
+def _is_number(value) -> bool:
+    """Return True for int and float values (bool is not a number here)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 class Config:
@@ -100,7 +110,7 @@ class Config:
 
     @property
     def quantification(self) -> bool:
-        """Get quantification flag for performing quantification using picked-group-fdr."""
+        """Get quantification flag for performing quantification (see quantificationOptions)."""
         return self.data.get("quantification", False)
 
     @property
@@ -400,6 +410,87 @@ class Config:
         if ce_calibration_dir is None:
             return None
         return self.base_path / Path(ce_calibration_dir)
+
+    ####################################
+    # these are quantification options #
+    ####################################
+
+    @property
+    def quantification_options(self) -> dict:
+        """Get the quantificationOptions dictionary from the config."""
+        return self.data.get("quantificationOptions", {})
+
+    @property
+    def quant_precursor(self) -> str:
+        """
+        Get how precursors are quantified; default is "search_engine".
+
+        "search_engine" updates the search engine's own quantification (MaxQuant, Sage, FragPipe) with the rescored PSMs
+        using picked-group-FDR. "flashlfq" measures the MS1 signal of the rescored PSMs with FlashLFQ, independent of
+        the search engine.
+        """
+        return str(self.quantification_options.get("precursor", QUANT_PRECURSOR_METHODS[0])).lower()
+
+    @property
+    def quant_protein(self) -> str:
+        """Get how protein intensities are calculated from the precursors ("directlfq" or "none"; flashlfq only)."""
+        return str(self.quantification_options.get("protein", QUANT_PROTEIN_METHODS[0])).lower()
+
+    @property
+    def quant_normalization(self) -> str:
+        """
+        Get the normalization of the precursor intensities between runs (flashlfq only); default is "drift".
+
+        "drift" corrects every run by a curve along the retention time, the most frequent log2 deviation from the
+        precursors' median over the runs; "mode" shifts every run by the most frequent log2 ratio to the first run,
+        "median" by the median log2 ratio (pulled by precursors that change between samples), "none" keeps the FlashLFQ
+        intensities.
+        """
+        return str(self.quantification_options.get("normalization", QUANT_NORMALIZATIONS[0])).lower()
+
+    @property
+    def quant_psm_fdr(self) -> float:
+        """Get the PSM q-value cutoff of the PSMs that are quantified (flashlfq only); default is 0.01."""
+        return self.quantification_options.get("psmFdr", 0.01)
+
+    @property
+    def quant_peptide_fdr(self) -> float:
+        """Get the Percolator peptide q-value cutoff of the peptidoform table (flashlfq only); default is 0.01."""
+        return self.quantification_options.get("peptideFdr", 0.01)
+
+    @property
+    def quant_protein_fdr(self) -> float:
+        """Get the protein group q-value cutoff of the quantified protein groups (flashlfq only); default is 0.01."""
+        return self.quantification_options.get("proteinFdr", 0.01)
+
+    @property
+    def quant_ppm_tolerance(self) -> float:
+        """Get the MS1 mass tolerance in ppm used by FlashLFQ; default is 10."""
+        return self.quantification_options.get("ppmTolerance", 10)
+
+    @property
+    def quant_ppm_filter(self) -> float | None:
+        """
+        Get the maximum distance of a peak's apex mass error to its run's median in ppm (flashlfq only); default is 5.
+
+        Peaks further away are not used; None keeps all peaks.
+        """
+        return self.quantification_options.get("ppmFilter", 5)
+
+    @property
+    def flashlfq_exe(self) -> Path:
+        """Get the FlashLFQ command line executable (CMD.dll of the FlashLFQ release); default is "CMD.dll"."""
+        return self.base_path / Path(self.quantification_options.get("flashlfqExe", "CMD.dll"))
+
+    @property
+    def dotnet_exe(self) -> str:
+        """Get the dotnet executable used to run FlashLFQ; default is "dotnet"."""
+        return self.quantification_options.get("dotnetExe", "dotnet")
+
+    @property
+    def ms1_quantification(self) -> bool:
+        """Return True if precursors are quantified on MS1 by Oktoberfest, which needs MS1 spectra."""
+        return self.quantification and self.quant_precursor == "flashlfq"
 
     ###############################
     # these are rescoring options #
@@ -789,7 +880,9 @@ class Config:
             self._check_koina_model_availability()
 
         if self.quantification:
-            self._check_quantification()
+            self._check_quantification_options()
+            if self.quant_precursor == "search_engine":
+                self._check_quantification()
             self._check_fasta()
 
         self._check_ptm_localization()
@@ -987,6 +1080,47 @@ class Config:
                     f"You specified the search results as {self.search_results_type} for quantification, but "
                     f"combined_ion.tsv is not available  at {path_stem / 'combined_ion.tsv'}."
                 )
+
+    def _check_quantification_options(self):
+        """Check the quantificationOptions and that MS1 quantification (flashlfq) can run with this config."""
+        for option, value, allowed in (
+            ("precursor", self.quant_precursor, QUANT_PRECURSOR_METHODS),
+            ("protein", self.quant_protein, QUANT_PROTEIN_METHODS),
+            ("normalization", self.quant_normalization, QUANT_NORMALIZATIONS),
+        ):
+            if value not in allowed:
+                raise ValueError(f"Invalid quantificationOptions.{option} {value!r}, must be one of {allowed}.")
+        fdrs = (("psmFdr", self.quant_psm_fdr), ("peptideFdr", self.quant_peptide_fdr),
+                ("proteinFdr", self.quant_protein_fdr))  # fmt: skip
+        for option, value in fdrs:
+            if not _is_number(value) or not 0 < value <= 1:
+                raise ValueError(f"quantificationOptions.{option} must be a q-value in (0, 1], got {value!r}.")
+        ppm = self.quant_ppm_tolerance
+        if not _is_number(ppm) or ppm <= 0:
+            raise ValueError(f"quantificationOptions.ppmTolerance must be a positive number, got {ppm!r}.")
+        ppm_filter = self.quant_ppm_filter
+        if ppm_filter is not None and (not _is_number(ppm_filter) or ppm_filter <= 0):
+            raise ValueError(f"quantificationOptions.ppmFilter must be a positive number or null, got {ppm_filter!r}.")
+        if self.quant_precursor == "flashlfq":
+            self._check_flashlfq()
+
+    def _check_flashlfq(self):
+        """Check that MS1 quantification with FlashLFQ can run with this config."""
+        if self.fdr_estimation_method != "percolator":
+            raise ValueError("Quantification with flashlfq requires fdr_estimation_method percolator.")
+        if self.ptm_localization:
+            raise ValueError("Quantification with flashlfq is not supported together with ptm_localization.")
+        if self.spectra_type not in ("raw", "mzml"):
+            raise ValueError(
+                f"Quantification with flashlfq needs MS1 spectra from raw or mzml files, got spectra_type "
+                f"{self.spectra_type}."
+            )
+        if not self.flashlfq_exe.is_file():
+            raise FileNotFoundError(
+                f"FlashLFQ not found at {self.flashlfq_exe}. Download the command line version (FlashLFQ.zip) from "
+                "https://github.com/smith-chem-wisc/FlashLFQ/releases and set quantificationOptions.flashlfqExe to "
+                "its CMD.dll."
+            )
 
     def _check_fasta(self):
         if not self.library_input_type.lower() == "fasta":

@@ -180,7 +180,9 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         format_ = spectra_file.suffix.lower()
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+            # MS1 quantification measures the precursors in the MS1 scans of the converted file
+            ms_level = [1, 2] if config.ms1_quantification else 2
+            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe, ms_level=ms_level)
         elif format_ in [".mzml", ".hdf"]:
             file_to_load = spectra_file
         elif format_ == ".d":
@@ -1508,10 +1510,11 @@ def run_rescoring(config_path: Union[str, Path, Config]):
                     pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
-        if config.quantification:
+        quant_step = ProcessStep(config.output, "quantification")
+        if config.quantification and not quant_step.is_done():
             logger.info("Starting quantification")
-            # method contains picked-group-FDR call
             apply_quant(config)
+            quant_step.mark_done()
             logger.info("Finished quantification")
 
 
