@@ -227,3 +227,25 @@ class TestAmbiguityCheck(unittest.TestCase):
         )
         for column in ("localization_flr", "localization_flr_decoy"):
             np.testing.assert_array_equal(off[column].to_numpy(), on[column].to_numpy())
+
+
+class TestLocalizationScore(unittest.TestCase):
+    """Test the localization score calibrated on the estimated FLR."""
+
+    def test_anchors(self):
+        """Test 1% FLR maps to 0.75, 5% to 0.5, linear in between and to the ends, NaN without an FLR."""
+        from oktoberfest.rescore import calibrate_localization_score
+
+        psms = pd.DataFrame({"localization_flr": [0.0, 0.005, 0.01, 0.03, 0.05, 0.525, 1.0, np.nan]})
+        score = calibrate_localization_score(psms)["localization_score"]
+        np.testing.assert_allclose(score, [1.0, 0.875, 0.75, 0.625, 0.5, 0.25, 0.0, np.nan])
+
+    def test_score_cut_equals_flr_cut(self):
+        """Test a score cut selects exactly the localizations at the matching estimated FLR, also unordered."""
+        from oktoberfest.rescore import calibrate_localization_score
+
+        rng = np.random.default_rng(1)
+        psms = pd.DataFrame({"localization_flr": rng.uniform(0, 0.2, 1000), "loc_prob_delta": rng.uniform(0, 1, 1000)})
+        score = calibrate_localization_score(psms)["localization_score"]
+        np.testing.assert_array_equal(score >= 0.75, psms["localization_flr"] <= 0.01)
+        np.testing.assert_array_equal(score >= 0.5, psms["localization_flr"] <= 0.05)

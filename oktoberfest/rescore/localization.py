@@ -894,57 +894,22 @@ def estimate_localization_flr(
     return psms
 
 
-def _calibrate(reference: pd.DataFrame, deltas: pd.Series, anchors: tuple) -> np.ndarray:
+def calibrate_localization_score(psms: pd.DataFrame, anchors: tuple = ((0.01, 0.75), (0.05, 0.5))) -> pd.DataFrame:
     """
-    Interpolate the localization score of loc_prob_delta values from the FLR anchors.
+    Map the estimated localization_flr to a localization score between 0 and 1.
 
-    :param reference: PSMs with localization_flr and loc_prob_delta that define the delta cutoffs of the anchors
-    :param deltas: the loc_prob_delta values to calibrate
-    :param anchors: pairs of (estimated FLR, localization score)
-    :return: localization scores
-    """
-    cutoffs, scores = [1.0], [1.0]
-    for flr, score in sorted(anchors):
-        within = reference.loc[reference["localization_flr"] <= flr, "loc_prob_delta"]
-        # the delta cutoff of this FLR; nothing reaches the score if no PSM is within the FLR
-        cutoff = float(within.min()) if not within.empty else 1.0
-        cutoffs.append(min(cutoff, cutoffs[-1]))
-        scores.append(score)
-    cutoffs.append(0.0)
-    scores.append(0.0)
-    cutoffs, scores = np.array(cutoffs[::-1]), np.array(scores[::-1])
-    # strictly increasing cutoffs for the interpolation
-    cutoffs = cutoffs + np.arange(len(cutoffs)) * 1e-12
-    return np.interp(deltas, cutoffs, scores)
+    For every anchor (FLR, score), an estimated FLR of FLR is mapped to score, e.g. a localization score of 0.75
+    corresponds to 1% (class I sites) and 0.5 to 5% estimated FLR (class II). The score is linearly interpolated
+    between the anchors, an FLR of 0 (score 1) and 1 (score 0). As it is a decreasing function of the FLR, a
+    localization score >= 0.75 selects exactly the localizations with an estimated FLR <= 1%, whatever groups and
+    ranking the FLR was estimated with.
 
-
-def calibrate_localization_score(
-    psms: pd.DataFrame, anchors: tuple = ((0.01, 0.75), (0.05, 0.5)), group_column: Optional[str] = None
-) -> pd.DataFrame:
-    """
-    Calibrate loc_prob_delta to a localization score using the decoy estimated FLR.
-
-    For every anchor (FLR, score), the loc_prob_delta at which the estimated localization_flr reaches FLR is mapped
-    to score, e.g. a localization score of 0.75 corresponds to 1% and 0.5 to 5% estimated FLR. The score is linearly
-    interpolated between the anchors, 0 and 1. With group_column, every group is calibrated separately (e.g. per
-    residue of the called sites, with the FLR estimated per group).
-
-    :param psms: percolator PSMs with loc_prob_delta and localization_flr
+    :param psms: percolator PSMs with localization_flr
     :param anchors: pairs of (estimated FLR, localization score), with decreasing score for increasing FLR
-    :param group_column: column with the group of every PSM, None to calibrate all PSMs together
-    :return: psms with the column localization_score (NaN for PSMs without loc_prob_delta)
+    :return: psms with the column localization_score (NaN for PSMs without localization_flr)
     """
-    psms["localization_score"] = np.nan
-    passing = psms[psms["localization_flr"].notna()]
-    if passing.empty:
-        return psms
-    has_delta = psms["loc_prob_delta"].notna()
-    if group_column is None:
-        psms.loc[has_delta, "localization_score"] = _calibrate(passing, psms.loc[has_delta, "loc_prob_delta"], anchors)
-        return psms
-    for group, members in psms[has_delta].groupby(group_column):
-        reference = passing[passing[group_column] == group]
-        psms.loc[members.index, "localization_score"] = _calibrate(reference, members["loc_prob_delta"], anchors)
+    flrs, scores = zip(*sorted(anchors), strict=True)
+    psms["localization_score"] = np.interp(psms["localization_flr"], (0.0, *flrs, 1.0), (1.0, *scores, 0.0))
     return psms
 
 
@@ -1001,7 +966,7 @@ def _add_localization_probabilities(
                 for column in ("model_error_high", "model_error_low"):
                     psms[column] = psms[column].where(neighbors == "neighbor", psms[f"{column}_no_neighbor"])
                 psms = hybrid_localization_flr(psms, group_column="model_group")
-            psms = calibrate_localization_score(psms, group_column=group_column)
+            psms = calibrate_localization_score(psms)
         psms = psms.drop(columns=["model_error_high_no_neighbor", "model_error_low_no_neighbor"])
         psms.to_csv(result_dir / f"rescore.percolator_with_prob.{psm_type}.txt", sep="\t", index=False)
 
