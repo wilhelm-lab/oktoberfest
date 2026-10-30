@@ -356,11 +356,12 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.pdf")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
-    sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
-    ax.axvline(
-        x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()] - sa_ce_df["COLLISION_ENERGY"].min(),
-        color="red",
-    )
+    # the picked CE has the highest mean spectral angle (as in the CE calibration); the violins are categorical, so the
+    # line goes at the position of that CE among the plotted CEs, not at its distance from the lowest CE
+    mean_sa = sa_ce_df.groupby("COLLISION_ENERGY")["SPECTRAL_ANGLE"].mean()
+    order = list(mean_sa.index)
+    sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", order=order, ax=ax, color="#1f77b4")
+    ax.axvline(x=order.index(mean_sa.idxmax()), color="red")
     plt.xticks(rotation=90)
     plt.grid()
     plt.savefig(filename, dpi=300)
