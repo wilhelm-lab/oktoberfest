@@ -197,6 +197,12 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
+        if config.unit_mass_tolerance == "ppm" and (library["MASS_ANALYZER"] == "ITMS").any():
+            logger.warning(
+                f"massTolerance {config.mass_tolerance} ppm is also used for the ion trap (ITMS) spectra of "
+                f"{spectra_file.name}. Leave massTolerance and unitMassTolerance out to use the ion trap default "
+                "(0.35 Da)."
+            )
 
         # Check for crosslinked or local model (skip for DLOmix)
         intensity_model = config.models.get("intensity", "").lower()
@@ -261,6 +267,26 @@ def _ce_calibration_library(library: Spectra, config: Config) -> Spectra:
         return library
     logger.info(f"Using {without_ptm.sum()} PSMs without the localized PTMs for CE calibration.")
     return Spectra(library[without_ptm].copy())
+
+
+def _search_engine_localizations(library: Spectra) -> Spectra:
+    """
+    Get the PSMs as localized by the search engine, the baseline of the original rescoring.
+
+    If PTMs are localized, the library contains all site permutations (and decoy site candidates) of each PSM. The
+    original rescoring only scores the localization of the search engine (SEARCH_MODIFIED_SEQUENCE), so that it is the
+    search engine result and not a choice among the candidates by its score.
+
+    :param library: the library with all PSMs
+    :return: the PSMs with the localization of the search engine (the library itself without permutations)
+    """
+    if "SEARCH_MODIFIED_SEQUENCE" not in library.obs.columns:
+        return library
+    obs = library.obs
+    is_search = (obs["MODIFIED_SEQUENCE"].astype(str) == obs["SEARCH_MODIFIED_SEQUENCE"].astype(str)).to_numpy()
+    if is_search.all():
+        return library
+    return Spectra(library[is_search].copy())
 
 
 def _map_best_ce(library: Spectra, best_ce_per_orig: pd.Series, is_hcd: np.ndarray, library_column: str):
@@ -774,7 +800,7 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
     add_neutral_loss_features = config.ptm_use_neutral_loss
     remove_miss_cleavage_features = ("R" in config.ptm_possible_sites) or ("K" in config.ptm_possible_sites)
     re.generate_features(
-        library=library,
+        library=_search_engine_localizations(library),
         search_type="original",
         output_file=fdr_dir / spectra_file.with_suffix(".original.tab").name,
         additional_columns=config.use_feature_cols,
