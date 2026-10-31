@@ -1,5 +1,7 @@
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -227,3 +229,76 @@ class TestAmbiguityCheck(unittest.TestCase):
         )
         for column in ("localization_flr", "localization_flr_decoy"):
             np.testing.assert_array_equal(off[column].to_numpy(), on[column].to_numpy())
+
+
+class TestCitrullinationDecoys(unittest.TestCase):
+    """Test citrullination is localized without decoys by default and with the generic workflow with decoy residues."""
+
+    @staticmethod
+    def _percolator(input_file, output_folder=None, **kwargs):
+        """Write every input PSM as accepted percolator target (stand-in for percolator)."""
+        output_folder = Path(output_folder or Path(input_file).parent)
+        tab = pd.read_csv(input_file, sep="\t")
+        psms = pd.DataFrame({"PSMId": tab["SpecId"], "peptide": tab["Peptide"], "filename": tab["filename"]})
+        psms.to_csv(output_folder / "rescore.percolator.psms.txt", sep="\t", index=False)
+        psms.iloc[:0].to_csv(output_folder / "rescore.percolator.decoy.psms.txt", sep="\t", index=False)
+
+    def _localize(self, decoy_residues):
+        from oktoberfest.rescore import localization
+
+        peptides = ["PEPR[UNIMOD:7]K", "PEPN[UNIMOD:7]RK", "PEPA[UNIMOD:7]RK", "PEPTIDEK"]
+        tab = pd.DataFrame(
+            {
+                "SpecId": [f"f-{i}-{p}-2-1" for i, p in enumerate(peptides)],
+                "Label": 1,
+                "ScanNr": range(len(peptides)),
+                "filename": "f",
+                "Peptide": peptides,
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            fdr_dir = Path(tmp)
+            tab.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+            with (
+                patch.object(localization, "rescore_with_percolator", side_effect=self._percolator),
+                patch.object(localization, "_localize_candidates") as localize_candidates,
+                patch.object(localization, "_best_localization", side_effect=lambda df, loc: df),
+                patch.object(localization, "_add_localization_probabilities"),
+            ):
+                localization.localize_ptms(fdr_dir, {7: ["N", "Q", "R"]}, decoy_residues)
+            return localize_candidates, sorted(path.name for path in fdr_dir.iterdir() if path.is_dir())
+
+    def test_without_decoys(self):
+        """Test the dedicated citrullination workflow is used if no decoy residues are given."""
+        localize_candidates, dirs = self._localize(None)
+        localize_candidates.assert_not_called()
+        self.assertNotIn("mod_fdr", dirs)
+
+    def test_with_decoys(self):
+        """Test the decoy candidates are passed as decoys to the generic workflow if decoy residues are given."""
+        localize_candidates, dirs = self._localize(["A"])
+        candidates, _, decoy_pattern = localize_candidates.call_args.args[:3]
+        self.assertEqual(decoy_pattern, r"[A]\[UNIMOD:(?:7)\]")
+        self.assertEqual(candidates["Peptide"].str.contains(decoy_pattern).sum(), 1)
+        self.assertIn("mod_fdr", dirs)
+
+
+class TestSearchEngineLocalizations(unittest.TestCase):
+    """Test the original rescoring only scores the localization of the search engine."""
+
+    def test_search_engine_localizations(self):
+        """Test the permutations and decoy candidates are removed, and libraries without permutations are kept."""
+        from oktoberfest.data.spectra import Spectra
+        from oktoberfest.runner import _search_engine_localizations
+
+        obs = pd.DataFrame(
+            {
+                "MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPST[UNIMOD:21]K", "PEPA[UNIMOD:21]STK", "PEPTIDEK"],
+                "SEARCH_MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPS[UNIMOD:21]TK", "PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+            },
+            index=[str(i) for i in range(4)],
+        )
+        original = _search_engine_localizations(Spectra(obs=obs))
+        self.assertEqual(original.obs["MODIFIED_SEQUENCE"].tolist(), ["PEPS[UNIMOD:21]TK", "PEPTIDEK"])
+        library = Spectra(obs=obs[["MODIFIED_SEQUENCE"]])
+        self.assertIs(_search_engine_localizations(library), library)

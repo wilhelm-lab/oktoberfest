@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 # not P, D, E, K, R, H, C and M, which change the fragmentation or are frequently modified
 ADJACENT_DECOY_RESIDUES = ["A", "G", "L", "V", "I", "F", "N", "Q", "W"]
 
-# decoy residues used to estimate the false localization rate if ptmLocalizationOptions.decoy_residues is not given
-DEFAULT_DECOY_RESIDUES = ["A", "G", "L", "V"]
-
 # options of ptmLocalizationOptions (first value is the default)
 LOCALIZATION_PROBABILITIES = ["pep", "score"]
 DECOY_WEIGHTINGS = ["count", "distance"]
@@ -551,27 +548,21 @@ class Config:
 
         Localizations of the PTMs on these residues, which cannot carry the PTMs (e.g. A for phosphorylation), are
         scored as additional (passive) candidates. Spectra in which a decoy candidate would win are used to estimate
-        the FLR. The residues are given in order of priority: every peptide uses the first one it contains. Default:
-        DEFAULT_DECOY_RESIDUES (A, G, L, V) without the residues the localized PTMs can be located on; an empty list
-        disables the decoys. Empty if ptm_localization is disabled.
+        the FLR. The residues are given in order of priority: every peptide uses the first one it contains. Decoys are
+        only used if ptmLocalizationOptions.decoy_residues is given (default: no decoys, the PTMs are localized without
+        estimating the FLR). Empty if ptm_localization is disabled.
         """
-        if not self.ptm_localization:
-            return []
         residues = self.ptm_decoy_priority_residues
-        if self.ptm_decoy_selection == "adjacent":
+        if residues and self.ptm_decoy_selection == "adjacent":
             residues += [aa for aa in ADJACENT_DECOY_RESIDUES if aa not in residues]
         return residues
 
     @property
     def ptm_decoy_priority_residues(self) -> list[str]:
-        """Get the decoy residues of ptmLocalizationOptions.decoy_residues (or the defaults), in order of priority."""
+        """Get the decoy residues of ptmLocalizationOptions.decoy_residues in order of priority, empty if not given."""
         if not self.ptm_localization:
             return []
-        residues = self.ptm_localization_options.get("decoy_residues")
-        if residues is None:
-            sites = {aa for site_list in self.ptm_sites.values() for aa in site_list}
-            return [aa for aa in DEFAULT_DECOY_RESIDUES if aa not in sites]
-        return list(residues)
+        return list(self.ptm_localization_options.get("decoy_residues") or [])
 
     @property
     def ptm_localization_probability(self) -> str:
@@ -810,6 +801,11 @@ class Config:
     def _check_ptm_decoys(self, ptm_sites: dict[int, list[str]], valid_residues: set[str]):
         """Check the decoy residues and the options of the false localization rate estimation."""
         decoys = self.ptm_decoy_residues
+        if not decoys and self.ptm_decoy_selection == "adjacent":
+            logger.warning(
+                'ptmLocalizationOptions.decoy_selection "adjacent" is ignored: no decoy_residues are given, so the PTMs '
+                "are localized without decoys."
+            )
         invalid_decoys = [r for r in decoys if r not in valid_residues]
         if invalid_decoys:
             raise ValueError(f"Invalid decoy residues {invalid_decoys} in ptmLocalizationOptions.")

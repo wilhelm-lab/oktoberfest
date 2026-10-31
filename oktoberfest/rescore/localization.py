@@ -425,6 +425,7 @@ def localization_probabilities(
     extra_features: Optional[list[str]] = None,
     extra_positive_features: Optional[list[str]] = None,
     keep_scores: bool = False,
+    num_threads: int = 10,
 ) -> pd.DataFrame:
     """
     Score all localization candidates of each spectrum and compute localization probabilities.
@@ -453,6 +454,7 @@ def localization_probabilities(
     :param extra_features: features used in addition to LOCALIZATION_FEATURES (e.g. SDI_FEATURES)
     :param extra_positive_features: extra features whose weights must not be negative
     :param keep_scores: also return the peptide and the percolator score of every candidate
+    :param num_threads: number of threads used by percolator
     :return: one row per (non decoy) candidate with PSMId, filename, ScanNr, loc_prob, loc_prob_delta (difference
         between the best and second best candidate of the spectrum), possible_sites (number of candidates of the
         spectrum), decoy_win (a decoy candidate scores higher than all candidates of the spectrum) and decoy_weight,
@@ -492,7 +494,7 @@ def localization_probabilities(
 
     train_dir.mkdir(parents=True, exist_ok=True)
     df_candidates[~is_decoy].to_csv(train_dir / "rescore.tab", sep="\t", index=False)
-    rescore_with_percolator(input_file=train_dir / "rescore.tab", output_folder=train_dir)
+    rescore_with_percolator(input_file=train_dir / "rescore.tab", output_folder=train_dir, num_threads=num_threads)
 
     score_dir.mkdir(parents=True, exist_ok=True)
     averaged_weights = score_dir / "averaged.weights.csv"
@@ -507,6 +509,7 @@ def localization_probabilities(
         input_file=score_dir / "rescore.tab",
         output_folder=score_dir,
         init_weights=constrained_weights,
+        num_threads=num_threads,
     )
 
     psms = pd.concat(
@@ -1016,6 +1019,7 @@ def _localize_candidates(
     data_dir: Optional[Path],
     use_sdi_features: bool,
     ambiguity_check: bool,
+    num_threads: int = 10,
 ) -> pd.DataFrame:
     """
     Score the localization candidates (localization_probabilities in localize_mod / localize_scores).
@@ -1038,6 +1042,7 @@ def _localize_candidates(
             probability,
             decoy_weighting,
             keep_scores=True,
+            num_threads=num_threads,
         )
         features = sdi_features(candidates, first_pass, data_dir, decoy_pattern)
         candidates = candidates.merge(features, on="SpecId", how="left")
@@ -1054,6 +1059,7 @@ def _localize_candidates(
         extra,
         extra_positive,
         keep_scores=ambiguity_check,
+        num_threads=num_threads,
     )
     if ambiguity_check:
         localization = ambiguity_flags(localization, data_dir)
@@ -1072,12 +1078,16 @@ def localize_ptms(
     use_sdi_features: bool = False,
     ambiguity_check: bool = False,
     data_dir: Optional[Path] = None,
+    num_threads: int = 10,
 ):
     """
     Rescore with percolator and localize PTMs.
 
     Citrullination (UNIMOD:7) and phosphorylation (UNIMOD:21) have dedicated workflows if they are the only PTM to
-    localize. Any other PTM or combination of PTMs is localized with the generic workflow.
+    localize. Any other PTM or combination of PTMs is localized with the generic workflow. Decoy candidates (PTMs on
+    decoy_residues) are only used if decoy_residues are given: they are passive candidates that estimate the false
+    localization rate. Citrullination with decoy residues is localized with the generic workflow, since the dedicated
+    one would score the decoy candidates like the other candidates.
 
     :param fdr_dir: the output directory containing rescore.tab with all localization candidates
     :param ptm_sites: the localized PTMs {unimod id: [residues]}
@@ -1095,6 +1105,7 @@ def localize_ptms(
         when estimating the FLR (see ambiguity_flags)
     :param data_dir: directory with the stored libraries <raw file>.mzml.pred.hdf5, needed by use_sdi_features and
         ambiguity_check
+    :param num_threads: number of threads used by percolator
     """
     df_rescore = pd.read_csv(fdr_dir / "rescore.tab", sep="\t", dtype={"filename": str})
     unimod_id = next(iter(ptm_sites)) if len(ptm_sites) == 1 else 0
@@ -1107,18 +1118,21 @@ def localize_ptms(
     new_rescore_dir = fdr_dir / "localize_mod"
     new_rescore_dir.mkdir(parents=True, exist_ok=True)
 
-    if unimod_id == 7:
+    if unimod_id == 7 and not use_decoys:
         df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
         df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
         df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
         df_rescore.drop(columns=["id"], inplace=True)
-        df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
-        rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir)
+        # best candidate per spectrum, in its own directory to keep rescore.tab with all candidates
+        cit_dir = fdr_dir / "localize_cit_spectra"
+        cit_dir.mkdir(parents=True, exist_ok=True)
+        df_rescore.to_csv(cit_dir / "rescore.tab", sep="\t", index=False)
+        rescore_with_percolator(input_file=cit_dir / "rescore.tab", output_folder=cit_dir, num_threads=num_threads)
         df_rescore_psms_targets = pd.read_csv(
-            fdr_dir / "rescore.percolator.psms.txt", sep="\t", dtype={"filename": str}
+            cit_dir / "rescore.percolator.psms.txt", sep="\t", dtype={"filename": str}
         )
         df_rescore_psms_decoys = pd.read_csv(
-            fdr_dir / "rescore.percolator.decoy.psms.txt", sep="\t", dtype={"filename": str}
+            cit_dir / "rescore.percolator.decoy.psms.txt", sep="\t", dtype={"filename": str}
         )
         df_rescore_psms_targets = df_rescore_psms_targets[
             df_rescore_psms_targets["peptide"].apply(lambda x: "UNIMOD:" + str(unimod_id) in x)
@@ -1138,7 +1152,9 @@ def localize_ptms(
         df_rescore.drop(columns=remove_cols, inplace=True)
 
         df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+        rescore_with_percolator(
+            input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir, num_threads=num_threads
+        )
     elif unimod_id == 21:
         df_rescore = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:21")]
 
@@ -1153,6 +1169,7 @@ def localize_ptms(
             data_dir,
             use_sdi_features,
             ambiguity_check,
+            num_threads,
         )
         df_rescore = _best_localization(df_rescore, localization)
 
@@ -1162,7 +1179,9 @@ def localize_ptms(
                 new_rescore_dir.mkdir(parents=True, exist_ok=True)
                 df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains(site + r"\[")]
                 df_rescore_fil.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-                rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+                rescore_with_percolator(
+                    input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir, num_threads=num_threads
+                )
                 _add_localization_probabilities(
                     new_rescore_dir,
                     localization,
@@ -1179,7 +1198,9 @@ def localize_ptms(
             new_rescore_dir.mkdir(parents=True, exist_ok=True)
 
             df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-            rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+            rescore_with_percolator(
+                input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir, num_threads=num_threads
+            )
             _add_localization_probabilities(
                 new_rescore_dir,
                 localization,
@@ -1205,6 +1226,7 @@ def localize_ptms(
             data_dir,
             use_sdi_features,
             ambiguity_check,
+            num_threads,
         )
         df_rescore_psms = _best_localization(df_rescore, localization)[["SpecId"]]
         # keep the localized PSMs of the PTMs and all PSMs without them
@@ -1216,7 +1238,9 @@ def localize_ptms(
         new_rescore_dir.mkdir(parents=True, exist_ok=True)
 
         df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
-        rescore_with_percolator(input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir)
+        rescore_with_percolator(
+            input_file=new_rescore_dir / "rescore.tab", output_folder=new_rescore_dir, num_threads=num_threads
+        )
         _add_localization_probabilities(
             new_rescore_dir,
             localization,

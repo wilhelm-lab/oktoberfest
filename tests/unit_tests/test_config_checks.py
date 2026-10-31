@@ -227,17 +227,27 @@ class TestPTMLocalization(unittest.TestCase):
                     _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
 
     def test_ptm_decoy4_defaults(self):
-        """Test the decoy4 defaults: A/G/L/V decoys (without PTM sites), PEP probabilities, count weights, one group."""
+        """Test the defaults: no decoys unless decoy_residues are given, PEP probabilities, count weights, one group."""
         config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"21": ["S", "T", "Y"]}})
-        self.assertEqual(config.ptm_decoy_residues, ["A", "G", "L", "V"])
+        self.assertEqual(config.ptm_decoy_residues, [])
+        self.assertEqual(config.ptm_permutation_sites, {21: ["S", "T", "Y"]})
         self.assertEqual(config.ptm_localization_probability, "pep")
         self.assertEqual(config.ptm_decoy_weighting, "count")
         self.assertEqual(config.ptm_flr_groups, "none")
         self.assertEqual(config.ptm_flr_estimator, "hybrid")
         config._check_ptm_localization()
-        # residues the PTM can be located on are no decoys
-        config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"1": ["A", "K"]}})
-        self.assertEqual(config.ptm_decoy_residues, ["G", "L", "V"])
+        # no decoys for citrullination either, also with decoy_selection "adjacent"
+        options = {"ptms": {"7": ["N", "Q", "R"]}, "decoy_selection": "adjacent"}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_residues, [])
+        self.assertEqual(config.ptm_permutation_sites, {7: ["N", "Q", "R"]})
+        with self.assertLogs("oktoberfest.utils.config", level="WARNING"):
+            config._check_ptm_localization()
+        # decoys only on the residues given, in their order of priority
+        options = {"ptms": {"7": ["N", "Q", "R"]}, "decoy_residues": ["G", "A"]}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_residues, ["G", "A"])
+        self.assertEqual(config.ptm_permutation_sites, {7: ["N", "Q", "R", "G", "A"]})
         # an empty list disables the decoys
         options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": []}
         self.assertEqual(_config(ptm_localization=True, ptmLocalizationOptions=options).ptm_decoy_residues, [])
