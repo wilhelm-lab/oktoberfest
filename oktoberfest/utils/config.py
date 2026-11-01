@@ -25,7 +25,7 @@ FLR_ESTIMATORS = ["hybrid", "decoy"]
 # options of quantificationOptions (first value is the default)
 QUANT_PRECURSOR_METHODS = ["search_engine", "flashlfq"]
 QUANT_PROTEIN_METHODS = ["directlfq", "none"]
-QUANT_NORMALIZATIONS = ["drift", "mode", "median", "none"]
+QUANT_NORMALIZATIONS = ["stable_drift", "drift", "mode", "median", "none"]
 
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
@@ -114,8 +114,12 @@ class Config:
         return self.data.get("quantification", False)
 
     @property
-    def mass_tolerance(self) -> Optional[float]:
-        """Get mass tolerance value from the config file with which to caluculate the min and max mass values."""
+    def mass_tolerance(self) -> Optional[Union[float, str]]:
+        """
+        Get mass tolerance value from the config file with which to caluculate the min and max mass values.
+
+        "auto" calibrates the fragment m/z and sets the tolerance per spectra file from the data (ppm).
+        """
         return self.data.get("massTolerance", None)
 
     @property
@@ -439,10 +443,12 @@ class Config:
     @property
     def quant_normalization(self) -> str:
         """
-        Get the normalization of the precursor intensities between runs (flashlfq only); default is "drift".
+        Get the normalization of the precursor intensities between runs (flashlfq only); default is "stable_drift".
 
         "drift" corrects every run by a curve along the retention time, the most frequent log2 deviation from the
-        precursors' median over the runs; "mode" shifts every run by the most frequent log2 ratio to the first run,
+        precursors' median over the runs; "stable_drift" estimates these curves from the precursors with the lowest
+        spread over the runs only (half of every retention time bin), so that precursors that change between the
+        samples do not pull them; "mode" shifts every run by the most frequent log2 ratio to the first run,
         "median" by the median log2 ratio (pulled by precursors that change between samples), "none" keeps the FlashLFQ
         intensities.
         """
@@ -469,13 +475,23 @@ class Config:
         return self.quantification_options.get("ppmTolerance", 10)
 
     @property
-    def quant_ppm_filter(self) -> float | None:
+    def quant_ppm_filter(self) -> float | str | None:
         """
-        Get the maximum distance of a peak's apex mass error to its run's median in ppm (flashlfq only); default is 5.
+        Get the maximum distance of a peak's apex mass error to its run's median in ppm (flashlfq only); default "auto".
 
-        Peaks further away are not used; None keeps all peaks.
+        Peaks further away are not used. "auto" takes the 90th percentile of each raw file's absolute mass errors
+        around its median; None keeps all peaks.
         """
-        return self.quantification_options.get("ppmFilter", 5)
+        return self.quantification_options.get("ppmFilter", "auto")
+
+    @property
+    def quant_mbr_fdr(self) -> Optional[float]:
+        """
+        Get the PIP q-value cutoff of FlashLFQ's match-between-runs peaks (flashlfq only); default None (not used).
+
+        FlashLFQ's decoy matches at a random retention time are never used.
+        """
+        return self.quantification_options.get("mbrFdr", None)
 
     @property
     def flashlfq_exe(self) -> Path:
@@ -888,6 +904,19 @@ class Config:
         self._check_ptm_localization()
         self._check_percolator_subset()
         self._check_chimeric_peak_subtraction()
+        self._check_mass_tolerance()
+
+    def _check_mass_tolerance(self):
+        """Check that massTolerance is a positive number or "auto" (only for ppm and linear peptides)."""
+        tolerance = self.mass_tolerance
+        if tolerance == "auto":
+            if self.unit_mass_tolerance not in (None, "ppm"):
+                raise ValueError(f'massTolerance "auto" is in ppm, got unitMassTolerance {self.unit_mass_tolerance!r}.')
+            if "xl" in self.models.get("intensity", "").lower():
+                raise ValueError('massTolerance "auto" is not supported for crosslinked peptides.')
+        elif tolerance is not None and (isinstance(tolerance, bool) or not isinstance(tolerance, (int, float))
+                                        or tolerance <= 0):  # fmt: skip
+            raise ValueError(f'massTolerance must be a positive number or "auto", got {tolerance!r}.')
 
     def _check_chimeric_peak_subtraction(self):
         """Check that chimericPeakSubtraction is a boolean."""
@@ -1099,8 +1128,13 @@ class Config:
         if not _is_number(ppm) or ppm <= 0:
             raise ValueError(f"quantificationOptions.ppmTolerance must be a positive number, got {ppm!r}.")
         ppm_filter = self.quant_ppm_filter
-        if ppm_filter is not None and (not _is_number(ppm_filter) or ppm_filter <= 0):
-            raise ValueError(f"quantificationOptions.ppmFilter must be a positive number or null, got {ppm_filter!r}.")
+        if ppm_filter not in (None, "auto") and (not _is_number(ppm_filter) or ppm_filter <= 0):
+            raise ValueError(
+                f'quantificationOptions.ppmFilter must be a positive number, "auto" or null, got {ppm_filter!r}.'
+            )
+        mbr_fdr = self.quant_mbr_fdr
+        if mbr_fdr is not None and (not _is_number(mbr_fdr) or not 0 < mbr_fdr <= 1):
+            raise ValueError(f"quantificationOptions.mbrFdr must be a q-value in (0, 1] or null, got {mbr_fdr!r}.")
         if self.quant_precursor == "flashlfq":
             self._check_flashlfq()
 

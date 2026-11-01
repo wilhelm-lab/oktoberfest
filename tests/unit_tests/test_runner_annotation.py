@@ -217,3 +217,30 @@ class TestAnnotateAndGetLibrary(unittest.TestCase):
                 self.assertEqual(library.obs["start_pos_p1"].tolist(), ["1", "1"])
                 self.assertEqual(library.obs["start_pos_p2"].tolist(), ["2", "2"])
         mock_annotate.assert_not_called()
+
+    @patch("oktoberfest.runner.pp.calibrate_fragment_masses")
+    def test_auto_mass_tolerance(
+        self,
+        mock_calibrate,
+        mock_raw,
+        mock_d,
+        mock_load_spectra,
+        mock_load_search,
+        mock_merge,
+        mock_annotate,
+        mock_annotate_xl,
+    ):
+        """Test massTolerance "auto" annotates the calibrated spectra with the tolerance found in the data."""
+        self._set_up_mocks(mock_load_spectra, mock_annotate)
+        self.config.data["massTolerance"] = "auto"
+        calibrated = pd.DataFrame({"SCAN_NUMBER": [1, 2], "FRAGMENTATION": ["HCD", "HCD"]})
+        for tolerance, unit in [(6.5, "ppm"), (None, None)]:
+            with self.subTest(tolerance=tolerance):
+                self.hdf5_path.unlink(missing_ok=True)
+                mock_calibrate.return_value = (calibrated, tolerance)
+
+                _annotate_and_get_library(Path("run_a.mzML"), self.config)
+
+                self.assertIs(mock_annotate.call_args.kwargs["psms"], calibrated)
+                self.assertEqual(mock_annotate.call_args.kwargs["mass_tol"], tolerance)
+                self.assertEqual(mock_annotate.call_args.kwargs["unit_mass_tol"], unit)

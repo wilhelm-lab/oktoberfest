@@ -13,6 +13,37 @@ from oktoberfest.data.spectra import FragmentType, Spectra
 class TestProcessing(unittest.TestCase):
     """Test class for preprocessing functions."""
 
+    def test_calibrate_fragment_masses(self):
+        """Test the fragment mass offset is removed and the tolerance follows the spread of the mass errors."""
+        from spectrum_fundamentals.fragments import fragment_arrays
+
+        rng = np.random.default_rng(0)
+        sequences = ["PEPTIDEK", "LGEYGFQNALIVR", "VEEAQAIASK"] * 20
+        mzs = []
+        for sequence in sequences:
+            fragments = fragment_arrays(sequence, "FTMS", 2, featured_ions=["y", "b"])[0]
+            theoretical = fragments["mass"][(fragments["charge"] == 1) & ~fragments["neutral_loss"]]
+            ppm = 4 + rng.normal(0, 1, len(theoretical))  # offset 4 ppm, SD 1 ppm
+            mzs.append(np.sort(theoretical * (1 + ppm * 1e-6)))
+        psms = pd.DataFrame(
+            {
+                "MZ": mzs,
+                "MODIFIED_SEQUENCE": sequences,
+                "PRECURSOR_CHARGE": 2,
+                "MASS_ANALYZER": "FTMS",
+                "REVERSE": False,
+            }
+        )
+
+        calibrated, tolerance = pp.calibrate_fragment_masses(psms, featured_ions=["y", "b"])
+
+        self.assertAlmostEqual(tolerance, 1.645, delta=0.3)  # 90th percentile of |N(0, 1)|
+        np.testing.assert_allclose(calibrated["MZ"][0], mzs[0] * (1 - 4e-6), rtol=1e-6)
+        self.assertIs(psms["MZ"][0], mzs[0])  # the input is not changed
+
+        itms = psms.assign(MASS_ANALYZER="ITMS")
+        self.assertEqual(pp.calibrate_fragment_masses(itms, featured_ions=["y", "b"]), (itms, None))
+
     def test_convert_search_custom_input(self):
         """Test that search results in internal format are loaded as they are when using custom_input."""
         search_results = pd.DataFrame(

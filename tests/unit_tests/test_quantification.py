@@ -159,10 +159,59 @@ class TestPeakTable(unittest.TestCase):
         self.assertEqual(rows.loc[rows["Intensity"] == 70.0, "Mass error to run median (ppm)"].item(), 10.0)
         self.assertEqual(rows.loc[rows["Intensity"] == 50.0, "Proteins"].item(), "P2_YEAST;P3_YEAST")
 
+    def test_match_between_runs(self):
+        """Test mbr_fdr keeps match-between-runs peaks below the PIP q-value cutoff, except random retention times."""
+        peaks = _peaks()
+        peaks["PIP Q-Value"], peaks["Random RT"] = np.nan, False
+        mbr = peaks[
+            peaks["Peak Detection Type"] == "MBR"
+        ]  # AM[UNIMOD:35]K in run_b, whose MSMS peak fails the mass error
+        peaks = pd.concat(
+            [peaks, mbr.assign(**{"PIP Q-Value": 0.2}), mbr.assign(**{"PIP Q-Value": 0.01, "Random RT": True})],
+            ignore_index=True,
+        )
+        peaks.loc[mbr.index, "PIP Q-Value"] = 0.01
+        self.assertFalse((quant.peak_table(peaks, _ids(), ppm_filter=5)["Detection"] == "MBR").any())
+        rows = quant.peak_table(peaks, _ids(), ppm_filter=5, mbr_fdr=0.05)
+        kept = rows[rows["Detection"] == "MBR"]
+        self.assertEqual(kept[["Intensity", "Used"]].values.tolist(), [[80.0, True]])
+
+    def test_identified_peak_preferred(self):
+        """Test a peak of an MS2 identification is used instead of a more intense match-between-runs peak."""
+        peaks = _peaks()
+        peaks["PIP Q-Value"], peaks["Random RT"] = 0.01, False
+        extra = peaks.iloc[[0]].assign(**{"Peak Detection Type": "MBR", "Peak intensity": 1000.0})
+        rows = quant.peak_table(pd.concat([peaks, extra], ignore_index=True), _ids(), ppm_filter=5, mbr_fdr=0.05)
+        used = rows[(rows["Modified sequence"] == "PEPTIDEK") & (rows["Raw file"] == "run_a") & rows["Used"]]
+        self.assertEqual((used["Detection"].item(), used["Intensity"].item()), ("MSMS", 100.0))
+
     def test_no_ppm_filter(self):
         """Test None keeps peaks with any mass error."""
         rows = quant.peak_table(_peaks(), _ids(), ppm_filter=None)
         self.assertTrue(rows.loc[rows["Intensity"] == 70.0, "Used"].item())
+
+    def test_auto_ppm_filter(self):
+        """Test "auto" allows the 90th percentile of the raw file's absolute mass errors around its median."""
+        sequences = [f"PEP{i}K/2" for i in range(5)]
+        peaks = pd.DataFrame(
+            {
+                "File Name": "run_a",
+                "Full Sequence": sequences,
+                "Peak intensity": 100.0,
+                "Peak Detection Type": "MSMS",
+                "Peak RT Start": 10.0,
+                "Peak RT Apex": 10.2,
+                "Peak RT End": 10.4,
+                "MS2 Retention Time": 10.1,
+                "Peak Apex Mass Error (ppm)": [0.0, 1.0, -1.0, 2.0, 9.0],
+            }
+        )
+        ids = pd.DataFrame({"Full Sequence": sequences, "Protein Accession": "P1_HUMAN"})
+        rows = quant.peak_table(peaks, ids, ppm_filter="auto")
+        # median 1, absolute deviations 0, 1, 1, 2, 8: 90th percentile 2 + 0.6 * (8 - 2)
+        np.testing.assert_allclose(rows["Mass error window (ppm)"], 5.6)
+        self.assertEqual(rows["Used"].tolist(), [True, True, True, True, False])
+        self.assertEqual(rows.loc[~rows["Used"], "Reason"].item(), "mass error")
 
 
 class TestNormalization(unittest.TestCase):
@@ -254,6 +303,27 @@ class TestDriftNormalization(unittest.TestCase):
         unchanged = (np.arange(len(rows)) % 400 % 10 >= 3) & ((rows["Peak RT apex"] < 30) | (rows["Peak RT apex"] > 70))
         log = np.log2(corrected[unchanged]).to_numpy().reshape(3, -1)
         self.assertTrue(np.allclose(log[2], log[0]))
+
+    def test_stable_precursors(self):
+        """Test the precursors that change between the runs are not selected as stable, in every part of the run."""
+        rows = self._rows()
+        log = np.log2(rows.pivot_table(index="Modified sequence", columns="Raw file", values="Intensity"))
+        rt = rows.pivot_table(index="Modified sequence", columns="Raw file", values="Peak RT apex").reindex(log.index)
+        curves = quant._drift_curves(log, rt, ["run_a", "run_b", "run_c"], 0.5, 50, "drift")
+        stable = quant.stable_precursors(log, rt, curves, 0.5, min_per_bin=50)
+        changed = log.index.str[3:-1].astype(int) % 10 < 3
+        self.assertEqual(stable.sum(), 200)
+        self.assertFalse((stable & changed).any())
+        self.assertTrue(stable[rt["run_a"] < 50].any() and stable[rt["run_a"] > 50].any())
+
+    def test_stable_drift_curves(self):
+        """Test the curves from the stable precursors follow the drift and are named stable_drift."""
+        curves = quant.drift_curves(self._rows(), ["run_a", "run_b", "run_c"], min_per_bin=50, stable_fraction=0.5)
+        self.assertEqual(set(curves["Normalization"]), {"stable_drift"})
+        self.assertTrue(np.allclose(curves.loc[curves["Raw file"] != "run_c", "Log2 offset"], 0.0))
+        run_c = curves[curves["Raw file"] == "run_c"]
+        self.assertTrue(np.allclose(run_c.loc[run_c["Retention time"] < 30, "Log2 offset"], 0.0))
+        self.assertTrue(np.allclose(run_c.loc[run_c["Retention time"] > 70, "Log2 offset"], 1.0))
 
     def test_correction_without_curve_or_apex(self):
         """Test peaks without an apex or without a curve for their run are not corrected."""

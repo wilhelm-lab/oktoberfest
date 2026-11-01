@@ -163,9 +163,10 @@ class TestQuantificationOptions(unittest.TestCase):
         config = _config(quantification=True)
         self.assertEqual(config.quant_precursor, "search_engine")
         self.assertEqual(config.quant_protein, "directlfq")
-        self.assertEqual(config.quant_normalization, "drift")
+        self.assertEqual(config.quant_normalization, "stable_drift")
         self.assertEqual((config.quant_psm_fdr, config.quant_peptide_fdr, config.quant_protein_fdr), (0.01, 0.01, 0.01))
-        self.assertEqual((config.quant_ppm_tolerance, config.quant_ppm_filter), (10, 5))
+        self.assertEqual((config.quant_ppm_tolerance, config.quant_ppm_filter), (10, "auto"))
+        self.assertIsNone(config.quant_mbr_fdr)
         self.assertFalse(config.ms1_quantification)
         config._check_quantification_options()
 
@@ -192,6 +193,9 @@ class TestQuantificationOptions(unittest.TestCase):
             ("peptideFdr", 2),
             ("ppmFilter", 0),
             ("ppmFilter", "5"),
+            ("ppmFilter", "Auto"),
+            ("mbrFdr", 0),
+            ("mbrFdr", "0.05"),
         ]:
             with self.subTest(option=option, value=value):
                 with self.assertRaisesRegex(ValueError, option):
@@ -202,6 +206,14 @@ class TestQuantificationOptions(unittest.TestCase):
         config = _config(quantificationOptions={"ppmFilter": None})
         self.assertIsNone(config.quant_ppm_filter)
         config._check_quantification_options()
+
+    def test_ppm_filter_auto_and_number(self):
+        """Test the mass error filter accepts "auto" and a fixed number of ppm."""
+        for value in ["auto", 7]:
+            with self.subTest(value=value):
+                config = _config(quantificationOptions={"ppmFilter": value})
+                self.assertEqual(config.quant_ppm_filter, value)
+                config._check_quantification_options()
 
     def test_flashlfq_requirements(self):
         """Test FlashLFQ needs Percolator, MS1 spectra, no PTM localization and the FlashLFQ executable."""
@@ -216,6 +228,26 @@ class TestQuantificationOptions(unittest.TestCase):
         self.flashlfq.unlink()
         with self.assertRaisesRegex(FileNotFoundError, "FlashLFQ"):
             self._flashlfq_config()._check_quantification_options()
+
+
+class TestMassTolerance(unittest.TestCase):
+    """Test the validation of massTolerance."""
+
+    def test_valid(self):
+        """Test a positive number, "auto" (ppm) and no value are accepted."""
+        for data in [{}, {"massTolerance": 20, "unitMassTolerance": "ppm"}, {"massTolerance": 0.35},
+                     {"massTolerance": "auto"}, {"massTolerance": "auto", "unitMassTolerance": "ppm"}]:  # fmt: skip
+            with self.subTest(data=data):
+                _config(models={"intensity": "Prosit_2020_intensity_HCD"}, **data)._check_mass_tolerance()
+
+    def test_invalid(self):
+        """Test negative, non-numeric and Da or crosslinking "auto" tolerances are rejected."""
+        for data in [{"massTolerance": -1}, {"massTolerance": "Auto"}, {"massTolerance": True},
+                     {"massTolerance": "auto", "unitMassTolerance": "da"}]:  # fmt: skip
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                _config(models={"intensity": "Prosit_2020_intensity_HCD"}, **data)._check_mass_tolerance()
+        with self.assertRaisesRegex(ValueError, "crosslinked"):
+            _config(models={"intensity": "Prosit_2024_intensity_XL_NMS2"}, massTolerance="auto")._check_mass_tolerance()
 
 
 @patch.object(Config, "_check_fasta")

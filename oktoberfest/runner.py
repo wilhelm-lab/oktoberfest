@@ -213,10 +213,16 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 aspec.obs["start_pos_p2"] = aspec.obs["start_pos_p2"].astype(str)
         else:
             annotate_neutral_loss = config.ptm_use_neutral_loss
+            mass_tol, unit_mass_tol = config.mass_tolerance, config.unit_mass_tolerance
+            if mass_tol == "auto":
+                library, mass_tol = pp.calibrate_fragment_masses(
+                    library, featured_ions=config.ion_types, custom_mods=config.unimod_to_mass()
+                )
+                unit_mass_tol = None if mass_tol is None else "ppm"
             aspec = pp.annotate_spectral_library(
                 psms=library,
-                mass_tol=config.mass_tolerance,
-                unit_mass_tol=config.unit_mass_tolerance,
+                mass_tol=mass_tol,
+                unit_mass_tol=unit_mass_tol,
                 fragmentation_method=_get_annotation_fragmentation(library, config),
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),

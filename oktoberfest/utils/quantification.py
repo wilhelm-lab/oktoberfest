@@ -1,6 +1,7 @@
 import logging
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 import anndata
 import numpy as np
@@ -14,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 DECOY_PREFIX = "rev_"
 SPEC_ID_COLUMNS = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+# ppmFilter "auto": percentile of the raw file's absolute mass errors (around its median) used as window
+AUTO_PPM_FILTER_PERCENTILE = 90
+# normalization "stable_drift": share of the precursors per retention time bin with the lowest spread over the runs
+# that the drift is estimated from
+STABLE_DRIFT_FRACTION = 0.5
 
 
 def apply_quant(config: Config) -> None:
@@ -141,12 +147,13 @@ def quantify_ms1(config: Config) -> None:
     Writes to <output>/quantification:
 
     - precursors.tsv: one row per precursor (modified sequence + charge) with one normalized intensity column per raw
-      file, in the ProteoBench "Custom" format (no match-between-runs)
+      file, in the ProteoBench "Custom" format (match-between-runs peaks only with quantificationOptions.mbrFdr)
     - peptidoforms.tsv: the precursors summed over their charge states, one row per modified sequence at the Percolator
       peptide q-value cutoff (quantificationOptions.peptideFdr); the precursors are only filtered by the PSM q-value
     - precursor_peaks.tsv: every FlashLFQ peak of an identified precursor, with its raw and normalized intensity,
       retention times, mass error, and whether it is used (or the reason why not)
-    - normalization.tsv: the log2 correction curve of every raw file along the retention time ("drift"), or the log2
+    - normalization.tsv: the log2 correction curve of every raw file along the retention time ("drift",
+      "stable_drift"), or the log2
       offset of every raw file to the first one ("mode", "median", "none")
     - protein_groups.tsv: directLFQ protein group intensities with the picked-group-FDR q-value
       (quantificationOptions.protein "directlfq")
@@ -169,15 +176,18 @@ def quantify_ms1(config: Config) -> None:
 
     peaks = pd.read_csv(flashlfq_dir / "QuantifiedPeaks.tsv", sep="\t", dtype={"File Name": str}, low_memory=False)
     runs = sorted(ids["File Name"].unique())
-    peak_rows = peak_table(peaks, ids, config.quant_ppm_filter)
-    if config.quant_normalization == "drift":
-        curves = drift_curves(peak_rows, runs)
+    peak_rows = peak_table(peaks, ids, config.quant_ppm_filter, config.quant_mbr_fdr)
+    # the normalization is estimated from the MS2 identifications only and applied to all peaks
+    identified = peak_rows[peak_rows["Detection"] == "MSMS"]
+    if config.quant_normalization in ("drift", "stable_drift"):
+        stable_fraction = STABLE_DRIFT_FRACTION if config.quant_normalization == "stable_drift" else None
+        curves = drift_curves(identified, runs, stable_fraction=stable_fraction)
         peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, drift_correction(peak_rows, curves))
         normalization = curves
     else:
-        offsets = normalization_offsets(peak_rows, runs, config.quant_normalization)
+        offsets = normalization_offsets(identified, runs, config.quant_normalization)
         peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, peak_rows["Raw file"].map(offsets))
-        normalization = normalization_table(peak_rows, runs, offsets, config.quant_normalization)
+        normalization = normalization_table(identified, runs, offsets, config.quant_normalization)
     peak_rows.to_csv(quant_dir / "precursor_peaks.tsv", sep="\t", index=False)
     normalization.to_csv(quant_dir / "normalization.tsv", sep="\t", index=False)
 
@@ -298,7 +308,8 @@ def run_flashlfq(config: Config, flashlfq_dir: Path):
     Run FlashLFQ on <flashlfq_dir>/ids.tsv with the mzML files in <flashlfq_dir>/spectra.
 
     The FlashLFQ command line takes booleans as switches: --chg (quantify only the identified charge state) is on,
-    normalization stays off, and match-between-runs (on by default, cannot be switched off) peaks are dropped later.
+    normalization stays off, and match-between-runs (on by default, cannot be switched off) peaks are filtered later
+    (see :func:`peak_table`).
 
     :param config: config object containing all Oktoberfest parameters
     :param flashlfq_dir: folder with ids.tsv and spectra/, and for the output
@@ -324,25 +335,39 @@ def run_flashlfq(config: Config, flashlfq_dir: Path):
         raise RuntimeError(f"FlashLFQ failed (exit code {result.returncode}), see {log_file}.")
 
 
-def peak_table(peaks: pd.DataFrame, ids: pd.DataFrame, ppm_filter: float | None = 5) -> pd.DataFrame:
+def peak_table(
+    peaks: pd.DataFrame, ids: pd.DataFrame, ppm_filter: float | str | None = "auto", mbr_fdr: Optional[float] = None
+) -> pd.DataFrame:
     """
     List every FlashLFQ peak of an identified precursor and decide which ones are used.
 
-    Match-between-runs peaks are dropped. A peak is used unless (in this order) it was not detected, it is shared by
-    several precursors, its apex mass error is more than ppm_filter from the median of its raw file, or the precursor
-    has a more intense peak in the same raw file (identifications far apart in retention time).
+    Match-between-runs peaks are dropped, unless mbr_fdr is given: then those with a FlashLFQ PIP q-value <= mbr_fdr
+    are kept, except FlashLFQ's decoy matches at a random retention time. A peak is used unless (in this order) it was
+    not detected, it is shared by several precursors, its apex mass error is outside the window around the median of
+    its raw file, or the precursor has a better peak in the same raw file (identifications far apart in retention
+    time; a peak of an MS2 identification is preferred to a match-between-runs one, then the more intense one).
+    The median mass error and the "auto" window of a raw file come from the peaks of its MS2 identifications.
 
     :param peaks: FlashLFQ QuantifiedPeaks.tsv
     :param ids: FlashLFQ input from :func:`flashlfq_input`
-    :param ppm_filter: maximum distance of the apex mass error to the raw file's median in ppm, None for no filter
-    :return: one row per peak and precursor with "Used" and the "Reason" if not
+    :param ppm_filter: maximum distance of the apex mass error to the raw file's median in ppm; "auto" for
+        the AUTO_PPM_FILTER_PERCENTILE percentile of the raw file's absolute mass errors around its median; None for no
+        filter
+    :param mbr_fdr: PIP q-value cutoff of the match-between-runs peaks, None to drop them
+    :return: one row per peak and precursor with its "Detection" (MSMS or MBR), "Used" and the "Reason" if not
     """
-    peaks = peaks[peaks["Peak Detection Type"] == "MSMS"]
+    keep = peaks["Peak Detection Type"] == "MSMS"
+    if mbr_fdr is not None:
+        random_rt = peaks["Random RT"].astype(str).str.lower() == "true"
+        q_value = pd.to_numeric(peaks["PIP Q-Value"], errors="coerce")
+        keep |= (peaks["Peak Detection Type"] == "MBR") & ~random_rt & (q_value <= mbr_fdr)
+    peaks = peaks[keep]
     rows = pd.DataFrame(
         {
             "Raw file": peaks["File Name"].astype(str),
             "Full Sequence": peaks["Full Sequence"].str.split("|", regex=False),
             "Intensity": pd.to_numeric(peaks["Peak intensity"], errors="coerce").fillna(0.0),
+            "Detection": peaks["Peak Detection Type"],
             **{
                 column: pd.to_numeric(peaks[source], errors="coerce")
                 for column, source in [
@@ -357,8 +382,11 @@ def peak_table(peaks: pd.DataFrame, ids: pd.DataFrame, ppm_filter: float | None 
     )
     rows["Shared"] = rows["Full Sequence"].str.len() > 1
     # median over the detected peaks before a shared peak is listed once per precursor
-    run_median = rows[rows["Intensity"] > 0].groupby("Raw file")["Mass error (ppm)"].median()
+    run_median = (
+        rows[(rows["Intensity"] > 0) & (rows["Detection"] == "MSMS")].groupby("Raw file")["Mass error (ppm)"].median()
+    )
     rows["Mass error to run median (ppm)"] = rows["Mass error (ppm)"] - rows["Raw file"].map(run_median)
+    rows["Mass error window (ppm)"] = rows["Raw file"].map(_mass_error_window(rows, ppm_filter))
     rows = rows.explode("Full Sequence", ignore_index=True)
     detected = rows["Intensity"] > 0
 
@@ -366,10 +394,12 @@ def peak_table(peaks: pd.DataFrame, ids: pd.DataFrame, ppm_filter: float | None 
     reason[~detected] = "not detected"
     reason[(reason == "") & rows["Shared"]] = "shared peak"
     if ppm_filter is not None:
-        reason[(reason == "") & ~(rows["Mass error to run median (ppm)"].abs() <= ppm_filter)] = "mass error"
-    candidates = rows[reason == ""]
-    strongest = candidates.groupby(["Full Sequence", "Raw file"])["Intensity"].idxmax()
-    reason[(reason == "") & ~rows.index.isin(strongest)] = "weaker peak"
+        outside = ~(rows["Mass error to run median (ppm)"].abs() <= rows["Mass error window (ppm)"])
+        reason[(reason == "") & outside] = "mass error"
+    # "MBR" sorts before "MSMS", so the last peak is the most intense one of an MS2 identification if there is one
+    candidates = rows[reason == ""].sort_values(["Detection", "Intensity"])
+    best = candidates.groupby(["Full Sequence", "Raw file"]).tail(1).index
+    reason[(reason == "") & ~rows.index.isin(best)] = "weaker peak"
     rows["Used"], rows["Reason"] = reason == "", reason
 
     precursor = rows["Full Sequence"].str.rsplit("/", n=1, expand=True)
@@ -380,6 +410,22 @@ def peak_table(peaks: pd.DataFrame, ids: pd.DataFrame, ppm_filter: float | None 
     return rows.drop(columns=["Full Sequence", "Shared"]).sort_values(
         ["Modified sequence", "Charge", "Raw file"], ignore_index=True
     )
+
+
+def _mass_error_window(rows: pd.DataFrame, ppm_filter: float | str | None) -> pd.Series:
+    """Get the allowed distance of the apex mass error to the run median per raw file (NaN without a filter)."""
+    runs = rows["Raw file"].unique()
+    if ppm_filter is None:
+        return pd.Series(np.nan, index=runs)
+    if ppm_filter != "auto":
+        return pd.Series(float(ppm_filter), index=runs)
+    deviation = rows.loc[
+        (rows["Intensity"] > 0) & (rows["Detection"] == "MSMS"), "Mass error to run median (ppm)"
+    ].abs()
+    window = deviation.groupby(rows["Raw file"]).quantile(AUTO_PPM_FILTER_PERCENTILE / 100).reindex(runs)
+    for run, ppm in window.items():
+        logger.info(f"Mass error window of {run}: +-{ppm:.2f} ppm around the median")
+    return window
 
 
 def normalization_offsets(peak_rows: pd.DataFrame, runs: list[str], normalization: str = "mode") -> pd.Series:
@@ -437,7 +483,12 @@ def normalization_table(peak_rows: pd.DataFrame, runs: list[str], offsets: pd.Se
 
 
 def drift_curves(
-    peak_rows: pd.DataFrame, runs: list[str], min_runs: int = 3, bin_minutes: float = 0.5, min_per_bin: int = 100
+    peak_rows: pd.DataFrame,
+    runs: list[str],
+    min_runs: int = 3,
+    bin_minutes: float = 0.5,
+    min_per_bin: int = 100,
+    stable_fraction: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Get the log2 intensity drift of every raw file along the retention time.
@@ -449,11 +500,16 @@ def drift_curves(
     bins. It holds the overall level of the raw file too, so no further normalization is needed and no raw file is the
     reference.
 
+    With stable_fraction, the curves are estimated a second time from the most stable precursors only (see
+    :func:`stable_precursors`), so that precursors that change between the samples do not pull the curves.
+
     :param peak_rows: peak table from :func:`peak_table`
     :param runs: raw files
     :param min_runs: minimum number of raw files a precursor is used in to take part
     :param bin_minutes: width of a retention time bin before merging, in minutes
     :param min_per_bin: minimum number of precursors in a bin
+    :param stable_fraction: share of the precursors per retention time bin with the lowest spread over the raw files
+        that the curves are estimated from, None to use all precursors
     :return: one row per raw file and bin: Raw file, Normalization, Retention time (median of the bin), Log2 offset
         (the curve) and Precursors (in the bin)
     """
@@ -466,11 +522,22 @@ def drift_curves(
         index=log.index, columns=runs
     )
     usable = log.notna().sum(axis=1) >= min(min_runs, len(runs))
-    deviations = log[usable].sub(log[usable].median(axis=1), axis=0)
+    log, rt = log[usable], rt[usable]
+    curves = _drift_curves(log, rt, runs, bin_minutes, min_per_bin, "drift")
+    if stable_fraction is None or curves.empty:
+        return curves
+    stable = stable_precursors(log, rt, curves, stable_fraction, bin_minutes, min_per_bin)
+    return _drift_curves(log[stable], rt[stable], runs, bin_minutes, min_per_bin, "stable_drift")
 
+
+def _drift_curves(
+    log: pd.DataFrame, rt: pd.DataFrame, runs: list[str], bin_minutes: float, min_per_bin: int, name: str
+) -> pd.DataFrame:
+    """Drift curves of the precursors (rows) of log (log2 intensities) and rt (apex retention times), see drift_curves."""
+    deviations = log.sub(log.median(axis=1), axis=0)
     curves = []
     for run in runs:
-        points = pd.DataFrame({"rt": rt.loc[usable, run], "deviation": deviations[run]}).dropna().sort_values("rt")
+        points = pd.DataFrame({"rt": rt[run], "deviation": deviations[run]}).dropna().sort_values("rt")
         if points.empty:
             continue
         points["bin"] = _merge_bins(np.floor(points["rt"].to_numpy() / bin_minutes), min_per_bin)
@@ -480,7 +547,7 @@ def drift_curves(
             pd.DataFrame(
                 {
                     "Raw file": run,
-                    "Normalization": "drift",
+                    "Normalization": name,
                     "Retention time": bins["rt"].to_numpy(),
                     "Log2 offset": bins["offset"].rolling(3, center=True, min_periods=1).mean().to_numpy(),
                     "Precursors": bins["precursors"].to_numpy(),
@@ -489,6 +556,45 @@ def drift_curves(
         )
     columns = ["Raw file", "Normalization", "Retention time", "Log2 offset", "Precursors"]
     return pd.concat(curves, ignore_index=True) if curves else pd.DataFrame(columns=columns)
+
+
+def stable_precursors(
+    log: pd.DataFrame,
+    rt: pd.DataFrame,
+    curves: pd.DataFrame,
+    fraction: float,
+    bin_minutes: float = 0.5,
+    min_per_bin: int = 100,
+) -> pd.Series:
+    """
+    Select the precursors whose intensity is most stable over the raw files.
+
+    The log2 intensities are corrected by the drift curves, and every precursor gets its standard deviation over the
+    raw files. Precursors of proteins that change between the samples have a larger spread, without the samples having
+    to be known. The precursors are grouped by their median apex retention time (bins of bin_minutes merged until they
+    hold min_per_bin / fraction precursors), and the fraction of every bin with the lowest standard deviation is kept,
+    so that every part of the gradient keeps precursors.
+
+    :param log: log2 intensities, one row per precursor and one column per raw file
+    :param rt: apex retention times like log
+    :param curves: drift curves of all precursors from :func:`_drift_curves`
+    :param fraction: share of the precursors kept per retention time bin
+    :param bin_minutes: width of a retention time bin before merging, in minutes
+    :param min_per_bin: minimum number of kept precursors in a bin
+    :return: boolean mask of the stable precursors (index of log)
+    """
+    corrected = log.copy()
+    for run, curve in curves.groupby("Raw file"):
+        corrected[run] = log[run] - np.interp(rt[run], curve["Retention time"], curve["Log2 offset"])
+    spread = corrected.std(axis=1)
+    center = rt.median(axis=1)
+    has_spread = spread.notna() & center.notna()
+    bins = pd.Series(np.nan, index=log.index)
+    bins[has_spread] = _merge_bins(
+        np.floor(center[has_spread].to_numpy() / bin_minutes), int(np.ceil(min_per_bin / fraction))
+    )
+    rank = spread[has_spread].groupby(bins[has_spread]).rank(pct=True, method="first")
+    return (rank <= fraction).reindex(log.index, fill_value=False)
 
 
 def _merge_bins(fine_bins: np.ndarray, min_per_bin: int) -> np.ndarray:
