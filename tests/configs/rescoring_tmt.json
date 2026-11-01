@@ -1,0 +1,21 @@
+{
+    "type": "Rescoring",
+    "tag": "tmt",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "output": "../data/tmt/out",
+    "inputs": {
+        "search_results": "../data/tmt/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/tmt/inputs/mzml",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2020_intensity_TMT",
+        "irt": "Prosit_2020_irt_TMT"
+    }
+}
