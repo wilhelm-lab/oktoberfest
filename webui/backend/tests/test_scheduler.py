@@ -75,101 +75,73 @@ def mock_redis():
         yield mock_r, mock_lock
 
 
-def test_auth_headers_and_role_scoping(client, test_db):
-    # Enable hosted mode for this test
-    with patch.object(settings, "app_mode", "hosted"):
-        with patch.object(settings, "global_users", "admin_user"):
-            # 1. Unauthenticated request should fail
-            resp = client.post("/api/v1/jobs", json={
-                "job_type": "Rescoring",
-                "config": {"inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"}},
-            })
-            assert resp.status_code == 401
-
-            # 2. Authenticated request as regular user1
-            resp = client.post(
-                "/api/v1/jobs",
-                json={
-                    "job_type": "Rescoring",
-                    "config": {"inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"}},
-                },
-                headers={"X-User-Id": "user1"}
-            )
-            assert resp.status_code == 201
-            job1_id = resp.json()["job_id"]
-
-            # 3. Authenticated request as regular user2
-            resp = client.post(
-                "/api/v1/jobs",
-                json={
-                    "job_type": "Rescoring",
-                    "config": {"inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"}},
-                },
-                headers={"X-User-Id": "user2"}
-            )
-            assert resp.status_code == 201
-            job2_id = resp.json()["job_id"]
-
-            # 4. User1 gets user1's job -> 200
-            resp = client.get(f"/api/v1/jobs/{job1_id}", headers={"X-User-Id": "user1"})
-            assert resp.status_code == 200
-
-            # 5. User1 gets user2's job -> 404 (isolation)
-            resp = client.get(f"/api/v1/jobs/{job2_id}", headers={"X-User-Id": "user1"})
-            assert resp.status_code == 404
-
-            # 6. Admin user (global) gets user2's job -> 200 (access to all)
-            resp = client.get(f"/api/v1/jobs/{job2_id}", headers={"X-User-Id": "admin_user"})
-            assert resp.status_code == 200
-
-            # 7. Listing jobs for user1 should only return user1's job
-            resp = client.get("/api/v1/jobs", headers={"X-User-Id": "user1"})
-            assert resp.status_code == 200
-            jobs = resp.json()
-            assert len(jobs) == 1
-            assert jobs[0]["job_id"] == job1_id
-
-            # 8. Listing jobs for admin should return all jobs
-            resp = client.get("/api/v1/jobs", headers={"X-User-Id": "admin_user"})
-            assert resp.status_code == 200
-            jobs = resp.json()
-            assert len(jobs) == 2
-
-            # 9. User3 in group 1491800192 gets user2's job -> 200 (belongs to global group)
-            resp = client.get(
-                f"/api/v1/jobs/{job2_id}",
-                headers={"X-User-Id": "user3", "X-User-Groups": "some_group, 1491800192, other"}
-            )
-            assert resp.status_code == 200
-
-            # 10. Listing jobs for user3 in group 1491800192 should return all jobs
-            resp = client.get(
-                "/api/v1/jobs",
-                headers={"X-User-Id": "user3", "X-User-Groups": "1491800192"}
-            )
-            assert resp.status_code == 200
-            jobs = resp.json()
-            assert len(jobs) == 2
+@pytest.fixture
+def hosted(tmp_path):
+    """Hosted mode with an .ip_salt in the data dir (job creation refuses to run without it)."""
+    (tmp_path / ".ip_salt").write_text("test-salt")
+    with patch.object(settings, "app_mode", "hosted"), patch.object(settings, "data_dir", str(tmp_path)):
+        yield
 
 
-def test_thread_capping_in_hosted_mode(client):
-    with patch.object(settings, "app_mode", "hosted"):
-        with patch.object(settings, "max_threads_per_user", 4):
-            # Create a job asking for 8 threads
-            resp = client.post(
-                "/api/v1/jobs",
-                json={
-                    "job_type": "Rescoring",
-                    "config": {
-                        "inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"},
-                        "numThreads": 8,
-                    },
-                },
-                headers={"X-User-Id": "user1"}
-            )
-            assert resp.status_code == 201
-            job = resp.json()
-            assert job["config"]["numThreads"] == 4  # capped at 4!
+RESCORING_JOB = {
+    "job_type": "Rescoring",
+    "config": {"inputs": {"search_results_type": "Maxquant", "spectra_type": "mzml"}},
+}
+
+
+def _as(client, session=None):
+    """Send the next requests with the given session cookie (none for a new visitor)."""
+    client.cookies.clear()
+    if session:
+        client.cookies.set("oktoberfest_session", session)
+    return client
+
+
+def test_session_cookie_and_role_scoping(client, hosted):
+    with patch.object(settings, "global_users", "admin_user"):
+        # 1. A new visitor gets a session cookie and owns the job created with it
+        resp = _as(client).post("/api/v1/jobs", json=RESCORING_JOB)
+        assert resp.status_code == 201
+        set_cookie = resp.headers["set-cookie"]
+        assert "oktoberfest_session=" in set_cookie and "Secure" in set_cookie and "HttpOnly" in set_cookie
+
+        # 2. Jobs of two regular users
+        resp = _as(client, "user1").post("/api/v1/jobs", json=RESCORING_JOB)
+        assert resp.status_code == 201
+        assert "set-cookie" not in resp.headers
+        job1_id = resp.json()["job_id"]
+        resp = _as(client, "user2").post("/api/v1/jobs", json=RESCORING_JOB)
+        assert resp.status_code == 201
+        job2_id = resp.json()["job_id"]
+
+        # 3. Anyone with the job id can view it, but only the owner can change it
+        assert _as(client, "user1").get(f"/api/v1/jobs/{job2_id}").status_code == 200
+        assert _as(client, "user1").post(f"/api/v1/jobs/{job2_id}/cancel").status_code == 404
+        assert _as(client, "user1").post(f"/api/v1/jobs/{job1_id}/cancel").status_code == 200
+
+        # 4. Users only list their own jobs
+        jobs = _as(client, "user1").get("/api/v1/jobs").json()
+        assert [j["job_id"] for j in jobs] == [job1_id]
+
+        # 5. Global users list and change all jobs
+        assert len(_as(client, "admin_user").get("/api/v1/jobs").json()) == 3
+        assert _as(client, "admin_user").post(f"/api/v1/jobs/{job2_id}/cancel").status_code == 200
+
+
+def test_job_creation_needs_ip_salt(client, tmp_path):
+    with patch.object(settings, "app_mode", "hosted"), patch.object(settings, "data_dir", str(tmp_path / "empty")):
+        resp = _as(client, "user1").post("/api/v1/jobs", json=RESCORING_JOB)
+    assert resp.status_code == 403
+    assert ".ip_salt" in resp.json()["detail"]
+
+
+def test_thread_capping_in_hosted_mode(client, hosted):
+    with patch.object(settings, "max_threads_per_user", 4):
+        # Create a job asking for 8 threads
+        job = {**RESCORING_JOB, "config": {**RESCORING_JOB["config"], "numThreads": 8}}
+        resp = _as(client, "user1").post("/api/v1/jobs", json=job)
+        assert resp.status_code == 201
+        assert resp.json()["config"]["numThreads"] == 4  # capped at 4!
 
 
 def test_scheduler_limits_and_queuing(test_db):

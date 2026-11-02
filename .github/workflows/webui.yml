@@ -1,0 +1,118 @@
+name: Web UI
+
+# Checks that the web UI works with the oktoberfest code of this commit: backend and frontend tests, then the docker
+# compose stack is built, started in hosted mode and smoke tested (webui/scripts/smoke_test.sh).
+on:
+    workflow_dispatch:
+    push:
+        branches: [main, development, "release/*"]
+        paths:
+            - "webui/**"
+            - "oktoberfest/**"
+            - "pyproject.toml"
+            - ".dockerignore"
+            - ".github/workflows/webui.yml"
+    pull_request:
+        paths:
+            - "webui/**"
+            - "oktoberfest/**"
+            - "pyproject.toml"
+            - ".dockerignore"
+            - ".github/workflows/webui.yml"
+
+jobs:
+    backend:
+        name: Backend tests
+        runs-on: ubuntu-latest
+        services:
+            redis:
+                image: redis:7-alpine
+                ports:
+                    - 6379:6379
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-python@v6
+              with:
+                  python-version: "3.11"
+                  cache: pip
+
+            - name: Install oktoberfest and the backend dependencies
+              run: |
+                  pip install ".[quant]"
+                  pip install --no-deps --force-reinstall \
+                      "spectrum-fundamentals @ git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@development" \
+                      "spectrum-io @ git+https://github.com/wilhelm-lab/spectrum_io.git@development"
+                  pip install "fastapi>=0.111.0" "uvicorn[standard]>=0.29.0" "sqlalchemy>=2.0.0" "alembic>=1.13.0" \
+                      "celery[redis]>=5.3.0" "redis>=5.0.0" "pydantic>=2.7.0" "pydantic-settings>=2.3.0" \
+                      "aiofiles>=23.0.0" "python-multipart>=0.0.9" pytest pytest-asyncio httpx anyio
+
+            - name: Run backend tests
+              working-directory: webui/backend
+              env:
+                  REDIS_URL: redis://localhost:6379/0
+              run: python -m pytest tests -q
+
+    frontend:
+        name: Frontend build and tests
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: webui/frontend
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+                  cache-dependency-path: webui/frontend/package-lock.json
+
+            - run: npm ci
+            - name: Type check and build
+              run: npm run build
+            - name: Unit tests
+              run: npx vitest run
+
+    docker:
+        name: Docker compose smoke test
+        needs: [backend, frontend]
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: webui
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Write .env.global (hosted mode, like the production server)
+              run: |
+                  data=$RUNNER_TEMP/okt-data
+                  mkdir -p "$data"
+                  openssl rand -hex 32 > "$data/.ip_salt"
+                  cat > .env.global <<EOF
+                  APP_MODE=hosted
+                  CELERY_CONCURRENCY=2
+                  HOST_MOUNT=$data
+                  CONTAINER_DATA_DIR=/data
+                  DATA_DIR=/data
+                  DATABASE_URL=sqlite:////data/app.db
+                  APP_UID=$(id -u)
+                  APP_GID=$(id -g)
+                  EOF
+
+            - name: Build images
+              run: docker compose --env-file .env.global build
+
+            - name: Start the stack
+              run: docker compose --env-file .env.global up -d --wait
+
+            - name: Smoke test
+              run: COMPOSE="docker compose --env-file .env.global" scripts/smoke_test.sh
+
+            - name: Logs
+              if: always()
+              run: docker compose --env-file .env.global logs --no-color --tail 200
+
+            - name: Stop the stack
+              if: always()
+              run: docker compose --env-file .env.global down -v

@@ -47,20 +47,41 @@ DATA_DIR=/mnt/data/oktoberfest
 
 ### 3. Build and Run
 
-Start the Docker containers in the background using docker compose:
+Start the Docker containers in the background using docker compose (Compose v2.24 or newer):
 
 ```bash
 docker compose up --build -d
 ```
 
-Docker will automatically pull the necessary images, build the frontend/backend, and start the services.
+Docker will automatically pull the necessary images, build the frontend/backend (with the oktoberfest code of this
+checkout, plus Percolator, .NET 8 and FlashLFQ for MS1 quantification), and start the services.
+
+For a server configured in `.env.global` instead of `.env` (e.g. hosted mode with `HOST_MOUNT`/`CONTAINER_DATA_DIR`),
+pass it explicitly, because docker compose only reads `.env` for variable substitution:
+
+```bash
+docker compose --env-file .env.global up --build -d
+```
+
+Hosted mode also needs the `.ip_salt` file in `DATA_DIR` (job creation is refused without it) and HTTPS (or access
+via `localhost`, e.g. an SSH tunnel): the session cookie is `Secure`.
 
 ### 4. Access the Web UI
 
 Once the containers are running, open your web browser and go to:
-**[http://localhost:8000](http://localhost:8000)**
+**[http://localhost:8080](http://localhost:8080)**
 
 _(Note: The `api` and `worker` services share a persistent Docker volume mapped to your `DATA_DIR`. Your jobs and data survive container restarts)._
+
+To check that everything works (API, worker, frontend, quantification/localization options and the tools in the
+image), run the smoke test that CI runs as well:
+
+```bash
+scripts/smoke_test.sh                                            # with .env
+COMPOSE="docker compose --env-file .env.global" scripts/smoke_test.sh  # with .env.global
+```
+
+It creates a few empty test jobs (owned by the session `smoke-test`).
 
 To stop the server at any time, run:
 

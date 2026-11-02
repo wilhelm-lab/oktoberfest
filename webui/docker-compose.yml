@@ -3,8 +3,7 @@ version: "3.9"
 services:
     redis:
         image: redis:7-alpine
-        ports:
-            - "6379:6379"
+        # only reachable from the other services (no host port: it has no auth)
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
@@ -13,11 +12,14 @@ services:
 
     api:
         build:
-            context: .
-            dockerfile: backend/Dockerfile
+            context: ..
+            dockerfile: webui/backend/Dockerfile
         command: uvicorn app.main:app --host 0.0.0.0 --port 8080
         env_file:
-            - .env.global
+            - path: .env
+              required: false
+            - path: .env.global
+              required: false
         environment:
             REDIS_URL: redis://redis:6379/0
             TMPDIR: ${CONTAINER_DATA_DIR:-/app/data}/tmp
@@ -28,18 +30,26 @@ services:
         volumes:
             - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         ports:
-            - "8080:8080"
+            - "${API_PORT:-8080}:8080"
+        healthcheck:
+            test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/v1/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 12
         depends_on:
             redis:
                 condition: service_healthy
 
     worker:
         build:
-            context: .
-            dockerfile: backend/Dockerfile
+            context: ..
+            dockerfile: webui/backend/Dockerfile
         command: celery -A app.worker.celery_app worker --loglevel=info
         env_file:
-            - .env.global
+            - path: .env
+              required: false
+            - path: .env.global
+              required: false
         environment:
             REDIS_URL: redis://redis:6379/0
             HOME: /tmp

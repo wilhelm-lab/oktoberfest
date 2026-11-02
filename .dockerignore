@@ -1,2 +1,9 @@
 data
 .git
+**/__pycache__
+**/.pytest_cache
+webui/.env*
+**/.ip_salt
+webui/backend/data
+webui/frontend/node_modules
+webui/frontend/dist
