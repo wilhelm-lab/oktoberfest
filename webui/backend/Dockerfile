@@ -10,7 +10,8 @@ COPY webui/frontend/ ./
 RUN npm run build
 
 # Stage 2: Python backend + Oktoberfest
-FROM python:3.11-slim
+# Pinned to Debian 12 (bookworm): the package names below (libicu72, mono-complete) are release specific
+FROM python:3.11-slim-bookworm
 
 # System dependencies
 # - mono: ThermoRawFileParser (NOT included; mount it and set thermoExe, or upload mzML)
