@@ -1146,9 +1146,10 @@ class Config:
         ):
             if value not in allowed:
                 raise ValueError(f"Invalid quantificationOptions.{option} {value!r}, must be one of {allowed}.")
-        fdrs = (("psmFdr", self.quant_psm_fdr), ("peptideFdr", self.quant_peptide_fdr),
-                ("proteinFdr", self.quant_protein_fdr))  # fmt: skip
-        for option, value in fdrs:
+        # read the raw values: the typed properties must not be called with invalid values (typeguard)
+        options = self.quantification_options
+        for option in ("psmFdr", "peptideFdr", "proteinFdr"):
+            value = options.get(option, 0.01)
             if not _is_number(value) or not 0 < value <= 1:
                 raise ValueError(f"quantificationOptions.{option} must be a q-value in (0, 1], got {value!r}.")
         for option, value in (("ppmTolerance", self.quant_ppm_tolerance), ("mbrRtWindow", self.quant_mbr_rt_window),
@@ -1160,7 +1161,7 @@ class Config:
             raise ValueError(
                 f'quantificationOptions.ppmFilter must be a positive number, "auto" or null, got {ppm_filter!r}.'
             )
-        mbr_fdr = self.quant_mbr_fdr
+        mbr_fdr = options.get("mbrFdr")
         if mbr_fdr is not None and (not _is_number(mbr_fdr) or not 0 < mbr_fdr <= 1):
             raise ValueError(f"quantificationOptions.mbrFdr must be a q-value in (0, 1] or null, got {mbr_fdr!r}.")
         if self.quant_precursor == "flashlfq":
