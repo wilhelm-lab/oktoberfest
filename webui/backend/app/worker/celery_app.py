@@ -8,7 +8,7 @@ celery_app = Celery(
     "oktoberfest_webui",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.worker.tasks"],
+    include=["app.worker.tasks", "app.worker.cleanup"],
 )
 
 celery_app.conf.update(
@@ -23,6 +23,8 @@ celery_app.conf.update(
     task_soft_time_limit=86400,  # 24h soft
     task_time_limit=90000,  # 25h hard
     worker_concurrency=settings.celery_concurrency,
+    # run by the worker's embedded beat (worker -B)
+    beat_schedule={"cleanup-old-jobs": {"task": "cleanup_expired_jobs", "schedule": 3600.0}},
     # task_routes={"run_oktoberfest_job": {"queue": "heavy"}},
 )
 

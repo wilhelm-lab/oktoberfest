@@ -99,7 +99,7 @@ The web UI is configured in ``oktoberfest-webui.env``. The most important settin
     +----------------------+------------------------------+------------------------------------------------------------------------+
     | PREDICTION_SERVER    | koina.wilhelmlab.org:443     | Default Koina server, can also be changed per job in the form          |
     +----------------------+------------------------------+------------------------------------------------------------------------+
-    | MAX_UPLOAD_BYTES     | 5000000000                   | Maximum size per uploaded file (5 GB)                                  |
+    | MAX_UPLOAD_BYTES     | 10000000000                  | Maximum size per uploaded file (10 GB)                                 |
     +----------------------+------------------------------+------------------------------------------------------------------------+
 
 .. note::

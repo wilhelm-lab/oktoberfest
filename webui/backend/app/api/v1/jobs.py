@@ -27,6 +27,20 @@ router = APIRouter(tags=["jobs"])
 
 # main result file per search engine, used as search_results if several result files are uploaded
 MAIN_SEARCH_RESULT_FILES = {"Maxquant": "msms.txt", "Sage": "results.sage.tsv"}
+# config inputs that are file paths: set by the server from the job's uploads only
+INPUT_PATH_KEYS = ("search_results", "spectra", "library_input")
+
+
+def _check_inputs_in_job_dir(config_dict: dict[str, Any], inputs_dir: Path) -> None:
+    """Refuse a config whose input paths point outside this job's upload folder (e.g. at other jobs' files)."""
+    root = inputs_dir.resolve()
+    for key in INPUT_PATH_KEYS:
+        value = config_dict.get("inputs", {}).get(key)
+        if value is None:
+            continue
+        path = Path(value).resolve()
+        if path != root and root not in path.parents:
+            raise HTTPException(status_code=422, detail=f"inputs.{key} must be an uploaded file of this job")
 
 # ── Request / Response models ──────────────────────────────────────────────────
 
@@ -118,18 +132,16 @@ async def create_job(
     # Validate config (file paths not yet resolved — that's ok)
     validated = _validate_config(body.job_type, body.config)
 
-    job = job_service.create_job(db, body.job_type, validated.model_dump(exclude_none=True))
-    # Store owner_id and IP address for hosted-mode scoping and parallel limiting
-    job.owner_id = user.id if settings.app_mode == "hosted" else None
-
-    # Get client IP for rate limiting
-    client_ip = request.headers.get("X-Forwarded-For")
-    if client_ip:
-        client_ip = client_ip.split(",")[0].strip()
-    else:
-        client_ip = request.client.host if request.client else "unknown"
-
+    hashed_ip = None
     if settings.app_mode == "hosted":
+        # Get client IP for rate limiting: the last X-Forwarded-For entry is the one added by the reverse proxy,
+        # earlier entries come from the client and can be forged
+        client_ip = request.headers.get("X-Forwarded-For")
+        if client_ip:
+            client_ip = client_ip.split(",")[-1].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
+
         # Hash the IP address for privacy
         try:
             salt_path = Path(settings.data_dir) / ".ip_salt"
@@ -137,11 +149,20 @@ async def create_job(
                 salt = f.read().strip()
         except Exception:
             raise HTTPException(status_code=403, detail="Job submission is disabled: server configuration error (missing .ip_salt file)")
-
         hashed_ip = hashlib.sha256(f"{client_ip}{salt}".encode()).hexdigest()
-        job.ip_address = hashed_ip
-    else:
-        job.ip_address = None
+
+        # A new session is just a new cookie, so the limit is per session and per client address
+        open_jobs = job_service.count_open_jobs(db, owner_id=user.id, ip_address=hashed_ip)
+        if open_jobs >= settings.max_open_jobs_per_client:
+            raise HTTPException(
+                status_code=429,
+                detail=f"You have {open_jobs} unfinished jobs; submit or cancel them before creating new ones",
+            )
+
+    job = job_service.create_job(db, body.job_type, validated.model_dump(exclude_none=True))
+    # Store owner_id and IP address for hosted-mode scoping and parallel limiting
+    job.owner_id = user.id if settings.app_mode == "hosted" else None
+    job.ip_address = hashed_ip
 
     db.commit()
     return _job_to_response(job, include_required=True)
@@ -189,8 +210,11 @@ def submit_job(
     job.file_count = len(uploaded_files)
     job.total_size_bytes = total_size
 
-    if "inputs" not in cfg_raw:
+    if not isinstance(cfg_raw.get("inputs"), dict):
         cfg_raw["inputs"] = {}
+    # input paths only ever come from this job's uploads, never from the submitted config
+    for key in INPUT_PATH_KEYS:
+        cfg_raw["inputs"].pop(key, None)
 
     if job.job_type in ("Rescoring", "CollisionEnergyCalibration"):
         # search_results: the engine's main result file if uploaded (e.g. msms.txt next to evidence.txt for
@@ -241,11 +265,17 @@ def submit_job(
     spectra_count_for_threads = len([f for f in uploaded_files if f.suffix.lower() in spectra_exts])
     cfg_raw["numThreads"] = min(4, spectra_count_for_threads) if spectra_count_for_threads > 0 else 1
 
+    if job.job_type in ("Rescoring", "CollisionEnergyCalibration"):
+        missing = [key for key in ("search_results", "spectra") if key not in cfg_raw["inputs"]]
+        if missing:
+            raise HTTPException(status_code=422, detail=f"Missing required uploads: {missing}")
+
     # Final validation with resolved paths
     validated = _validate_config(job.job_type, cfg_raw)
 
     # Serialize to Oktoberfest JSON shape
     config_dict = validated.to_oktoberfest_dict(job_id, output_dir)
+    _check_inputs_in_job_dir(config_dict, inputs_dir)
 
     # Write config.json
     config_path = storage.config_path(job_id)

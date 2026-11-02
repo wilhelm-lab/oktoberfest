@@ -55,6 +55,25 @@ export function getJobLog(jobId: string) {
     return api.get(`/jobs/${jobId}/log`).then((r) => r.data);
 }
 
+// ── Session (hosted mode admin sign-in) ────────────────────────────────────────
+
+export interface SessionInfo {
+    mode: string;
+    is_admin: boolean;
+}
+
+export function getSession(): Promise<SessionInfo> {
+    return api.get("/session").then((r) => r.data);
+}
+
+export function adminSignIn(key: string): Promise<SessionInfo> {
+    return api.post("/session/admin", { key }).then((r) => r.data);
+}
+
+export function signOut(): Promise<SessionInfo> {
+    return api.post("/session/signout").then((r) => r.data);
+}
+
 export function getJobs(limit = 50, offset = 0) {
     return api.get("/jobs", { params: { limit, offset } }).then((r) => r.data);
 }

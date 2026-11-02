@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -75,6 +76,25 @@ def list_jobs(db: Session, limit: int = 50, offset: int = 0) -> list[Job]:
 def list_jobs_for_user(db: Session, user_id: str, limit: int = 50, offset: int = 0) -> list[Job]:
     """Retrieve a paginated list of jobs belonging to a specific user, ordered by creation time descending."""
     return db.query(Job).filter(Job.owner_id == user_id).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
+
+
+def count_open_jobs(db: Session, owner_id: str, ip_address: Optional[str]) -> int:
+    """Count queued or running jobs and drafts of the last 24 h of a session or client address (hosted mode limits)."""
+    client = Job.owner_id == owner_id
+    if ip_address:
+        client = or_(client, Job.ip_address == ip_address)
+    recent = datetime.utcnow() - timedelta(hours=24)
+    return (
+        db.query(Job)
+        .filter(client)
+        .filter(
+            or_(
+                Job.status.in_([JobStatus.QUEUED.value, JobStatus.RUNNING.value]),
+                and_(Job.status == JobStatus.CREATED.value, Job.created_at >= recent),
+            )
+        )
+        .count()
+    )
 
 
 def get_required_files(job_type: str, config_data: dict[str, Any]) -> list[dict[str, Any]]:

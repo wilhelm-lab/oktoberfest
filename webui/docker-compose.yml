@@ -21,6 +21,9 @@ x-backend: &backend
         MPLCONFIGDIR: /tmp/matplotlib
         NUMBA_CACHE_DIR: /tmp/numba
     user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    # no extra privileges: jobs run as APP_UID without any Linux capabilities
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     volumes:
         - ${HOST_DATA_DIR:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
     depends_on:
@@ -32,6 +35,9 @@ services:
     redis:
         image: redis:7-alpine
         # only reachable from the other services (no host port: it has no auth)
+        user: "999:1000" # the image's redis user, so it never runs as root
+        cap_drop: [ALL]
+        security_opt: ["no-new-privileges:true"]
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
@@ -52,7 +58,8 @@ services:
 
     worker:
         <<: *backend
-        command: celery -A app.worker.celery_app worker --loglevel=info
+        # -B: also runs the hourly cleanup of old jobs (one worker container only)
+        command: celery -A app.worker.celery_app worker -B --schedule /tmp/celerybeat-schedule --loglevel=info
 
 volumes:
     okt-data:

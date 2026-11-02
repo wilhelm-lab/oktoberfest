@@ -60,6 +60,13 @@ async def upload_file(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid filename (path traversal)")
 
+    # hosted mode: the job's earlier uploads count towards its total size limit (a re-upload replaces its file)
+    job_limit = None
+    if settings.app_mode == "hosted":
+        inputs = storage.inputs_dir(job_id)
+        earlier = sum(f.stat().st_size for f in inputs.iterdir() if f.is_file() and f.name != safe_name)
+        job_limit = settings.max_job_upload_bytes - earlier
+
     total = 0
     with open(dest, "wb") as f:
         while chunk := await file.read(1 << 20):  # 1 MB chunks
@@ -67,6 +74,9 @@ async def upload_file(
             if total > settings.max_upload_bytes:
                 dest.unlink(missing_ok=True)
                 raise HTTPException(status_code=413, detail="File exceeds size limit")
+            if job_limit is not None and total > job_limit:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="The uploads of this job exceed the size limit")
             f.write(chunk)
 
     import logging

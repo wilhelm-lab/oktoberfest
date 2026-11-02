@@ -93,11 +93,18 @@ each of them. Restart after changing a setting: `docker compose --env-file oktob
 | `CELERY_CONCURRENCY`                       | `1`                        | Jobs that can run at the same time                                                |
 | `MAX_TOTAL_THREADS`                        | `4`                        | CPU threads all running jobs may use together                                     |
 | `MAX_THREADS_PER_USER`                     | `4`                        | Hosted mode: threads per job                                                      |
-| `MAX_UPLOAD_BYTES`                         | `5000000000`               | Maximum size of one uploaded file (5 GB)                                          |
-| `PREDICTION_SERVER`                        | `koina.wilhelmlab.org:443` | Koina server pre-filled in the forms; users can change it per job                 |
+| `MAX_OPEN_JOBS_PER_CLIENT`                 | `10`                       | Hosted mode: unfinished jobs per session and client address                       |
+| `MAX_JOB_UPLOAD_BYTES`                     | `100000000000`             | Hosted mode: total upload size of one job (100 GB)                                |
+| `MAX_UPLOAD_BYTES`                         | `10000000000`              | Maximum size of one uploaded file (10 GB)                                         |
+| `RESULT_RETENTION_DAYS`                    | `0` (keep)                 | Delete finished jobs older than this many days                                    |
+| `MAX_DATA_BYTES`                           | `0` (no limit)             | When the data folder reaches this size, delete the oldest finished jobs           |
+| `CLEANUP_MIN_AGE_HOURS`                    | `24`                       | Jobs younger than this are never deleted by `MAX_DATA_BYTES`                      |
+| `PREDICTION_SERVER`                        | `koina.wilhelmlab.org:443` | Koina server pre-filled in the forms; users can change it per job (local mode)    |
+| `ALLOWED_PREDICTION_SERVERS`               | empty                      | Hosted mode: further Koina servers users may choose                               |
 | `THERMO_EXE`, `FLASHLFQ_EXE`, `DOTNET_EXE` | set by the image           | External tools; only needed [without Docker](#running-without-docker-development) |
 
-To use your own Koina instance, set `PREDICTION_SERVER=my-koina-server:443`.
+To use your own Koina instance, set `PREDICTION_SERVER=my-koina-server:443`. In hosted mode users can only choose
+`PREDICTION_SERVER` and the servers in `ALLOWED_PREDICTION_SERVERS`.
 
 **Choosing resources**: each job uses one thread per spectra file (at most 4) and up to 16 GB RAM. For a machine with
 32 cores and 128 GB RAM, `CELERY_CONCURRENCY=6` and `MAX_TOTAL_THREADS=24` are a reasonable start. Queued jobs wait
@@ -129,6 +136,15 @@ Its paths point into `CONTAINER_DATA_DIR`; set `CONTAINER_DATA_DIR` to the same 
 should also be valid outside the containers.
 
 To back up the web UI, stop it and copy `HOST_DATA_DIR`.
+
+**Deleting old jobs**: by default all jobs are kept. The worker checks every hour:
+
+-   `RESULT_RETENTION_DAYS=30` deletes jobs that finished more than 30 days ago.
+-   `MAX_DATA_BYTES=300000000000` deletes, once the data folder reaches 300 GB, finished jobs older than
+    `CLEANUP_MIN_AGE_HOURS` (24 h), oldest first, until it is below 300 GB again.
+
+Unsubmitted drafts count as finished from their creation; queued and running jobs are never deleted. Users should
+download their results soon after a job finishes.
 
 ---
 
@@ -172,7 +188,7 @@ oktoberfest.example.org {
 }
 ```
 
-With nginx, also raise the upload limit (`client_max_body_size 5G;`) and pass the client address
+With nginx, also raise the upload limit (`client_max_body_size 10G;`) and pass the client address
 (`proxy_set_header X-Forwarded-For $remote_addr;`).
 
 Do not expose port 8080 directly (`API_BIND=0.0.0.0`) on a shared server: the per-client limits trust the
@@ -186,6 +202,33 @@ Browsers treat `http://localhost` as secure, so for a quick test you can also us
 `GLOBAL_USERS` lists session ids that see and can cancel all jobs. Generate a long random value
 (`openssl rand -hex 24`), add it to `GLOBAL_USERS`, restart, and set your browser's `oktoberfest_session` cookie for the
 site to that value (developer tools → Application/Storage → Cookies). Anyone who knows the value has admin access.
+
+### 4. Security
+
+What the web UI does to protect a shared server:
+
+-   **Files**: uploads are stored under sanitized names inside the job's folder, and a job can only use its own uploads
+    as inputs (paths in a submitted config are ignored). Results and logs are only served from the job's folder.
+-   **Network**: only the API port is published, on `127.0.0.1` unless `API_BIND` says otherwise; redis is only
+    reachable by the other containers. In hosted mode users cannot choose an arbitrary prediction server, so the server
+    cannot be made to connect to other hosts.
+-   **Browsers**: hosted mode uses an `HttpOnly`, `Secure`, `SameSite=Lax` session cookie; in local mode only pages
+    from `localhost` may call the API from another origin, so other websites cannot read your jobs.
+-   **Resources**: hosted mode limits threads per job, running jobs per user, unfinished jobs per client and the upload
+    size per file and per job.
+-   **Containers**: run as `APP_UID` (redis as its own user) without Linux capabilities and with `no-new-privileges`.
+
+What you need to take care of:
+
+-   Serve it over HTTPS through a reverse proxy and keep `API_BIND=127.0.0.1` (see above). Limit request rates there if
+    the server is reachable from the internet.
+-   Keep `GLOBAL_USERS` values long and random, and `oktoberfest-webui.env` and `.ip_salt` readable only by you.
+-   Anyone with a job id can view that job and download its results (the id is the share link). Do not offer the
+    server for confidential data unless access to the site itself is restricted, e.g. by the reverse proxy (VPN, IP
+    allowlist or login).
+-   Watch the disk space of `HOST_DATA_DIR`, or let old jobs be deleted automatically (`MAX_DATA_BYTES`,
+    `RESULT_RETENTION_DAYS`, see [Where is my data?](#where-is-my-data)).
+-   Update regularly (`git pull`, rebuild) to get security fixes of the image's packages.
 
 ---
 
@@ -226,7 +269,7 @@ In `webui/oktoberfest-webui.env`, uncomment `DATA_DIR`, `DATABASE_URL` and `REDI
 ```bash
 redis-server                                             # or: docker run -p 6379:6379 redis:7-alpine
 cd webui/backend && uvicorn app.main:app --reload --port 8000
-cd webui/backend && celery -A app.worker.celery_app worker --loglevel=info
+cd webui/backend && celery -A app.worker.celery_app worker -B --loglevel=info  # -B: hourly cleanup
 cd webui/frontend && npm ci && npm run dev              # http://localhost:5173 (forwards /api to port 8000)
 ```
 
@@ -250,16 +293,16 @@ starts it in hosted mode with settings from `oktoberfest-webui.env.example` and 
 
 ## Troubleshooting
 
-| Problem                                                       | Fix                                                                                                                              |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `env file ... oktoberfest-webui.env not found`                | Create it: `cp oktoberfest-webui.env.example oktoberfest-webui.env`                                                              |
-| Settings are ignored, data ends up in a Docker volume         | Pass `--env-file oktoberfest-webui.env` to every `docker compose` command                                                        |
-| `Permission denied` / `unable to open database file`          | `HOST_DATA_DIR` must exist and be writable by `APP_UID`/`APP_GID` (`mkdir -p data`, set them to `id -u` / `id -g`)               |
-| `port is already allocated`                                   | Another program uses the port: change `API_PORT`                                                                                 |
-| Hosted mode: jobs cannot be created or disappear after reload | Open the site via HTTPS (or `http://localhost` through an SSH tunnel), see [HTTPS](#2-put-https-in-front-of-it)                  |
-| `Job submission is disabled ... missing .ip_salt file`        | [Create the IP salt](#1-create-the-ip-salt) in `HOST_DATA_DIR`                                                                   |
+| Problem                                                       | Fix                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `env file ... oktoberfest-webui.env not found`                | Create it: `cp oktoberfest-webui.env.example oktoberfest-webui.env`                                                             |
+| Settings are ignored, data ends up in a Docker volume         | Pass `--env-file oktoberfest-webui.env` to every `docker compose` command                                                       |
+| `Permission denied` / `unable to open database file`          | `HOST_DATA_DIR` must exist and be writable by `APP_UID`/`APP_GID` (`mkdir -p data`, set them to `id -u` / `id -g`)              |
+| `port is already allocated`                                   | Another program uses the port: change `API_PORT`                                                                                |
+| Hosted mode: jobs cannot be created or disappear after reload | Open the site via HTTPS (or `http://localhost` through an SSH tunnel), see [HTTPS](#2-put-https-in-front-of-it)                 |
+| `Job submission is disabled ... missing .ip_salt file`        | [Create the IP salt](#1-create-the-ip-salt) in `HOST_DATA_DIR`                                                                  |
 | Other machines cannot connect                                 | `API_BIND=127.0.0.1` only allows this machine: use a reverse proxy (shared server) or `API_BIND=0.0.0.0` (trusted network only) |
-| A job fails                                                   | The job page shows its log (`captured.log`); `docker compose --env-file oktoberfest-webui.env logs worker` shows the rest        |
+| A job fails                                                   | The job page shows its log (`captured.log`); `docker compose --env-file oktoberfest-webui.env logs worker` shows the rest       |
 
 ---
 

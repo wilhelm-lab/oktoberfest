@@ -98,6 +98,17 @@ class CommonConfigMixin(BaseModel):
     var_mods: Optional[dict[str, Any]] = None
     ion_types: Optional[str] = None
 
+    @field_validator("prediction_server")
+    @classmethod
+    def validate_prediction_server(cls, v: str) -> str:
+        # on a shared server, a free choice would let users make the server connect to any host and port
+        if settings.app_mode == "hosted":
+            allowed = {settings.prediction_server}
+            allowed.update(s.strip() for s in settings.allowed_prediction_servers.split(",") if s.strip())
+            if v not in allowed:
+                raise ValueError(f"prediction_server must be one of {sorted(allowed)}")
+        return v
+
     @field_validator("numThreads")
     @classmethod
     def validate_threads(cls, v: int) -> int:
