@@ -1355,7 +1355,6 @@ description = "serialize all of Python"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-
 markers = "extra == \"dlomix\" or extra == \"quant\""
 files = [
     {file = "dill-0.3.8-py3-none-any.whl", hash = "sha256:c36ca9ffb54365bdd2f8eb3eff7d2a21237f8452b57ace88b1ac615b7e815bd7"},
@@ -2141,7 +2140,7 @@ description = "httpx2 transports for Emscripten/Pyodide, backed by the JavaScrip
 optional = true
 python-versions = ">=3.12"
 groups = ["main"]
-markers = "sys_platform == \"emscripten\" and extra == \"dlomix\" and python_version >= \"3.12\""
+markers = "python_version >= \"3.12\" and sys_platform == \"emscripten\" and extra == \"dlomix\""
 files = [
     {file = "httpx2_jsfetch-1.0-py3-none-any.whl", hash = "sha256:cb916b707601e69a07721aabc8f3f6659be3a6893bc1ff5c6f9e02241df2da32"},
     {file = "httpx2_jsfetch-1.0.tar.gz", hash = "sha256:70a0e3eabfef7cce5ad9c629f7d01ca05e418f586646f4ddf14782e4c1454c60"},
@@ -3330,7 +3329,6 @@ description = "better multiprocessing and multithreading in Python"
 optional = true
 python-versions = ">=3.8"
 groups = ["main"]
-
 markers = "extra == \"dlomix\" or extra == \"quant\""
 files = [
     {file = "multiprocess-0.70.16-pp310-pypy310_pp73-macosx_10_13_x86_64.whl", hash = "sha256:476887be10e2f59ff183c006af746cb6f1fd0eadcfd4ef49e605cbe2659920ee"},
@@ -5501,7 +5499,7 @@ description = "Python documentation generator"
 optional = true
 python-versions = ">=3.12"
 groups = ["main"]
-markers = "extra == \"docs\" and python_version >= \"3.12\""
+markers = "python_version >= \"3.12\" and extra == \"docs\""
 files = [
     {file = "sphinx-9.1.0-py3-none-any.whl", hash = "sha256:c84fdd4e782504495fe4f2c0b3413d6c2bf388589bb352d439b2a3bb99991978"},
     {file = "sphinx-9.1.0.tar.gz", hash = "sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb"},
@@ -5577,7 +5575,7 @@ description = "Type hints (PEP 484) support for the Sphinx autodoc extension"
 optional = true
 python-versions = ">=3.12"
 groups = ["main"]
-markers = "extra == \"docs\" and python_version >= \"3.12\""
+markers = "python_version >= \"3.12\" and extra == \"docs\""
 files = [
     {file = "sphinx_autodoc_typehints-3.10.5-py3-none-any.whl", hash = "sha256:7155748080735731c892d09b5128bc4e5303795691ca8515ccf333b1efd8d964"},
     {file = "sphinx_autodoc_typehints-3.10.5.tar.gz", hash = "sha256:a54dfab95a6b5e8601543d25474497e98ed59268ac0ab01b3daba9817cf9707e"},
@@ -7000,5 +6998,4 @@ quant = ["directlfq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "b3f0af7e929fc1d0f03befb008caea5dc04eade82759424e6a9ec9ea32690add"
-
+content-hash = "3ba2ff37e0ff308ac15383ff7a5f0ac036674a1e8480895d63fadd5b6c1ece94"
