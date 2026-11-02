@@ -53,6 +53,14 @@ def test_rescoring_serializes_to_oktoberfest_shape():
     assert d["inputs"]["search_results"] == "/data/job1/inputs/msms.txt"
     # ce_range must be a list (not tuple)
     assert isinstance(d["ce_alignment_options"]["ce_range"], list)
+    assert d["percolatorSubsetMaxTrain"] == 500000
+
+
+def test_rescoring_percolator_subset_can_be_disabled():
+    d = RescoringConfig(percolatorSubsetMaxTrain=None).to_oktoberfest_dict("job1", "/out")
+    assert "percolatorSubsetMaxTrain" not in d
+    with pytest.raises(Exception, match="percolatorSubsetMaxTrain"):
+        RescoringConfig(percolatorSubsetMaxTrain=0)
 
 
 # ── CE Calibration ────────────────────────────────────────────────────────────

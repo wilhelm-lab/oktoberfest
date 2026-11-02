@@ -451,6 +451,7 @@ def convert_search(
     ptm_unimod_id: Optional[Union[int, dict[int, list[str]]]] = 0,
     ptm_sites: Optional[list] = None,
     ptm_model: Optional[bool] = False,
+    num_threads: int = 1,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -474,6 +475,7 @@ def convert_search(
         localize several PTMs. 0 or an empty mapping disables the generation of site permutations.
     :param ptm_sites: possible sites that the ptm can exist on, if a single unimod id is given
     :param ptm_model: whether a PTM-aware intensity model is used
+    :param num_threads: number of processes for reading several result files (e.g. one pepXML per raw file)
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -573,7 +575,7 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(
+    return search_result(input_path, num_threads=num_threads).generate_internal(
         tmt_label=tmt_label,
         out_path=output_file,
         custom_mods=custom_mods,
