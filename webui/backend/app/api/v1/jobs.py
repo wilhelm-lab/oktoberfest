@@ -25,6 +25,9 @@ from app.worker.tasks import run_oktoberfest_job
 
 router = APIRouter(tags=["jobs"])
 
+# main result file per search engine, used as search_results if several result files are uploaded
+MAIN_SEARCH_RESULT_FILES = {"Maxquant": "msms.txt", "Sage": "results.sage.tsv"}
+
 # ── Request / Response models ──────────────────────────────────────────────────
 
 
@@ -190,17 +193,26 @@ def submit_job(
         cfg_raw["inputs"] = {}
 
     if job.job_type in ("Rescoring", "CollisionEnergyCalibration"):
-        # search_results: first uploaded file matching typical search result extensions
+        # search_results: the engine's main result file if uploaded (e.g. msms.txt next to evidence.txt for
+        # quantification), else the first uploaded file matching typical search result extensions
         search_exts = {".txt", ".tsv", ".csv", ".pepxml", ".mzid", ".xml"}
         spectra_exts = {".raw", ".mzml", ".hdf", ".hdf5", ".d"}
+        fasta_exts = {".fasta", ".fa", ".faa"}
+        uploaded_files = sorted(uploaded_files)
         search_files = [f for f in uploaded_files if f.suffix.lower() in search_exts]
         spectra_files = [f for f in uploaded_files if f.suffix.lower() in spectra_exts]
+        fasta_files = [f for f in uploaded_files if f.suffix.lower() in fasta_exts]
         # If a file doesn't match either, assign by position
         if not search_files and not spectra_files and uploaded_files:
             search_files = [uploaded_files[0]]
             spectra_files = uploaded_files[1:] or [uploaded_files[0]]
+        engine = cfg_raw["inputs"].get("search_results_type", "")
+        main_file = MAIN_SEARCH_RESULT_FILES.get(engine)
+        search_files.sort(key=lambda f: f.name.lower() != main_file)
         if search_files:
             cfg_raw["inputs"]["search_results"] = str(search_files[0])
+        if fasta_files and job.job_type == "Rescoring" and cfg_raw.get("quantification"):
+            cfg_raw["inputs"]["library_input"] = str(fasta_files[0])
         if spectra_files:
             unique_exts = {f.suffix.lower() for f in spectra_files}
             if len(unique_exts) > 1:

@@ -9,6 +9,13 @@ export interface MetaCatalog {
     libraryFormats: string[];
     enzymes: string[];
     tags: string[];
+    quantification: {
+        precursor: string[];
+        protein: string[];
+        normalization: string[];
+        flashlfq_available: boolean;
+    };
+    localizationPtms: Record<string, { name: string; residues: string[] }>;
 }
 
 export interface UploadEntry {
@@ -26,6 +33,13 @@ export const useJobStore = defineStore("job", () => {
         libraryFormats: [],
         enzymes: [],
         tags: [],
+        quantification: {
+            precursor: [],
+            protein: [],
+            normalization: [],
+            flashlfq_available: false,
+        },
+        localizationPtms: {},
     });
     const metaLoaded = ref(false);
 
@@ -42,7 +56,7 @@ export const useJobStore = defineStore("job", () => {
 
     async function fetchMeta() {
         if (metaLoaded.value) return;
-        const [models, engines, spectra, formats, enzymes, tags] =
+        const [models, engines, spectra, formats, enzymes, tags, quant, ptms] =
             await Promise.all([
                 api.getModels(),
                 api.getSearchEngines(),
@@ -50,6 +64,8 @@ export const useJobStore = defineStore("job", () => {
                 api.getLibraryFormats(),
                 api.getEnzymes(),
                 api.getTags(),
+                api.getQuantificationOptions(),
+                api.getLocalizationPtms(),
             ]);
         meta.models = models;
         meta.searchEngines = engines;
@@ -57,6 +73,8 @@ export const useJobStore = defineStore("job", () => {
         meta.libraryFormats = formats;
         meta.enzymes = enzymes;
         meta.tags = tags;
+        meta.quantification = quant;
+        meta.localizationPtms = ptms;
         metaLoaded.value = true;
     }
 

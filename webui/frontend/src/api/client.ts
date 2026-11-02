@@ -94,6 +94,14 @@ export function getTags() {
     return api.get("/meta/tags").then((r) => r.data);
 }
 
+export function getQuantificationOptions() {
+    return api.get("/meta/quantification").then((r) => r.data);
+}
+
+export function getLocalizationPtms() {
+    return api.get("/meta/localization-ptms").then((r) => r.data);
+}
+
 export function getDefaults(jobType: string) {
     return api.get(`/meta/defaults/${jobType}`).then((r) => r.data);
 }

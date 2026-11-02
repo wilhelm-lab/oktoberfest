@@ -84,6 +84,8 @@ def get_required_files(job_type: str, config_data: dict[str, Any]) -> list[dict[
         engine = config_data.get("inputs", {}).get("search_results_type", "Maxquant")
         result.append({"role": "search_results", "accept": ROLE_EXTENSIONS["search_results"], "multiple": True})
         result.append({"role": "spectra", "accept": ROLE_EXTENSIONS["spectra"], "multiple": True})
+        if job_type == "Rescoring" and config_data.get("quantification"):
+            result.append({"role": "fasta", "accept": ROLE_EXTENSIONS["fasta"], "multiple": False})
     elif job_type == "SpectralLibraryGeneration":
         lib_type = config_data.get("inputs", {}).get("library_input_type", "fasta")
         if lib_type in ("fasta", ""):
@@ -108,6 +110,10 @@ def check_uploaded_files(job_id: str, job_type: str, config_data: dict[str, Any]
         # (simplified: check inputs dir is non-empty)
         if not uploaded:
             missing = ["search_results", "spectra"]
+        elif job_type == "Rescoring" and config_data.get("quantification"):
+            fasta_exts = tuple(ROLE_EXTENSIONS["fasta"])
+            if not any(name.lower().endswith(fasta_exts) for name in uploaded):
+                missing = ["fasta"]
     elif job_type == "SpectralLibraryGeneration":
         if not uploaded:
             missing = ["fasta"]
@@ -130,6 +136,7 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
     phases = [
         # Rescoring phases
         ("Finished quantification", "Finishing quantification"),
+        ("Starting FlashLFQ with command", "MS1 quantification (FlashLFQ)"),
         ("Starting quantification", "Performing quantification"),
         ("Finished rescoring.", "Generating summary plots"),
         ("Generating summary plots...", "Generating summary plots"),
@@ -149,6 +156,7 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
 
         # CE Calibration / Common phases
         ("Performing RANSAC regression", "Collision energy alignment (RANSAC)"),
+        ("decoy localization candidates", "Generating PTM localization candidates"),
         ("Converting search results from", "Converting search results"),
         ("Job executed with the following config:", "Initializing Job"),
     ]

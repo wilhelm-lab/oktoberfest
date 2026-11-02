@@ -10,6 +10,10 @@ from app.services.catalog import (
     INTENSITY_MODELS,
     IRT_MODELS,
     LIBRARY_FORMATS,
+    LOCALIZATION_PTMS,
+    QUANT_NORMALIZATIONS,
+    QUANT_PRECURSOR_METHODS,
+    QUANT_PROTEIN_METHODS,
     SEARCH_ENGINES,
     SPECTRA_TYPES,
     TAGS,
@@ -56,6 +60,23 @@ def get_instrument_types():
 @router.get("/fragmentation-methods")
 def get_fragmentation_methods():
     return FRAGMENTATION_METHODS
+
+
+@router.get("/quantification")
+def get_quantification_options():
+    from app.config import settings
+
+    return {
+        "precursor": QUANT_PRECURSOR_METHODS,
+        "protein": QUANT_PROTEIN_METHODS,
+        "normalization": QUANT_NORMALIZATIONS,
+        "flashlfq_available": bool(settings.flashlfq_exe),
+    }
+
+
+@router.get("/localization-ptms")
+def get_localization_ptms():
+    return LOCALIZATION_PTMS
 
 
 @router.get("/defaults/{job_type}")

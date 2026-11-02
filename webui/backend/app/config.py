@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     max_total_threads: int = 28
     global_users: str = "global,admin"
     global_group: str = "1491800192"
+    # FlashLFQ command line (CMD.dll) and dotnet for MS1 quantification; empty disables flashlfq
+    flashlfq_exe: str = ""
+    dotnet_exe: str = "dotnet"
 
 
 settings = Settings()
