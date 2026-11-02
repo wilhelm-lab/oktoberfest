@@ -165,7 +165,8 @@ class TestQuantificationOptions(unittest.TestCase):
         self.assertEqual(config.quant_protein, "directlfq")
         self.assertEqual(config.quant_normalization, "stable_drift")
         self.assertEqual((config.quant_psm_fdr, config.quant_peptide_fdr, config.quant_protein_fdr), (0.01, 0.01, 0.01))
-        self.assertEqual((config.quant_ppm_tolerance, config.quant_ppm_filter), (10, "auto"))
+        self.assertEqual((config.quant_ppm_tolerance, config.quant_ppm_filter), ("auto", "auto"))
+        self.assertEqual((config.quant_mbr_rt_window, config.quant_drift_bin_minutes), ("auto", "auto"))
         self.assertIsNone(config.quant_mbr_fdr)
         self.assertFalse(config.ms1_quantification)
         config._check_quantification_options()
@@ -190,6 +191,10 @@ class TestQuantificationOptions(unittest.TestCase):
             ("proteinFdr", "0.01"),
             ("proteinFdr", True),
             ("ppmTolerance", -10),
+            ("ppmTolerance", "10"),
+            ("mbrRtWindow", 0),
+            ("mbrRtWindow", "Auto"),
+            ("driftBinMinutes", -0.1),
             ("peptideFdr", 2),
             ("ppmFilter", 0),
             ("ppmFilter", "5"),
@@ -214,6 +219,12 @@ class TestQuantificationOptions(unittest.TestCase):
                 config = _config(quantificationOptions={"ppmFilter": value})
                 self.assertEqual(config.quant_ppm_filter, value)
                 config._check_quantification_options()
+
+    def test_auto_settings_and_numbers(self):
+        """Test the FlashLFQ tolerance, match-between-runs window and drift bin accept "auto" and positive numbers."""
+        for option, value in [("ppmTolerance", 5), ("mbrRtWindow", 0.5), ("driftBinMinutes", 0.05)]:
+            with self.subTest(option=option):
+                _config(quantificationOptions={option: value})._check_quantification_options()
 
     def test_flashlfq_requirements(self):
         """Test FlashLFQ needs Percolator, MS1 spectra, no PTM localization and the FlashLFQ executable."""

@@ -1,0 +1,31 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "output": "../data/phospho/out",
+    "inputs": {
+        "search_results": "../data/phospho/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/phospho/inputs/mzml",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2025_intensity_22PTM",
+        "irt": "Prosit_2025_irt_22PTM"
+    },
+    "ptm_localization": true,
+    "ptmLocalizationOptions": {
+        "ptms": {
+            "21": ["S", "T", "Y"]
+        },
+        "neutral_loss": true,
+        "decoy_residues": ["A", "G", "L", "V"]
+    }
+}

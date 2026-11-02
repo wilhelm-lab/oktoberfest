@@ -1,0 +1,31 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "output": "../data/cit/out",
+    "inputs": {
+        "search_results": "../data/cit/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/cit/inputs/mzml",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2024_intensity_cit",
+        "irt": "Prosit_2024_irt_cit"
+    },
+    "ptm_localization": true,
+    "ptmLocalizationOptions": {
+        "ptms": {
+            "7": ["N", "Q", "R"]
+        },
+        "neutral_loss": true,
+        "decoy_residues": []
+    }
+}

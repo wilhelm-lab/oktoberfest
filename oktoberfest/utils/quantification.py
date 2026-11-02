@@ -1,13 +1,17 @@
+import json
 import logging
+import re
 import subprocess
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import anndata
 import numpy as np
 import pandas as pd
 from picked_group_fdr.digestion_params import DigestionParams
 from picked_group_fdr.pipeline import pipeline
+from pyteomics import mass, mzml
 
 from . import Config
 
@@ -18,8 +22,51 @@ SPEC_ID_COLUMNS = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CH
 # ppmFilter "auto": percentile of the raw file's absolute mass errors (around its median) used as window
 AUTO_PPM_FILTER_PERCENTILE = 90
 # normalization "stable_drift": share of the precursors per retention time bin with the lowest spread over the runs
-# that the drift is estimated from
-STABLE_DRIFT_FRACTION = 0.5
+# that the drift is estimated from, width of the retention time bins (minutes) and minimum precursors per bin
+STABLE_DRIFT_FRACTION = 0.75
+STABLE_DRIFT_BIN_MINUTES = 0.1
+STABLE_DRIFT_MIN_PER_BIN = 25
+# driftBinMinutes "auto": stable_drift bin width as a share of the median peak width of the MS2 identifications (0.1 min
+# was the best bin for 0.39 min wide peaks)
+AUTO_DRIFT_BIN_PEAK_WIDTH = 0.25
+# mbrRtWindow "auto": percentile of the retention time deviations of the MS2 identifications between the raw files
+AUTO_MBR_RT_PERCENTILE = 90
+# ppmTolerance "auto": mass error of a sample of identifications in the MS1 scan before their MS2 scan, searched
+# within AUTO_PPM_SEARCH ppm (FlashLFQ's Orbitrap default) at the two most abundant isotopes, which have to agree within
+# AUTO_PPM_ISOTOPE_AGREEMENT ppm; the tolerance is the |median| plus this percentile of the errors around the median
+AUTO_PPM_SAMPLE = 5000
+AUTO_PPM_SEARCH = 10.0
+AUTO_PPM_ISOTOPE_AGREEMENT = 3.0
+AUTO_PPM_PERCENTILE = 95
+# FlashLFQ's defaults, used when there are too few identifications to measure the "auto" values
+FLASHLFQ_PPM_TOLERANCE = 10.0
+FLASHLFQ_MBR_RT_WINDOW = 1.5
+MIN_AUTO_MEASUREMENTS = 100
+PROTON = 1.007276467
+C13_SPACING = 1.0033548
+# natural abundances by nominal mass offset from the lightest isotope, and the compositions of common modifications
+# (others are left out of the isotope envelope; their effect on which isotopes are the most abundant is small)
+ISOTOPE_ABUNDANCES = {
+    "C": [0.9893, 0.0107],
+    "H": [0.999885, 0.000115],
+    "N": [0.99636, 0.00364],
+    "O": [0.99757, 0.00038, 0.00205],
+    "S": [0.9499, 0.0075, 0.0425, 0.0, 0.0001],
+    "P": [1.0],
+}
+UNIMOD_COMPOSITIONS = {
+    "1": {"C": 2, "H": 2, "O": 1},  # acetyl
+    "4": {"C": 2, "H": 3, "N": 1, "O": 1},  # carbamidomethyl
+    "5": {"C": 1, "H": 1, "N": 1, "O": 1},  # carbamyl
+    "7": {"H": -1, "N": -1, "O": 1},  # deamidation
+    "21": {"H": 1, "O": 3, "P": 1},  # phospho
+    "27": {"H": -2, "O": -1},  # Glu->pyro-Glu
+    "28": {"H": -3, "N": -1},  # Gln->pyro-Glu
+    "34": {"C": 1, "H": 2},  # methyl
+    "35": {"O": 1},  # oxidation
+    "36": {"C": 2, "H": 4},  # dimethyl
+    "121": {"C": 4, "H": 6, "N": 2, "O": 2},  # GlyGly
+}
 
 
 def apply_quant(config: Config) -> None:
@@ -157,6 +204,8 @@ def quantify_ms1(config: Config) -> None:
       offset of every raw file to the first one ("mode", "median", "none")
     - protein_groups.tsv: directLFQ protein group intensities with the picked-group-FDR q-value
       (quantificationOptions.protein "directlfq")
+    - settings.json: the FlashLFQ mass tolerance, match-between-runs retention time window and stable_drift bin width
+      used, and the measurements behind the "auto" ones
     - flashlfq/, picked_group_fdr/, directlfq/: input and output of the tools
 
     :param config: config object containing all Oktoberfest parameters
@@ -172,22 +221,22 @@ def quantify_ms1(config: Config) -> None:
     ids.to_csv(flashlfq_dir / "ids.tsv", sep="\t", index=False)
     logger.info(f"Quantifying {ids['Full Sequence'].nunique()} precursors of {len(ids)} PSMs with FlashLFQ")
     link_spectra(config, ids["File Name"].unique(), flashlfq_dir / "spectra")
-    run_flashlfq(config, flashlfq_dir)
+    settings = {
+        "ppmTolerance": _setting(config.quant_ppm_tolerance, lambda: ppm_tolerance(ids, flashlfq_dir / "spectra",
+                                                                                   config.num_threads)),
+        "mbrRtWindow": _setting(config.quant_mbr_rt_window, lambda: mbr_rt_window(ids)),
+    }  # fmt: skip
+    run_flashlfq(config, flashlfq_dir, settings["ppmTolerance"]["value"], settings["mbrRtWindow"]["value"])
 
     peaks = pd.read_csv(flashlfq_dir / "QuantifiedPeaks.tsv", sep="\t", dtype={"File Name": str}, low_memory=False)
     runs = sorted(ids["File Name"].unique())
     peak_rows = peak_table(peaks, ids, config.quant_ppm_filter, config.quant_mbr_fdr)
-    # the normalization is estimated from the MS2 identifications only and applied to all peaks
-    identified = peak_rows[peak_rows["Detection"] == "MSMS"]
-    if config.quant_normalization in ("drift", "stable_drift"):
-        stable_fraction = STABLE_DRIFT_FRACTION if config.quant_normalization == "stable_drift" else None
-        curves = drift_curves(identified, runs, stable_fraction=stable_fraction)
-        peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, drift_correction(peak_rows, curves))
-        normalization = curves
-    else:
-        offsets = normalization_offsets(identified, runs, config.quant_normalization)
-        peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, peak_rows["Raw file"].map(offsets))
-        normalization = normalization_table(identified, runs, offsets, config.quant_normalization)
+    if config.quant_normalization == "stable_drift":
+        settings["driftBinMinutes"] = _setting(config.quant_drift_bin_minutes, lambda: drift_bin_minutes(peak_rows))
+    with open(quant_dir / "settings.json", "w") as f:
+        json.dump(settings, f, indent=2)
+    bin_minutes = settings.get("driftBinMinutes", {}).get("value", STABLE_DRIFT_BIN_MINUTES)
+    normalization = normalize(peak_rows, runs, config.quant_normalization, bin_minutes)
     peak_rows.to_csv(quant_dir / "precursor_peaks.tsv", sep="\t", index=False)
     normalization.to_csv(quant_dir / "normalization.tsv", sep="\t", index=False)
 
@@ -303,16 +352,180 @@ def link_spectra(config: Config, raw_files: list[str], spectra_dir: Path):
             link.symlink_to(available[raw_file].resolve())
 
 
-def run_flashlfq(config: Config, flashlfq_dir: Path):
+def _setting(configured: float | str, measure: Callable[[], dict]) -> dict:
+    """Get a setting given in the config, or measured from the data ("auto"): {"value", "source", measurements}."""
+    if configured == "auto":
+        return {"source": "auto", **measure()}
+    return {"value": float(configured), "source": "config"}
+
+
+def ppm_tolerance(ids: pd.DataFrame, spectra_dir: Path, threads: int = 1) -> dict:
+    """
+    Measure FlashLFQ's MS1 mass tolerance from the MS1 spectra, before FlashLFQ runs.
+
+    For a sample of AUTO_PPM_SAMPLE identifications, the MS1 scan before the MS2 scan is searched for the most intense
+    peak within AUTO_PPM_SEARCH ppm of the most abundant isotope of the peptide whose second most abundant isotope is
+    present at the same mass error (within AUTO_PPM_ISOTOPE_AGREEMENT ppm), as FlashLFQ needs an isotope envelope. The
+    tolerance is the |median| error plus the AUTO_PPM_PERCENTILE percentile of the errors around the median, since
+    FlashLFQ searches around the expected m/z.
+
+    :param ids: FlashLFQ input from :func:`flashlfq_input`
+    :param spectra_dir: folder with one <raw file>.mzML per raw file
+    :param threads: number of raw files read in parallel
+    :return: {"value": tolerance in ppm, "measured": identifications with a peak, "median_ppm", "percentile_ppm"};
+        FlashLFQ's default FLASHLFQ_PPM_TOLERANCE if fewer than MIN_AUTO_MEASUREMENTS identifications have a peak
+    """
+    sample = ids.sample(n=min(AUTO_PPM_SAMPLE, len(ids)), random_state=42)
+    groups = list(sample.groupby("File Name"))
+    paths = [spectra_dir / f"{raw_file}.mzML" for raw_file, _ in groups]
+    with ProcessPoolExecutor(max_workers=max(1, min(threads, len(groups)))) as executor:
+        errors = [
+            e for file_errors in executor.map(ms1_mass_errors, paths, [g for _, g in groups]) for e in file_errors
+        ]
+    return tolerance_from_errors(np.asarray(errors))
+
+
+def tolerance_from_errors(errors: np.ndarray) -> dict:
+    """Get the "auto" MS1 mass tolerance from measured mass errors (ppm), see :func:`ppm_tolerance`."""
+    if len(errors) < MIN_AUTO_MEASUREMENTS:
+        logger.warning(
+            f"Only {len(errors)} MS1 mass errors measured, using FlashLFQ's default of {FLASHLFQ_PPM_TOLERANCE} ppm."
+        )
+        return {"value": FLASHLFQ_PPM_TOLERANCE, "measured": len(errors)}
+    median = float(np.median(errors))
+    spread = float(np.percentile(np.abs(errors - median), AUTO_PPM_PERCENTILE))
+    value = round(abs(median) + spread, 2)
+    logger.info(f"MS1 mass tolerance {value} ppm (median error {median:+.2f} ppm, {len(errors)} identifications)")
+    return {"value": value, "measured": len(errors), "median_ppm": median, "percentile_ppm": spread}
+
+
+def ms1_mass_errors(path: Path, ids: pd.DataFrame) -> list[float]:
+    """
+    Get the MS1 mass error (ppm) of identifications of one raw file, see :func:`ppm_tolerance`.
+
+    :param path: mzML file
+    :param ids: identifications of this raw file (Full Sequence, Peptide Monoisotopic Mass, Precursor Charge and
+        Scan Retention Time in minutes)
+    :return: mass error of every identification with an isotope envelope in the MS1 scan before its MS2 scan
+    """
+    with mzml.PreIndexedMzML(str(path), decode_binary=False) as reader:
+        ms1 = [(float(s["scanList"]["scan"][0]["scan start time"]), s["id"]) for s in reader if s.get("ms level") == 1]
+    ms1_rt = np.array([rt for rt, _ in ms1])
+    errors = []
+    columns = ["Scan Retention Time", "Full Sequence", "Peptide Monoisotopic Mass", "Precursor Charge"]
+    with mzml.PreIndexedMzML(str(path)) as reader:
+        for rt, full_sequence, mono_mass, charge in ids[columns].itertuples(index=False, name=None):
+            k = np.searchsorted(ms1_rt, rt, side="right") - 1
+            if k < 0:
+                continue
+            spectrum = reader.get_by_id(ms1[k][1])
+            error = _envelope_error(
+                spectrum["m/z array"], spectrum["intensity array"], full_sequence, mono_mass, int(charge)
+            )
+            if error is not None:
+                errors.append(error)
+    return errors
+
+
+def _envelope_error(
+    mz: np.ndarray, intensity: np.ndarray, full_sequence: str, mono_mass: float, charge: int
+) -> Optional[float]:
+    """Mass error of the most intense peak at the most abundant isotope with the second one at the same error."""
+    first, second = np.argsort(-isotope_envelope(full_sequence))[:2]
+    mono_mz = (mono_mass + charge * PROTON) / charge
+    target = mono_mz + first * C13_SPACING / charge
+    partner = mono_mz + second * C13_SPACING / charge
+    ppm = (mz - target) / target * 1e6
+    partner_ppm = (mz - partner) / partner * 1e6
+    best, best_intensity = None, -1.0
+    for i in np.flatnonzero(np.abs(ppm) <= AUTO_PPM_SEARCH):
+        if intensity[i] > best_intensity and np.any(np.abs(partner_ppm - ppm[i]) <= AUTO_PPM_ISOTOPE_AGREEMENT):
+            best, best_intensity = float(ppm[i]), intensity[i]
+    return best
+
+
+def isotope_envelope(full_sequence: str, peaks: int = 6) -> np.ndarray:
+    """
+    Get the relative abundances of the first isotopes of a peptide from its elemental composition.
+
+    :param full_sequence: modified sequence in UNIMOD notation, optionally followed by "/<charge>"
+    :param peaks: number of isotopes (0 = monoisotopic)
+    :return: abundance of isotope 0..peaks-1
+    """
+    sequence = full_sequence.split("/")[0]
+    composition = mass.Composition(sequence=re.sub(r"\[[^\]]*\]-?", "", sequence).replace("-", ""))
+    for unimod in re.findall(r"\[UNIMOD:(\d+)\]", sequence):
+        composition += mass.Composition(UNIMOD_COMPOSITIONS.get(unimod, {}))
+    envelope = np.zeros(peaks)
+    envelope[0] = 1.0
+    for element, count in composition.items():
+        for _ in range(max(count, 0)):
+            envelope = np.convolve(envelope, ISOTOPE_ABUNDANCES.get(element, [1.0]))[:peaks]
+    return envelope
+
+
+def mbr_rt_window(ids: pd.DataFrame) -> dict:
+    """
+    Measure FlashLFQ's match-between-runs retention time window from the MS2 identifications.
+
+    Every precursor identified in at least 3 raw files gets its median MS2 retention time per raw file. Its deviation
+    from the precursor's median over the raw files, after removing every raw file's median deviation (a global shift),
+    is how far a precursor elutes from where the other raw files predict it. The window is the AUTO_MBR_RT_PERCENTILE
+    percentile of the absolute deviations.
+
+    :param ids: FlashLFQ input from :func:`flashlfq_input`
+    :return: {"value": window in minutes, "measured": deviations}; FlashLFQ's default FLASHLFQ_MBR_RT_WINDOW if there
+        are fewer than MIN_AUTO_MEASUREMENTS deviations
+    """
+    rt = ids.groupby(["Full Sequence", "File Name"])["Scan Retention Time"].median().unstack()
+    rt = rt[rt.notna().sum(axis=1) >= 3]
+    deviation = rt.sub(rt.median(axis=1), axis=0)
+    deviation = deviation.sub(deviation.median(), axis=1).abs().stack()
+    if len(deviation) < MIN_AUTO_MEASUREMENTS:
+        logger.warning(
+            f"Only {len(deviation)} retention time deviations between raw files, using FlashLFQ's default "
+            f"match-between-runs window of {FLASHLFQ_MBR_RT_WINDOW} min."
+        )
+        return {"value": FLASHLFQ_MBR_RT_WINDOW, "measured": len(deviation)}
+    value = round(float(deviation.quantile(AUTO_MBR_RT_PERCENTILE / 100)), 3)
+    logger.info(f"Match-between-runs retention time window {value} min ({len(deviation)} deviations)")
+    return {"value": value, "measured": len(deviation)}
+
+
+def drift_bin_minutes(peak_rows: pd.DataFrame) -> dict:
+    """
+    Get the stable_drift retention time bin from the peak width: AUTO_DRIFT_BIN_PEAK_WIDTH times the median width.
+
+    :param peak_rows: peak table from :func:`peak_table`
+    :return: {"value": bin width in minutes, "peak_width": median peak width of the used MS2 identifications}
+    """
+    used = peak_rows[peak_rows["Used"] & (peak_rows["Detection"] == "MSMS")]
+    width = float((used["Peak RT end"] - used["Peak RT start"]).median())
+    if not width > 0:
+        logger.warning(f"No peak widths, using a stable_drift bin of {STABLE_DRIFT_BIN_MINUTES} min.")
+        return {"value": STABLE_DRIFT_BIN_MINUTES}
+    value = round(width * AUTO_DRIFT_BIN_PEAK_WIDTH, 4)
+    logger.info(f"stable_drift bin {value} min (median peak width {width:.3f} min)")
+    return {"value": value, "peak_width": width}
+
+
+def run_flashlfq(
+    config: Config,
+    flashlfq_dir: Path,
+    ppm: float = FLASHLFQ_PPM_TOLERANCE,
+    mbr_rt_window: float = FLASHLFQ_MBR_RT_WINDOW,
+):
     """
     Run FlashLFQ on <flashlfq_dir>/ids.tsv with the mzML files in <flashlfq_dir>/spectra.
 
     The FlashLFQ command line takes booleans as switches: --chg (quantify only the identified charge state) is on,
     normalization stays off, and match-between-runs (on by default, cannot be switched off) peaks are filtered later
-    (see :func:`peak_table`).
+    (see :func:`peak_table`). The isotope mass tolerance is the same as the peak one.
 
     :param config: config object containing all Oktoberfest parameters
     :param flashlfq_dir: folder with ids.tsv and spectra/, and for the output
+    :param ppm: MS1 mass tolerance in ppm
+    :param mbr_rt_window: maximum match-between-runs retention time window in minutes
     :raises RuntimeError: if FlashLFQ fails or writes no QuantifiedPeaks.tsv
     """
     exe = config.flashlfq_exe
@@ -322,7 +535,9 @@ def run_flashlfq(config: Config, flashlfq_dir: Path):
         "--rep", str(flashlfq_dir / "spectra"),
         "--out", str(flashlfq_dir),
         "--chg",
-        "--ppm", str(config.quant_ppm_tolerance),
+        "--ppm", str(ppm),
+        "--iso", str(ppm),
+        "--mrt", str(mbr_rt_window),
         "--thr", str(config.num_threads),
     ]  # fmt: skip
     (flashlfq_dir / "QuantifiedPeaks.tsv").unlink(missing_ok=True)
@@ -428,6 +643,32 @@ def _mass_error_window(rows: pd.DataFrame, ppm_filter: float | str | None) -> pd
     return window
 
 
+def normalize(
+    peak_rows: pd.DataFrame, runs: list[str], normalization: str, bin_minutes: float = STABLE_DRIFT_BIN_MINUTES
+) -> pd.DataFrame:
+    """
+    Add the "Normalized intensity" of every peak (in place), estimated from the MS2 identifications only.
+
+    :param peak_rows: peak table from :func:`peak_table`
+    :param runs: raw files
+    :param normalization: "stable_drift", "drift", "mode", "median" or "none"
+    :param bin_minutes: retention time bin of "stable_drift" in minutes
+    :return: the normalization table: drift curves (:func:`drift_curves`) or offsets (:func:`normalization_table`)
+    """
+    identified = peak_rows[peak_rows["Detection"] == "MSMS"]
+    if normalization in ("drift", "stable_drift"):
+        if normalization == "stable_drift":
+            curves = drift_curves(identified, runs, bin_minutes=bin_minutes, min_per_bin=STABLE_DRIFT_MIN_PER_BIN,
+                                  stable_fraction=STABLE_DRIFT_FRACTION)  # fmt: skip
+        else:
+            curves = drift_curves(identified, runs)
+        peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, drift_correction(peak_rows, curves))
+        return curves
+    offsets = normalization_offsets(identified, runs, normalization)
+    peak_rows["Normalized intensity"] = peak_rows["Intensity"] / np.power(2.0, peak_rows["Raw file"].map(offsets))
+    return normalization_table(identified, runs, offsets, normalization)
+
+
 def normalization_offsets(peak_rows: pd.DataFrame, runs: list[str], normalization: str = "mode") -> pd.Series:
     """
     Get the log2 offset of every raw file to the first one, from the precursors used in both.
@@ -496,12 +737,13 @@ def drift_curves(
     Every precursor used in at least min_runs raw files (all of them if there are fewer) gets a reference level, its
     median log2 intensity over those raw files. Per raw file, the deviations from the reference are sorted by the
     apex retention time and grouped into bins of bin_minutes, each merged with its successors until it holds
-    min_per_bin precursors. The curve is the most frequent deviation of every bin (see :func:`_mode`), smoothed over 3
-    bins. It holds the overall level of the raw file too, so no further normalization is needed and no raw file is the
-    reference.
+    min_per_bin precursors. The curve is the deviation of every bin, smoothed over 3 bins. It holds the overall level
+    of the raw file too, so no further normalization is needed and no raw file is the reference.
 
-    With stable_fraction, the curves are estimated a second time from the most stable precursors only (see
-    :func:`stable_precursors`), so that precursors that change between the samples do not pull the curves.
+    Without stable_fraction ("drift"), all precursors are used and the deviation of a bin is its most frequent one
+    (see :func:`_mode`), which follows the unchanged majority. With stable_fraction ("stable_drift"), only the most
+    stable precursors are used (see :func:`stable_precursors`), so that precursors that change between the samples do
+    not pull the curves, and the deviation of a bin is their median.
 
     :param peak_rows: peak table from :func:`peak_table`
     :param runs: raw files
@@ -523,15 +765,20 @@ def drift_curves(
     )
     usable = log.notna().sum(axis=1) >= min(min_runs, len(runs))
     log, rt = log[usable], rt[usable]
-    curves = _drift_curves(log, rt, runs, bin_minutes, min_per_bin, "drift")
-    if stable_fraction is None or curves.empty:
-        return curves
-    stable = stable_precursors(log, rt, curves, stable_fraction, bin_minutes, min_per_bin)
-    return _drift_curves(log[stable], rt[stable], runs, bin_minutes, min_per_bin, "stable_drift")
+    if stable_fraction is None:
+        return _drift_curves(log, rt, runs, bin_minutes, min_per_bin, "drift", _mode)
+    stable = stable_precursors(log, rt, stable_fraction, bin_minutes, min_per_bin)
+    return _drift_curves(log[stable], rt[stable], runs, bin_minutes, min_per_bin, "stable_drift", _median)
 
 
 def _drift_curves(
-    log: pd.DataFrame, rt: pd.DataFrame, runs: list[str], bin_minutes: float, min_per_bin: int, name: str
+    log: pd.DataFrame,
+    rt: pd.DataFrame,
+    runs: list[str],
+    bin_minutes: float,
+    min_per_bin: int,
+    name: str,
+    center: Callable[[pd.Series], float],
 ) -> pd.DataFrame:
     """Drift curves of the precursors (rows) of log (log2 intensities) and rt (apex retention times), see drift_curves."""
     deviations = log.sub(log.median(axis=1), axis=0)
@@ -542,7 +789,7 @@ def _drift_curves(
             continue
         points["bin"] = _merge_bins(np.floor(points["rt"].to_numpy() / bin_minutes), min_per_bin)
         bins = points.groupby("bin").agg(rt=("rt", "median"), precursors=("rt", "size"))
-        bins["offset"] = points.groupby("bin")["deviation"].apply(_mode)
+        bins["offset"] = points.groupby("bin")["deviation"].apply(center)
         curves.append(
             pd.DataFrame(
                 {
@@ -561,32 +808,27 @@ def _drift_curves(
 def stable_precursors(
     log: pd.DataFrame,
     rt: pd.DataFrame,
-    curves: pd.DataFrame,
     fraction: float,
-    bin_minutes: float = 0.5,
-    min_per_bin: int = 100,
+    bin_minutes: float = 0.1,
+    min_per_bin: int = 25,
 ) -> pd.Series:
     """
     Select the precursors whose intensity is most stable over the raw files.
 
-    The log2 intensities are corrected by the drift curves, and every precursor gets its standard deviation over the
-    raw files. Precursors of proteins that change between the samples have a larger spread, without the samples having
-    to be known. The precursors are grouped by their median apex retention time (bins of bin_minutes merged until they
-    hold min_per_bin / fraction precursors), and the fraction of every bin with the lowest standard deviation is kept,
-    so that every part of the gradient keeps precursors.
+    Every precursor gets the standard deviation of its log2 intensities over the raw files. Precursors of proteins that
+    change between the samples have a larger spread, without the samples having to be known. The precursors are
+    grouped by their median apex retention time (bins of bin_minutes merged until they hold min_per_bin / fraction
+    precursors), and the fraction of every bin with the lowest standard deviation is kept, so that every part of the
+    gradient keeps precursors.
 
     :param log: log2 intensities, one row per precursor and one column per raw file
     :param rt: apex retention times like log
-    :param curves: drift curves of all precursors from :func:`_drift_curves`
     :param fraction: share of the precursors kept per retention time bin
     :param bin_minutes: width of a retention time bin before merging, in minutes
     :param min_per_bin: minimum number of kept precursors in a bin
     :return: boolean mask of the stable precursors (index of log)
     """
-    corrected = log.copy()
-    for run, curve in curves.groupby("Raw file"):
-        corrected[run] = log[run] - np.interp(rt[run], curve["Retention time"], curve["Log2 offset"])
-    spread = corrected.std(axis=1)
+    spread = log.std(axis=1)
     center = rt.median(axis=1)
     has_spread = spread.notna() & center.notna()
     bins = pd.Series(np.nan, index=log.index)
@@ -624,6 +866,12 @@ def drift_correction(peak_rows: pd.DataFrame, curves: pd.DataFrame) -> pd.Series
         rows = peak_rows["Raw file"] == run
         correction[rows] = np.interp(peak_rows.loc[rows, "Peak RT apex"], curve["Retention time"], curve["Log2 offset"])
     return correction.fillna(0.0)
+
+
+def _median(log_ratios: pd.Series) -> float:
+    """Median of a log2 ratio distribution, 0 without values."""
+    log_ratios = log_ratios.dropna()
+    return float(log_ratios.median()) if not log_ratios.empty else 0.0
 
 
 def _mode(log_ratios: pd.Series) -> float:

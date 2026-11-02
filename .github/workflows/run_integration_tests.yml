@@ -17,7 +17,7 @@ on:
                 required: false
                 default: "3.12"
                 type: choice
-                options: ["3.10", "3.11", "3.12"]
+                options: ["3.11", "3.12", "3.13"]
             pytest-extra-args:
                 description: "Extra pytest arguments (e.g. -k test_my_feature)"
                 required: false
@@ -36,6 +36,9 @@ jobs:
     integration-test:
         name: Integration Tests (Python ${{ inputs.python-version || '3.12' }})
         runs-on: ubuntu-latest
+        # the rescoring use case tests (tests/integration_tests/test_rescoring_usecases.py) took about 1.5 h on a
+        # 40-core server (cit ~26 min, multifrag ~45 min)
+        timeout-minutes: 360
 
         steps:
             - uses: actions/checkout@v6
@@ -57,6 +60,21 @@ jobs:
                   key: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-${{ hashFiles('poetry.lock') }}
                   restore-keys: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-
 
+            # inputs of the rescoring use case tests (mzML + MSFragger results from figshare, a few GB);
+            # the key changes when the figshare URLs in the test module change
+            - name: Cache rescoring use case inputs
+              uses: actions/cache@v5
+              with:
+                  path: tests/data/*/inputs
+                  key: usecase-inputs-${{ hashFiles('tests/integration_tests/test_rescoring_usecases.py') }}
+
+            # the rescoring use case tests run percolator (same version as in the Dockerfile)
+            - name: Install percolator
+              run: |
+                  DEB=percolator-v3-06-linux-amd64.deb
+                  wget -q https://github.com/percolator/percolator/releases/download/rel-3-06-01/$DEB -O /tmp/$DEB
+                  sudo apt-get install -y /tmp/$DEB
+
             - name: Install project and dependencies
               # If your integration tests require extra packages (e.g. a
               # dedicated [tool.poetry.group.integration] group in
@@ -68,16 +86,19 @@ jobs:
                   # Expose any secrets your integration tests need here:
                   # MY_SERVICE_API_KEY: ${{ secrets.MY_SERVICE_API_KEY }}
                   INTEGRATION_TEST: "1" # Sentinel env var tests can assert on
+              # run the tests once, with coverage (make coverage-int would run them a second time)
               run: |
-                  poetry run pytest tests/integration_tests \
+                  poetry run coverage erase
+                  poetry run coverage run -m pytest tests/integration_tests \
                     -v \
                     --tb=short \
                     ${{ inputs.pytest-extra-args }}
 
             - name: Generate integration coverage report
-              env:
-                  INTEGRATION_TEST: "1"
-              run: make coverage-int
+              if: always()
+              run: |
+                  poetry run coverage report -i
+                  poetry run coverage xml
 
             - name: Upload integration coverage
               uses: codecov/codecov-action@v7
