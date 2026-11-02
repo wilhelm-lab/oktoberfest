@@ -5,7 +5,7 @@ description = "Public repo oktoberfest"
 authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
 readme = "README.rst"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11"
 dependencies = [
     "rich>=15.0.0",
     "PyYAML>=5.4.1",
@@ -15,19 +15,20 @@ dependencies = [
     "mokapot>=0.9.1",
     "numpy>=1.26.4",
     "seaborn>=0.12.2",
-    # PTM pipeline requires spectrum-io>=0.8.0 / spectrum-fundamentals>=1.0.0 (not yet released).
-    # spectrum-fundamentals stays on features/ptm_pipeline (merged into development) because spectrum-io@development
-    # still pins that ref; switch to @development once spectrum-io does.
-    "spectrum-io @ git+https://github.com/wilhelm-lab/spectrum_io.git@development",
+    "spectrum-io>=1.0.0",
     # >=1.0.0 computes the ExpMass percolator feature (no longer added by oktoberfest)
-    "spectrum-fundamentals @ git+https://github.com/wilhelm-lab/spectrum_fundamentals.git@features/ptm_pipeline",
+    "spectrum-fundamentals>=1.1.0",
     "picked_group_fdr>=0.9.0",
-    "koinapy>=0.0.10",
+    "koinapy>=0.0.11",
     "spectrum-utils>=0.4.2",
+    # pyopenms 3.6 ships its own Arrow; loading it next to pyarrow breaks DataFrame.to_parquet
+    # (ArrowKeyError: scheme 'file' already registered)
+    "pyopenms<3.6",
 ]
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -47,13 +48,20 @@ docs = [
 # dlomix[tf] extra installs tensorflow alongside dlomix
 # oktoberfest integration relies on dlomix models trained with keras/tensorflow
 dlomix = [
-    "dlomix[tf]>=0.3.1"
+    "dlomix[tf]>=0.3.1",
+    # dlomix's tensorflow range also admits versions without python 3.13 wheels
+    "tensorflow>=2.20,<2.22; python_version >= '3.13'",
 ]
 
 [project.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 
 [tool.poetry]
+
+# Locking range only (not published): picked_group_fdr and triqler cap python at <3.14.
+# Users are bound by the open-ended requires-python above.
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"
