@@ -309,16 +309,17 @@ class TestDriftNormalization(unittest.TestCase):
         rows = self._rows()
         log = np.log2(rows.pivot_table(index="Modified sequence", columns="Raw file", values="Intensity"))
         rt = rows.pivot_table(index="Modified sequence", columns="Raw file", values="Peak RT apex").reindex(log.index)
-        curves = quant._drift_curves(log, rt, ["run_a", "run_b", "run_c"], 0.5, 50, "drift")
-        stable = quant.stable_precursors(log, rt, curves, 0.5, min_per_bin=50)
+        stable = quant.stable_precursors(log, rt, 0.5, bin_minutes=0.5, min_per_bin=50)
         changed = log.index.str[3:-1].astype(int) % 10 < 3
         self.assertEqual(stable.sum(), 200)
         self.assertFalse((stable & changed).any())
         self.assertTrue(stable[rt["run_a"] < 50].any() and stable[rt["run_a"] > 50].any())
 
     def test_stable_drift_curves(self):
-        """Test the curves from the stable precursors follow the drift and are named stable_drift."""
-        curves = quant.drift_curves(self._rows(), ["run_a", "run_b", "run_c"], min_per_bin=50, stable_fraction=0.5)
+        """Test the median curves of the stable precursors follow the drift and are named stable_drift."""
+        curves = quant.drift_curves(
+            self._rows(), ["run_a", "run_b", "run_c"], min_per_bin=50, stable_fraction=quant.STABLE_DRIFT_FRACTION
+        )
         self.assertEqual(set(curves["Normalization"]), {"stable_drift"})
         self.assertTrue(np.allclose(curves.loc[curves["Raw file"] != "run_c", "Log2 offset"], 0.0))
         run_c = curves[curves["Raw file"] == "run_c"]
@@ -394,6 +395,86 @@ class TestPrecursorTable(unittest.TestCase):
         self.assertEqual(aq["run_b"].tolist(), [0.0, 200.0])
 
 
+class TestAutoSettings(unittest.TestCase):
+    """Test the FlashLFQ tolerance, match-between-runs window and drift bin measured from the data."""
+
+    def test_isotope_envelope(self):
+        """Test the envelope of the elemental composition, with sulfur and modifications."""
+        envelope = quant.isotope_envelope("PEPTIDEK/2")
+        self.assertEqual(int(np.argmax(envelope)), 0)
+        self.assertAlmostEqual(envelope[1] / envelope[0], 0.479, places=2)
+        # carbamidomethyl adds C2H3NO and the sulfur of the cysteine raises M+2
+        cys = quant.isotope_envelope("C[UNIMOD:4]PEPTIDEK")
+        self.assertGreater(cys[2] / cys[0], envelope[2] / envelope[0] + 0.03)
+        # long peptides have M+1 (2.8 kDa) or M+2 (3.7 kDa) as the most abundant isotope
+        self.assertEqual(int(np.argmax(quant.isotope_envelope("PEPTIDEK" * 3))), 1)
+        self.assertEqual(int(np.argmax(quant.isotope_envelope("PEPTIDEK" * 4))), 2)
+        # unknown modifications are left out
+        self.assertTrue(np.allclose(quant.isotope_envelope("PEPT[UNIMOD:999]IDEK"), envelope))
+
+    def test_envelope_error(self):
+        """Test the most intense peak with its isotope partner at the same error is taken, within the search window."""
+        mono_mass, charge = 927.4549, 2
+        mono = (mono_mass + charge * quant.PROTON) / charge
+        partner = mono + quant.C13_SPACING / charge
+        shift = lambda mz, ppm: mz * (1 + ppm * 1e-6)  # noqa: E731
+        # an intense peak without isotope partner (-6 ppm) and the peptide at +2 ppm with its M+1
+        mz = np.array([shift(mono, -6), shift(mono, 2), shift(partner, 2.5)])
+        error = quant._envelope_error(mz, np.array([1e6, 1e5, 5e4]), "PEPTIDEK/2", mono_mass, charge)
+        self.assertAlmostEqual(error, 2, places=3)
+        mz = np.array([shift(mono, 12), shift(partner, 12)])
+        self.assertIsNone(quant._envelope_error(mz, np.array([1e5, 5e4]), "PEPTIDEK/2", mono_mass, charge))
+
+    def test_tolerance_from_errors(self):
+        """Test the tolerance is the |median| plus the 95th percentile around it, FlashLFQ's default with few errors."""
+        errors = np.concatenate([np.full(95, 1.0), np.full(5, 11.0)]) + np.linspace(-1, 1, 100)
+        result = quant.tolerance_from_errors(errors)
+        median = np.median(errors)
+        self.assertAlmostEqual(result["value"], abs(median) + np.percentile(np.abs(errors - median), 95), places=2)
+        self.assertEqual(result["measured"], 100)
+        self.assertEqual(quant.tolerance_from_errors(errors[:50])["value"], quant.FLASHLFQ_PPM_TOLERANCE)
+
+    def test_mbr_rt_window(self):
+        """Test the window is the percentile of the deviations after removing every raw file's global shift."""
+        rng = np.random.default_rng(0)
+        n = 200
+        jitter = rng.uniform(-0.2, 0.2, (n, 3))
+        ids = pd.DataFrame(
+            {
+                "Full Sequence": np.repeat([f"PEP{i}K/2" for i in range(n)], 3),
+                "File Name": np.tile(["run_a", "run_b", "run_c"], n),
+                # run_c elutes 5 min later, which is not part of the window
+                "Scan Retention Time": (np.arange(n)[:, None] + np.array([0.0, 0.0, 5.0]) + jitter).ravel(),
+            }
+        )
+        window = quant.mbr_rt_window(ids)["value"]
+        self.assertGreater(window, 0.1)
+        self.assertLess(window, 0.3)
+        self.assertEqual(quant.mbr_rt_window(ids.head(30))["value"], quant.FLASHLFQ_MBR_RT_WINDOW)
+
+    def test_drift_bin_minutes(self):
+        """Test the bin is a quarter of the median width of the used MS2 identifications' peaks."""
+        rows = quant.peak_table(_peaks(), _ids(), ppm_filter=5)
+        result = quant.drift_bin_minutes(rows)
+        self.assertAlmostEqual(result["value"], 0.1)
+        self.assertAlmostEqual(result["peak_width"], 0.4)
+
+    def test_setting(self):
+        """Test a configured value is used as given and "auto" is measured."""
+        self.assertEqual(quant._setting(5, lambda: {"value": 1.0}), {"value": 5.0, "source": "config"})
+        self.assertEqual(quant._setting("auto", lambda: {"value": 1.0}), {"source": "auto", "value": 1.0})
+
+    def test_normalize(self):
+        """Test the normalized intensities are added and the stable_drift bin is passed on."""
+        rows = TestDriftNormalization._rows().assign(Detection="MSMS")
+        with patch("oktoberfest.utils.quantification.drift_curves", wraps=quant.drift_curves) as curves:
+            quant.normalize(rows, ["run_a", "run_b", "run_c"], "stable_drift", bin_minutes=0.5)
+        self.assertEqual(curves.call_args.kwargs["bin_minutes"], 0.5)
+        self.assertIn("Normalized intensity", rows.columns)
+        table = quant.normalize(rows, ["run_a", "run_b", "run_c"], "median")
+        self.assertEqual(table["Normalization"].unique().tolist(), ["median"])
+
+
 class TestRunFlashLFQ(unittest.TestCase):
     """Test the FlashLFQ call."""
 
@@ -413,11 +494,12 @@ class TestRunFlashLFQ(unittest.TestCase):
         """Test the .dll is run with dotnet, with the identified charge only, and a missing output is an error."""
         mock_run.return_value = MagicMock(returncode=0)
         with self.assertRaisesRegex(RuntimeError, "FlashLFQ failed"):
-            quant.run_flashlfq(self.config, self.dir)
+            quant.run_flashlfq(self.config, self.dir, ppm=4.5, mbr_rt_window=0.4)
         cmd = mock_run.call_args.args[0]
         self.assertEqual(cmd[:2], ["/opt/dotnet", str(self.dir / "CMD.dll")])
         self.assertIn("--chg", cmd)
         self.assertEqual(cmd[cmd.index("--thr") + 1], "3")
+        self.assertEqual([cmd[cmd.index(flag) + 1] for flag in ("--ppm", "--iso", "--mrt")], ["4.5", "4.5", "0.4"])
         self.assertNotIn("--nor", cmd)
 
         mock_run.side_effect = lambda *args, **kwargs: (

@@ -446,11 +446,11 @@ class Config:
         Get the normalization of the precursor intensities between runs (flashlfq only); default is "stable_drift".
 
         "drift" corrects every run by a curve along the retention time, the most frequent log2 deviation from the
-        precursors' median over the runs; "stable_drift" estimates these curves from the precursors with the lowest
-        spread over the runs only (half of every retention time bin), so that precursors that change between the
-        samples do not pull them; "mode" shifts every run by the most frequent log2 ratio to the first run,
-        "median" by the median log2 ratio (pulled by precursors that change between samples), "none" keeps the FlashLFQ
-        intensities.
+        precursors' median over the runs (0.5 min bins); "stable_drift" takes the median deviation of the precursors
+        with the lowest spread over the runs only (75% of every retention time bin of driftBinMinutes), so that
+        precursors that change between the samples do not pull the curves; "mode" shifts every run by the most frequent
+        log2 ratio to the first run, "median" by the median log2 ratio (pulled by precursors that change between
+        samples), "none" keeps the FlashLFQ intensities.
         """
         return str(self.quantification_options.get("normalization", QUANT_NORMALIZATIONS[0])).lower()
 
@@ -470,9 +470,33 @@ class Config:
         return self.quantification_options.get("proteinFdr", 0.01)
 
     @property
-    def quant_ppm_tolerance(self) -> float:
-        """Get the MS1 mass tolerance in ppm used by FlashLFQ; default is 10."""
-        return self.quantification_options.get("ppmTolerance", 10)
+    def quant_ppm_tolerance(self) -> float | str:
+        """
+        Get the MS1 (peak and isotope) mass tolerance in ppm used by FlashLFQ (flashlfq only); default is "auto".
+
+        "auto" measures it in the MS1 spectra before FlashLFQ runs: the |median| plus the 95th percentile around the
+        median of the mass errors of 5,000 identifications, searched within 10 ppm at their two most abundant isotopes.
+        """
+        return self.quantification_options.get("ppmTolerance", "auto")
+
+    @property
+    def quant_mbr_rt_window(self) -> float | str:
+        """
+        Get FlashLFQ's maximum match-between-runs retention time window in minutes (flashlfq only); default is "auto".
+
+        "auto" takes the 90th percentile of how far the MS2 identifications of a precursor elute from its median over
+        the raw files, after removing every raw file's global shift.
+        """
+        return self.quantification_options.get("mbrRtWindow", "auto")
+
+    @property
+    def quant_drift_bin_minutes(self) -> float | str:
+        """
+        Get the retention time bin of the "stable_drift" normalization in minutes (flashlfq only); default is "auto".
+
+        "auto" takes a quarter of the median peak width of the MS2 identifications.
+        """
+        return self.quantification_options.get("driftBinMinutes", "auto")
 
     @property
     def quant_ppm_filter(self) -> float | str | None:
@@ -1124,9 +1148,10 @@ class Config:
         for option, value in fdrs:
             if not _is_number(value) or not 0 < value <= 1:
                 raise ValueError(f"quantificationOptions.{option} must be a q-value in (0, 1], got {value!r}.")
-        ppm = self.quant_ppm_tolerance
-        if not _is_number(ppm) or ppm <= 0:
-            raise ValueError(f"quantificationOptions.ppmTolerance must be a positive number, got {ppm!r}.")
+        for option, value in (("ppmTolerance", self.quant_ppm_tolerance), ("mbrRtWindow", self.quant_mbr_rt_window),
+                              ("driftBinMinutes", self.quant_drift_bin_minutes)):  # fmt: skip
+            if value != "auto" and (not _is_number(value) or value <= 0):
+                raise ValueError(f'quantificationOptions.{option} must be a positive number or "auto", got {value!r}.')
         ppm_filter = self.quant_ppm_filter
         if ppm_filter not in (None, "auto") and (not _is_number(ppm_filter) or ppm_filter <= 0):
             raise ValueError(
