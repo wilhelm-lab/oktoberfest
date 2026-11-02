@@ -11,7 +11,7 @@ from pandas.api.types import is_string_dtype
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
-from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
+from spectrum_fundamentals.fragments import compute_peptide_mass, fragment_arrays, retrieve_ion_types
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
@@ -31,6 +31,11 @@ from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
+
+# massTolerance "auto": percentile of the file's absolute fragment mass errors (after removing the offset) used as tolerance
+AUTO_MASS_TOLERANCE_PERCENTILE = 90
+# massTolerance "auto": widest fragment mass error (ppm) considered
+AUTO_MASS_TOLERANCE_MAX = 20.0
 
 
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
@@ -928,6 +933,75 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
     return psms
 
 
+def calibrate_fragment_masses(
+    psms: pd.DataFrame,
+    featured_ions: list[str],
+    custom_mods: Optional[dict[str, float]] = None,
+    max_ppm: float = AUTO_MASS_TOLERANCE_MAX,
+    n_psms: int = 5000,
+) -> tuple[pd.DataFrame, Optional[float]]:
+    """
+    Calibrate the fragment m/z of a spectra file and get its fragment mass tolerance from the data.
+
+    For up to n_psms random target PSMs, every theoretical fragment ion (without neutral losses) is matched to its
+    closest peak within max_ppm. The median of these mass errors is the systematic offset, which is removed from the
+    m/z of all peaks. The tolerance is the AUTO_MASS_TOLERANCE_PERCENTILE percentile of the absolute errors around the
+    offset, at most max_ppm. Most matched peaks are true fragments, so random matches hardly move the median.
+    Spectra from an ion trap (ITMS) are left unchanged and get no tolerance, so that the default (0.35 Da) is used.
+
+    :param psms: PSMs merged with their spectra (MZ in ascending order)
+    :param featured_ions: ion types to be annotated
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+    :param max_ppm: widest mass error considered and largest tolerance
+    :param n_psms: number of target PSMs used to measure the mass errors
+    :return: the PSMs with calibrated MZ and the fragment mass tolerance in ppm (None for ion trap spectra)
+    """
+    if (psms["MASS_ANALYZER"] == "ITMS").any():
+        logger.warning("Ion trap spectra found, using the default fragment mass tolerance instead of auto.")
+        return psms, None
+    targets = np.flatnonzero(~psms["REVERSE"].astype(bool).to_numpy())
+    sample = np.random.default_rng(42).choice(targets, min(n_psms, len(targets)), replace=False)
+    errors = [
+        _fragment_mass_errors(np.asarray(mz), sequence, charge, featured_ions, custom_mods, max_ppm)
+        for mz, sequence, charge in psms.iloc[sample][["MZ", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]].itertuples(
+            index=False
+        )
+    ]
+    errors = np.concatenate(errors) if errors else np.array([])
+    if len(errors) == 0:
+        logger.warning(f"No fragment ions found within {max_ppm} ppm, using {max_ppm} ppm without calibration.")
+        return psms, max_ppm
+    offset = float(np.median(errors))
+    tolerance = min(max_ppm, float(np.percentile(np.abs(errors - offset), AUTO_MASS_TOLERANCE_PERCENTILE)))
+    logger.info(
+        f"Fragment mass offset {offset:+.2f} ppm, tolerance +-{tolerance:.2f} ppm "
+        f"({len(errors)} fragment ions of {len(sample)} target PSMs)"
+    )
+    psms = psms.copy()
+    psms["MZ"] = [np.asarray(mz) * (1 - offset * 1e-6) for mz in psms["MZ"]]
+    return psms, tolerance
+
+
+def _fragment_mass_errors(
+    mz: np.ndarray,
+    sequence: str,
+    charge: int,
+    featured_ions: list[str],
+    custom_mods: Optional[dict[str, float]],
+    max_ppm: float,
+) -> np.ndarray:
+    """Get the mass error (ppm) of the closest peak to every fragment ion of a PSM, for those within max_ppm."""
+    if len(mz) == 0:
+        return np.array([])
+    fragments = fragment_arrays(sequence, "FTMS", int(charge), featured_ions=featured_ions, custom_mods=custom_mods)[0]
+    theoretical = fragments["mass"][~fragments["neutral_loss"]]
+    right = np.clip(np.searchsorted(mz, theoretical), 0, len(mz) - 1)
+    left = np.clip(right - 1, 0, len(mz) - 1)
+    closest = np.where(np.abs(mz[right] - theoretical) < np.abs(mz[left] - theoretical), mz[right], mz[left])
+    ppm = (closest - theoretical) / theoretical * 1e6
+    return ppm[np.abs(ppm) <= max_ppm]
+
+
 def annotate_spectral_library(
     psms: pd.DataFrame,
     fragmentation_method: str = "HCD",
@@ -1149,7 +1223,10 @@ def load_spectra(
 
 
 def convert_raw_to_mzml(
-    raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
+    raw_file: Union[str, Path],
+    output_file: Union[str, Path],
+    thermo_exe: Optional[Union[str, Path]] = None,
+    ms_level: Union[int, list[int]] = 2,
 ):
     """
     Convert raw to mzML format.
@@ -1162,6 +1239,7 @@ def convert_raw_to_mzml(
     :param thermo_exe: Path to the executable of ThermoRawFileParser, default depends on the OS:
         for Windows, it is "ThermoRawFileParser.exe", while for Linux and MacOS, it is
         "/opt/compomics/ThermoRawFileParser.exe".
+    :param ms_level: MS level(s) to keep, e.g. [1, 2] to keep the MS1 scans for MS1 quantification; default is 2
     """
     if thermo_exe is None:
         if "linux" in platform or platform == "darwin":
@@ -1170,7 +1248,7 @@ def convert_raw_to_mzml(
             thermo_exe = "ThermoRawFileParser.exe"
 
     raw = ThermoRaw()
-    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
+    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe, ms_level=ms_level)
 
 
 def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):

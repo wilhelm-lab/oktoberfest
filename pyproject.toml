@@ -52,6 +52,11 @@ dlomix = [
     "dlomix[tf]>=0.3.1; python_version >= '3.11'"
 ]
 
+# directLFQ protein intensities for MS1 quantification (quantificationOptions.protein "directlfq")
+quant = [
+    "directlfq>=0.3.3"
+]
+
 [project.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 

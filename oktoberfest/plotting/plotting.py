@@ -554,6 +554,9 @@ def plot_mirror_spectrum(
     ][score_col].iloc[0]
     fragment_tol_mass = config.mass_tolerance
     fragment_tol_mode = config.unit_mass_tolerance
+    if fragment_tol_mass == "auto":
+        # the tolerance is set per spectra file; the plot uses the widest one on the uncalibrated spectrum
+        fragment_tol_mass, fragment_tol_mode = 20.0, "ppm"
 
     # Get experimental spectrum
     mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
