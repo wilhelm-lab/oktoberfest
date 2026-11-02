@@ -11,7 +11,7 @@ Required information
 --------------------
 
 Oktoberfest needs to map the search engine specific output to UNIMOD format to create the internal file format, as well as the monoisotopic modification mass.
-The configuration file accepts two flags, "static_mods", and "var_mods", which both expect key-value mappings of the form:
+The configuration file accepts two flags, "static_mods" and "var_mods", inside "custom_modifications" of the "inputs" section, which both expect key-value mappings of the form:
 
 "<key>": [<UNIMOD_ID>, <mod_mass>]
 
@@ -27,18 +27,26 @@ Important: If you want to provide n-terminal or c-terminal modifications, you ha
 Example configuration
 ---------------------
 
-Oktoberfest supports two configuration flags, one for static and one for variable modifications, containing the search engine specific format as a key, and the UNIMOD ID and monoisotopic modification mass as a value:
+Oktoberfest supports two configuration flags, one for static and one for variable modifications, containing the search engine specific format as a key, and the UNIMOD ID and monoisotopic modification mass as a value. Both are placed in "custom_modifications" within the "inputs" section of the configuration file:
 
 .. code-block:: json
 
-    "static_mods": {
-        "^(Lactylation (Lac))": [2114, 72.021129]
-        "C": [4, 57.021464]
-    },
-    "var_mods": {
-        "M(ox)": [35, 15.994915],
-        "(Deamidation (NQ))": [7, 0.984016]
-    },
+    "inputs": {
+        "search_results": "./msms.txt",
+        "search_results_type": "Maxquant",
+        "spectra": "./",
+        "spectra_type": "raw",
+        "custom_modifications": {
+            "static_mods": {
+                "^(Lactylation (Lac))": [2114, 72.021129],
+                "C": [4, 57.021464]
+            },
+            "var_mods": {
+                "M(ox)": [35, 15.994915],
+                "(Deamidation (NQ))": [7, 0.984016]
+            }
+        }
+    }
 
 
 The above example is a MaxQuant specific mapping. It converts any carbamidomethylated "C" to "C[UNIMOD:4]", variable oxidation of "M" into "M[UNIMOD:35]", and, since no specific aminoacid was provided any deamidation on any aminoacid to "[UNIMOD:7]". Additionally, any n-terminal lactylation is converted to "[UNIMOD:2114]-" (note the added "-").
