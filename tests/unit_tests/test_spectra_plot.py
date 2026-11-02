@@ -1,6 +1,7 @@
 """Tests for plot_mirror_spectrum in oktoberfest.plotting."""
 
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -124,3 +125,20 @@ def test_plot_mirror_spectrum(
     assert mock_msms_spectrum.call_count == 2
 
     pdf.close()
+
+
+def test_find_mzml(tmp_path: Path):
+    """Test the mzML of a mirror plot is found for raw (converted) and mzML inputs."""
+    from oktoberfest.plotting.plotting import _find_mzml
+
+    config = Mock(output=tmp_path / "out", spectra=tmp_path / "mzml")
+    (tmp_path / "out" / "spectra").mkdir(parents=True)
+    (tmp_path / "mzml").mkdir()
+    assert _find_mzml(config, "run1") is None
+    (tmp_path / "mzml" / "run1.mzML").touch()
+    assert _find_mzml(config, "run1") == tmp_path / "mzml" / "run1.mzML"
+    (tmp_path / "out" / "spectra" / "run1.mzML").touch()
+    assert _find_mzml(config, "run1") == tmp_path / "out" / "spectra" / "run1.mzML"
+    config.spectra = tmp_path / "mzml" / "run2.mzml"
+    config.spectra.touch()
+    assert _find_mzml(config, "run2") == config.spectra

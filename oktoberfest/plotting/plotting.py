@@ -496,6 +496,24 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.close()
 
 
+def _find_mzml(config: Config, raw_file: str) -> Union[Path, None]:
+    """
+    Find the mzML file of a raw file for mirror plots.
+
+    Raw files are converted to <output>/spectra; mzML inputs are read from the spectra input (a folder or one file).
+
+    :param config: the configuration object
+    :param raw_file: raw file name without extension
+    :return: path to the mzML file, None if it is not found
+    """
+    candidates = [config.output / "spectra" / f"{raw_file}.mzML"]
+    if config.spectra.is_dir():
+        candidates += [config.spectra / f"{raw_file}{suffix}" for suffix in (".mzML", ".mzml")]
+    elif config.spectra.stem == raw_file:
+        candidates.append(config.spectra)
+    return next((path for path in candidates if path.is_file()), None)
+
+
 def plot_mirror_spectrum(
     spec_pred: Spectra,
     mzml: pd.DataFrame,
@@ -701,15 +719,19 @@ def plot_all(data_dir: Path, config: Config, fdr_cutoff: float = 0.01):
     if {"RT", "iRT", "pred_RT"}.issubset(prosit_df.columns):
         plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.pdf")
 
-    base_mzml_path = os.path.abspath(os.path.join(fdr_dir, "../../spectra"))
     base_hdf5_path = os.path.abspath(os.path.join(fdr_dir, "../../data"))
     mirror_plots_dict = config.mirror_plots
+    if not mirror_plots_dict:
+        return
 
     pdf_path = data_dir / "mirror_plots.pdf"
 
     with PdfPages(pdf_path) as pdf:
         for raw_file, scan_numbers in mirror_plots_dict.items():
-            mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+            mzml_path = _find_mzml(config, raw_file)
+            if mzml_path is None:
+                print(f"Warning: No mzML file found for {raw_file}, skipping its mirror plots.")
+                continue
             hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
 
             mzml = ThermoRaw.read_mzml(source=mzml_path)
