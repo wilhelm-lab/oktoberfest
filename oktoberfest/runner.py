@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from math import ceil
 from multiprocessing import Manager, Process, pool
@@ -78,6 +79,7 @@ def _preprocess(spectra_files: list[Path], config: Config) -> list[Path]:
             ptm_unimod_id=ptm_unimods,
             ptm_sites=ptm_sites,
             ptm_model=ptm_model,
+            num_threads=config.num_threads,
         )
         if config.spectra_type.lower() in ["d", "hdf"]:
             timstof_metadata = pp.convert_timstof_metadata(
@@ -178,7 +180,9 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
         format_ = spectra_file.suffix.lower()
         if format_ == ".raw":
             file_to_load = spectra_dir / spectra_file.with_suffix(".mzML").name
-            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe)
+            # MS1 quantification measures the precursors in the MS1 scans of the converted file
+            ms_level = [1, 2] if config.ms1_quantification else 2
+            pp.convert_raw_to_mzml(spectra_file, file_to_load, thermo_exe=config.thermo_exe, ms_level=ms_level)
         elif format_ in [".mzml", ".hdf"]:
             file_to_load = spectra_file
         elif format_ == ".d":
@@ -209,10 +213,16 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
                 aspec.obs["start_pos_p2"] = aspec.obs["start_pos_p2"].astype(str)
         else:
             annotate_neutral_loss = config.ptm_use_neutral_loss
+            mass_tol, unit_mass_tol = config.mass_tolerance, config.unit_mass_tolerance
+            if mass_tol == "auto":
+                library, mass_tol = pp.calibrate_fragment_masses(
+                    library, featured_ions=config.ion_types, custom_mods=config.unimod_to_mass()
+                )
+                unit_mass_tol = None if mass_tol is None else "ppm"
             aspec = pp.annotate_spectral_library(
                 psms=library,
-                mass_tol=config.mass_tolerance,
-                unit_mass_tol=config.unit_mass_tolerance,
+                mass_tol=mass_tol,
+                unit_mass_tol=unit_mass_tol,
                 fragmentation_method=_get_annotation_fragmentation(library, config),
                 p_window=config.p_window,
                 custom_mods=config.unimod_to_mass(),
@@ -784,9 +794,59 @@ def _calculate_features(spectra_file: Path, config: Config, xl: bool = False, cm
             remove_miss_cleavage_features=remove_miss_cleavage_features,
             task="multifrag" if config.check_multifrag() else "default",
             featured_ions=config.ion_types,
+            subtract_peaks=config.chimeric_peak_subtraction,
         )
 
     calc_feature_step.mark_done()
+
+
+def _percolator_run(fdr_dir: Path, config: Config, stage: str, num_threads: int, step: ProcessStep, xl: bool = False):
+    """
+    Run percolator on the original or the rescore features and mark the step as done.
+
+    The rescore features are localized instead if PTMs are localized. The training subset (percolatorSubsetMaxTrain)
+    is used for the rescoring runs only, never for the localization models.
+
+    :param fdr_dir: the output directory
+    :param config: the configuration object
+    :param stage: "original" or "rescore"
+    :param num_threads: number of threads used by percolator
+    :param step: the process step to mark as done
+    :param xl: crosslinked or linear peptide
+    """
+    features = fdr_dir / f"{stage}.tab"
+    if stage == "rescore" and config.ptm_localization:
+        re.localize_ptms(
+            fdr_dir,
+            config.ptm_sites,
+            config.ptm_decoy_residues,
+            config.ptm_flr_neighbor_split,
+            config.ptm_localization_probability,
+            config.ptm_decoy_weighting,
+            config.ptm_flr_groups,
+            config.ptm_flr_estimator,
+            config.ptm_sdi_features,
+            config.ptm_ambiguity_check,
+            config.output / "data",
+            num_threads=num_threads,
+        )
+    elif config.ptm_fdr_control and not xl:
+        re.percolator_fdr_modified(
+            features, num_threads=num_threads, subset_max_train=config.percolator_subset_max_train
+        )
+    else:
+        re.rescore_with_percolator(
+            input_file=features,
+            output_folder=fdr_dir,
+            xl=xl,
+            num_threads=num_threads,
+            subset_max_train=config.percolator_subset_max_train,
+        )
+    if xl:
+        output_csms = xl_psm_to_csm(str(fdr_dir), stage, "percolator")
+        output_csms = xl_between_or_self(output_csms, score="score")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms, stage, "percolator")
+    step.mark_done()
 
 
 def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
@@ -802,45 +862,23 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
 
     if config.fdr_estimation_method == "percolator":
+        runs = []
         if not rescore_original_step.is_done():
-            if config.ptm_fdr_control and not xl:
-                re.percolator_fdr_modified(fdr_dir / "original.tab", num_threads=config.num_threads)
-            else:
-                re.rescore_with_percolator(
-                    input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
-                )
-            if xl:
-                output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
-                output_csms_original = xl_between_or_self(output_csms_original, score="score")
-                xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "percolator")
-
-            rescore_original_step.mark_done()
+            runs.append(
+                lambda threads: _percolator_run(fdr_dir, config, "original", threads, rescore_original_step, xl)
+            )
         if not config._run_original and not rescore_prosit_step.is_done():
-            if config.ptm_localization:
-                re.localize_ptms(
-                    fdr_dir,
-                    config.ptm_sites,
-                    config.ptm_decoy_residues,
-                    config.ptm_flr_neighbor_split,
-                    config.ptm_localization_probability,
-                    config.ptm_decoy_weighting,
-                    config.ptm_flr_groups,
-                    config.ptm_flr_estimator,
-                    config.ptm_sdi_features,
-                    config.ptm_ambiguity_check,
-                    config.output / "data",
-                )
-            elif config.ptm_fdr_control and not xl:
-                re.percolator_fdr_modified(fdr_dir / "rescore.tab", num_threads=config.num_threads)
-            else:
-                re.rescore_with_percolator(
-                    input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl, num_threads=config.num_threads
-                )
-            if xl:
-                output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
-                output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
-                xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
-            rescore_prosit_step.mark_done()
+            runs.append(lambda threads: _percolator_run(fdr_dir, config, "rescore", threads, rescore_prosit_step, xl))
+        if len(runs) == 2 and config.num_threads >= 2 and not xl:
+            # original and rescore are independent: run them at the same time, sharing numThreads (not for
+            # crosslinks, whose csm plots are not thread safe)
+            threads = [config.num_threads // 2, config.num_threads - config.num_threads // 2]
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                for future in [executor.submit(run, n) for run, n in zip(runs, threads, strict=True)]:
+                    future.result()
+        else:
+            for run in runs:
+                run(config.num_threads)
     elif config.fdr_estimation_method == "mokapot":
         if not rescore_original_step.is_done():
             re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
@@ -1478,10 +1516,11 @@ def run_rescoring(config_path: Union[str, Path, Config]):
                     pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
-        if config.quantification:
+        quant_step = ProcessStep(config.output, "quantification")
+        if config.quantification and not quant_step.is_done():
             logger.info("Starting quantification")
-            # method contains picked-group-FDR call
             apply_quant(config)
+            quant_step.mark_done()
             logger.info("Finished quantification")
 
 

@@ -140,6 +140,127 @@ class TestCheckQuantification(unittest.TestCase):
         config._check_fasta()
 
 
+class TestQuantificationOptions(unittest.TestCase):
+    """Test the quantificationOptions and the checks for MS1 quantification with FlashLFQ."""
+
+    def setUp(self):  # noqa: D102
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.flashlfq = Path(self.tmp_dir.name) / "CMD.dll"
+        self.flashlfq.touch()
+
+    def tearDown(self):  # noqa: D102
+        self.tmp_dir.cleanup()
+
+    def _flashlfq_config(self, **data) -> Config:
+        options = {"precursor": "flashlfq", "flashlfqExe": str(self.flashlfq)}
+        config = _config(quantification=True, quantificationOptions=options, **data)
+        config.base_path = Path(self.tmp_dir.name)
+        config.data["inputs"] = {"spectra_type": "mzml"}
+        return config
+
+    def test_defaults(self):
+        """Test the search engine's quantification is used by default and MS1 options default to sensible values."""
+        config = _config(quantification=True)
+        self.assertEqual(config.quant_precursor, "search_engine")
+        self.assertEqual(config.quant_protein, "directlfq")
+        self.assertEqual(config.quant_normalization, "stable_drift")
+        self.assertEqual((config.quant_psm_fdr, config.quant_peptide_fdr, config.quant_protein_fdr), (0.01, 0.01, 0.01))
+        self.assertEqual((config.quant_ppm_tolerance, config.quant_ppm_filter), ("auto", "auto"))
+        self.assertEqual((config.quant_mbr_rt_window, config.quant_drift_bin_minutes), ("auto", "auto"))
+        self.assertIsNone(config.quant_mbr_fdr)
+        self.assertFalse(config.ms1_quantification)
+        config._check_quantification_options()
+
+    def test_flashlfq(self):
+        """Test a valid FlashLFQ configuration passes and enables MS1 quantification."""
+        config = self._flashlfq_config()
+        config._check_quantification_options()
+        self.assertTrue(config.ms1_quantification)
+        self.assertFalse(
+            _config(quantification=False, quantificationOptions={"precursor": "flashlfq"}).ms1_quantification
+        )
+
+    def test_invalid_options(self):
+        """Test unknown methods and invalid q-values or tolerances are rejected."""
+        for option, value in [
+            ("precursor", "ionquant"),
+            ("protein", "maxlfq"),
+            ("normalization", "quantile"),
+            ("psmFdr", 0),
+            ("psmFdr", 1.5),
+            ("proteinFdr", "0.01"),
+            ("proteinFdr", True),
+            ("ppmTolerance", -10),
+            ("ppmTolerance", "10"),
+            ("mbrRtWindow", 0),
+            ("mbrRtWindow", "Auto"),
+            ("driftBinMinutes", -0.1),
+            ("peptideFdr", 2),
+            ("ppmFilter", 0),
+            ("ppmFilter", "5"),
+            ("ppmFilter", "Auto"),
+            ("mbrFdr", 0),
+            ("mbrFdr", "0.05"),
+        ]:
+            with self.subTest(option=option, value=value):
+                with self.assertRaisesRegex(ValueError, option):
+                    _config(quantificationOptions={option: value})._check_quantification_options()
+
+    def test_ppm_filter_off(self):
+        """Test the mass error filter can be switched off with null."""
+        config = _config(quantificationOptions={"ppmFilter": None})
+        self.assertIsNone(config.quant_ppm_filter)
+        config._check_quantification_options()
+
+    def test_ppm_filter_auto_and_number(self):
+        """Test the mass error filter accepts "auto" and a fixed number of ppm."""
+        for value in ["auto", 7]:
+            with self.subTest(value=value):
+                config = _config(quantificationOptions={"ppmFilter": value})
+                self.assertEqual(config.quant_ppm_filter, value)
+                config._check_quantification_options()
+
+    def test_auto_settings_and_numbers(self):
+        """Test the FlashLFQ tolerance, match-between-runs window and drift bin accept "auto" and positive numbers."""
+        for option, value in [("ppmTolerance", 5), ("mbrRtWindow", 0.5), ("driftBinMinutes", 0.05)]:
+            with self.subTest(option=option):
+                _config(quantificationOptions={option: value})._check_quantification_options()
+
+    def test_flashlfq_requirements(self):
+        """Test FlashLFQ needs Percolator, MS1 spectra, no PTM localization and the FlashLFQ executable."""
+        with self.assertRaisesRegex(ValueError, "percolator"):
+            self._flashlfq_config(fdr_estimation_method="mokapot")._check_quantification_options()
+        with self.assertRaisesRegex(ValueError, "ptm_localization"):
+            self._flashlfq_config(ptm_localization=True)._check_quantification_options()
+        config = self._flashlfq_config()
+        config.data["inputs"]["spectra_type"] = "d"
+        with self.assertRaisesRegex(ValueError, "spectra_type"):
+            config._check_quantification_options()
+        self.flashlfq.unlink()
+        with self.assertRaisesRegex(FileNotFoundError, "FlashLFQ"):
+            self._flashlfq_config()._check_quantification_options()
+
+
+class TestMassTolerance(unittest.TestCase):
+    """Test the validation of massTolerance."""
+
+    def test_valid(self):
+        """Test a positive number, "auto" (ppm) and no value are accepted."""
+        for data in [{}, {"massTolerance": 20, "unitMassTolerance": "ppm"}, {"massTolerance": 0.35},
+                     {"massTolerance": "auto"}, {"massTolerance": "auto", "unitMassTolerance": "ppm"}]:  # fmt: skip
+            with self.subTest(data=data):
+                _config(models={"intensity": "Prosit_2020_intensity_HCD"}, **data)._check_mass_tolerance()
+
+    def test_invalid(self):
+        """Test negative, non-numeric and Da or crosslinking "auto" tolerances are rejected."""
+        for data in [{"massTolerance": -1}, {"massTolerance": "Auto"}, {"massTolerance": True},
+                     {"massTolerance": "auto", "unitMassTolerance": "da"}]:  # fmt: skip
+            with self.subTest(data=data), self.assertRaises(ValueError):
+                _config(models={"intensity": "Prosit_2020_intensity_HCD"}, **data)._check_mass_tolerance()
+        with self.assertRaisesRegex(ValueError, "crosslinked"):
+            _config(models={"intensity": "Prosit_2024_intensity_XL_NMS2"}, massTolerance="auto")._check_mass_tolerance()
+
+
 @patch.object(Config, "_check_fasta")
 @patch.object(Config, "_check_quantification")
 @patch.object(Config, "_check_for_speclib")
@@ -165,6 +286,15 @@ class TestCheck(unittest.TestCase):
         _config(type="Rescoring", quantification=True, models=models).check()
         mock_quant.assert_called_once()
         mock_fasta.assert_called_once()
+
+        # MS1 quantification does not need the search engine's quantification files
+        with patch.object(Config, "_check_quantification_options") as mock_options:
+            _config(
+                type="Rescoring", quantification=True, quantificationOptions={"precursor": "flashlfq"}, models=models
+            ).check()
+        mock_options.assert_called_once()
+        mock_quant.assert_called_once()
+        self.assertEqual(mock_fasta.call_count, 2)
 
     def test_dlomix_model(self, mock_koina, mock_speclib, mock_quant, mock_fasta):
         """Test DLOmix models are loaded instead of checking Koina and fail clearly if they cannot be loaded."""
@@ -333,3 +463,41 @@ class TestPTMLocalization(unittest.TestCase):
         config = _config(models=ptm_models, ptm_localization=True, ptmLocalizationOptions=localization)
         self.assertFalse(config.ptm_fdr_control)
         self.assertEqual(config.ptm_sites, {21: ["S", "T", "Y"]})
+
+
+class TestPercolatorSubset(unittest.TestCase):
+    """Test the maximum number of PSMs percolator trains on."""
+
+    def test_default(self):
+        """Test percolator trains on all PSMs by default."""
+        config = _config()
+        self.assertIsNone(config.percolator_subset_max_train)
+        config._check_percolator_subset()
+
+    def test_subset(self):
+        """Test a positive number of PSMs is accepted and anything else is rejected."""
+        config = _config(percolatorSubsetMaxTrain=500000)
+        self.assertEqual(config.percolator_subset_max_train, 500000)
+        config._check_percolator_subset()
+        for value in [0, -1, 1.5, "500000", True]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "percolatorSubsetMaxTrain"):
+                    _config(percolatorSubsetMaxTrain=value)._check_percolator_subset()
+
+
+class TestChimericPeakSubtraction(unittest.TestCase):
+    """Test the flag for removing the peaks of better candidates in chimeric spectra."""
+
+    def test_default(self):
+        """Test the peaks are not subtracted by default."""
+        config = _config()
+        self.assertFalse(config.chimeric_peak_subtraction)
+        config._check_chimeric_peak_subtraction()
+
+    def test_flag(self):
+        """Test a boolean is accepted and anything else is rejected."""
+        self.assertTrue(_config(chimericPeakSubtraction=True).chimeric_peak_subtraction)
+        for value in [1, "true", None]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
+                    _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()

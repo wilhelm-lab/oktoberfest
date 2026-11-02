@@ -112,10 +112,11 @@ class TestMergeInput(unittest.TestCase):
         self.tmp_dir.cleanup()
 
     def _write_tab_files(self) -> list[Path]:
+        # as written by generate_features (missing values already filled with 0)
         tabs = [
-            pd.DataFrame({"SpecId": ["F1-1", "F1-2"], "Label": [1, -1], "spectral_angle": [0.7, np.nan]}),
+            pd.DataFrame({"SpecId": ["F1-1", "F1-2"], "Label": [1, -1], "spectral_angle": [0.7, 0.0]}),
             pd.DataFrame({"SpecId": ["F2-1"], "Label": [1], "spectral_angle": [0.5]}),
-            pd.DataFrame({"SpecId": ["F3-1", "F3-2"], "Label": [-1, 1], "spectral_angle": [np.nan, 0.9]}),
+            pd.DataFrame({"SpecId": ["F3-1", "F3-2"], "Label": [-1, 1], "spectral_angle": [0.0, 0.9]}),
         ]
         tab_files = []
         for i, tab in enumerate(tabs):
@@ -125,7 +126,7 @@ class TestMergeInput(unittest.TestCase):
         return tab_files
 
     def test_merge_input(self):
-        """Test files are concatenated in order with a single header and missing values set to 0."""
+        """Test files are concatenated in order with a single header."""
         for num_threads in [1, 2]:
             with self.subTest(num_threads=num_threads):
                 tab_files = self._write_tab_files()
@@ -140,6 +141,15 @@ class TestMergeInput(unittest.TestCase):
                 self.assertEqual(merged["spectral_angle"].tolist(), [0.7, 0.0, 0.5, 0.0, 0.9])
                 # the per spectra file inputs are removed after merging
                 self.assertFalse(any(tab_file.exists() for tab_file in tab_files))
+
+    def test_merge_single_input(self):
+        """Test a single tab file is moved to the output file unchanged."""
+        tab_file = self._write_tab_files()[0]
+        content = tab_file.read_bytes()
+        output_file = self.tmp_path / "merged.tab"
+        re.merge_input(tab_files=[tab_file], output_file=output_file)
+        self.assertEqual(output_file.read_bytes(), content)
+        self.assertFalse(tab_file.exists())
 
 
 class TestPercolatorFdrModified(unittest.TestCase):

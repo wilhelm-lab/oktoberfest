@@ -60,6 +60,7 @@ DEFAULTS = {
         "thermoExe": "ThermoRawFileParser.exe",
         "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
         "quantification": False,
+        "percolatorSubsetMaxTrain": 500000,
     },
     "CollisionEnergyCalibration": {
         "type": "CollisionEnergyCalibration",
