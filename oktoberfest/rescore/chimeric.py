@@ -88,7 +88,8 @@ def subtract_shared_peaks(
     scale = np.where(remaining > 0, remaining, 1.0)
     obs[lost] = np.where(observed, obs[lost] / scale[:, None], obs[lost])
     if "MOST_INTESE_PEAK" in metadata:
-        most_intense = metadata["MOST_INTESE_PEAK"].to_numpy(dtype=float)
+        # a writable copy: with copy-on-write (pandas 3) to_numpy returns a read-only view
+        most_intense = np.array(metadata["MOST_INTESE_PEAK"], dtype=float)
         most_intense[lost] = np.where(remaining > 0, most_intense[lost] * remaining, np.nan)
         metadata["MOST_INTESE_PEAK"] = most_intense
     return sp.csr_matrix(obs), sp.csr_matrix(mzs), metadata
