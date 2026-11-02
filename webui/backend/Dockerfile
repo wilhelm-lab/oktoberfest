@@ -65,7 +65,7 @@ RUN pip install --no-cache-dir --retries 5 --timeout 60 \
     "python-multipart>=0.0.9"
 
 # Install oktoberfest from this checkout (with directLFQ for quantification), then move spectrum_fundamentals and
-# spectrum_io to SPECTRUM_REF (pyproject pins a feature branch that is already merged into development)
+# spectrum_io from their PyPI releases to the git ref SPECTRUM_REF
 ARG SPECTRUM_REF=development
 COPY pyproject.toml README.rst /src/oktoberfest/
 COPY oktoberfest/ /src/oktoberfest/oktoberfest/
