@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, computed, watch } from "vue";
+import { reactive, computed, onMounted, watch } from "vue";
 import FileUpload from "@/components/FileUpload.vue";
 import RangeField from "@/components/RangeField.vue";
 import ModelsSection from "@/components/ModelsSection.vue";
 import ConfigSummary from "@/components/ConfigSummary.vue";
 import { useJobForm } from "@/composables/useJobForm";
 
-const { store, submitting, error, submit } = useJobForm("Rescoring");
+const { store, submitting, error, submit, loadServerDefaults } = useJobForm("Rescoring");
 
 const form = reactive({
     // Inputs
@@ -57,6 +57,7 @@ const form = reactive({
     instrument_type: "QE",
     ion_types_list: ["b", "y"],
 });
+onMounted(() => loadServerDefaults(form));
 
 // localization settings of the published benchmark runs (phospho_repro final model, docs/config.rst defaults)
 function publishedLocalizationDefaults() {

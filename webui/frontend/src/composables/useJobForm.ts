@@ -24,5 +24,15 @@ export function useJobForm(jobType: string) {
         }
     }
 
-    return { store, submitting, error, success, submit };
+    // Pre-fill fields whose default is configured on the server (e.g. PREDICTION_SERVER)
+    async function loadServerDefaults(form: { prediction_server: string }) {
+        try {
+            const defaults = await store.fetchDefaults(jobType);
+            if (defaults?.prediction_server) form.prediction_server = defaults.prediction_server;
+        } catch {
+            // keep the form's built-in default
+        }
+    }
+
+    return { store, submitting, error, success, submit, loadServerDefaults };
 }

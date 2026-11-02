@@ -138,7 +138,6 @@ class RescoringConfig(CommonConfigMixin):
     # positive number or "auto" (fragment tolerance estimated per spectra file, ppm only)
     massTolerance: Union[Literal["auto"], float] = 20.0
     unitMassTolerance: str = "ppm"
-    thermoExe: str = "/cmnfs/scratch/oktoberfest_webserver/ThermoRawFileParser1.4.4/ThermoRawFileParser.exe"
     ce_alignment_options: CeAlignmentOptions = Field(default_factory=CeAlignmentOptions)
     fastaDigestOptions: Optional[FastaDigestOptions] = None
     # train percolator on at most this many PSMs (rescoring only, never localization): ~6x faster and ~3x less RAM
@@ -226,7 +225,7 @@ class RescoringConfig(CommonConfigMixin):
             "models": {"intensity": self.models.intensity, "irt": self.models.irt},
             "prediction_server": self.prediction_server,
             "ssl": self.ssl,
-            "thermoExe": self.thermoExe,
+            "thermoExe": settings.thermo_exe,
             "numThreads": self.numThreads,
             "fdr_estimation_method": self.fdr_estimation_method,
             "add_feature_cols": self.add_feature_cols,

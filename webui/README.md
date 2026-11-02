@@ -1,252 +1,287 @@
 # Oktoberfest Web UI
 
-A browser-based interface for [Oktoberfest](https://github.com/wilhelm-lab/oktoberfest) — open-source spectral library generation and rescoring pipeline based on Prosit.
+A browser interface for [Oktoberfest](https://github.com/wilhelm-lab/oktoberfest): submit and monitor **Rescoring**,
+**Collision Energy Calibration** and **Spectral Library Generation** jobs through guided forms instead of writing JSON
+configs by hand.
 
-Submit and monitor **Rescoring**, **Collision Energy Calibration**, and **Spectral Library Generation** jobs through a guided form UI, without writing JSON configs by hand.
+-   Runs on Windows, macOS and Linux with Docker, on your own machine or as a shared server for a group.
+-   Rescoring includes MS1 quantification (search engine or FlashLFQ) and PTM site localization with false
+    localization rate (FLR) estimation.
+-   Everything runs locally: the Docker image contains Oktoberfest, Percolator, ThermoRawFileParser, FlashLFQ and the
+    .NET runtime. Only the peptide property predictions are requested from a [Koina](https://koina.wilhelmlab.org)
+    server.
+
+Contents: [Quick start](#quick-start-docker) · [Configuration](#configuration) · [Data](#where-is-my-data) ·
+[Shared server](#running-a-shared-server-hosted-mode) · [Included tools](#included-tools) ·
+[Without Docker](#running-without-docker-development) · [Tests](#tests) · [Troubleshooting](#troubleshooting)
 
 ---
 
-## Local Hosting Guide (Windows, Mac, Linux)
+## Quick start (Docker)
 
-Running the Web UI locally via Docker is the easiest way to get started. This process works identically on **Windows**, **macOS**, and **Linux**.
+### 1. Install the prerequisites
 
-### 1. Prerequisites
+-   **Docker**: Docker Desktop on Windows and macOS, Docker Engine with the Compose plugin (v2.24 or newer) on Linux.
+    See [Get Docker](https://docs.docker.com/get-docker/). On Windows, use the WSL2 backend.
+-   **Git**: [Download Git](https://git-scm.com/downloads).
+-   **Hardware**: at least 16 GB RAM is recommended; full proteome rescoring jobs need 8-16 GB each. The image needs a
+    few GB of disk space, plus space for your data.
 
-You must install the following software on your machine:
-
--   **Docker Desktop** (for Windows/Mac) or **Docker Engine / Docker Compose** (for Linux). [Download Docker](https://docs.docker.com/get-docker/)
--   **Git** (to clone the repository). [Download Git](https://git-scm.com/downloads)
-
-_(Note for Windows users: We strongly recommend installing WSL2 as the backend for Docker Desktop for optimal performance)._
-
-### 2. Setup the Environment
-
-Clone the repository and navigate to the `webui` folder.
+### 2. Get the code and create your settings file
 
 ```bash
 git clone https://github.com/wilhelm-lab/oktoberfest.git
 cd oktoberfest/webui
+cp oktoberfest-webui.env.example oktoberfest-webui.env
+mkdir -p data
 ```
 
-Copy the example environment file to create your local `.env` file:
+`oktoberfest-webui.env` holds all settings of your installation. Every setting is explained in the file itself.
+For a personal installation the defaults work as they are. On Linux, set `APP_UID` and `APP_GID` to the output of
+`id -u` and `id -g`, so that the files in `data/` belong to you.
+
+### 3. Start
 
 ```bash
-cp .env.example .env
+docker compose --env-file oktoberfest-webui.env up --build -d
 ```
 
-**Where are files saved?**
-By default, all uploaded inputs, generated outputs, databases, and logs are saved inside the `webui/data/` folder on your machine.
-If you want to save these files somewhere else (e.g., an external hard drive `D:\oktoberfest-data` or `/mnt/data`), open the `.env` file you just created and modify the `DATA_DIR` variable:
+The first start builds the image, which takes several minutes. Later starts take seconds.
 
-```env
-# Example for Windows:
-DATA_DIR=D:\oktoberfest-data
-# Example for Linux/Mac:
-DATA_DIR=/mnt/data/oktoberfest
-```
+Always pass `--env-file oktoberfest-webui.env` to `docker compose` (also for `down`, `logs` etc.): the compose file
+reads the data folder, user and port from it.
 
-### 3. Build and Run
+### 4. Open the web UI
 
-Start the Docker containers in the background using docker compose (Compose v2.24 or newer):
+Go to **[http://localhost:8080](http://localhost:8080)** (or the `API_PORT` you set).
+
+### 5. Check the installation (optional)
 
 ```bash
-docker compose up --build -d
+scripts/smoke_test.sh
 ```
 
-Docker will automatically pull the necessary images, build the frontend/backend (with the oktoberfest code of this
-checkout, plus Percolator, .NET 8 and FlashLFQ for MS1 quantification), and start the services.
+This checks the API, the worker, the frontend, the quantification and localization options and the tools in the image,
+and prints `OK: web UI smoke test passed`. It creates a few empty test jobs.
 
-For a server configured in `.env.global` instead of `.env` (e.g. hosted mode with `HOST_MOUNT`/`CONTAINER_DATA_DIR`),
-pass it explicitly, because docker compose only reads `.env` for variable substitution:
+### Stop, update, logs
 
 ```bash
-docker compose --env-file .env.global up --build -d
+docker compose --env-file oktoberfest-webui.env down                     # stop (jobs and data are kept)
+git pull && docker compose --env-file oktoberfest-webui.env up --build -d # update to the latest version
+docker compose --env-file oktoberfest-webui.env logs -f worker           # follow the job logs
 ```
 
-Hosted mode also needs the `.ip_salt` file in `DATA_DIR` (job creation is refused without it) and HTTPS (or access
-via `localhost`, e.g. an SSH tunnel): the session cookie is `Secure`.
-
-### 4. Access the Web UI
-
-Once the containers are running, open your web browser and go to:
-**[http://localhost:8080](http://localhost:8080)**
-
-_(Note: The `api` and `worker` services share a persistent Docker volume mapped to your `DATA_DIR`. Your jobs and data survive container restarts)._
-
-To check that everything works (API, worker, frontend, quantification/localization options and the tools in the
-image), run the smoke test that CI runs as well:
-
-```bash
-scripts/smoke_test.sh                                            # with .env
-COMPOSE="docker compose --env-file .env.global" scripts/smoke_test.sh  # with .env.global
-```
-
-It creates a few empty test jobs (owned by the session `smoke-test`).
-
-To stop the server at any time, run:
-
-```bash
-docker compose down
-```
+The containers restart automatically after a reboot until you stop them with `down`.
 
 ---
 
-## Local development (no Docker)
+## Configuration
 
-Prerequisites: Python 3.11+, Node 18+, Redis, `oktoberfest` installed, and a local Python environment of your choice.
+All settings are in `oktoberfest-webui.env`; [`oktoberfest-webui.env.example`](oktoberfest-webui.env.example) documents
+each of them. Restart after changing a setting: `docker compose --env-file oktoberfest-webui.env up -d`.
 
-Create and activate a Python environment first if you do not already have one. Then install poetry and the backend dependencies:
+| Setting                                    | Default                    | What it does                                                                      |
+| ------------------------------------------ | -------------------------- | --------------------------------------------------------------------------------- |
+| `HOST_DATA_DIR`                            | `./data`                   | Folder (or Docker volume name) on this machine that stores all jobs               |
+| `CONTAINER_DATA_DIR`                       | `/app/data`                | The same folder inside the containers                                             |
+| `APP_UID` / `APP_GID`                      | `1000`                     | User and group the containers run as (owner of the job files)                     |
+| `API_PORT`                                 | `8080`                     | Port of the web UI                                                                |
+| `API_BIND`                                 | `127.0.0.1`                | `127.0.0.1`: only this machine can connect; `0.0.0.0`: all network interfaces     |
+| `APP_MODE`                                 | `local`                    | `local` (single user) or `hosted` (shared server, see below)                      |
+| `GLOBAL_USERS`                             | empty                      | Hosted mode: admin session ids that see all jobs                                  |
+| `CELERY_CONCURRENCY`                       | `1`                        | Jobs that can run at the same time                                                |
+| `MAX_TOTAL_THREADS`                        | `4`                        | CPU threads all running jobs may use together                                     |
+| `MAX_THREADS_PER_USER`                     | `4`                        | Hosted mode: threads per job                                                      |
+| `MAX_UPLOAD_BYTES`                         | `5000000000`               | Maximum size of one uploaded file (5 GB)                                          |
+| `PREDICTION_SERVER`                        | `koina.wilhelmlab.org:443` | Koina server pre-filled in the forms; users can change it per job                 |
+| `THERMO_EXE`, `FLASHLFQ_EXE`, `DOTNET_EXE` | set by the image           | External tools; only needed [without Docker](#running-without-docker-development) |
 
-```bash
-pip install poetry
+To use your own Koina instance, set `PREDICTION_SERVER=my-koina-server:443`.
+
+**Choosing resources**: each job uses one thread per spectra file (at most 4) and up to 16 GB RAM. For a machine with
+32 cores and 128 GB RAM, `CELERY_CONCURRENCY=6` and `MAX_TOTAL_THREADS=24` are a reasonable start. Queued jobs wait
+until enough threads are free.
+
+---
+
+## Where is my data?
+
+Everything is stored in `HOST_DATA_DIR` (by default `webui/data/`):
+
+```
+data/
+  app.db           job database
+  .ip_salt         hosted mode only (see below)
+  <job_id>/
+    inputs/        uploaded files
+    output/        Oktoberfest output (see the Oktoberfest documentation, "Generated outputs")
+    config.json    the Oktoberfest configuration of the job
+    captured.log   log of the run
+    results.zip    downloadable archive of the results and config
 ```
 
-```bash
-cd backend
-poetry install
+After submitting a job you are redirected to `/jobs/<job_id>`, which updates automatically. Large jobs take hours:
+bookmark the page and come back later. `/jobs` lists your recent jobs.
+
+`config.json` can be used to rerun the job with Oktoberfest directly (`python -m oktoberfest --config_path config.json`).
+Its paths point into `CONTAINER_DATA_DIR`; set `CONTAINER_DATA_DIR` to the same absolute path as `HOST_DATA_DIR` if they
+should also be valid outside the containers.
+
+To back up the web UI, stop it and copy `HOST_DATA_DIR`.
+
+---
+
+## Running a shared server (hosted mode)
+
+For a server used by several people, set in `oktoberfest-webui.env`:
+
+```env
+APP_MODE=hosted
+API_BIND=127.0.0.1
+HOST_DATA_DIR=/srv/oktoberfest-webui
+CELERY_CONCURRENCY=6
+MAX_TOTAL_THREADS=24
 ```
 
-From there, the backend can be run with Poetry-managed commands:
+In hosted mode, each browser gets its own session (a cookie) and only lists its own jobs. A job can still be viewed by
+anyone who knows its id, but only changed by its owner. Each user can run one job at a time, and the threads per job
+are capped by `MAX_THREADS_PER_USER`.
+
+### 1. Create the IP salt
+
+Client IP addresses are only stored as salted hashes (to limit parallel jobs per client). Create the salt once; the
+server refuses new jobs without it:
 
 ```bash
-# 1. Database
-poetry run alembic upgrade head
-
-# 2. Start Redis (separate terminal or Docker)
-docker run -p 6379:6379 redis:7-alpine
-
-# 3. API (separate terminal)
-poetry run uvicorn app.main:app --reload --port 8000
-
-# 4. Worker (separate terminal)
-poetry run celery -A app.worker.celery_app worker --loglevel=info --concurrency=1
-
-# 5. Frontend dev server (separate terminal)
-cd ../frontend && npm install && npm run dev
-# → http://localhost:5173  (proxies /api → :8000)
+openssl rand -hex 32 > /srv/oktoberfest-webui/.ip_salt
+chmod 600 /srv/oktoberfest-webui/.ip_salt
 ```
+
+The file must be readable by `APP_UID`. Keep it when you move or back up the data folder.
+
+### 2. Put HTTPS in front of it
+
+The session cookie is only sent over HTTPS (it is marked `Secure`), so without HTTPS browsers cannot keep a session and
+jobs cannot be created. Keep `API_BIND=127.0.0.1` and run a reverse proxy with a certificate on the same machine, for
+example [Caddy](https://caddyserver.com), which gets certificates automatically:
+
+```
+oktoberfest.example.org {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+With nginx, also raise the upload limit (`client_max_body_size 5G;`) and pass the client address
+(`proxy_set_header X-Forwarded-For $remote_addr;`).
+
+Do not expose port 8080 directly (`API_BIND=0.0.0.0`) on a shared server: the per-client limits trust the
+`X-Forwarded-For` header, which only the proxy should set.
+
+Browsers treat `http://localhost` as secure, so for a quick test you can also use an SSH tunnel:
+`ssh -L 8080:localhost:8080 your-server`, then open `http://localhost:8080`.
+
+### 3. Admin access (optional)
+
+`GLOBAL_USERS` lists session ids that see and can cancel all jobs. Generate a long random value
+(`openssl rand -hex 24`), add it to `GLOBAL_USERS`, restart, and set your browser's `oktoberfest_session` cookie for the
+site to that value (developer tools → Application/Storage → Cookies). Anyone who knows the value has admin access.
+
+---
+
+## Included tools
+
+The Docker image is built from this checkout, so it always runs the Oktoberfest code of the branch you are on. It
+contains:
+
+| Tool                                                                    | Version              | Used for                                   |
+| ----------------------------------------------------------------------- | -------------------- | ------------------------------------------ |
+| Oktoberfest (with the `quant` extra: directLFQ)                         | this checkout        | all jobs                                   |
+| spectrum_fundamentals, spectrum_io                                      | `development` branch | annotation, features, file formats         |
+| [Percolator](https://github.com/percolator/percolator)                  | 3.06                 | FDR estimation                             |
+| [ThermoRawFileParser](https://github.com/CompOmics/ThermoRawFileParser) | 1.4.4 (with mono)    | `.raw` to mzML conversion                  |
+| [FlashLFQ](https://github.com/smith-chem-wisc/FlashLFQ) + .NET 8        | 2.1.4                | MS1 quantification (`precursor: flashlfq`) |
+
+Versions can be changed with build arguments (`THERMO_RAW_FILE_PARSER_VERSION`, `FLASHLFQ_VERSION`, `SPECTRUM_REF`), e.g.
+`docker compose --env-file oktoberfest-webui.env build --build-arg SPECTRUM_REF=main`.
+
+---
+
+## Running without Docker (development)
+
+Prerequisites: Python 3.11, Node 22, Redis, Percolator on `PATH`, and for `.raw` files and FlashLFQ: mono,
+ThermoRawFileParser, .NET 8 and FlashLFQ (or upload mzML and use search engine quantification).
+
+```bash
+# from the repository root: Oktoberfest from this checkout plus the backend dependencies
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[quant]"
+pip install fastapi "uvicorn[standard]" sqlalchemy alembic "celery[redis]" redis pydantic pydantic-settings \
+    aiofiles python-multipart pytest pytest-asyncio httpx anyio
+```
+
+In `webui/oktoberfest-webui.env`, uncomment `DATA_DIR`, `DATABASE_URL` and `REDIS_URL` and set the tool paths
+(`THERMO_EXE`, `FLASHLFQ_EXE`, `DOTNET_EXE`). Then start each part in its own terminal:
+
+```bash
+redis-server                                             # or: docker run -p 6379:6379 redis:7-alpine
+cd webui/backend && uvicorn app.main:app --reload --port 8000
+cd webui/backend && celery -A app.worker.celery_app worker --loglevel=info
+cd webui/frontend && npm ci && npm run dev              # http://localhost:5173 (forwards /api to port 8000)
+```
+
+The database tables are created when the API starts.
+
+---
+
+## Tests
+
+```bash
+cd webui/backend && python -m pytest tests -q          # backend (a few tests need redis on localhost:6379)
+cd webui/backend && ENABLE_E2E=1 python -m pytest tests/test_e2e.py -v  # a real spectral library job (needs Koina)
+cd webui/frontend && npx vitest run                    # frontend unit tests
+cd webui/frontend && npm run build                     # type check and production build
+```
+
+The GitHub workflow `.github/workflows/webui.yml` runs the backend and frontend tests, then builds the Docker image,
+starts it in hosted mode with settings from `oktoberfest-webui.env.example` and runs `scripts/smoke_test.sh`.
+
+---
+
+## Troubleshooting
+
+| Problem                                                       | Fix                                                                                                                              |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `env file ... oktoberfest-webui.env not found`                | Create it: `cp oktoberfest-webui.env.example oktoberfest-webui.env`                                                              |
+| Settings are ignored, data ends up in a Docker volume         | Pass `--env-file oktoberfest-webui.env` to every `docker compose` command                                                        |
+| `Permission denied` / `unable to open database file`          | `HOST_DATA_DIR` must exist and be writable by `APP_UID`/`APP_GID` (`mkdir -p data`, set them to `id -u` / `id -g`)               |
+| `port is already allocated`                                   | Another program uses the port: change `API_PORT`                                                                                 |
+| Hosted mode: jobs cannot be created or disappear after reload | Open the site via HTTPS (or `http://localhost` through an SSH tunnel), see [HTTPS](#2-put-https-in-front-of-it)                  |
+| `Job submission is disabled ... missing .ip_salt file`        | [Create the IP salt](#1-create-the-ip-salt) in `HOST_DATA_DIR`                                                                   |
+| Other machines cannot connect                                 | `API_BIND=127.0.0.1` only allows this machine: use a reverse proxy (shared server) or `API_BIND=0.0.0.0` (trusted network only) |
+| A job fails                                                   | The job page shows its log (`captured.log`); `docker compose --env-file oktoberfest-webui.env logs worker` shows the rest        |
 
 ---
 
 ## Architecture
 
 ```
-Browser (Vue 3 SPA)
-  │  POST /api/v1/jobs  (create + upload + submit)
-  │  GET  /api/v1/jobs/{id}  (poll status every ~3s)
+Browser (Vue 3 + Vuetify)
+  │  create job, upload files, submit; poll /api/v1/jobs/{id}
   ▼
-FastAPI backend (port 8000)
-  │  enqueue task  (Celery + Redis)
+api: FastAPI (port 8080, also serves the frontend)
+  │  queue (Celery + Redis); the scheduler starts queued jobs when threads are free
   ▼
-Celery worker
-  │  python -m oktoberfest --config_path config.json
-  │  zip output/ → results.zip
+worker: Celery
+  │  writes config.json, runs Oktoberfest, zips output/ into results.zip
   ▼
-SQLite (./data/app.db) + DATA_DIR (./data/<job_id>/)
+HOST_DATA_DIR: app.db (SQLite) + one folder per job
 ```
-
-Each job gets its own directory:
-
-```
-data/<job_id>/
-  inputs/        ← uploaded files
-  output/        ← Oktoberfest writes here
-  config.json    ← resolved config (exact copy in results.zip)
-  captured.log   ← stdout/stderr from oktoberfest process
-  results.zip    ← downloadable archive
-```
-
----
-
-## Job types
-
-| Type                 | Required inputs          | Outputs                                |
-| -------------------- | ------------------------ | -------------------------------------- |
-| **Rescoring**        | Search results + spectra | Rescored PSM/peptide tables, FDR plots |
-| **CE Calibration**   | Search results + spectra | Optimal NCE + diagnostics              |
-| **Spectral Library** | FASTA or peptides CSV    | `.msp` / Spectronaut / DLib library    |
-
----
-
-## Configuration
-
-All settings are environment variables (see `.env.example`):
-
-| Variable             | Default                    | Description                         |
-| -------------------- | -------------------------- | ----------------------------------- |
-| `DATA_DIR`           | `./data`                   | Job storage root                    |
-| `DATABASE_URL`       | `sqlite:///./data/app.db`  | SQLite (local) or Postgres URL      |
-| `REDIS_URL`          | `redis://localhost:6379/0` | Celery broker                       |
-| `PREDICTION_SERVER`  | `koina.wilhelmlab.org:443` | Koina gRPC endpoint                 |
-| `MAX_UPLOAD_BYTES`   | `5000000000`               | Per-file upload limit (5 GB)        |
-| `CELERY_CONCURRENCY` | `1`                        | Worker parallelism (1 = FIFO queue) |
-| `APP_MODE`           | `local`                    | `local` \| `hosted` (see below)     |
-
-### Custom prediction server
-
-To use an on-prem Koina/Triton instance, set `PREDICTION_SERVER` in `.env`:
-
-```
-PREDICTION_SERVER=my-koina-server.local:443
-```
-
-Or set it per-job in the **Models & Prediction** form section.
-
----
-
-## Hardware notes
-
--   **RAM**: Full-proteome rescoring jobs can require 8–16 GB RAM depending on dataset size.
--   **CPU**: Set `numThreads` in the form (Advanced section) to control parallelism. `CELERY_CONCURRENCY=1` means one job at a time on the worker.
--   **Jobs are long**: Large spectral library generation or rescoring runs can take hours. The status page polls automatically; save the Job ID URL and come back.
-
----
-
-## Native dependency caveats
-
-### ThermoRawFileParser (`.raw` → `.mzML`)
-
-**Not included** in the Docker image. To use `.raw` Thermo files:
-
-1. Download [ThermoRawFileParser](https://github.com/compomics/ThermoRawFileParser/releases) and install Mono runtime.
-2. Set the `thermoExe` path in the Advanced section of any Rescoring/CE Calibration job (or set a default in `.env`).
-3. **Alternative**: pre-convert your `.raw` files to `.mzML` (e.g. with msConvert) and select **mzML** as spectra type — no ThermoRawFileParser needed.
-
-### Percolator
-
-The sole supported FDR estimation method is **percolator**.
-
--   The binary is executed locally via subprocess during the rescoring step.
--   Ensure `percolator` is on `$PATH` inside the container if running custom builds.
-
----
-
-## Running tests
-
-Activate your Python environment, install backend dependencies with Poetry, and then run tests with `poetry run pytest`.
-
-```bash
-# Backend unit + integration tests (fast, no Redis needed)
-cd backend
-poetry run pytest tests/ -v
-
-# End-to-end test (runs a real SpectralLibraryGeneration job)
-ENABLE_E2E=1 poetry run pytest tests/test_e2e.py -v -s
-
-# Frontend unit tests
-cd frontend && npm run test:unit
-```
-
----
-
-## Finding your Job ID
-
-After submitting, you are redirected to `/jobs/<job_id>`. Bookmark this URL or copy the displayed Job ID. You can also list recent jobs at `/jobs`.
 
 ---
 
 ## Links
 
--   [Oktoberfest GitHub](https://github.com/wilhelm-lab/oktoberfest)
--   [Oktoberfest Docs](https://oktoberfest.readthedocs.io)
+-   [Oktoberfest on GitHub](https://github.com/wilhelm-lab/oktoberfest)
+-   [Oktoberfest documentation](https://oktoberfest.readthedocs.io)
 -   [Koina prediction server](https://koina.wilhelmlab.org)

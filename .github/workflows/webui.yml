@@ -1,7 +1,8 @@
 name: Web UI
 
 # Checks that the web UI works with the oktoberfest code of this commit: backend and frontend tests, then the docker
-# compose stack is built, started in hosted mode and smoke tested (webui/scripts/smoke_test.sh).
+# compose stack is configured from the env file template, built, started in hosted mode and smoke tested
+# (webui/scripts/smoke_test.sh).
 on:
     workflow_dispatch:
     push:
@@ -84,35 +85,32 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Write .env.global (hosted mode, like the production server)
+            - name: Write oktoberfest-webui.env from the template (hosted mode)
               run: |
                   data=$RUNNER_TEMP/okt-data
                   mkdir -p "$data"
                   openssl rand -hex 32 > "$data/.ip_salt"
-                  cat > .env.global <<EOF
-                  APP_MODE=hosted
-                  CELERY_CONCURRENCY=2
-                  HOST_MOUNT=$data
-                  CONTAINER_DATA_DIR=/data
-                  DATA_DIR=/data
-                  DATABASE_URL=sqlite:////data/app.db
-                  APP_UID=$(id -u)
-                  APP_GID=$(id -g)
-                  EOF
+                  set_env() { sed -i "s|^$1=.*|$1=$2|" oktoberfest-webui.env; grep -q "^$1=$2\$" oktoberfest-webui.env; }
+                  cp oktoberfest-webui.env.example oktoberfest-webui.env
+                  set_env APP_MODE hosted
+                  set_env CELERY_CONCURRENCY 2
+                  set_env HOST_DATA_DIR "$data"
+                  set_env APP_UID "$(id -u)"
+                  set_env APP_GID "$(id -g)"
 
             - name: Build images
-              run: docker compose --env-file .env.global build
+              run: docker compose --env-file oktoberfest-webui.env build
 
             - name: Start the stack
-              run: docker compose --env-file .env.global up -d --wait
+              run: docker compose --env-file oktoberfest-webui.env up -d --wait
 
             - name: Smoke test
-              run: COMPOSE="docker compose --env-file .env.global" scripts/smoke_test.sh
+              run: scripts/smoke_test.sh
 
             - name: Logs
               if: always()
-              run: docker compose --env-file .env.global logs --no-color --tail 200
+              run: docker compose --env-file oktoberfest-webui.env logs --no-color --tail 200
 
             - name: Stop the stack
               if: always()
-              run: docker compose --env-file .env.global down -v
+              run: docker compose --env-file oktoberfest-webui.env down -v

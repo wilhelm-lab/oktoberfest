@@ -107,6 +107,9 @@ celerybeat.pid
 # Environments
 .env
 .env.global
+# web UI settings and default data folder (webui/oktoberfest-webui.env.example is the template)
+webui/oktoberfest-webui.env
+webui/data/
 .venv
 env/
 venv/

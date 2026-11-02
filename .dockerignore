@@ -3,6 +3,8 @@ data
 **/__pycache__
 **/.pytest_cache
 webui/.env*
+webui/oktoberfest-webui.env
+webui/data
 **/.ip_salt
 webui/backend/data
 webui/frontend/node_modules

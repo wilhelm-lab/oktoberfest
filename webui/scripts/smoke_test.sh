@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Smoke test of a running web UI stack (`docker compose up -d` in webui/): API, worker, frontend, the quantification /
-# localization options and the tools inside the image. Run from webui/: scripts/smoke_test.sh [base url]
+# Smoke test of a running web UI stack (`docker compose --env-file oktoberfest-webui.env up -d` in webui/): API, worker,
+# frontend, the quantification / localization options and the tools inside the image. Run from webui/:
+#   scripts/smoke_test.sh [base url]
+# Uses oktoberfest-webui.env for docker compose and API_PORT; override with COMPOSE="docker compose ...".
 set -euo pipefail
 
+ENV_FILE=oktoberfest-webui.env
+if [[ -z ${API_PORT:-} && -f $ENV_FILE ]]; then
+    API_PORT=$(sed -n 's/^API_PORT=//p' "$ENV_FILE" | tail -1)
+fi
 BASE=${1:-http://localhost:${API_PORT:-8080}}
-COMPOSE=${COMPOSE:-docker compose}
+COMPOSE=${COMPOSE:-docker compose --env-file $ENV_FILE}
 TIMEOUT=${SMOKE_TIMEOUT:-180}
 COOKIE="oktoberfest_session=smoke-test"  # hosted mode identifies users by this cookie
 
@@ -58,6 +64,7 @@ $COMPOSE exec -T worker sh -c '
     percolator --help 2>&1 | grep -q "Percolator version"
     "$DOTNET_EXE" --list-runtimes | grep -q "Microsoft.NETCore.App 8."
     test -f "$FLASHLFQ_EXE"
+    test -f "$THERMO_EXE"
     mono --version | head -1
 ' || fail "tools missing in the worker image"
 

@@ -5,7 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(".env", ".env.global"),
+        # oktoberfest-webui.env in webui/ (docker compose passes it as environment; the second path is for running the
+        # backend from webui/backend without docker); environment variables take precedence
+        env_file=("../oktoberfest-webui.env", "oktoberfest-webui.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -22,8 +24,10 @@ class Settings(BaseSettings):
     celery_concurrency: int = 28
     max_threads_per_user: int = 4
     max_total_threads: int = 28
-    global_users: str = "global,admin"
-    global_group: str = "1491800192"
+    # session ids (cookie oktoberfest_session) that see all jobs in hosted mode; they act as passwords
+    global_users: str = ""
+    # ThermoRawFileParser for .raw spectra (included in the docker image)
+    thermo_exe: str = "ThermoRawFileParser.exe"
     # FlashLFQ command line (CMD.dll) and dotnet for MS1 quantification; empty disables flashlfq
     flashlfq_exe: str = ""
     dotnet_exe: str = "dotnet"

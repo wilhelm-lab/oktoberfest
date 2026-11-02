@@ -238,3 +238,20 @@ def test_ce_range_must_have_two_elements():
 def test_fasta_digest_maxlength_must_ge_minlength():
     with pytest.raises(Exception, match="maxLength"):
         FastaDigestOptions(minLength=10, maxLength=5)
+
+
+def test_thermo_exe_comes_from_server_settings(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "thermo_exe", "/opt/ThermoRawFileParser/ThermoRawFileParser.exe")
+    # a path in the job config is ignored: the server decides which executable runs
+    cfg = RescoringConfig(thermoExe="/tmp/evil.exe")
+    assert cfg.to_oktoberfest_dict("job1", "/out")["thermoExe"] == "/opt/ThermoRawFileParser/ThermoRawFileParser.exe"
+
+
+def test_prediction_server_default_follows_settings(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "prediction_server", "koina.example.org:443")
+    assert RescoringConfig().prediction_server == "koina.example.org:443"
+    assert RescoringConfig(prediction_server="other:443").prediction_server == "other:443"

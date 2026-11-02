@@ -2,7 +2,9 @@ Web UI
 ======
 
 Oktoberfest comes with a browser-based interface that lets you submit and monitor jobs through a guided form instead of writing JSON configuration files by hand.
-The web UI runs locally on your machine (Windows, macOS and Linux) via Docker and executes the same jobs as the high-level API (see `Running Oktoberfest <./jobs.html>`_).
+The web UI runs locally on your machine (Windows, macOS and Linux) via Docker, or as a shared server for a group, and executes the same jobs as the high-level API (see `Running Oktoberfest <./jobs.html>`_).
+Rescoring jobs include MS1 quantification (search engine or FlashLFQ) and PTM site localization with false localization rate estimation.
+The Docker image contains Oktoberfest, Percolator, ThermoRawFileParser, FlashLFQ and the .NET runtime, so only the predictions are requested from a Koina server.
 
 Supported jobs
 --------------
@@ -30,27 +32,29 @@ Prerequisites:
   - `Docker <https://docs.docker.com/get-docker/>`_ (Docker Desktop on Windows / macOS, Docker Engine with Docker Compose on Linux). On Windows, WSL2 is recommended as the backend for Docker Desktop.
   - `Git <https://git-scm.com/downloads>`_
 
-Clone the repository, change to the ``webui`` folder and create your local environment file from the provided example:
+Clone the repository, change to the ``webui`` folder and create your settings file from the provided template:
 
 .. code-block:: bash
 
    git clone https://github.com/wilhelm-lab/oktoberfest.git
    cd oktoberfest/webui
-   cp .env.example .env
+   cp oktoberfest-webui.env.example oktoberfest-webui.env
+   mkdir -p data
 
-By default, all uploaded inputs, generated outputs, the job database and logs are saved in ``webui/data/``. To store them somewhere else, e.g. on an external drive, change ``DATA_DIR`` in the ``.env`` file.
+Every setting is explained in ``oktoberfest-webui.env``; the defaults work for a personal installation. On Linux, set ``APP_UID`` and ``APP_GID`` to the output of ``id -u`` and ``id -g`` so that the job files belong to you.
+By default, all uploaded inputs, generated outputs, the job database and logs are saved in ``webui/data/``. To store them somewhere else, e.g. on an external drive, change ``HOST_DATA_DIR``.
 
-Build and start the containers in the background:
-
-.. code-block:: bash
-
-   docker compose up --build -d
-
-Then open `http://localhost:8000 <http://localhost:8000>`_ in your browser. Jobs and data are kept in ``DATA_DIR`` and survive container restarts. To stop the web UI, run:
+Build and start the containers in the background (always pass ``--env-file``, also for ``down`` and ``logs``):
 
 .. code-block:: bash
 
-   docker compose down
+   docker compose --env-file oktoberfest-webui.env up --build -d
+
+Then open `http://localhost:8080 <http://localhost:8080>`_ in your browser. ``scripts/smoke_test.sh`` checks that everything works. Jobs and data are kept in ``HOST_DATA_DIR`` and survive container restarts. To stop the web UI, run:
+
+.. code-block:: bash
+
+   docker compose --env-file oktoberfest-webui.env down
 
 Submitting and monitoring jobs
 ------------------------------
@@ -73,7 +77,7 @@ The ``config.json`` of a job can be reused to run the same job with the high-lev
 Configuration
 -------------
 
-The web UI is configured via environment variables in the ``.env`` file:
+The web UI is configured in ``oktoberfest-webui.env``. The most important settings:
 
 .. table::
     :class: fixed-table
@@ -81,22 +85,26 @@ The web UI is configured via environment variables in the ``.env`` file:
     +----------------------+------------------------------+------------------------------------------------------------------------+
     | Variable             | Default                      | Description                                                            |
     +======================+==============================+========================================================================+
-    | DATA_DIR             | ./data                       | Root directory for job inputs, outputs and logs                        |
+    | HOST_DATA_DIR        | ./data                       | Folder that stores all jobs, uploads, results and the job database     |
     +----------------------+------------------------------+------------------------------------------------------------------------+
-    | DATABASE_URL         | sqlite:///./data/app.db      | Job database, SQLite (local) or Postgres URL                           |
+    | APP_UID / APP_GID    | 1000                         | User and group the containers run as (owner of the job files)          |
     +----------------------+------------------------------+------------------------------------------------------------------------+
-    | REDIS_URL            | redis://localhost:6379/0     | Message broker for the job queue                                       |
+    | API_PORT             | 8080                         | Port of the web UI                                                     |
+    +----------------------+------------------------------+------------------------------------------------------------------------+
+    | APP_MODE             | local                        | local (single user) or hosted (shared server with separate sessions)   |
+    +----------------------+------------------------------+------------------------------------------------------------------------+
+    | CELERY_CONCURRENCY   | 1                            | Number of jobs executed in parallel                                    |
+    +----------------------+------------------------------+------------------------------------------------------------------------+
+    | MAX_TOTAL_THREADS    | 4                            | CPU threads all running jobs may use together                          |
     +----------------------+------------------------------+------------------------------------------------------------------------+
     | PREDICTION_SERVER    | koina.wilhelmlab.org:443     | Default Koina server, can also be changed per job in the form          |
     +----------------------+------------------------------+------------------------------------------------------------------------+
     | MAX_UPLOAD_BYTES     | 5000000000                   | Maximum size per uploaded file (5 GB)                                  |
     +----------------------+------------------------------+------------------------------------------------------------------------+
-    | CELERY_CONCURRENCY   | 1                            | Number of jobs executed in parallel (1 = one job at a time)            |
-    +----------------------+------------------------------+------------------------------------------------------------------------+
 
 .. note::
-    ThermoRawFileParser is not included in the Docker image. Either provide the path to ThermoRawFileParser in the advanced section of the form, or convert your RAW files to mzML beforehand (e.g. with msConvert) and select mzML as spectra type.
+    Full proteome rescoring jobs can require 8-16 GB of RAM depending on the size of the dataset. Each job uses one thread per spectra file (at most 4).
 
-    Full proteome rescoring jobs can require 8-16 GB of RAM depending on the size of the dataset. The number of processes used per job can be set via ``numThreads`` in the advanced section of the form.
+    Running the web UI as a shared server (hosted mode) needs HTTPS and an IP salt file in the data folder; see the web UI README.
 
 For local development without Docker, running the tests and details about the architecture, see the `web UI README <https://github.com/wilhelm-lab/oktoberfest/blob/development/webui/README.md>`_.

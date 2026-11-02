@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, computed } from "vue";
+import { reactive, computed, onMounted } from "vue";
 import FileUpload from "@/components/FileUpload.vue";
 import RangeField from "@/components/RangeField.vue";
 import ModelsSection from "@/components/ModelsSection.vue";
 import ConfigSummary from "@/components/ConfigSummary.vue";
 import { useJobForm } from "@/composables/useJobForm";
 
-const { store, submitting, error, submit } = useJobForm(
+const { store, submitting, error, submit, loadServerDefaults } = useJobForm(
     "SpectralLibraryGeneration"
 );
 
@@ -35,6 +35,7 @@ const form = reactive({
     specialAas: "KR",
     db: "concat",
 });
+onMounted(() => loadServerDefaults(form));
 
 const fileAccept = computed(() =>
     form.library_input_type === "peptides"

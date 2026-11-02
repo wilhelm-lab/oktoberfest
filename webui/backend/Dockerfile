@@ -14,7 +14,7 @@ RUN npm run build
 FROM python:3.11-slim-bookworm
 
 # System dependencies
-# - mono: ThermoRawFileParser (NOT included; mount it and set thermoExe, or upload mzML)
+# - mono: ThermoRawFileParser (.raw -> mzML)
 # - .NET 8 runtime + FlashLFQ: MS1 quantification (quantificationOptions.precursor "flashlfq")
 # - git: spectrum_fundamentals / spectrum_io are installed from GitHub
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -32,6 +32,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://github.com/percolator/percolator/releases/download/rel-3-06-01/percolator-v3-06-linux-amd64.deb -o /tmp/percolator.deb && \
     dpkg -i /tmp/percolator.deb && \
     rm /tmp/percolator.deb
+
+# Install ThermoRawFileParser
+ARG THERMO_RAW_FILE_PARSER_VERSION=1.4.4
+RUN curl -fsSL https://github.com/CompOmics/ThermoRawFileParser/releases/download/v${THERMO_RAW_FILE_PARSER_VERSION}/ThermoRawFileParser${THERMO_RAW_FILE_PARSER_VERSION}.zip -o /tmp/trfp.zip && \
+    unzip -q /tmp/trfp.zip -d /opt/ThermoRawFileParser && \
+    rm /tmp/trfp.zip
+ENV THERMO_EXE=/opt/ThermoRawFileParser/ThermoRawFileParser.exe
 
 # Install the .NET 8 runtime and FlashLFQ
 ARG FLASHLFQ_VERSION=2.1.4

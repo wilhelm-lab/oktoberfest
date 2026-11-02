@@ -6,6 +6,8 @@ Model lists SHOULD be fetched from Koina when feasible; this module provides
 the static fallback used locally or when the prediction server is unreachable.
 """
 
+from app.config import settings
+
 INTENSITY_MODELS = [
     "Prosit_2019_intensity",
     "Prosit_2020_intensity_HCD",
@@ -64,7 +66,7 @@ DEFAULTS = {
         "type": "Rescoring",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {
@@ -77,7 +79,6 @@ DEFAULTS = {
         "regressionMethod": "spline",
         "massTolerance": 20,
         "unitMassTolerance": "ppm",
-        "thermoExe": "ThermoRawFileParser.exe",
         "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
         "quantification": False,
         "quantificationOptions": {
@@ -112,7 +113,7 @@ DEFAULTS = {
         "type": "CollisionEnergyCalibration",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {
@@ -122,14 +123,13 @@ DEFAULTS = {
         },
         "massTolerance": 20,
         "unitMassTolerance": "ppm",
-        "thermoExe": "ThermoRawFileParser.exe",
         "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
     },
     "SpectralLibraryGeneration": {
         "type": "SpectralLibraryGeneration",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {

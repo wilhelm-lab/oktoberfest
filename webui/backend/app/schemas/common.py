@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.config import settings
+
 
 class TagEnum(str, Enum):
     none = ""
@@ -86,7 +88,7 @@ class CommonConfigMixin(BaseModel):
 
     tag: TagEnum = TagEnum.none
     models: ModelsBlock = Field(default_factory=ModelsBlock)
-    prediction_server: str = "koina.wilhelmlab.org:443"
+    prediction_server: str = Field(default_factory=lambda: settings.prediction_server)
     ssl: bool = True
     numThreads: int = Field(default=1, ge=1)
     instrument_type: Optional[InstrumentTypeEnum] = None
