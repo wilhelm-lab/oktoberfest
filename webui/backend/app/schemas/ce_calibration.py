@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.config import settings
 from app.schemas.common import CeAlignmentOptions, CommonConfigMixin
 from app.schemas.rescoring import RescoringInputs
 
@@ -13,7 +14,6 @@ class CeCalibrationConfig(CommonConfigMixin):
     inputs: RescoringInputs = Field(default_factory=RescoringInputs)
     massTolerance: float = Field(default=20.0, gt=0)
     unitMassTolerance: str = "ppm"
-    thermoExe: str = "/cmnfs/scratch/oktoberfest_webserver/ThermoRawFileParser1.4.4/ThermoRawFileParser.exe"
     ce_alignment_options: CeAlignmentOptions = Field(default_factory=CeAlignmentOptions)
 
     @field_validator("unitMassTolerance")
@@ -37,7 +37,7 @@ class CeCalibrationConfig(CommonConfigMixin):
             "models": {"intensity": self.models.intensity, "irt": self.models.irt},
             "prediction_server": self.prediction_server,
             "ssl": self.ssl,
-            "thermoExe": self.thermoExe,
+            "thermoExe": settings.thermo_exe,
             "numThreads": self.numThreads,
             "massTolerance": self.massTolerance,
             "unitMassTolerance": self.unitMassTolerance,

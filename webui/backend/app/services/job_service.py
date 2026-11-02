@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -77,6 +78,25 @@ def list_jobs_for_user(db: Session, user_id: str, limit: int = 50, offset: int =
     return db.query(Job).filter(Job.owner_id == user_id).order_by(Job.created_at.desc()).offset(offset).limit(limit).all()
 
 
+def count_open_jobs(db: Session, owner_id: str, ip_address: Optional[str]) -> int:
+    """Count queued or running jobs and drafts of the last 24 h of a session or client address (hosted mode limits)."""
+    client = Job.owner_id == owner_id
+    if ip_address:
+        client = or_(client, Job.ip_address == ip_address)
+    recent = datetime.utcnow() - timedelta(hours=24)
+    return (
+        db.query(Job)
+        .filter(client)
+        .filter(
+            or_(
+                Job.status.in_([JobStatus.QUEUED.value, JobStatus.RUNNING.value]),
+                and_(Job.status == JobStatus.CREATED.value, Job.created_at >= recent),
+            )
+        )
+        .count()
+    )
+
+
 def get_required_files(job_type: str, config_data: dict[str, Any]) -> list[dict[str, Any]]:
     """Return expected upload roles for the frontend."""
     result = []
@@ -84,6 +104,8 @@ def get_required_files(job_type: str, config_data: dict[str, Any]) -> list[dict[
         engine = config_data.get("inputs", {}).get("search_results_type", "Maxquant")
         result.append({"role": "search_results", "accept": ROLE_EXTENSIONS["search_results"], "multiple": True})
         result.append({"role": "spectra", "accept": ROLE_EXTENSIONS["spectra"], "multiple": True})
+        if job_type == "Rescoring" and config_data.get("quantification"):
+            result.append({"role": "fasta", "accept": ROLE_EXTENSIONS["fasta"], "multiple": False})
     elif job_type == "SpectralLibraryGeneration":
         lib_type = config_data.get("inputs", {}).get("library_input_type", "fasta")
         if lib_type in ("fasta", ""):
@@ -108,6 +130,10 @@ def check_uploaded_files(job_id: str, job_type: str, config_data: dict[str, Any]
         # (simplified: check inputs dir is non-empty)
         if not uploaded:
             missing = ["search_results", "spectra"]
+        elif job_type == "Rescoring" and config_data.get("quantification"):
+            fasta_exts = tuple(ROLE_EXTENSIONS["fasta"])
+            if not any(name.lower().endswith(fasta_exts) for name in uploaded):
+                missing = ["fasta"]
     elif job_type == "SpectralLibraryGeneration":
         if not uploaded:
             missing = ["fasta"]
@@ -130,6 +156,7 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
     phases = [
         # Rescoring phases
         ("Finished quantification", "Finishing quantification"),
+        ("Starting FlashLFQ with command", "MS1 quantification (FlashLFQ)"),
         ("Starting quantification", "Performing quantification"),
         ("Finished rescoring.", "Generating summary plots"),
         ("Generating summary plots...", "Generating summary plots"),
@@ -149,6 +176,7 @@ def get_job_progress_phase(job_id: str) -> Optional[str]:
 
         # CE Calibration / Common phases
         ("Performing RANSAC regression", "Collision energy alignment (RANSAC)"),
+        ("decoy localization candidates", "Generating PTM localization candidates"),
         ("Converting search results from", "Converting search results"),
         ("Job executed with the following config:", "Initializing Job"),
     ]

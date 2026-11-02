@@ -6,6 +6,8 @@ Model lists SHOULD be fetched from Koina when feasible; this module provides
 the static fallback used locally or when the prediction server is unreachable.
 """
 
+from app.config import settings
+
 INTENSITY_MODELS = [
     "Prosit_2019_intensity",
     "Prosit_2020_intensity_HCD",
@@ -13,12 +15,15 @@ INTENSITY_MODELS = [
     "Prosit_2020_intensity_TMT",
     "Prosit_2023_intensity_XL_CMS2",
     "Prosit_2024_intensity_XL_NMS2",
+    "Prosit_2024_intensity_PTMs_gl",
+    "Prosit_2025_intensity_22PTM",
     "AlphaPept_ms2_generic",
 ]
 
 IRT_MODELS = [
     "Prosit_2019_irt",
     "Prosit_2020_irt_TMT",
+    "Prosit_2024_irt_PTMs_gl",
     "Deeplc_hela_hf",
     "AlphaPept_rt_generic",
     "",  # none / disable
@@ -38,13 +43,30 @@ INSTRUMENT_TYPES = ["QE", "LUMOS", "TIMSTOF", "SCIEXTOF"]
 
 FRAGMENTATION_METHODS = ["HCD", "ECD", "EID", "ETciD", "UVPD"]
 
+QUANT_PRECURSOR_METHODS = ["search_engine", "flashlfq"]
+
+QUANT_PROTEIN_METHODS = ["directlfq", "none"]
+
+QUANT_NORMALIZATIONS = ["stable_drift", "drift", "mode", "median", "none"]
+
+# unimod id -> name and default residues of PTMs offered for localization
+LOCALIZATION_PTMS = {
+    "21": {"name": "Phosphorylation", "residues": ["S", "T", "Y"]},
+    "7": {"name": "Deamidation / Citrullination", "residues": ["N", "Q", "R"]},
+    "1": {"name": "Acetylation", "residues": ["K"]},
+    "34": {"name": "Methylation", "residues": ["K", "R"]},
+    "36": {"name": "Dimethylation", "residues": ["K", "R"]},
+    "37": {"name": "Trimethylation", "residues": ["K"]},
+    "121": {"name": "GlyGly (ubiquitination)", "residues": ["K"]},
+}
+
 
 DEFAULTS = {
     "Rescoring": {
         "type": "Rescoring",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {
@@ -57,16 +79,41 @@ DEFAULTS = {
         "regressionMethod": "spline",
         "massTolerance": 20,
         "unitMassTolerance": "ppm",
-        "thermoExe": "ThermoRawFileParser.exe",
         "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
         "quantification": False,
+        "quantificationOptions": {
+            "precursor": "search_engine",
+            "protein": "directlfq",
+            "normalization": "stable_drift",
+            "psmFdr": 0.01,
+            "peptideFdr": 0.01,
+            "proteinFdr": 0.01,
+            "ppmTolerance": 10,
+            "ppmFilter": "auto",
+        },
         "percolatorSubsetMaxTrain": 500000,
+        "chimericPeakSubtraction": False,
+        "ptm_localization": False,
+        "ptmLocalizationOptions": {
+            "ptms": {"21": ["S", "T", "Y"]},
+            "neutral_loss": True,
+            "decoy_residues": ["A", "G", "L", "V"],
+            "decoy_neutral_loss": False,
+            "decoy_selection": "residue",
+            "flr_neighbor_split": False,
+            "loc_probability": "pep",
+            "decoy_weighting": "count",
+            "flr_groups": "none",
+            "flr_estimator": "hybrid",
+            "sdi_features": True,
+            "ambiguity_check": True,
+        },
     },
     "CollisionEnergyCalibration": {
         "type": "CollisionEnergyCalibration",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {
@@ -76,14 +123,13 @@ DEFAULTS = {
         },
         "massTolerance": 20,
         "unitMassTolerance": "ppm",
-        "thermoExe": "ThermoRawFileParser.exe",
         "ce_alignment_options": {"ce_range": [19, 50], "use_ransac_model": False},
     },
     "SpectralLibraryGeneration": {
         "type": "SpectralLibraryGeneration",
         "tag": "",
         "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
-        "prediction_server": "koina.wilhelmlab.org:443",
+        "prediction_server": settings.prediction_server,
         "ssl": True,
         "numThreads": 1,
         "inputs": {

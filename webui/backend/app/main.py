@@ -31,7 +31,9 @@ origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip() and 
 if settings.app_mode == "local":
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=".*",  # Permissive for local dev but works with credentials
+        # only pages served from this machine (e.g. the vite dev server): with credentials, any other origin could
+        # read the jobs through the browser of whoever runs the web UI
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -46,10 +48,11 @@ elif origins:
     )
 
 # API routers
-from app.api.v1 import jobs, files, meta, health  # noqa: E402
+from app.api.v1 import jobs, files, meta, health, session  # noqa: E402
 
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(meta.router, prefix="/api/v1/meta")
+app.include_router(session.router, prefix="/api/v1/session")
 app.include_router(jobs.router, prefix="/api/v1/jobs")
 app.include_router(files.router, prefix="/api/v1/jobs")
 

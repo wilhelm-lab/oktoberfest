@@ -5,6 +5,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.config import settings
+
 
 class TagEnum(str, Enum):
     none = ""
@@ -86,7 +88,7 @@ class CommonConfigMixin(BaseModel):
 
     tag: TagEnum = TagEnum.none
     models: ModelsBlock = Field(default_factory=ModelsBlock)
-    prediction_server: str = "koina.wilhelmlab.org:443"
+    prediction_server: str = Field(default_factory=lambda: settings.prediction_server)
     ssl: bool = True
     numThreads: int = Field(default=1, ge=1)
     instrument_type: Optional[InstrumentTypeEnum] = None
@@ -95,6 +97,17 @@ class CommonConfigMixin(BaseModel):
     static_mods: Optional[dict[str, Any]] = None
     var_mods: Optional[dict[str, Any]] = None
     ion_types: Optional[str] = None
+
+    @field_validator("prediction_server")
+    @classmethod
+    def validate_prediction_server(cls, v: str) -> str:
+        # on a shared server, a free choice would let users make the server connect to any host and port
+        if settings.app_mode == "hosted":
+            allowed = {settings.prediction_server}
+            allowed.update(s.strip() for s in settings.allowed_prediction_servers.split(",") if s.strip())
+            if v not in allowed:
+                raise ValueError(f"prediction_server must be one of {sorted(allowed)}")
+        return v
 
     @field_validator("numThreads")
     @classmethod

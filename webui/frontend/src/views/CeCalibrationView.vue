@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, computed } from "vue";
+import { reactive, computed, onMounted } from "vue";
 import FileUpload from "@/components/FileUpload.vue";
 import RangeField from "@/components/RangeField.vue";
 import ModelsSection from "@/components/ModelsSection.vue";
 import ConfigSummary from "@/components/ConfigSummary.vue";
 import { useJobForm } from "@/composables/useJobForm";
 
-const { store, submitting, error, submit } = useJobForm(
+const { store, submitting, error, submit, loadServerDefaults } = useJobForm(
     "CollisionEnergyCalibration"
 );
 
@@ -25,6 +25,7 @@ const form = reactive({
     instrument_type: "QE",
     ion_types_list: ["b", "y"],
 });
+onMounted(() => loadServerDefaults(form));
 
 const searchResultFiles = computed(() => store.uploads["search_results"] ?? []);
 const spectraFiles = computed(() => store.uploads["spectra"] ?? []);

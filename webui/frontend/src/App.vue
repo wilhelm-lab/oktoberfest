@@ -1,5 +1,25 @@
 <script setup lang="ts">
+import { ref, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import UploadProgressOverlay from "@/components/UploadProgressOverlay.vue";
+import { getSession } from "@/api/client";
+
+// show when this browser is signed in as admin (hosted mode); re-checked after leaving the admin page
+const route = useRoute();
+const isAdmin = ref(false);
+
+async function refreshSession() {
+    try {
+        isAdmin.value = (await getSession()).is_admin;
+    } catch {
+        isAdmin.value = false;
+    }
+}
+
+onMounted(refreshSession);
+watch(() => route.name, (name, previous) => {
+    if (previous === "admin") refreshSession();
+});
 </script>
 
 <template>
@@ -18,6 +38,15 @@ import UploadProgressOverlay from "@/components/UploadProgressOverlay.vue";
                 </router-link>
             </v-app-bar-title>
             <template #append>
+                <v-chip
+                    v-if="isAdmin"
+                    :to="{ name: 'admin' }"
+                    color="white"
+                    variant="outlined"
+                    prepend-icon="mdi-shield-account"
+                    class="mr-2"
+                    >Admin</v-chip
+                >
                 <v-btn
                     variant="text"
                     color="white"

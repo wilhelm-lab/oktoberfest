@@ -30,6 +30,25 @@ class AppUser:
 
 LOCAL_USER = AppUser(id="local", is_local=True, is_global=False)
 
+SESSION_COOKIE = "oktoberfest_session"
+
+
+def set_session_cookie(response: Response, session_id: str) -> None:
+    """Remember the session in the browser (hosted mode)."""
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=session_id,
+        httponly=True,
+        secure=True,
+        max_age=60 * 60 * 24 * 365,  # 1 year
+        samesite="lax"
+    )
+
+
+def global_users() -> list[str]:
+    """Session ids with access to all jobs (GLOBAL_USERS)."""
+    return [u.strip() for u in settings.global_users.split(",") if u.strip()]
+
 def get_current_user(request: Request, response: Response) -> AppUser:
     """Return the authenticated user.
 
@@ -38,27 +57,13 @@ def get_current_user(request: Request, response: Response) -> AppUser:
     Fallback to cookie-based UUID sessions.
     """
     if settings.app_mode == "hosted":
-        user_id = request.cookies.get("oktoberfest_session")
+        user_id = request.cookies.get(SESSION_COOKIE)
         if not user_id:
             user_id = str(uuid.uuid4())
             # Set cookie on the response so the browser remembers this UUID
-            response.set_cookie(
-                key="oktoberfest_session",
-                value=user_id,
-                httponly=True,
-                secure=True,
-                max_age=60 * 60 * 24 * 365,  # 1 year
-                samesite="lax"
-            )
+            set_session_cookie(response, user_id)
 
-        is_global = False
-
-        # Fallback to checking settings.global_users list
-        global_users_list = [u.strip() for u in settings.global_users.split(",") if u.strip()]
-        if user_id in global_users_list:
-            is_global = True
-
-        return AppUser(id=user_id, is_local=False, is_global=is_global)
+        return AppUser(id=user_id, is_local=False, is_global=user_id in global_users())
 
     return LOCAL_USER
 

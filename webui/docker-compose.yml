@@ -1,56 +1,65 @@
-version: "3.9"
+# Oktoberfest web UI: redis (job queue), api (web server + frontend) and worker (runs the jobs).
+# Configure it in oktoberfest-webui.env (copy oktoberfest-webui.env.example) and start it from this folder with
+#   docker compose --env-file oktoberfest-webui.env up --build -d
+# (--env-file is needed because the settings below are substituted from that file.)
+
+# shared by api and worker
+x-backend: &backend
+    build:
+        context: ..
+        dockerfile: webui/backend/Dockerfile
+    image: oktoberfest-webui:local
+    env_file:
+        - oktoberfest-webui.env
+    environment:
+        REDIS_URL: redis://redis:6379/0
+        # inside the containers the data folder is always CONTAINER_DATA_DIR
+        DATA_DIR: ${CONTAINER_DATA_DIR:-/app/data}
+        DATABASE_URL: sqlite:///${CONTAINER_DATA_DIR:-/app/data}/app.db
+        TMPDIR: ${CONTAINER_DATA_DIR:-/app/data}/tmp
+        HOME: /tmp
+        MPLCONFIGDIR: /tmp/matplotlib
+        NUMBA_CACHE_DIR: /tmp/numba
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    # no extra privileges: jobs run as APP_UID without any Linux capabilities
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+        - ${HOST_DATA_DIR:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
+    depends_on:
+        redis:
+            condition: service_healthy
+    restart: unless-stopped
 
 services:
     redis:
         image: redis:7-alpine
-        ports:
-            - "6379:6379"
+        # only reachable from the other services (no host port: it has no auth)
+        user: "999:1000" # the image's redis user, so it never runs as root
+        cap_drop: [ALL]
+        security_opt: ["no-new-privileges:true"]
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
             timeout: 3s
             retries: 5
+        restart: unless-stopped
 
     api:
-        build:
-            context: .
-            dockerfile: backend/Dockerfile
+        <<: *backend
         command: uvicorn app.main:app --host 0.0.0.0 --port 8080
-        env_file:
-            - .env.global
-        environment:
-            REDIS_URL: redis://redis:6379/0
-            TMPDIR: ${CONTAINER_DATA_DIR:-/app/data}/tmp
-            HOME: /tmp
-            MPLCONFIGDIR: /tmp/matplotlib
-            NUMBA_CACHE_DIR: /tmp/numba
-        user: "${APP_UID:-1000}:${APP_GID:-1000}"
-        volumes:
-            - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
         ports:
-            - "8080:8080"
-        depends_on:
-            redis:
-                condition: service_healthy
+            - "${API_BIND:-127.0.0.1}:${API_PORT:-8080}:8080"
+        healthcheck:
+            test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/v1/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 12
 
     worker:
-        build:
-            context: .
-            dockerfile: backend/Dockerfile
-        command: celery -A app.worker.celery_app worker --loglevel=info
-        env_file:
-            - .env.global
-        environment:
-            REDIS_URL: redis://redis:6379/0
-            HOME: /tmp
-            MPLCONFIGDIR: /tmp/matplotlib
-            NUMBA_CACHE_DIR: /tmp/numba
-        user: "${APP_UID:-1000}:${APP_GID:-1000}"
-        volumes:
-            - ${HOST_MOUNT:-okt-data}:${CONTAINER_DATA_DIR:-/app/data}
-        depends_on:
-            redis:
-                condition: service_healthy
+        <<: *backend
+        # -B: also runs the hourly cleanup of old jobs (one worker container only)
+        command: celery -A app.worker.celery_app worker -B --schedule /tmp/celerybeat-schedule --loglevel=info
 
 volumes:
     okt-data:
