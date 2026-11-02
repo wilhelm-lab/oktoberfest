@@ -1,0 +1,25 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "output": "../data/multifrag/out_etcid",
+    "inputs": {
+        "search_results": "../data/multifrag/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/multifrag/inputs/mzml/ASND01_NGL_YD1_241129_Expi_trypsin_ETciD_frac2_09.mzML",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2025_intensity_MultiFrag",
+        "irt": "Prosit_2019_irt"
+    },
+    "fragmentation_method": "ETCID",
+    "ion_types": "AbcCyzZ"
+}

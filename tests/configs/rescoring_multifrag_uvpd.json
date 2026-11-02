@@ -1,0 +1,25 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "massTolerance": 20,
+    "unitMassTolerance": "ppm",
+    "output": "../data/multifrag/out_uvpd",
+    "inputs": {
+        "search_results": "../data/multifrag/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/multifrag/inputs/mzml/EXPLO_NGL_YD1_240422_Expi_tryps_UVPD_4pulses_6mJ_1240kHz_frac11_02.mzML",
+        "spectra_type": "mzml"
+    },
+    "models": {
+        "intensity": "Prosit_2025_intensity_MultiFrag",
+        "irt": "Prosit_2019_irt"
+    },
+    "fragmentation_method": "UVPD",
+    "ion_types": "aAbCyz"
+}

@@ -174,3 +174,9 @@ tests/doctests/
 CLAUDE.md
 .specs
 webui/frontend/node_modules/
+
+# inputs of the rescoring use case integration tests, downloaded from figshare
+tests/data/*/inputs/
+# outputs of the rescoring use case integration tests
+tests/data/*/out/
+tests/data/multifrag/out_*/
