@@ -5,6 +5,8 @@
         "results/percolator/rescore.tab",
         "results/percolator/original.percolator.psms.txt",
         "results/percolator/rescore.percolator.psms.txt",
+        "results/percolator/localize_cit_spectra/rescore.tab",
+        "results/percolator/localize_cit_spectra/rescore.percolator.psms.txt",
         "results/percolator/localize_mod/rescore.tab",
         "results/percolator/localize_mod/rescore.percolator.psms.txt",
         "results/percolator/localize_mod/rescore.percolator.peptides.txt"
@@ -597,11 +599,13 @@
     },
     "reference_counts_1pct_fdr": {
         "localize_mod/rescore.percolator.psms.txt": 3499,
-        "original.percolator.psms.txt": 100837,
-        "rescore.percolator.psms.txt": 4207,
+        "original.percolator.psms.txt": 101182,
+        "rescore.percolator.psms.txt": 103313,
+        "localize_cit_spectra/rescore.percolator.psms.txt": 4207,
         "localize_mod/rescore.percolator.peptides.txt": 1423,
-        "original.percolator.peptides.txt": 36652,
-        "rescore.percolator.peptides.txt": 2019
+        "original.percolator.peptides.txt": 36268,
+        "rescore.percolator.peptides.txt": 37543,
+        "localize_cit_spectra/rescore.percolator.peptides.txt": 2019
     },
     "reference_citrullinated_psms_1pct_fdr": {
         "this_run_localize_mod": {

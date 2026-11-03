@@ -109,3 +109,29 @@ The following output files are specific to XL‑MS rescoring.
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | xisearch_xifdr_input.csv              | Contains XiSearch scores for each CSM. You can feed this file to xiFDR as well, allowing a direct comparison between original XiSearch scores and rescored (Percolator) results.                                                                         |
     +---------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+PTM FDR control and localization
+--------------------------------
+
+With ``ptm_fdr_control`` or ``ptm_localization``, the percolator directory contains subdirectories for the modified
+PSMs. Each subdirectory has its own percolator input (``rescore.tab``) and outputs (``rescore.percolator.*``, as in
+the table above).
+
+- **Separate FDR control** (``ptm_fdr_control``): the unmodified PSMs are rescored in place (``rescore.tab`` and
+  ``rescore.percolator.*`` in the percolator directory), the modified PSMs in ``mod_fdr/``.
+- **Localization** (``ptm_localization``): ``original.tab`` only contains the localizations of the search engine, so
+  ``original.percolator.*`` is the search engine baseline. ``rescore.tab`` contains all site candidates, which are
+  scored in ``localize_mod/`` (percolator training on the localization features) and ``localize_scores/`` (all
+  candidates scored with the trained weights); with ``ptmLocalizationOptions.sdi_features``, a first pass without
+  them is stored in ``localize_mod_first_pass/`` and ``localize_scores_first_pass/``. The PSMs with their most likely
+  localization are rescored, with the localization probability and false localization rate in
+  ``rescore.percolator_with_prob.psms.txt``:
+
+  - phosphorylation: ``localize_phospho/`` (``localize_rt_all_<residue>/`` per residue if P or H are possible sites)
+  - other PTMs and combinations of PTMs: ``mod_fdr/``, together with the PSMs without the localized PTMs
+
+- **Citrullination** (UNIMOD:7 as the only localized PTM, without ``decoy_residues``): the PSMs are split like for the
+  separate FDR control. Spectra without a citrullinated candidate are rescored in place (``rescore.tab`` and
+  ``rescore.percolator.*`` in the percolator directory). Spectra with a citrullinated candidate are rescored in
+  ``localize_cit_spectra/`` (best candidate per spectrum), and their citrullinated PSMs in ``localize_mod/``, the
+  citrullination results. With ``decoy_residues``, citrullination is localized like the other PTMs (``mod_fdr/``).

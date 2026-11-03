@@ -260,6 +260,7 @@ class TestLocalizeCitrullination(unittest.TestCase):
                 "Peptide": ["PEPR[UNIMOD:7]K", "PEPRK", "LESLIEK", "DEC[UNIMOD:7]OY"],
                 "spectral_angle": [0.9, 0.8, 0.7, 0.2],
                 "spectral_angle_mod": [0.5, 0.4, 0.3, 0.1],
+                "count_observed_b_sdi": [3, 2, 1, 0],
                 "Proteins": ["P1", "P1", "P2", "rev_P3"],
             }
         )
@@ -269,8 +270,16 @@ class TestLocalizeCitrullination(unittest.TestCase):
             with mock.patch("oktoberfest.rescore.localization.rescore_with_percolator", side_effect=_fake_percolator):
                 localize_ptms(fdr_dir, {7: ["R"]})
 
-            # rescore.tab keeps all candidates
-            self.assertEqual(len(pd.read_csv(fdr_dir / "rescore.tab", sep="\t")), 4)
+            # spectra without a citrullinated candidate are rescored in place, the main results (scan 2)
+            unmodified = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+            self.assertListEqual(unmodified["SpecId"].tolist(), ["f1-2-LESLIEK-2"])
+            self.assertNotIn("id", unmodified.columns)
+            self.assertListEqual(
+                list(unmodified.columns),
+                ["SpecId", "Label", "ScanNr", "filename", "Peptide", "spectral_angle", "Proteins"],
+            )
+            main = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
+            self.assertListEqual(main["PSMId"].tolist(), ["f1-2-LESLIEK-2"])
             # all candidates of spectra with a citrullinated candidate (scan 2 has none)
             filtered = pd.read_csv(fdr_dir / "localize_cit_spectra" / "rescore.tab", sep="\t")
             self.assertListEqual(filtered["ScanNr"].tolist(), [1, 1, 3])
@@ -280,7 +289,16 @@ class TestLocalizeCitrullination(unittest.TestCase):
             self.assertListEqual(localized["SpecId"].tolist(), ["f1-1-PEPR[UNIMOD:7]K-2", "f1-3-DEC[UNIMOD:7]OY-2"])
             self.assertListEqual(
                 list(localized.columns),
-                ["SpecId", "Label", "ScanNr", "filename", "Peptide", "spectral_angle", "Proteins"],
+                [
+                    "SpecId",
+                    "Label",
+                    "ScanNr",
+                    "filename",
+                    "Peptide",
+                    "spectral_angle",
+                    "count_observed_b_sdi",
+                    "Proteins",
+                ],
             )
             self.assertTrue((fdr_dir / "localize_mod" / "rescore.percolator.psms.txt").exists())
 
