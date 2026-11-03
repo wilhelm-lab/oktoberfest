@@ -18,11 +18,11 @@ on:
     workflow_dispatch:
         inputs:
             python-version:
-                description: "Python version to use"
+                description: "Python version(s) to use"
                 required: false
-                default: "3.12"
+                default: "3.12 + 3.13"
                 type: choice
-                options: ["3.11", "3.12", "3.13"]
+                options: ["3.12 + 3.13", "3.11", "3.12", "3.13", "all"]
             pytest-extra-args:
                 description: "Extra pytest arguments (e.g. -k test_my_feature)"
                 required: false
@@ -65,15 +65,21 @@ jobs:
 
     # -----------------------------------------------------------------------
     # Integration tests — pytest against ./tests/integration_tests.
-    # Runs on a single Python version by default (parametrised via dispatch).
+    # Runs on Python 3.12 and 3.13 in parallel (one runner each, so it takes no
+    # longer than one version); manual dispatch can pick one version or all.
     # Uploads integration-only coverage so Codecov can merge it with unit
     # coverage uploaded by the main CI workflow.
     # -----------------------------------------------------------------------
     integration-test:
-        name: Integration Tests (Python ${{ inputs.python-version || '3.12' }})
+        name: Integration Tests (Python ${{ matrix.python-version }})
         needs: version
         if: needs.version.outputs.changed == 'true'
         runs-on: ubuntu-latest
+        strategy:
+            # finish the other versions when one fails
+            fail-fast: false
+            matrix:
+                python-version: ${{ fromJSON(inputs.python-version == 'all' && '["3.11", "3.12", "3.13"]' || contains(fromJSON('["3.11", "3.12", "3.13"]'), inputs.python-version) && format('["{0}"]', inputs.python-version) || '["3.12", "3.13"]') }}
         # the rescoring use case tests (tests/integration_tests/test_rescoring_usecases.py) took about 1.5 h on a
         # 40-core server (cit ~26 min, multifrag ~45 min)
         timeout-minutes: 360
@@ -83,7 +89,7 @@ jobs:
 
             - uses: actions/setup-python@v6
               with:
-                  python-version: ${{ inputs.python-version || '3.12' }}
+                  python-version: ${{ matrix.python-version }}
                   cache: pip
 
             - name: Install Poetry
@@ -95,8 +101,8 @@ jobs:
                   path: ~/.cache/pypoetry/virtualenvs
                   # Separate cache key from the unit-test jobs so that adding
                   # integration-only dependencies does not bust their caches.
-                  key: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-${{ hashFiles('poetry.lock') }}
-                  restore-keys: poetry-integration-${{ runner.os }}-py${{ inputs.python-version || '3.12' }}-
+                  key: poetry-integration-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+                  restore-keys: poetry-integration-${{ runner.os }}-py${{ matrix.python-version }}-
 
             # inputs of the rescoring use case tests (mzML + MSFragger results from figshare, a few GB);
             # the key changes when the figshare URLs in the test module change
@@ -158,6 +164,6 @@ jobs:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: coverage.xml
                   flags: integration-tests
-                  name: integration-${{ inputs.python-version || '3.12' }}
+                  name: integration-${{ matrix.python-version }}
                   verbose: true
                   fail_ci_if_error: false
