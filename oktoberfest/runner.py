@@ -197,12 +197,7 @@ def _annotate_and_get_library(spectra_file: Path, config: Config, tims_meta_file
             spectra["FRAGMENTATION"] = config.fragmentation_method
         search = pp.load_search(config.output / "msms" / spectra_file.with_suffix(".rescore").name)
         library = pp.merge_spectra_and_peptides(spectra, search)
-        if config.unit_mass_tolerance == "ppm" and (library["MASS_ANALYZER"] == "ITMS").any():
-            logger.warning(
-                f"massTolerance {config.mass_tolerance} ppm is also used for the ion trap (ITMS) spectra of "
-                f"{spectra_file.name}. Leave massTolerance and unitMassTolerance out to use the ion trap default "
-                "(0.35 Da)."
-            )
+        _warn_ppm_ion_trap(library, config, spectra_file)
 
         # Check for crosslinked or local model (skip for DLOmix)
         intensity_model = config.models.get("intensity", "").lower()
@@ -267,6 +262,16 @@ def _ce_calibration_library(library: Spectra, config: Config) -> Spectra:
         return library
     logger.info(f"Using {without_ptm.sum()} PSMs without the localized PTMs for CE calibration.")
     return Spectra(library[without_ptm].copy())
+
+
+def _warn_ppm_ion_trap(library: pd.DataFrame, config: Config, spectra_file: Path):
+    """Warn if a ppm massTolerance is also applied to the ion trap (ITMS) spectra of a spectra file."""
+    if config.unit_mass_tolerance == "ppm" and (library["MASS_ANALYZER"] == "ITMS").any():
+        logger.warning(
+            f"massTolerance {config.mass_tolerance} ppm is also used for the ion trap (ITMS) spectra of "
+            f"{spectra_file.name}. Leave massTolerance and unitMassTolerance out to use the ion trap default "
+            "(0.35 Da)."
+        )
 
 
 def _search_engine_localizations(library: Spectra) -> Spectra:

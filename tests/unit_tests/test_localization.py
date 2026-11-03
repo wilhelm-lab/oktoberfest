@@ -378,3 +378,44 @@ class TestLocalizationScore(unittest.TestCase):
         score = calibrate_localization_score(psms)["localization_score"]
         np.testing.assert_array_equal(score >= 0.75, psms["localization_flr"] <= 0.01)
         np.testing.assert_array_equal(score >= 0.5, psms["localization_flr"] <= 0.05)
+
+    def test_only_search_engine_localizations(self):
+        """Test a library without permutations (every PSM localized as by the search engine) is returned as is."""
+        from oktoberfest.data.spectra import Spectra
+        from oktoberfest.runner import _search_engine_localizations
+
+        obs = pd.DataFrame(
+            {
+                "MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+                "SEARCH_MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+            },
+            index=["0", "1"],
+        )
+        library = Spectra(obs=obs)
+        self.assertIs(_search_engine_localizations(library), library)
+
+
+class TestWarnPpmIonTrap(unittest.TestCase):
+    """Test the warning if a ppm massTolerance is also applied to ion trap spectra."""
+
+    def _warnings(self, unit: str, analyzers: list[str]) -> list[str]:
+        from unittest import mock
+
+        from oktoberfest.runner import _warn_ppm_ion_trap
+
+        config = mock.Mock(unit_mass_tolerance=unit, mass_tolerance=20)
+        with mock.patch("oktoberfest.runner.logger") as logger:
+            _warn_ppm_ion_trap(pd.DataFrame({"MASS_ANALYZER": analyzers}), config, Path("run.mzML"))
+        return [call.args[0] for call in logger.warning.call_args_list]
+
+    def test_ppm_with_ion_trap(self):
+        """Test a ppm tolerance warns if the file has ion trap spectra, naming the file."""
+        messages = self._warnings("ppm", ["FTMS", "ITMS"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("run.mzML", messages[0])
+        self.assertIn("20 ppm", messages[0])
+
+    def test_no_warning(self):
+        """Test no warning for a Da tolerance or a file without ion trap spectra."""
+        self.assertListEqual(self._warnings("da", ["FTMS", "ITMS"]), [])
+        self.assertListEqual(self._warnings("ppm", ["FTMS", "FTMS"]), [])
