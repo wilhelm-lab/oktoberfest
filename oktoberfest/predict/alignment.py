@@ -35,7 +35,7 @@ def _prepare_alignment_df(
     hcd_targets = library.obs.query("(FRAGMENTATION == 'HCD') & ~REVERSE")
     hcd_targets = hcd_targets.sort_values(by="SCORE", ascending=False)
     hcd_targets = hcd_targets.drop_duplicates(subset=["RAW_FILE", "SCAN_NUMBER"], keep="first")
-    hcd_targets = hcd_targets.groupby(groups)
+    hcd_targets = hcd_targets.groupby(groups, observed=True)
 
     top_hcd_targets = hcd_targets.head(top_n)
 

@@ -82,7 +82,7 @@ class Spectra(anndata.AnnData):
                 for charge in c.CHARGES
             ]
         )
-        df.set_index("ion", inplace=True)
+        df = df.set_index("ion")
         return df
 
     @staticmethod
@@ -375,7 +375,7 @@ class Spectra(anndata.AnnData):
         """Filter out (peptide, charge, collision energy) duplicates if there's more than n_duplicates."""
         self.obs["duplicate_count"] = self.obs.groupby(["SEQUENCE", "PRECURSOR_CHARGE", "COLLISION_ENERGY"]).cumcount()
         self.__dict__ = Spectra(self[self.obs["duplicate_count"] < num_duplicates].copy()).__dict__
-        self.obs.drop(columns="duplicate_count", inplace=True)
+        self.obs = self.obs.drop(columns="duplicate_count")
 
     def convert_to_df(self) -> pd.DataFrame:
         """

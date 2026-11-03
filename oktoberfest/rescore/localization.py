@@ -1119,7 +1119,7 @@ def localize_ptms(
         df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
         df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
         df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
-        df_rescore.drop(columns=["id"], inplace=True)
+        df_rescore = df_rescore.drop(columns=["id"])
         df_rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
         rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, num_threads=num_threads)
         df_rescore_psms_targets = pd.read_csv(
@@ -1136,14 +1136,14 @@ def localize_ptms(
         ]
         df_rescore_psms = pd.concat([df_rescore_psms_targets, df_rescore_psms_decoys])
         df_rescore_psms = df_rescore_psms[["PSMId"]]
-        df_rescore_psms.rename(columns={"PSMId": "SpecId"}, inplace=True)
+        df_rescore_psms = df_rescore_psms.rename(columns={"PSMId": "SpecId"})
         df_rescore = df_rescore.merge(df_rescore_psms, on="SpecId", how="inner")
 
         remove_cols = []
         for col in df_rescore.columns:
             if "_mod" in col:
                 remove_cols.append(col)
-        df_rescore.drop(columns=remove_cols, inplace=True)
+        df_rescore = df_rescore.drop(columns=remove_cols)
 
         df_rescore.to_csv(new_rescore_dir / "rescore.tab", sep="\t", index=False)
         rescore_with_percolator(

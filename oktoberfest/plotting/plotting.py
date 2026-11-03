@@ -194,7 +194,7 @@ def joint_plot(
     df_decoys["color"] = "#FE7312"
 
     df_all = pd.concat([df_targets, df_decoys], axis=0)
-    df_all.dropna(inplace=True)
+    df_all = df_all.dropna()
     jplot = sns.jointplot(
         data=df_all,
         x="and_score",

@@ -349,14 +349,16 @@ def _get_best_ce(library: Spectra, spectra_file: Path, config: Config):
 
         if use_ransac_model:
             logger.info("Performing RANSAC regression")
-            calib_group = (
-                alignment_library.obs.groupby(
-                    by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"], as_index=False
-                )["SPECTRAL_ANGLE"]
-                .mean()
-                .groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], as_index=False)
-                .apply(lambda x: x.loc[x["SPECTRAL_ANGLE"].idxmax()])
-            )
+            mean_angles = alignment_library.obs.groupby(
+                by=["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "COLLISION_ENERGY", "MASS"],
+                as_index=False,
+                observed=True,
+            )["SPECTRAL_ANGLE"].mean()
+            # the collision energy with the highest mean spectral angle per charge, original CE and mass
+            best = mean_angles.groupby(["PRECURSOR_CHARGE", "ORIG_COLLISION_ENERGY", "MASS"], observed=True)[
+                "SPECTRAL_ANGLE"
+            ].idxmax()
+            calib_group = mean_angles.loc[best].reset_index(drop=True)
             calib_group["delta_collision_energy"] = (
                 calib_group["COLLISION_ENERGY"] - calib_group["ORIG_COLLISION_ENERGY"]
             )
@@ -1063,17 +1065,17 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
             "which_pep",
         ]
     ] = df_psm["index"].str.split("_", expand=True)
-    df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"], inplace=True)
+    df_psm = df_psm.drop(columns=["index", "_", "decoy_p1", "decoy_p2"])
     df_pep_1 = df_psm[df_psm["which_pep"] == "1"].copy()
     df_pep_2 = df_psm[df_psm["which_pep"] == "2"].copy()
-    df_pep_1.drop(columns=["which_pep"], inplace=True)
-    df_pep_2.drop(columns=["which_pep"], inplace=True)
+    df_pep_1 = df_pep_1.drop(columns=["which_pep"])
+    df_pep_2 = df_pep_2.drop(columns=["which_pep"])
     df_pep_1.columns = [col + "_a" if col != "index_csm" else col for col in df_pep_1.columns]
     df_pep_2.columns = [col + "_b" if col != "index_csm" else col for col in df_pep_2.columns]
     df_csm = pd.merge(df_pep_1, df_pep_2, on="index_csm")
     df_csm["score"] = df_csm.apply(min_score, axis=1)
     df_csm["label"] = df_csm.apply(get_label, axis=1)
-    df_csm.rename(columns={"fdr_group_b": "fdr_group"}, inplace=True)
+    df_csm = df_csm.rename(columns={"fdr_group_b": "fdr_group"})
     return df_csm
 
 
@@ -1163,7 +1165,7 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
         columns_to_remove_psm = columns_to_remove_psm_rescore
         rescore_tab_file = pd.read_csv(features_dir + "/rescore.tab", sep="\t")
 
-    rescore_tab_file.drop(columns=columns_to_remove_psm, inplace=True, errors="ignore")
+    rescore_tab_file = rescore_tab_file.drop(columns=columns_to_remove_psm, errors="ignore")
     rescore_tab_file = rescore_tab_file.fillna(0)
     string_columns = [
         "SpecId",
@@ -1199,7 +1201,7 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
         + "-"
         + rescore_tab_file.index.astype(str)  # Adding index to SpecId
     )
-    rescore_tab_file.drop(
+    rescore_tab_file = rescore_tab_file.drop(
         columns=[
             "protein_p1",
             "protein_p2",
@@ -1209,7 +1211,6 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
             "base_sequence_p1",
             "base_sequence_p2",
         ],
-        inplace=True,
     )
     columns_feature_pep_a = [
         col
@@ -1276,7 +1277,7 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
         ]
         split_data.columns = new_columns
         df = pd.concat([df, split_data], axis=1)
-        df.drop(columns=["index", "decoy_p1", "decoy_p2"], inplace=True)
+        df = df.drop(columns=["index", "decoy_p1", "decoy_p2"])
         df["SpecId"] = df["SpecId"].str.split("-decoy_p1").str[0]
         df = df.reset_index()
         df["protein_p1"] = df["Proteins"].apply(lambda x: x.split("_p2_")[0].split("p1_")[1])
@@ -1344,12 +1345,12 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
     df_percolator_csm_decoy = pd.read_csv(str(fdr_dir) + "/rescore.percolator.decoy.csms.txt", sep="\t")
     df_percolator_csm_decoy = convert_percolator_output(df_percolator_csm_decoy)
     df_percolator_csm = pd.concat([df_percolator_csm_target, df_percolator_csm_decoy], ignore_index=True)
-    df_percolator_csm.rename(columns={"score": "score_percolator"}, inplace=True)
-    df_percolator_csm.reset_index(drop=True, inplace=True)
+    df_percolator_csm = df_percolator_csm.rename(columns={"score": "score_percolator"})
+    df_percolator_csm = df_percolator_csm.reset_index(drop=True)
 
     # read df_search_engine_internal
     df_search_engine_internal = pd.read_csv(str(fdr_dir) + "/rescore_features_csm.tab", sep="\t")
-    df_search_engine_internal.drop("SCORE", axis=1, inplace=True)
+    df_search_engine_internal = df_search_engine_internal.drop("SCORE", axis=1)
     if xisearch_or_scout == "scout":
         df_search_engine_internal["MODIFIED_SEQUENCE_A_xiFDR"] = df_search_engine_internal["AlphaPeptide"].str.replace(
             "+", ""
@@ -1357,7 +1358,7 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
         df_search_engine_internal["MODIFIED_SEQUENCE_B_xiFDR"] = df_search_engine_internal["BetaPeptide"].str.replace(
             "+", ""
         )
-    df_search_engine_internal.reset_index(drop=True, inplace=True)
+    df_search_engine_internal = df_search_engine_internal.reset_index(drop=True)
 
     # merge percolator and search engine output
     merged_xisearch_percolator = pd.merge(df_search_engine_internal, df_percolator_csm, on="SpecId")
@@ -1365,20 +1366,20 @@ def input_xifdr(fdr_dir: str, xisearch_or_scout: str):
     df_percolator_xifdr_input = input_columns_xifdr(merged_xisearch_percolator, input_type="percolator")
     df_percolator_xifdr_input = df_percolator_xifdr_input[xifdr_columns]
     df_percolator_xifdr_input = df_percolator_xifdr_input.loc[:, ~df_percolator_xifdr_input.columns.duplicated()]
-    df_percolator_xifdr_input.reset_index(drop=True, inplace=True)
+    df_percolator_xifdr_input = df_percolator_xifdr_input.reset_index(drop=True)
     df_percolator_xifdr_input.to_csv(str(fdr_dir) + "/percolator_xifdr_input.csv", sep=",", index=False)
 
     if xisearch_or_scout == "xisearch":
         df_xisearch_xifdr_input = input_columns_xifdr(merged_xisearch_percolator, input_type="xisearch")
         df_xisearch_xifdr_input = df_xisearch_xifdr_input[xifdr_columns]
         df_xisearch_xifdr_input = df_xisearch_xifdr_input.loc[:, ~df_xisearch_xifdr_input.columns.duplicated()]
-        df_xisearch_xifdr_input.reset_index(drop=True, inplace=True)
+        df_xisearch_xifdr_input = df_xisearch_xifdr_input.reset_index(drop=True)
         df_xisearch_xifdr_input.to_csv(str(fdr_dir) + "/xisearch_xifdr_input.csv", sep=",", index=False)
     elif xisearch_or_scout == "scout":
         df_scout_xifdr_input = input_columns_xifdr(merged_xisearch_percolator, input_type="scout")
         df_scout_xifdr_input = df_scout_xifdr_input[xifdr_columns]
         df_scout_xifdr_input = df_scout_xifdr_input.loc[:, ~df_scout_xifdr_input.columns.duplicated()]
-        df_scout_xifdr_input.reset_index(drop=True, inplace=True)
+        df_scout_xifdr_input = df_scout_xifdr_input.reset_index(drop=True)
         df_scout_xifdr_input.to_csv(str(fdr_dir) + "/scout_xifdr_input.csv", sep=",", index=False)
 
 
@@ -1649,14 +1650,14 @@ def _build_speclib_rows_for_file(filename: str, peptide_df: pd.DataFrame, data_d
     obs["PSMId"] = obs[spec_id_cols].astype(str).agg("-".join, axis=1)
 
     # Filter 1% FDR peptide level
-    obs["avg_retention_time_sec"] = obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"])[
+    obs["avg_retention_time_sec"] = obs.groupby(["MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"], observed=True)[
         "retention_time_sec"
     ].transform("mean")
 
     # PSMId only ends with the charge if there is no SCAN_EVENT_NUMBER, so take the charge from the spectra
     peptide_df = peptide_df.copy()
     peptide_df["charge"] = peptide_df["PSMId"].map(obs.set_index("PSMId")["PRECURSOR_CHARGE"])
-    peptide_df.drop_duplicates(["peptide", "charge"], inplace=True)
+    peptide_df = peptide_df.drop_duplicates(["peptide", "charge"])
     accepted_peptide_ids = peptide_df.loc[peptide_df["q-value"] <= 0.01, "PSMId"]
     positions = np.flatnonzero(obs["PSMId"].isin(accepted_peptide_ids).to_numpy())
 
@@ -1793,7 +1794,7 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
     # keep the most intense entry per fragment
     df = df.sort_values(by="LibraryIntensity", ascending=False)
     df = df.drop_duplicates(["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz", "NormalizedRetentionTime"])
-    df.sort_values(by=["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz"], inplace=True)
+    df = df.sort_values(by=["ModifiedPeptideSequence", "PrecursorCharge", "ProductMz"])
     df.to_csv(config.output / "results/spec_lib.tsv", sep="\t", index=False)
 
 
