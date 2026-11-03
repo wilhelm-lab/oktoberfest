@@ -1087,7 +1087,10 @@ def localize_ptms(
     localize. Any other PTM or combination of PTMs is localized with the generic workflow. Decoy candidates (PTMs on
     decoy_residues) are only used if decoy_residues are given: they are passive candidates that estimate the false
     localization rate. Citrullination with decoy residues is localized with the generic workflow, since the dedicated
-    one would score the decoy candidates like the other candidates.
+    one would score the decoy candidates like the other candidates. The dedicated citrullination workflow splits the
+    spectra like the PTM FDR control: spectra without a citrullinated candidate are rescored in place (rescore.tab and
+    rescore.percolator.* in fdr_dir), spectra with one are selected in localize_cit_spectra and their citrullinated
+    PSMs rescored in localize_mod.
 
     :param fdr_dir: the output directory containing rescore.tab with all localization candidates
     :param ptm_sites: the localized PTMs {unimod id: [residues]}
@@ -1121,9 +1124,16 @@ def localize_ptms(
     if unimod_id == 7 and not use_decoys:
         df_rescore["id"] = df_rescore["filename"] + df_rescore["ScanNr"].astype(str)
         df_rescore_fil = df_rescore[df_rescore["Peptide"].str.contains("UNIMOD:" + str(unimod_id))]
-        df_rescore = df_rescore[df_rescore["id"].isin(df_rescore_fil["id"].tolist())]
-        df_rescore = df_rescore.drop(columns=["id"])
-        # best candidate per spectrum, in its own directory to keep rescore.tab with all candidates
+        is_cit_spectrum = df_rescore["id"].isin(df_rescore_fil["id"].tolist())
+        # spectra without a citrullinated candidate are rescored in place, like the unmodified PSMs of the PTM FDR
+        # control (percolator_fdr_modified): rescore.tab and rescore.percolator.* in fdr_dir, without the
+        # localization features (_mod and site determining ion _sdi features), which only apply to the candidates
+        localization_cols = [col for col in df_rescore.columns if "_mod" in col or "_sdi" in col]
+        df_unmodified = df_rescore[~is_cit_spectrum].drop(columns=["id", *localization_cols])
+        df_unmodified.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+        rescore_with_percolator(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, num_threads=num_threads)
+        df_rescore = df_rescore[is_cit_spectrum].drop(columns=["id"])
+        # spectra with a citrullinated candidate: best candidate per spectrum
         cit_dir = fdr_dir / "localize_cit_spectra"
         cit_dir.mkdir(parents=True, exist_ok=True)
         df_rescore.to_csv(cit_dir / "rescore.tab", sep="\t", index=False)

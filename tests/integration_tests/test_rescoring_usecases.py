@@ -207,10 +207,12 @@ class TestRescoringUseCases(unittest.TestCase):
         Citrullination localization (UNIMOD:7 on N, Q and R) with the Prosit Cit models (PXD056560).
 
         Synthetic citrullinated peptides spiked into a MES-SA digest. The citrullination workflow of localize_ptms
-        keeps only spectra with a UNIMOD:7 candidate and rescores them in localize_mod. original.tab contains all
-        localization candidates, so the original percolator results are no valid baseline; the number of
-        citrullinated PSMs is compared with the reference run instead (the PRIDE deposit of the Prosit-Cit paper
-        reports a similar number, 1266, for these three files).
+        rescores the spectra without a UNIMOD:7 candidate in place (rescore.tab, like the unmodified PSMs of the PTM
+        FDR control), selects the spectra with one in localize_cit_spectra and rescores their citrullinated PSMs in
+        localize_mod. The original percolator results only contain the search
+        engine localizations of all spectra, so they are no baseline for the citrullinated PSMs; their number is
+        compared with the reference run instead (the PRIDE deposit of the Prosit-Cit paper reports a similar number,
+        1266, for these three files).
         """
         self._prepare("cit", ["out"])
         expected = self._expected("cit")
@@ -220,6 +222,12 @@ class TestRescoringUseCases(unittest.TestCase):
         self._check_files(out_dir, expected["output_files"])
         self._check_columns(fdr_dir / "original.tab", expected["original_columns"])
         self._check_columns(fdr_dir / "rescore.tab", expected["rescore_columns"])
+        # spectra without a citrullinated candidate in rescore.tab, those with one in localize_cit_spectra
+        unmodified = pd.read_csv(fdr_dir / "rescore.tab", sep="\t", usecols=["Peptide"])["Peptide"]
+        self.assertFalse(unmodified.str.contains(r"\[UNIMOD:7\]", regex=True).any())
+        n_unmodified = _n_accepted(fdr_dir / "rescore.percolator.psms.txt")
+        n_unmodified_reference = expected["reference_counts_1pct_fdr"]["rescore.percolator.psms.txt"]
+        self.assertGreater(n_unmodified, 0.8 * n_unmodified_reference, f"{n_unmodified} unmodified PSMs")
         loc_tab = fdr_dir / "localize_mod" / "rescore.tab"
         self._check_columns(loc_tab, expected["columns"]["localize_mod/rescore.tab"])
         # citrulline neutral loss (isocyanic acid) features
@@ -255,9 +263,9 @@ class TestRescoringUseCases(unittest.TestCase):
         """
         Phospho site localization on a synthetic phosphopeptide library (PXD007058, pools 1-3, HCD OT).
 
-        With ptm_localization, original.tab contains all localization candidates of every spectrum (including the
-        decoy site candidates), so the original percolator results are no valid baseline. Instead, the localizations
-        are checked against the known sites of the synthetic library.
+        With ptm_localization, the original percolator results only contain the search engine localizations, while the
+        localization scores all site candidates of every spectrum. The localizations are checked against the known
+        sites of the synthetic library.
         """
         self._prepare("phospho", ["out"])
         expected = self._expected("phospho")
