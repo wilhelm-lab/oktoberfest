@@ -79,7 +79,7 @@ class TestXLPreprocessingPlotCsm(unittest.TestCase):
             }
         )
         with tempfile.TemporaryDirectory() as tmp_dir:
-            xl_preprocessing_plot_csm(tmp_dir, df, "rescore", "percolator")
+            xl_preprocessing_plot_csm(tmp_dir, df, "rescore")
             targets = pd.read_csv(Path(tmp_dir) / "rescore.percolator.csms.txt", sep="\t")
             decoys = pd.read_csv(Path(tmp_dir) / "rescore.percolator.decoy.csms.txt", sep="\t")
 

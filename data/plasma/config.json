@@ -17,7 +17,7 @@
     "output": "./out",
     "thermoExe": "ThermoRawFileParser.exe",
     "regressionMethod": "spline",
-    "fdr_estimation_method": "mokapot",
+    "fdr_estimation_method": "percolator",
     "massTolerance": 20,
     "unitMassTolerance": "ppm"
 }
