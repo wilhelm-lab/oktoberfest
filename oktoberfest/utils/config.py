@@ -286,12 +286,29 @@ class Config:
 
     @property
     def library_input_type(self) -> str:
-        """Get library input file type (fasta or peptides) from the config file."""
+        """
+        Get library input file type (fasta, peptides or internal) from the config file.
+
+        If it is not given, it is inferred from the library input: a fasta file (.fasta, .fa, .faa), a peptide list
+        (peptide column) or a table in internal format (modified_sequence column).
+        """
         library_input_type = self.inputs.get("library_input_type")
         if library_input_type is not None:
             return library_input_type.lower()
-        else:
-            raise ValueError("No library input file type (fasta or peptides) specified in config file.")
+        library_input = self.library_input
+        if library_input.suffix.lower() in (".fasta", ".fa", ".faa"):
+            return "fasta"
+        if library_input.is_file():
+            with open(library_input) as f:
+                columns = [column.strip().lower() for column in f.readline().split(",")]
+            if "modified_sequence" in columns:
+                return "internal"
+            if "peptide" in columns:
+                return "peptides"
+        raise ValueError(
+            f"Could not infer the library input type of {library_input}. Please specify library_input_type "
+            '("fasta", "peptides" or "internal") in the config file.'
+        )
 
     @property
     def instrument_type(self) -> Optional[str]:
