@@ -1,5 +1,7 @@
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -258,6 +260,7 @@ class TestLocalizeCitrullination(unittest.TestCase):
                 "Peptide": ["PEPR[UNIMOD:7]K", "PEPRK", "LESLIEK", "DEC[UNIMOD:7]OY"],
                 "spectral_angle": [0.9, 0.8, 0.7, 0.2],
                 "spectral_angle_mod": [0.5, 0.4, 0.3, 0.1],
+                "count_observed_b_sdi": [3, 2, 1, 0],
                 "Proteins": ["P1", "P1", "P2", "rev_P3"],
             }
         )
@@ -267,8 +270,18 @@ class TestLocalizeCitrullination(unittest.TestCase):
             with mock.patch("oktoberfest.rescore.localization.rescore_with_percolator", side_effect=_fake_percolator):
                 localize_ptms(fdr_dir, {7: ["R"]})
 
+            # spectra without a citrullinated candidate are rescored in place, the main results (scan 2)
+            unmodified = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+            self.assertListEqual(unmodified["SpecId"].tolist(), ["f1-2-LESLIEK-2"])
+            self.assertNotIn("id", unmodified.columns)
+            self.assertListEqual(
+                list(unmodified.columns),
+                ["SpecId", "Label", "ScanNr", "filename", "Peptide", "spectral_angle", "Proteins"],
+            )
+            main = pd.read_csv(fdr_dir / "rescore.percolator.psms.txt", sep="\t")
+            self.assertListEqual(main["PSMId"].tolist(), ["f1-2-LESLIEK-2"])
             # all candidates of spectra with a citrullinated candidate (scan 2 has none)
-            filtered = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+            filtered = pd.read_csv(fdr_dir / "localize_cit_spectra" / "rescore.tab", sep="\t")
             self.assertListEqual(filtered["ScanNr"].tolist(), [1, 1, 3])
             self.assertNotIn("id", filtered.columns)
             # the citrullinated PSMs only, without the _mod features
@@ -276,6 +289,129 @@ class TestLocalizeCitrullination(unittest.TestCase):
             self.assertListEqual(localized["SpecId"].tolist(), ["f1-1-PEPR[UNIMOD:7]K-2", "f1-3-DEC[UNIMOD:7]OY-2"])
             self.assertListEqual(
                 list(localized.columns),
-                ["SpecId", "Label", "ScanNr", "filename", "Peptide", "spectral_angle", "Proteins"],
+                [
+                    "SpecId",
+                    "Label",
+                    "ScanNr",
+                    "filename",
+                    "Peptide",
+                    "spectral_angle",
+                    "count_observed_b_sdi",
+                    "Proteins",
+                ],
             )
             self.assertTrue((fdr_dir / "localize_mod" / "rescore.percolator.psms.txt").exists())
+
+
+class TestCitrullinationDecoys(unittest.TestCase):
+    """Test citrullination is localized without decoys by default and with the generic workflow with decoy residues."""
+
+    @staticmethod
+    def _percolator(input_file, output_folder=None, **kwargs):
+        """Write every input PSM as accepted percolator target (stand-in for percolator)."""
+        output_folder = Path(output_folder or Path(input_file).parent)
+        tab = pd.read_csv(input_file, sep="\t")
+        psms = pd.DataFrame({"PSMId": tab["SpecId"], "peptide": tab["Peptide"], "filename": tab["filename"]})
+        psms.to_csv(output_folder / "rescore.percolator.psms.txt", sep="\t", index=False)
+        psms.iloc[:0].to_csv(output_folder / "rescore.percolator.decoy.psms.txt", sep="\t", index=False)
+
+    def _localize(self, decoy_residues):
+        from oktoberfest.rescore import localization
+
+        peptides = ["PEPR[UNIMOD:7]K", "PEPN[UNIMOD:7]RK", "PEPA[UNIMOD:7]RK", "PEPTIDEK"]
+        tab = pd.DataFrame(
+            {
+                "SpecId": [f"f-{i}-{p}-2-1" for i, p in enumerate(peptides)],
+                "Label": 1,
+                "ScanNr": range(len(peptides)),
+                "filename": "f",
+                "Peptide": peptides,
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            fdr_dir = Path(tmp)
+            tab.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+            with (
+                patch.object(localization, "rescore_with_percolator", side_effect=self._percolator),
+                patch.object(localization, "_localize_candidates") as localize_candidates,
+                patch.object(localization, "_best_localization", side_effect=lambda df, loc: df),
+                patch.object(localization, "_add_localization_probabilities"),
+            ):
+                localization.localize_ptms(fdr_dir, {7: ["N", "Q", "R"]}, decoy_residues)
+            return localize_candidates, sorted(path.name for path in fdr_dir.iterdir() if path.is_dir())
+
+    def test_without_decoys(self):
+        """Test the dedicated citrullination workflow is used if no decoy residues are given."""
+        localize_candidates, dirs = self._localize(None)
+        localize_candidates.assert_not_called()
+        self.assertNotIn("mod_fdr", dirs)
+
+    def test_with_decoys(self):
+        """Test the decoy candidates are passed as decoys to the generic workflow if decoy residues are given."""
+        localize_candidates, dirs = self._localize(["A"])
+        candidates, _, decoy_pattern = localize_candidates.call_args.args[:3]
+        self.assertEqual(decoy_pattern, r"[A]\[UNIMOD:(?:7)\]")
+        self.assertEqual(candidates["Peptide"].str.contains(decoy_pattern).sum(), 1)
+        self.assertIn("mod_fdr", dirs)
+
+
+class TestSearchEngineLocalizations(unittest.TestCase):
+    """Test the original rescoring only scores the localization of the search engine."""
+
+    def test_search_engine_localizations(self):
+        """Test the permutations and decoy candidates are removed, and libraries without permutations are kept."""
+        from oktoberfest.data.spectra import Spectra
+        from oktoberfest.runner import _search_engine_localizations
+
+        obs = pd.DataFrame(
+            {
+                "MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPST[UNIMOD:21]K", "PEPA[UNIMOD:21]STK", "PEPTIDEK"],
+                "SEARCH_MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPS[UNIMOD:21]TK", "PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+            },
+            index=[str(i) for i in range(4)],
+        )
+        original = _search_engine_localizations(Spectra(obs=obs))
+        self.assertEqual(original.obs["MODIFIED_SEQUENCE"].tolist(), ["PEPS[UNIMOD:21]TK", "PEPTIDEK"])
+        library = Spectra(obs=obs[["MODIFIED_SEQUENCE"]])
+        self.assertIs(_search_engine_localizations(library), library)
+
+    def test_only_search_engine_localizations(self):
+        """Test a library without permutations (every PSM localized as by the search engine) is returned as is."""
+        from oktoberfest.data.spectra import Spectra
+        from oktoberfest.runner import _search_engine_localizations
+
+        obs = pd.DataFrame(
+            {
+                "MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+                "SEARCH_MODIFIED_SEQUENCE": ["PEPS[UNIMOD:21]TK", "PEPTIDEK"],
+            },
+            index=["0", "1"],
+        )
+        library = Spectra(obs=obs)
+        self.assertIs(_search_engine_localizations(library), library)
+
+
+class TestWarnPpmIonTrap(unittest.TestCase):
+    """Test the warning if a ppm massTolerance is also applied to ion trap spectra."""
+
+    def _warnings(self, unit: str, analyzers: list[str]) -> list[str]:
+        from unittest import mock
+
+        from oktoberfest.runner import _warn_ppm_ion_trap
+
+        config = mock.Mock(unit_mass_tolerance=unit, mass_tolerance=20)
+        with mock.patch("oktoberfest.runner.logger") as logger:
+            _warn_ppm_ion_trap(pd.DataFrame({"MASS_ANALYZER": analyzers}), config, Path("run.mzML"))
+        return [call.args[0] for call in logger.warning.call_args_list]
+
+    def test_ppm_with_ion_trap(self):
+        """Test a ppm tolerance warns if the file has ion trap spectra, naming the file."""
+        messages = self._warnings("ppm", ["FTMS", "ITMS"])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("run.mzML", messages[0])
+        self.assertIn("20 ppm", messages[0])
+
+    def test_no_warning(self):
+        """Test no warning for a Da tolerance or a file without ion trap spectra."""
+        self.assertListEqual(self._warnings("da", ["FTMS", "ITMS"]), [])
+        self.assertListEqual(self._warnings("ppm", ["FTMS", "FTMS"]), [])

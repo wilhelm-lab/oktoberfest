@@ -25,7 +25,7 @@ plt.rcParams.update(
         "ytick.major.width": 1.5,
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
-        "font.family": "sans_serif",
+        "font.family": "sans-serif",
     }
 )
 

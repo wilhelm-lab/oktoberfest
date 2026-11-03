@@ -706,12 +706,12 @@
         "localize_phospho/rescore.percolator_with_prob.psms.txt": 214,
         "localize_scores/rescore.percolator.psms.txt": 908,
         "localize_scores_first_pass/rescore.percolator.psms.txt": 907,
-        "original.percolator.psms.txt": 521,
+        "original.percolator.psms.txt": 509,
         "localize_mod/rescore.percolator.peptides.txt": 115,
         "localize_mod_first_pass/rescore.percolator.peptides.txt": 112,
         "localize_phospho/rescore.percolator.peptides.txt": 125,
         "localize_scores/rescore.percolator.peptides.txt": 386,
         "localize_scores_first_pass/rescore.percolator.peptides.txt": 382,
-        "original.percolator.peptides.txt": 329
+        "original.percolator.peptides.txt": 242
     }
 }
