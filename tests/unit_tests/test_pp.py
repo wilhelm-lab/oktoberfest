@@ -234,3 +234,25 @@ class TestProcessing(unittest.TestCase):
         # add_intensities must not raise IndexError with Arrow-backed var_names
         spectra.add_intensities(intensities, annotation, FragmentType.RAW)
         self.assertIn("raw_int", spectra.layers)
+
+
+class TestSplitSearch(unittest.TestCase):
+    """Test splitting search results and timsTOF metadata by spectra file."""
+
+    def test_file_names_with_dots(self):
+        """Test spectra file names with dots keep their full name (the runner reads <spectra file stem>.rescore)."""
+        search_results = pd.DataFrame({"RAW_FILE": ["run.trimmed", "run.trimmed", "other"], "SCAN_NUMBER": [1, 2, 3]})
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_dir = Path(tmp_dir)
+            found = pp.split_search(search_results, output_dir, filenames=["run.trimmed", "missing"])
+            found_meta = pp.split_timstof_metadata(search_results, output_dir, filenames=["run.trimmed"])
+
+            self.assertListEqual(found, ["run.trimmed"])
+            self.assertListEqual(found_meta, ["run.trimmed"])
+            spectra_file = Path("run.trimmed.mzML")
+            rescore = pd.read_csv(output_dir / spectra_file.with_suffix(".rescore").name, index_col=0)
+            self.assertListEqual(rescore["SCAN_NUMBER"].tolist(), [1, 2])
+            self.assertTrue((output_dir / spectra_file.with_suffix(".timsmeta").name).exists())
+            self.assertListEqual(
+                sorted(p.name for p in output_dir.iterdir()), ["run.trimmed.rescore", "run.trimmed.timsmeta"]
+            )
