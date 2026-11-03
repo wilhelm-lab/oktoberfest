@@ -21,6 +21,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
 
 from oktoberfest.__main__ import main
@@ -33,6 +34,7 @@ FIGSHARE_URL_CIT = "https://ndownloader.figshare.com/files/70952382"
 FIGSHARE_URL_MULTIFRAG = "https://ndownloader.figshare.com/files/70952376"
 FIGSHARE_URL_PHOSPHO = "https://ndownloader.figshare.com/files/70952370"
 FIGSHARE_URL_HLA = "https://ndownloader.figshare.com/files/70952379"
+FIGSHARE_URL_QUANT = "https://ndownloader.figshare.com/files/71027736"
 
 FIGSHARE_URLS = {
     "tmt": FIGSHARE_URL_TMT,
@@ -40,6 +42,7 @@ FIGSHARE_URLS = {
     "multifrag": FIGSHARE_URL_MULTIFRAG,
     "phospho": FIGSHARE_URL_PHOSPHO,
     "hla": FIGSHARE_URL_HLA,
+    "quant": FIGSHARE_URL_QUANT,
 }
 
 FDR = 0.01
@@ -100,6 +103,38 @@ def _tab_columns(tab_file: Path) -> list[str]:
         return f.readline().rstrip("\n").split("\t")
 
 
+def _species_ratios(table: pd.DataFrame, condition_a: list[str], condition_b: list[str], expected: dict) -> dict:
+    """
+    Get the log2 A/B ratios per species and the absolute error to the expected ratio, as ProteoBench computes them.
+
+    Entries quantified in at least 3 runs with a value in both conditions; the ratio is the log2 of the mean intensity
+    in A over the mean in B. Entries of more than one species are left out.
+
+    :param table: one row per precursor or protein, a "Proteins" or "Protein group" column and one column per run
+    :param condition_a: runs of condition A
+    :param condition_b: runs of condition B
+    :param expected: expected log2 A/B ratio per species (HUMAN, YEAST, ECOLI)
+    :return: number of entries, median log2 ratio per species and median absolute error (global and per species)
+    """
+    proteins = table["Proteins"] if "Proteins" in table else table["Protein group"]
+    species = proteins.map(lambda p: {name.rsplit("_", 1)[-1] for name in str(p).split(";")})
+    species = species.map(lambda s: next(iter(s)) if len(s) == 1 else None)
+    runs = condition_a + condition_b
+    used = (
+        (table[runs].notna().sum(axis=1) >= 3)
+        & table[condition_a].notna().any(axis=1)
+        & table[condition_b].notna().any(axis=1)
+        & species.isin(list(expected))
+    )
+    log2 = np.log2(table.loc[used, condition_a].mean(axis=1) / table.loc[used, condition_b].mean(axis=1))
+    epsilon = (log2 - species[used].map(expected)).abs()
+    result = {"entries": int(used.sum()), "median_abs_epsilon": float(epsilon.median())}
+    for name in expected:
+        result[f"log2_{name}"] = float(log2[species[used] == name].median())
+        result[f"median_abs_epsilon_{name}"] = float(epsilon[species[used] == name].median())
+    return result
+
+
 def _phospho_sites(peptide: str) -> tuple[str, set[int]]:
     """Get the plain sequence and the 1-based phospho sites of a percolator peptide like _.AS[UNIMOD:21]PEK._."""
     sequence, sites = "", set()
@@ -134,6 +169,10 @@ class TestRescoringUseCases(unittest.TestCase):
 
     def _check_columns(self, tab_file: Path, expected_columns: list[str]):
         self.assertListEqual(_tab_columns(tab_file), expected_columns, f"Unexpected columns in {tab_file}")
+
+    def _check_range(self, value: float, value_range: list[float], label: str):
+        low, high = value_range
+        self.assertTrue(low <= value <= high, f"{label}: {value} outside [{low}, {high}]")
 
     def _check_gain(self, original: int, rescored: int, label: str):
         self.assertGreater(original, 0, f"No {label} at 1% FDR before rescoring")
@@ -285,3 +324,61 @@ class TestRescoringUseCases(unittest.TestCase):
         modified = _accepted(mod_dir / "rescore.percolator.psms.txt")["peptide"]
         self.assertGreater(len(modified), 0)
         self.assertTrue(modified.str.contains("UNIMOD").all())
+
+    def test_rescoring_quantification(self):
+        """
+        MS1 quantification with FlashLFQ, picked group FDR and directLFQ on the ProteoBench Astral DDA ion module.
+
+        Six Astral DDA runs (conditions A and B, three replicates each) of a human/yeast/E. coli mix, cut to a retention
+        time window, searched with MSFragger DDA+ and rescored with chimeric peak subtraction. All quantification
+        settings are measured from the data ("auto": MS1 tolerance, match-between-runs window, RT drift bin) and the
+        intensities get the RT drift correction. Expected log2 A/B ratios: human 0, yeast 1, E. coli -2. FlashLFQ needs
+        dotnet and its command line release (inputs/flashlfq/CMD.dll, see the integration test workflow); the test is
+        skipped without them.
+        """
+        self._prepare("quant", ["out"])
+        if not (DATA_DIR / "quant" / "inputs" / "flashlfq" / "CMD.dll").is_file() or shutil.which("dotnet") is None:
+            self.skipTest("FlashLFQ (tests/data/quant/inputs/flashlfq/CMD.dll) or dotnet not installed.")
+        expected = self._expected("quant")
+        _run_rescoring("rescoring_quant.json")
+        out_dir = DATA_DIR / "quant" / "out"
+        quant_dir = out_dir / "quantification"
+        fdr_dir = self._check_standard_run(out_dir, expected)
+        self._check_files(quant_dir, expected["quantification_files"])
+        ranges = expected["ranges"]
+
+        # PSMs and peptides at 1% FDR before and after rescoring
+        for level in ("psms", "peptides"):
+            for scores, value_range in ranges[f"{level}_1pct_fdr"].items():
+                n = _n_accepted(fdr_dir / f"{scores}.percolator.{level}.txt")
+                self._check_range(n, value_range, f"{scores} {level} at 1% FDR")
+
+        # every setting was measured from the data
+        with open(quant_dir / "settings.json") as f:
+            settings = json.load(f)
+        for name, value_range in ranges["settings"].items():
+            self.assertEqual(settings[name]["source"], "auto", name)
+            self._check_range(settings[name]["value"], value_range, name)
+
+        # FlashLFQ quantified peaks per run
+        peaks = pd.read_csv(quant_dir / "flashlfq" / "QuantifiedPeaks.tsv", sep="\t", low_memory=False)
+        quantified = peaks[peaks["Peak intensity"] > 0].groupby("File Name").size()
+        for run, value_range in ranges["flashlfq_peaks"].items():
+            self._check_range(int(quantified.get(run, 0)), value_range, f"FlashLFQ peaks in {run}")
+
+        # picked group FDR protein groups at 1% FDR
+        groups = pd.read_csv(quant_dir / "picked_group_fdr" / "proteinGroups.txt", sep="\t")
+        n_groups = int(((groups["Q-value"] <= FDR) & groups["Reverse"].isna()).sum())
+        self.assertGreater(n_groups, 0.8 * expected["reference"]["protein_groups_1pct_fdr"])
+
+        # precursor (FlashLFQ) and protein (directLFQ) ratios
+        ratios = {k: float(v) for k, v in expected["expected_log2_ratios"].items()}
+        for table_name, reference in expected["reference"]["ratios"].items():
+            table = pd.read_csv(quant_dir / table_name, sep="\t")
+            result = _species_ratios(table, expected["condition_a"], expected["condition_b"], ratios)
+            with self.subTest(table=table_name):
+                self.assertGreater(result["entries"], 0.8 * reference["entries"], result)
+                self.assertLess(result["median_abs_epsilon"], reference["median_abs_epsilon"] + 0.03, result)
+                for name, ratio in ratios.items():
+                    tolerance = expected["log2_ratio_tolerance"][name]
+                    self.assertAlmostEqual(result[f"log2_{name}"], ratio, delta=tolerance, msg=f"{name}: {result}")
