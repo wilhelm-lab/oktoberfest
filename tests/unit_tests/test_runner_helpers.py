@@ -55,6 +55,45 @@ class TestSpeclibFromPeptides(unittest.TestCase):
             self.assertDictEqual(proteins, {"PEPTIDEK": "P1", "LGGNEQVTR": "unknown", "AGLLCPSTK": "P2;P3"})
 
 
+class TestSpeclibFromInternal(unittest.TestCase):
+    """Test the spectral library generation from a table in internal format (as in the tutorial)."""
+
+    def test_internal(self):
+        """Test the table is read directly, with the input type given or inferred from the columns."""
+        for library_input_type in ("internal", None):
+            with self.subTest(library_input_type=library_input_type), tempfile.TemporaryDirectory() as tmp_dir:
+                tmp_path = Path(tmp_dir)
+                (tmp_path / "peptides_spectral_library.csv").write_text(
+                    "modified_sequence,collision_energy,precursor_charge\n"
+                    "KIIDRAITSL,34,2\nKIEKLKVEL,35,2\nTYCDATKCFTVTE,34,2\n"
+                )
+                inputs = {"library_input": "peptides_spectral_library.csv"}
+                if library_input_type is not None:
+                    inputs["library_input_type"] = library_input_type
+                (tmp_path / "cfg_speclib.json").write_text(
+                    json.dumps(
+                        {
+                            "type": "SpectralLibraryGeneration",
+                            "inputs": inputs,
+                            "output": "out",
+                            "models": {"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
+                        }
+                    )
+                )
+                config = Config()
+                config.read(tmp_path / "cfg_speclib.json")
+                config.output.mkdir()
+
+                library = _speclib_from_digestion(config)
+
+                self.assertListEqual(
+                    library.obs["MODIFIED_SEQUENCE"].tolist(),
+                    ["KIIDRAITSL", "KIEKLKVEL", "TYC[UNIMOD:4]DATKC[UNIMOD:4]FTVTE"],
+                )
+                self.assertListEqual(library.obs["COLLISION_ENERGY"].tolist(), [34, 35, 34])
+                self.assertFalse((config.output / "peptides_internal.csv").exists())
+
+
 class TestXLPreprocessingPlotCsm(unittest.TestCase):
     """Test the split of cross-link CSMs into targets (TT) and decoys (TD, DD)."""
 

@@ -483,8 +483,10 @@ def _speclib_from_digestion(config: Config) -> Spectra:
             created_internal_step.mark_done()
         library_file = internal_library_file
 
-    else:
-        raise ValueError(f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides".')
+    elif library_input_type != "internal":
+        raise ValueError(
+            f'Library input type {library_input_type} not understood. Can only be "fasta", "peptides" or "internal".'
+        )
     spec_library = pp.gen_lib(library_file)
 
     pp_and_filter_step = ProcessStep(config.output, "speclib_filtered")

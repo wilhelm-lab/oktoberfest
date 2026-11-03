@@ -531,3 +531,42 @@ class TestChimericPeakSubtraction(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
                     _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()
+
+
+class TestLibraryInputType(unittest.TestCase):
+    """Test the library input type is taken from the config or inferred from the library input."""
+
+    def setUp(self):  # noqa: D102
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.tmp_path = Path(self.tmp_dir.name)
+
+    def tearDown(self):  # noqa: D102
+        self.tmp_dir.cleanup()
+
+    def _type(self, file_name: str, content: str = "", library_input_type: str | None = None) -> str:
+        (self.tmp_path / file_name).write_text(content)
+        config = Config()
+        config.base_path = self.tmp_path
+        config.data["inputs"] = {"library_input": file_name}
+        if library_input_type is not None:
+            config.data["inputs"]["library_input_type"] = library_input_type
+        return config.library_input_type
+
+    def test_given(self):
+        """Test a given library input type is used (lower case)."""
+        self.assertEqual(self._type("lib.csv", "peptide\nPEPTIDEK\n", "Internal"), "internal")
+
+    def test_inferred(self):
+        """Test fasta files, peptide lists and tables in internal format are recognized."""
+        self.assertEqual(self._type("proteome.fasta", ">P1\nPEPTIDEK\n"), "fasta")
+        self.assertEqual(self._type("proteome.FA", ">P1\nPEPTIDEK\n"), "fasta")
+        self.assertEqual(self._type("peptides.csv", "peptide,proteins\nPEPTIDEK,P1\n"), "peptides")
+        self.assertEqual(
+            self._type("internal.csv", "Modified_Sequence,collision_energy,precursor_charge\nPEPTIDEK,30,2\n"),
+            "internal",
+        )
+
+    def test_not_inferred(self):
+        """Test an unknown library input asks for the library input type."""
+        with self.assertRaisesRegex(ValueError, "library_input_type"):
+            self._type("peptides.tsv", "sequence\tcharge\nPEPTIDEK\t2\n")
