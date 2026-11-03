@@ -463,7 +463,7 @@ def _speclib_from_digestion(config: Config) -> Spectra:
             if peptide_dict is None:
                 p2p_df = pd.read_csv(library_file)
                 if "proteins" in p2p_df.columns:
-                    p2p_df["proteins"].fillna("unknown", inplace=True)
+                    p2p_df["proteins"] = p2p_df["proteins"].fillna("unknown")
                     proteins = p2p_df["proteins"].apply(lambda x: x.split(";")).to_list()
                 peptides = p2p_df["peptide"].to_list()
             else:
@@ -949,7 +949,7 @@ def xl_preprocessing_plot_csm(features_dir: str, df: pd.DataFrame, original_or_r
         }
     )
     df["is_target"] = df["label"]
-    df["label"] = df["label"].replace({"TT": True, "TD": False, "DD": False})
+    df["label"] = df["label"] == "TT"  # labels are TT, TD or DD; only TT is a target
     df_target = df[df["label"]]
     df_decoy = df[~df["label"]]
 
@@ -1190,7 +1190,6 @@ def prepare_rescore_xl_psm_level(features_dir: str, original_or_rescore: str):
     max_expmass = rescore_tab_file_a["ExpMass"].max()
     rescore_tab_file_b["ExpMass"] += max_expmass
     input_psm_rescore = pd.concat([rescore_tab_file_a, rescore_tab_file_b], axis=0, ignore_index=True)
-    input_psm_rescore["Proteins"].fillna("unknown", inplace=True)
     return input_psm_rescore
 
 
