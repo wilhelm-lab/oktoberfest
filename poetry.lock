@@ -6998,4 +6998,4 @@ quant = ["directlfq"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.14"
-content-hash = "3ba2ff37e0ff308ac15383ff7a5f0ac036674a1e8480895d63fadd5b6c1ece94"
+content-hash = "4523bd50470a70329ad8fa9ca6bc9379012a4e3e53423e58f1a6a40de4429999"

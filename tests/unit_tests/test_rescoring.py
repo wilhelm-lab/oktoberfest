@@ -102,7 +102,7 @@ class TestRescoring(unittest.TestCase):
 
 
 class TestMergeInput(unittest.TestCase):
-    """Test merging the per spectra file tab files into the percolator / mokapot input."""
+    """Test merging the per spectra file tab files into the percolator input."""
 
     def setUp(self):  # noqa: D102
         self.tmp_dir = tempfile.TemporaryDirectory()

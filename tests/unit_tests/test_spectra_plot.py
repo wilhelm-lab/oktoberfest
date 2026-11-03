@@ -55,22 +55,20 @@ def sample_data():
     )
     target_df = pd.DataFrame(
         {
-            "ScanNr": [123],
-            "SpecId": [123],
+            "PSMId": ["file.mzML-123-PEPTIDE-2-1"],
             "filename": ["file.mzML"],
-            "mokapot score": [0.9],
-            "mokapot q-value": [0.01],
-            "Peptide": ["PEPTIDE"],
+            "score": [0.9],
+            "q-value": [0.01],
+            "peptide": ["PEPTIDE"],
         }
     )
     decoy_df = pd.DataFrame(
         {
-            "ScanNr": [123],
-            "SpecId": [123],
+            "PSMId": ["file.mzML-123-DECOY-2-1"],
             "filename": ["file.mzML"],
-            "mokapot score": [-0.4],
-            "mokapot q-value": [0.05],
-            "Peptide": ["DECOY"],
+            "score": [-0.4],
+            "q-value": [0.05],
+            "peptide": ["DECOY"],
         }
     )
 
@@ -81,10 +79,6 @@ def sample_data():
     return mock_spectra, mzml, prosit_df, target_df, decoy_df, config
 
 
-@patch(
-    "oktoberfest.plotting._check_columns",
-    return_value=("mokapot score", "mokapot q-value", "Peptide", "SpecId"),
-)
 @patch("spectrum_utils.spectrum.MsmsSpectrum")
 @patch("spectrum_utils.plot.mirror")
 @patch("seaborn.kdeplot")
@@ -92,7 +86,6 @@ def test_plot_mirror_spectrum(
     mock_kdeplot: Mock,
     mock_mirror: Mock,
     mock_msms_spectrum: Mock,
-    mock_check_columns: Mock,
     sample_data: tuple,
 ):
     """
@@ -101,7 +94,6 @@ def test_plot_mirror_spectrum(
     :param mock_kdeplot: mocked seaborn.kdeplot
     :param mock_mirror: mocked spectrum_utils.plot.mirror
     :param mock_msms_spectrum: mocked MsmsSpectrum constructor
-    :param mock_check_columns: mocked column checker
     :param sample_data: fixture returning test inputs
     """
     spec_pred, mzml, prosit_df, target_df, decoy_df, config = sample_data

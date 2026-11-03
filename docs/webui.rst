@@ -23,7 +23,7 @@ Supported jobs
     +------------------------------+-----------------------------+---------------------------------------------------------------------+
 
 .. note::
-    Training data generation, local DLOmix models and FDR estimation with mokapot are currently not available in the web UI. Use the high-level API for these (see `Running Oktoberfest <./jobs.html>`_).
+    Training data generation and local DLOmix models are currently not available in the web UI. Use the high-level API for these (see `Running Oktoberfest <./jobs.html>`_).
 
 Running the web UI with Docker
 ------------------------------

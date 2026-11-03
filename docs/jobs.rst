@@ -165,7 +165,7 @@ Oktoberfest will:
 1. Calibrate CE against the provided RAW files.
 2. Perform peptide property prediction for all spectra that have a match in the search results file.
 3. Use predicted spectra and retention time to generate features for rescoring.
-4. Run percolator or mokapot to rescore the search and perform FDR estimation.
+4. Run percolator to rescore the search and perform FDR estimation.
 5. Generate summary plots.
 
 .. note::
@@ -196,7 +196,7 @@ Example config file:
         },
         "prediction_server": "koina.wilhelmlab.org:443",
         "numThreads": 1,
-        "fdr_estimation_method": "mokapot",
+        "fdr_estimation_method": "percolator",
         "add_feature_cols": "none",
         "regressionMethod": "spline",
         "ssl": true,

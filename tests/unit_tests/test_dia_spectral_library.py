@@ -133,12 +133,6 @@ class TestDIASpectralLibrary(unittest.TestCase):
         lib = pd.read_csv(self.config.output / "results" / "spec_lib.tsv", sep="\t")
         self.assertEqual(sorted(lib["PrecursorCharge"].unique().tolist()), [2, 3])
 
-    def test_spectral_library_requires_percolator(self):
-        """Test the export fails for mokapot results."""
-        self.config.data["fdr_estimation_method"] = "mokapot"
-        with self.assertRaisesRegex(ValueError, "Percolator"):
-            generate_spectral_lib_fdr_control(self.config)
-
     def _write_pred_hdf5(self, run_name: str, obs: pd.DataFrame):
         n = len(obs)
         mz = np.zeros((n, len(self.var)))

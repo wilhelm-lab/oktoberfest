@@ -184,7 +184,6 @@ autodoc_mock_imports = [
     "spectrum_utils",
     "tqdm",
     "picked_group_fdr",
-    "mokapot",
 ]
 
 # -- Options for Texinfo output ----------------------------------------

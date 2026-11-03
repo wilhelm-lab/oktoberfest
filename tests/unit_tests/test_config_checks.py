@@ -227,9 +227,7 @@ class TestQuantificationOptions(unittest.TestCase):
                 _config(quantificationOptions={option: value})._check_quantification_options()
 
     def test_flashlfq_requirements(self):
-        """Test FlashLFQ needs Percolator, MS1 spectra, no PTM localization and the FlashLFQ executable."""
-        with self.assertRaisesRegex(ValueError, "percolator"):
-            self._flashlfq_config(fdr_estimation_method="mokapot")._check_quantification_options()
+        """Test FlashLFQ needs MS1 spectra, no PTM localization and the FlashLFQ executable."""
         with self.assertRaisesRegex(ValueError, "ptm_localization"):
             self._flashlfq_config(ptm_localization=True)._check_quantification_options()
         config = self._flashlfq_config()
@@ -307,6 +305,38 @@ class TestCheck(unittest.TestCase):
         with patch.object(Config, "dlomix_pipeline", new_callable=PropertyMock, return_value=None):
             with self.assertRaisesRegex(ValueError, "Could not load DLOmix pipeline from some/path"):
                 config.check()
+
+
+class TestFdrEstimationMethod(unittest.TestCase):
+    """Test only percolator is accepted for FDR estimation."""
+
+    def test_percolator(self):
+        """Test percolator (also as the default and in any case) passes."""
+        for data in [{}, {"fdr_estimation_method": "percolator"}, {"fdr_estimation_method": "Percolator"}]:
+            with self.subTest(data=data):
+                _config(**data)._check_fdr_estimation_method()
+
+    def test_mokapot_removed(self):
+        """Test mokapot fails with a hint that its support was removed."""
+        with self.assertRaisesRegex(ValueError, "mokapot support was removed.*percolator"):
+            _config(fdr_estimation_method="mokapot")._check_fdr_estimation_method()
+
+    def test_unknown_method(self):
+        """Test an unknown method fails."""
+        with self.assertRaisesRegex(ValueError, 'fdr_estimation_method must be "percolator"'):
+            _config(fdr_estimation_method="sage")._check_fdr_estimation_method()
+
+    @patch.object(Config, "_check_koina_model_availability")
+    def test_checked_first(self, mock_koina):
+        """Test Config.check fails on mokapot before contacting Koina."""
+        config = _config(
+            type="Rescoring",
+            fdr_estimation_method="mokapot",
+            models={"intensity": "Prosit_2020_intensity_HCD", "irt": "Prosit_2019_irt"},
+        )
+        with self.assertRaisesRegex(ValueError, "mokapot support was removed"):
+            config.check()
+        mock_koina.assert_not_called()
 
 
 class TestPTMLocalization(unittest.TestCase):

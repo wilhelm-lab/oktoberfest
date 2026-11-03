@@ -101,7 +101,7 @@ def quantify_search_engine(config: Config) -> None:
 
     fdr_dir = config.output / "results" / config.fdr_estimation_method
 
-    # uses Percolator (or Mokapot) output as starting point
+    # uses the Percolator output as starting point
     okt_target_psms = str(fdr_dir / f"rescore.{config.fdr_estimation_method}.psms.txt")
     okt_decoy_psms = str(fdr_dir / f"rescore.{config.fdr_estimation_method}.decoy.psms.txt")
 
