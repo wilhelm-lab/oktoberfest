@@ -77,9 +77,35 @@ Please cite the Prosit model(s) you are using
 *Integration of alternative fragmentation techniques into standard LC-MS workflows using a single deep learning model enhances proteome coverage*,
 `Nature Methods <https://doi.org/10.1038/s41592-026-03042-9>`__.
 
+**When using Prosit-PTM** (rescoring of modified peptides and PTM site localization)
+
+[8] Gabriel W, Zolg DP, Giurcoiu V et al. (2025),
+*Learning the Unseen: Data-Augmented Deep Learning for PTM Discovery with Prosit-PTM*,
+`bioRxiv <https://doi.org/10.1101/2025.11.07.687302>`__.
+
+**When using Prosit-Cit** (citrullination)
+
+[9] Gabriel W, Meelker González R, Laposchan S et al. (2025),
+*Deep Learning Enhances Precision of Citrullination Identification in Human and Plant Tissue Proteomes*,
+`Molecular & Cellular Proteomics <https://doi.org/10.1016/j.mcpro.2025.100924>`__.
+
 Please cite in case you use quantification
 -------------------------------------------
 
-[8] The M, Samaras P, Kuster B, Wilhelm, M. (2022),
+**Protein group FDR (picked group FDR)**
+
+[10] The M, Samaras P, Kuster B, Wilhelm M (2022),
 *Reanalysis of ProteomicsDB using an accurate, sensitive, and scalable false discovery rate estimation approach for protein groups*,
-`Molecular & Cellular Proteomics <https://doi-org.org/10.1016/j.mcpro.2022.100437>`__.
+`Molecular & Cellular Proteomics <https://doi.org/10.1016/j.mcpro.2022.100437>`__.
+
+**MS1 quantification with FlashLFQ**
+
+[11] Millikin RJ, Solntsev SK, Shortreed MR, Smith LM (2018),
+*Ultrafast Peptide Label-Free Quantification with FlashLFQ*,
+`Journal of Proteome Research <https://doi.org/10.1021/acs.jproteome.7b00608>`__.
+
+**Protein quantification with directLFQ**
+
+[12] Ammar C, Schessner JP, Willems S, Michaelis AC, Mann M (2023),
+*Accurate Label-Free Quantification by directLFQ to Compare Unlimited Numbers of Proteomes*,
+`Molecular & Cellular Proteomics <https://doi.org/10.1016/j.mcpro.2023.100581>`__.
