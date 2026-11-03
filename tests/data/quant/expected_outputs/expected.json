@@ -1,0 +1,213 @@
+{
+    "usecase": "quant",
+    "description": "ProteoBench Astral DDA ion module, 6 runs cut to 12-13 min (MS1 11.5-13.5 min), MSFragger 4.2 DDA+ (top 5), Prosit_2020_intensity_HCD / Prosit_2019_irt, chimeric peak subtraction, fully data-guided FlashLFQ 2.1.4 + picked group FDR + directLFQ. Reference values from a run on 2026-11-03 (15.7 min with 2 threads).",
+    "output_files": [
+        "results/percolator/original.tab",
+        "results/percolator/rescore.tab",
+        "results/percolator/original.percolator.psms.txt",
+        "results/percolator/original.percolator.peptides.txt",
+        "results/percolator/rescore.percolator.psms.txt",
+        "results/percolator/rescore.percolator.peptides.txt"
+    ],
+    "quantification_files": [
+        "settings.json",
+        "normalization.tsv",
+        "precursor_peaks.tsv",
+        "precursors.tsv",
+        "peptidoforms.tsv",
+        "protein_groups.tsv",
+        "flashlfq/ids.tsv",
+        "flashlfq/QuantifiedPeaks.tsv",
+        "flashlfq/QuantifiedPeptides.tsv",
+        "picked_group_fdr/proteinGroups.txt",
+        "directlfq/precursors.aq_reformat.tsv.protein_intensities.tsv"
+    ],
+    "original_columns": [
+        "SpecId",
+        "Label",
+        "ScanNr",
+        "filename",
+        "ExpMass",
+        "CID",
+        "Charge1",
+        "Charge2",
+        "Charge3",
+        "Charge4",
+        "Charge5",
+        "Charge6",
+        "HCD",
+        "KR",
+        "UnknownFragmentationMethod",
+        "andromeda",
+        "andromeda_delta_score",
+        "annotated_ions",
+        "delta_mass_ppm",
+        "log10_evalue",
+        "missedCleavages",
+        "next_score",
+        "sequence_length",
+        "Peptide",
+        "Proteins"
+    ],
+    "rescore_columns": [
+        "SpecId",
+        "Label",
+        "ScanNr",
+        "filename",
+        "ExpMass",
+        "CID",
+        "Charge1",
+        "Charge2",
+        "Charge3",
+        "Charge4",
+        "Charge5",
+        "Charge6",
+        "HCD",
+        "KR",
+        "UnknownFragmentationMethod",
+        "abs_rt_diff",
+        "andromeda",
+        "annotated_ions",
+        "count_not_observed_and_not_predicted",
+        "count_not_observed_and_not_predicted_b",
+        "count_not_observed_and_not_predicted_y",
+        "count_not_observed_but_predicted",
+        "count_not_observed_but_predicted_b",
+        "count_not_observed_but_predicted_y",
+        "count_observed",
+        "count_observed_and_predicted",
+        "count_observed_and_predicted_b",
+        "count_observed_and_predicted_y",
+        "count_observed_b",
+        "count_observed_but_not_predicted",
+        "count_observed_but_not_predicted_b",
+        "count_observed_but_not_predicted_y",
+        "count_observed_y",
+        "count_predicted",
+        "count_predicted_b",
+        "count_predicted_y",
+        "delta_mass_ppm",
+        "fraction_not_observed_and_not_predicted",
+        "fraction_not_observed_and_not_predicted_b",
+        "fraction_not_observed_and_not_predicted_b_vs_predicted_b",
+        "fraction_not_observed_and_not_predicted_vs_predicted",
+        "fraction_not_observed_and_not_predicted_y",
+        "fraction_not_observed_and_not_predicted_y_vs_predicted_y",
+        "fraction_not_observed_but_predicted",
+        "fraction_not_observed_but_predicted_b",
+        "fraction_not_observed_but_predicted_b_vs_predicted",
+        "fraction_not_observed_but_predicted_vs_predicted",
+        "fraction_not_observed_but_predicted_y",
+        "fraction_not_observed_but_predicted_y_vs_predicted",
+        "fraction_observed",
+        "fraction_observed_and_predicted",
+        "fraction_observed_and_predicted_b",
+        "fraction_observed_and_predicted_b_vs_predicted_b",
+        "fraction_observed_and_predicted_vs_predicted",
+        "fraction_observed_and_predicted_y",
+        "fraction_observed_and_predicted_y_vs_predicted_y",
+        "fraction_observed_b",
+        "fraction_observed_but_not_predicted",
+        "fraction_observed_but_not_predicted_b",
+        "fraction_observed_but_not_predicted_b_vs_predicted_b",
+        "fraction_observed_but_not_predicted_vs_predicted",
+        "fraction_observed_but_not_predicted_y",
+        "fraction_observed_but_not_predicted_y_vs_predicted_y",
+        "fraction_observed_y",
+        "fraction_predicted",
+        "fraction_predicted_b",
+        "fraction_predicted_y",
+        "log10_evalue",
+        "missedCleavages",
+        "next_score",
+        "observed_intensity",
+        "sequence_length",
+        "spectral_angle",
+        "sum_observed_and_predicted",
+        "Peptide",
+        "Proteins"
+    ],
+    "condition_a": [
+        "LFQ_Astral_DDA_15min_50ng_Condition_A_REP1",
+        "LFQ_Astral_DDA_15min_50ng_Condition_A_REP2",
+        "LFQ_Astral_DDA_15min_50ng_Condition_A_REP3"
+    ],
+    "condition_b": [
+        "LFQ_Astral_DDA_15min_50ng_Condition_B_REP1",
+        "LFQ_Astral_DDA_15min_50ng_Condition_B_REP2",
+        "LFQ_Astral_DDA_15min_50ng_Condition_B_REP3"
+    ],
+    "expected_log2_ratios": {
+        "HUMAN": 0.0,
+        "YEAST": 1.0,
+        "ECOLI": -2.0
+    },
+    "log2_ratio_tolerance": {
+        "HUMAN": 0.15,
+        "YEAST": 0.25,
+        "ECOLI": 0.4
+    },
+    "reference": {
+        "psms_1pct_fdr": {
+            "original": 51131,
+            "rescore": 93259
+        },
+        "peptides_1pct_fdr": {
+            "original": 3812,
+            "rescore": 6539
+        },
+        "settings": {
+            "ppmTolerance": 3.2,
+            "mbrRtWindow": 0.024,
+            "driftBinMinutes": 0.0118
+        },
+        "protein_groups_1pct_fdr": 3343,
+        "ratios": {
+            "precursors.tsv": {
+                "entries": 3613,
+                "median_abs_epsilon": 0.1447,
+                "log2_HUMAN": 0.027,
+                "log2_YEAST": 0.996,
+                "log2_ECOLI": -1.751
+            },
+            "protein_groups.tsv": {
+                "entries": 1880,
+                "median_abs_epsilon": 0.1341,
+                "log2_HUMAN": -0.034,
+                "log2_YEAST": 0.911,
+                "log2_ECOLI": -1.845
+            }
+        },
+        "flashlfq_peaks": {
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP1": 5854,
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP2": 5845,
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP3": 5851,
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP1": 5873,
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP2": 5856,
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP3": 5846
+        }
+    },
+    "ranges": {
+        "psms_1pct_fdr": {
+            "original": [40904, 61357],
+            "rescore": [74607, 111911]
+        },
+        "peptides_1pct_fdr": {
+            "original": [3049, 4574],
+            "rescore": [5231, 7847]
+        },
+        "settings": {
+            "ppmTolerance": [2.24, 4.16],
+            "mbrRtWindow": [0.012, 0.036],
+            "driftBinMinutes": [0.0083, 0.0153]
+        },
+        "flashlfq_peaks": {
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP1": [4683, 7025],
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP2": [4676, 7014],
+            "LFQ_Astral_DDA_15min_50ng_Condition_A_REP3": [4680, 7021],
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP1": [4698, 7048],
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP2": [4684, 7027],
+            "LFQ_Astral_DDA_15min_50ng_Condition_B_REP3": [4676, 7015]
+        }
+    }
+}

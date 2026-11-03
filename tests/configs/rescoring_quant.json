@@ -1,0 +1,36 @@
+{
+    "type": "Rescoring",
+    "tag": "",
+    "prediction_server": "koina.wilhelmlab.org:443",
+    "ssl": true,
+    "numThreads": 2,
+    "fdr_estimation_method": "percolator",
+    "allFeatures": false,
+    "regressionMethod": "spline",
+    "massTolerance": "auto",
+    "chimericPeakSubtraction": true,
+    "output": "../data/quant/out",
+    "inputs": {
+        "search_results": "../data/quant/inputs/msfragger",
+        "search_results_type": "Msfragger",
+        "spectra": "../data/quant/inputs/mzml",
+        "spectra_type": "mzml",
+        "instrument_type": "QE",
+        "library_input": "../data/quant/inputs/ProteoBenchFASTA_MixedSpecies_HYE.fasta",
+        "library_input_type": "fasta"
+    },
+    "models": {
+        "intensity": "Prosit_2020_intensity_HCD",
+        "irt": "Prosit_2019_irt"
+    },
+    "ce_alignment_options": {
+        "ce_range": [19, 50],
+        "use_ransac_model": false
+    },
+    "quantification": true,
+    "quantificationOptions": {
+        "precursor": "flashlfq",
+        "protein": "directlfq",
+        "flashlfqExe": "../data/quant/inputs/flashlfq/CMD.dll"
+    }
+}

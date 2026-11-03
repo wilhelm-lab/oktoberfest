@@ -5,7 +5,12 @@ name: Integration Tests
 #
 # Triggers:
 #   - Manual dispatch (primary day-to-day trigger, supports input overrides)
-#   - Push to main/development (post-merge gate, not pre-merge)
+#   - Release and patch PRs to main (the release gate: these PRs carry the version bump)
+#   - Version bumps on development: pushes that change the version in pyproject.toml
+#     (other pushes that touch pyproject.toml, e.g. dependency updates, are skipped by the version job)
+#
+# Draft releases cannot trigger workflows on GitHub (release events of drafts are not sent to Actions),
+# and Release Drafter updates the draft on every push to development anyway.
 #
 # To run against a specific branch or with extra pytest flags, use the
 # manual dispatch inputs below.
@@ -23,10 +28,41 @@ on:
                 required: false
                 default: ""
 
+    pull_request:
+        branches: [main]
+
     push:
-        branches: [main, development]
+        branches: [development]
+        paths: [pyproject.toml]
 
 jobs:
+    # -----------------------------------------------------------------------
+    # On pushes, only run when the version in pyproject.toml changed.
+    # -----------------------------------------------------------------------
+    version:
+        name: Version bump
+        runs-on: ubuntu-latest
+        outputs:
+            changed: ${{ steps.compare.outputs.changed }}
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 2
+
+            - name: Compare the version with the previous commit
+              id: compare
+              run: |
+                  if [ "${{ github.event_name }}" != "push" ]; then
+                    echo "changed=true" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+                  version() { python3 -c "import sys, tomllib; d = tomllib.loads(sys.stdin.read()); print(d.get('project', {}).get('version') or d['tool']['poetry']['version'])"; }
+                  git fetch --depth=1 origin "${{ github.event.before }}" || true
+                  new=$(version < pyproject.toml)
+                  old=$(git show "${{ github.event.before }}:pyproject.toml" 2>/dev/null | version || echo "")
+                  echo "version $old -> $new"
+                  if [ "$old" != "$new" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
     # -----------------------------------------------------------------------
     # Integration tests — pytest against ./tests/integration_tests.
     # Runs on a single Python version by default (parametrised via dispatch).
@@ -35,6 +71,8 @@ jobs:
     # -----------------------------------------------------------------------
     integration-test:
         name: Integration Tests (Python ${{ inputs.python-version || '3.12' }})
+        needs: version
+        if: needs.version.outputs.changed == 'true'
         runs-on: ubuntu-latest
         # the rescoring use case tests (tests/integration_tests/test_rescoring_usecases.py) took about 1.5 h on a
         # 40-core server (cit ~26 min, multifrag ~45 min)
@@ -75,11 +113,25 @@ jobs:
                   wget -q https://github.com/percolator/percolator/releases/download/rel-3-06-01/$DEB -O /tmp/$DEB
                   sudo apt-get install -y /tmp/$DEB
 
+            # MS1 quantification test (test_rescoring_quantification): FlashLFQ runs on .NET 8
+            - uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: "8.0.x"
+
+            - name: Install FlashLFQ
+              run: |
+                  DIR=tests/data/quant/inputs/flashlfq
+                  if [ ! -f $DIR/CMD.dll ]; then
+                    mkdir -p $DIR
+                    wget -q https://github.com/smith-chem-wisc/FlashLFQ/releases/download/2.1.4/FlashLFQ.zip -O /tmp/FlashLFQ.zip
+                    unzip -q /tmp/FlashLFQ.zip -d $DIR
+                  fi
+
             - name: Install project and dependencies
               # If your integration tests require extra packages (e.g. a
               # dedicated [tool.poetry.group.integration] group in
               # pyproject.toml), add --with integration here.
-              run: poetry install --with dev
+              run: poetry install --with dev --extras quant
 
             - name: Run integration tests
               env:
