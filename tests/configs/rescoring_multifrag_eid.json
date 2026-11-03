@@ -3,7 +3,7 @@
     "tag": "",
     "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": true,
-    "numThreads": 2,
+    "numThreads": 4,
     "fdr_estimation_method": "percolator",
     "allFeatures": false,
     "regressionMethod": "spline",

@@ -13,6 +13,7 @@
     "outputFormat": "spectronaut",
     "prediction_server": "koina.wilhelmlab.org:443",
     "ssl": true,
+    "numThreads": 4,
     "spectralLibraryOptions": {
         "fragmentation": "HCD",
         "collisionEnergy": 30,
