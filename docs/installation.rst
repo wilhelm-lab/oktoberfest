@@ -87,7 +87,7 @@ For MacOS, follow the instructions provided by `Mono <https://www.mono-project.c
 
 **Percolator**
 `Percolator v3.06.1 <https://github.com/percolator/percolator/releases/tag/rel-3-06-01>`_:
-This is the tool Mokapot is based on. As it has more options and is generally more stable wrt. to FDR cutoffs and deduplication, it is recommended to use this tool instead of Mokapot.
+Oktoberfest uses Percolator for target / decoy separation and FDR estimation.
 Installable packages are provided for Linux/MacOS/Windows.
 
 **DLOmix**

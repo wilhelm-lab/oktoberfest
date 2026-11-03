@@ -48,24 +48,15 @@ MAX_RT_PLOT_POINTS = 50000
 
 def _check_columns(df: pd.DataFrame):
     """
-    Check columns to make plotting work for mokapot.
+    Check the percolator output columns needed for plotting.
 
     :param df: a pandas dataframe to check columns for
-    :raises AssertionError: if expected columns do not correspond to either mokapot or percolator output
+    :raises AssertionError: if expected columns of the percolator output are missing
 
-    :return: Tuple of column identifiers: (score, q-value, Proteins, SpecId)
+    :return: Tuple of column identifiers: (score, q-value, peptide, PSMId)
     """
-    mokapot_mapping = {
-        "mokapot score": "score",
-        "mokapot q-value": "q-value",
-        "Peptide": "peptide",
-        "SpecId": "PSMId",
-    }
-    if set(mokapot_mapping.keys()).issubset(df.columns):
-        column_names = list(mokapot_mapping.keys())
-    elif set(mokapot_mapping.values()).issubset(df.columns):
-        column_names = list(mokapot_mapping.values())
-    else:
+    column_names = ["score", "q-value", "peptide", "PSMId"]
+    if not set(column_names).issubset(df.columns):
         raise AssertionError("Missing columns in one of the input files. Please check.")
 
     return column_names
@@ -75,8 +66,8 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     """
     Generate histogram of the score distribution for targets and decoys.
 
-    :param target: mokapot / percolator target output
-    :param decoy: mokapot / percolator decoy output
+    :param target: percolator target output
+    :param decoy: percolator decoy output
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -126,10 +117,10 @@ def joint_plot(
     """
     Generate joint plot to compare rescoring with and without peptide property predictions.
 
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
-    :param prosit_decoy: mokapot / percolator decoy output for rescoring with peptide property prediction
-    :param andromeda_target: mokapot / percolator target output for rescoring without peptide property prediction
-    :param andromeda_decoy: mokapot / percolator decoy output for rescoring without peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
+    :param prosit_decoy: percolator decoy output for rescoring with peptide property prediction
+    :param andromeda_target: percolator target output for rescoring without peptide property prediction
+    :param andromeda_decoy: percolator decoy output for rescoring without peptide property prediction
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -228,8 +219,8 @@ def plot_gain_loss(
     """
     Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.
 
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
-    :param andromeda_target: mokapot / percolator target output for rescoring without peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
+    :param andromeda_target: percolator target output for rescoring without peptide property prediction
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -389,8 +380,8 @@ def plot_pred_rt_vs_irt(
     """
     Generate scatterplot to compare predicted indexed retention time against (aligned) experimentally observed retention time.
 
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
     :param outpath: the path to the location used for storing the plot without the filename
     :param suffix: the suffix of the filename, which will be prepended by the rawfile name
 
@@ -452,9 +443,9 @@ def plot_pred_rt_vs_irt(
 def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy_df: pd.DataFrame, filename: Path):
     """Generate spectral angle distribution for targets and decoys.
 
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
-    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param target_df: percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: percolator decoy output for rescoring with peptide property prediction on the psm level
     :param filename: the path to the location used for storing the plot
 
     :Example:
@@ -533,17 +524,16 @@ def plot_mirror_spectrum(
     :param raw_file: The name of the raw file being processed
     :param scan_number: The scan number of the spectrum to be plotted
     :param config: the configuration object
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
-    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param target_df: percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: percolator decoy output for rescoring with peptide property prediction on the psm level
     :param pdf: PDF file object for saving mirror plots
     """
     score_col, _, _, spec_col = _check_columns(target_df)
     target_df["target"] = True
     decoy_df["target"] = False
     concat_target_decoy = pd.concat([target_df, decoy_df])
-    if spec_col == "PSMId":
-        concat_target_decoy["ScanNr"] = concat_target_decoy["PSMId"].str.split("-").str[1].astype(int)
+    concat_target_decoy["ScanNr"] = concat_target_decoy[spec_col].str.split("-").str[1].astype(int)
     filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
     if filtered_obs.empty:
         print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
@@ -633,7 +623,7 @@ def plot_all(data_dir: Path, config: Config, fdr_cutoff: float = 0.01):
     """
     Generate all plots after a rescoring run.
 
-    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
+    :param data_dir: the directory containing all inputs / outputs from percolator
     :param config: the configuration object
     :param fdr_cutoff: the FDR cutoff used for the gain / loss plots
     """

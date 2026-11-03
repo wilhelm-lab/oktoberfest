@@ -123,11 +123,14 @@ class TestGenerateTrainingDataParquets(unittest.TestCase):
         np.testing.assert_array_equal(raw[:, 1], [0.0, 0.0])
         self.assertTrue((raw[:, 2:] == -1).all())
 
-    def test_run_generate_training_data_requires_percolator(self):
-        """Test the job fails early for mokapot."""
+    def test_run_generate_training_data_rejects_mokapot(self):
+        """Test the job fails before rescoring for mokapot, whose support was removed."""
         self.config.data["fdr_estimation_method"] = "mokapot"
-        with patch.object(Config, "check"), patch("oktoberfest.runner.run_rescoring") as mock_rescoring:
-            with self.assertRaisesRegex(ValueError, "percolator"):
+        with (
+            patch.object(Config, "_check_koina_model_availability"),
+            patch("oktoberfest.runner.run_rescoring") as mock_rescoring,
+        ):
+            with self.assertRaisesRegex(ValueError, "mokapot support was removed"):
                 run_generate_training_data(self.config)
         mock_rescoring.assert_not_called()
 

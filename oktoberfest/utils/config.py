@@ -561,7 +561,7 @@ class Config:
 
     @property
     def fdr_estimation_method(self) -> str:
-        """Get peptide detection method from the config file (mokapot or percolator). Default is percolator."""
+        """Get the FDR estimation method from the config file; only percolator is supported. Default is percolator."""
         return self.data.get("fdr_estimation_method", "percolator").lower()
 
     @property
@@ -588,7 +588,7 @@ class Config:
     @property
     def perform_rescoring(self) -> bool:
         """
-        Get flag whether to run rescoring (percolator / mokapot), plotting and quantification. Default is True.
+        Get flag whether to run rescoring (percolator), plotting and quantification. Default is True.
 
         If set to False, the input tab files for rescoring are still created, but rescoring is not executed.
         """
@@ -905,6 +905,7 @@ class Config:
 
     def check(self):
         """Validate the configuration."""
+        self._check_fdr_estimation_method()
         self._check_tmt()
 
         if self.job_type == "SpectralLibraryGeneration":
@@ -948,6 +949,17 @@ class Config:
         value = self.data.get("chimericPeakSubtraction", False)
         if not isinstance(value, bool):
             raise ValueError(f"chimericPeakSubtraction must be true or false, got {value!r}.")
+
+    def _check_fdr_estimation_method(self):
+        """Check that percolator is used for FDR estimation (mokapot support was removed)."""
+        method = self.fdr_estimation_method
+        if method == "mokapot":
+            raise ValueError(
+                "mokapot support was removed from Oktoberfest (mokapot is unmaintained and does not run with numpy 2 "
+                'and pandas 3). Use "fdr_estimation_method": "percolator".'
+            )
+        if method != "percolator":
+            raise ValueError(f'fdr_estimation_method must be "percolator", got {method!r}.')
 
     def _check_percolator_subset(self):
         """Check that percolatorSubsetMaxTrain is a positive number of PSMs if given."""
@@ -1169,8 +1181,6 @@ class Config:
 
     def _check_flashlfq(self):
         """Check that MS1 quantification with FlashLFQ can run with this config."""
-        if self.fdr_estimation_method != "percolator":
-            raise ValueError("Quantification with flashlfq requires fdr_estimation_method percolator.")
         if self.ptm_localization:
             raise ValueError("Quantification with flashlfq is not supported together with ptm_localization.")
         if self.spectra_type not in ("raw", "mzml"):

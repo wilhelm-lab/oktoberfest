@@ -6,8 +6,6 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-import mokapot
-import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from spectrum_fundamentals.metrics.percolator import Percolator
@@ -37,14 +35,14 @@ def generate_features(
     subtract_peaks: bool = False,
 ):
     """
-    Generate features to be used for percolator or mokapot target decoy separation.
+    Generate features to be used for percolator target decoy separation.
 
     The function calculates a range of metrics and features on the provided library for the chosen
     fdr estimation method, then writes the input tab file to the chosen output file.
 
     :param library: the library to perform feature generation on
     :param search_type: One of "original" and "rescore", which determines the generated features
-    :param output_file: the location to the generated tab file to be used for percolator / mokapot
+    :param output_file: the location to the generated tab file to be used for percolator
     :param additional_columns: additional columns supplied in the search results to be used as features (either a list or "all")
     :param all_features: whether to use all features or only the standard set TODO
     :param xl: crosslinked or linear peptide
@@ -131,7 +129,7 @@ def generate_features(
     )
 
     perc_features.calc()
-    # missing feature values are 0 for percolator / mokapot (filled here, so that merge_input only concatenates);
+    # missing feature values are 0 for percolator (filled here, so that merge_input only concatenates);
     # only columns with missing values are touched (categoricals become plain columns, as if read from the tab file)
     features = perc_features.metrics_val
     for column in features.columns[features.isna().any()]:
@@ -330,56 +328,6 @@ def rescore_with_percolator(
     logger.info(f"Starting percolator with command {cmd}")
     subprocess.run(cmd, shell=True, check=True)
     logger.info("Finished rescoring using percolator.")
-
-
-def rescore_with_mokapot(
-    input_file: str | Path,
-    output_folder: str | Path | None = None,
-    test_fdr: float = 0.01,
-    xl: bool = False,
-):
-    """
-    Rescore using mokapot.
-
-    The function takes an input file location, as well as an output folder location for mokapot outputs and
-    executes mokapot with additional optional parameters.
-
-    :param input_file: Path to percolator tab file
-    :param output_folder: An optional output folder for all percolator files, default is the parent directory of the input_file
-    :param test_fdr: the fdr cutoff for the test set
-    :param xl: crosslinked or linear peptide (currently unused)
-    :raises FileNotFoundError: if the input file does not exist
-    """
-    if isinstance(input_file, str):
-        input_file = Path(input_file)
-
-    if not input_file.is_file():
-        raise FileNotFoundError(f"{input_file} does not exist.")
-
-    if output_folder is None:
-        output_folder = input_file.parent
-    if isinstance(output_folder, str):
-        output_folder = Path(output_folder)
-
-    mokapot_logger = logging.getLogger("mokapot")
-    mokapot_logger.setLevel(logging.INFO)
-    log_file = output_folder / f"{input_file.stem}.log"
-
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.INFO)
-    log_formatter = logging.Formatter("%(levelname)s: %(message)s")
-    file_handler.setFormatter(log_formatter)
-    mokapot_logger.addHandler(file_handler)
-
-    np.random.seed(123)
-
-    psms = mokapot.read_pin(input_file)
-    logger.info(f"Number of PSMs used for training: {len(psms)}")
-
-    logger.info("Running mokapot...")
-    results, models = mokapot.brew(psms, test_fdr=test_fdr)
-    results.to_txt(dest_dir=output_folder, file_root=f"{input_file.stem}", decoys=True)
-    logger.info("Finished rescoring using mokapot.")
 
 
 def percolator_fdr_modified(features_path: Path, num_threads: int = 3, subset_max_train: int | None = None):

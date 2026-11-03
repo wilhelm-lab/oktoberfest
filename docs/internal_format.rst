@@ -10,7 +10,7 @@ If the search engine you get your results from is not directly supported by Okto
 Internal file format specification
 ----------------------------------
 
-Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the basic file format specification. Additional columns can be added, which will be forwarded to percolator / mokapot if specified with the `"add_feature_cols" <./config.html#applicable-to-rescoring>`_ option.
+Oktoberfest expects a csv formatted file where each row represents a PSM. The following provides the basic file format specification. Additional columns can be added, which will be forwarded to percolator if specified with the `"add_feature_cols" <./config.html#applicable-to-rescoring>`_ option.
 
 
 .. table::
@@ -38,7 +38,7 @@ Oktoberfest expects a csv formatted file where each row represents a PSM. The fo
     +-------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     | PEPTIDE_LENGTH    | Length of the unmodified peptide sequence                                                                                                                                                                  |
     +-------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    | <optional cols>   | Optional additional feature columns forwarded directly to percolator / mokapot if specified in the config file using the "add_feature_cols" option. Columns must only contain valid floating point numbers.|
+    | <optional cols>   | Optional additional feature columns forwarded directly to percolator if specified in the config file using the "add_feature_cols" option. Columns must only contain valid floating point numbers.          |
     +-------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 Example

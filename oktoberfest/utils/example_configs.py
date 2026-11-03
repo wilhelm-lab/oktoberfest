@@ -14,7 +14,7 @@ RESCORING = {
     "ssl": True,
     "thermoExe": "ThermoRawFileParser.exe",
     "numThreads": 1,
-    "fdr_estimation_method": "mokapot",
+    "fdr_estimation_method": "percolator",
     "add_feature_cols": "none",
     "regressionMethod": "spline",
     "massTolerance": 20,

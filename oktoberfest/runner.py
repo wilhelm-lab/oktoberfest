@@ -846,9 +846,9 @@ def _percolator_run(fdr_dir: Path, config: Config, stage: str, num_threads: int,
             subset_max_train=config.percolator_subset_max_train,
         )
     if xl:
-        output_csms = xl_psm_to_csm(str(fdr_dir), stage, "percolator")
+        output_csms = xl_psm_to_csm(str(fdr_dir), stage)
         output_csms = xl_between_or_self(output_csms, score="score")
-        xl_preprocessing_plot_csm(str(fdr_dir), output_csms, stage, "percolator")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms, stage)
     step.mark_done()
 
 
@@ -859,49 +859,25 @@ def _rescore(fdr_dir: Path, config: Config, xl: bool = False):
     :param fdr_dir: the output directory
     :param config: the configuration object
     :param xl: crosslinked or linear peptide
-    :raises ValueError: if the provided fdr estimation method in the config is not recognized
     """
     rescore_original_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_original")
     rescore_prosit_step = ProcessStep(config.output, f"{config.fdr_estimation_method}_prosit")
 
-    if config.fdr_estimation_method == "percolator":
-        runs = []
-        if not rescore_original_step.is_done():
-            runs.append(
-                lambda threads: _percolator_run(fdr_dir, config, "original", threads, rescore_original_step, xl)
-            )
-        if not config._run_original and not rescore_prosit_step.is_done():
-            runs.append(lambda threads: _percolator_run(fdr_dir, config, "rescore", threads, rescore_prosit_step, xl))
-        if len(runs) == 2 and config.num_threads >= 2 and not xl:
-            # original and rescore are independent: run them at the same time, sharing numThreads (not for
-            # crosslinks, whose csm plots are not thread safe)
-            threads = [config.num_threads // 2, config.num_threads - config.num_threads // 2]
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                for future in [executor.submit(run, n) for run, n in zip(runs, threads, strict=True)]:
-                    future.result()
-        else:
-            for run in runs:
-                run(config.num_threads)
-    elif config.fdr_estimation_method == "mokapot":
-        if not rescore_original_step.is_done():
-            re.rescore_with_mokapot(input_file=fdr_dir / "original.tab", output_folder=fdr_dir, xl=xl)
-            if xl:
-                output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "mokapot")
-                output_csms_original = xl_between_or_self(output_csms_original, score="score")
-                xl_preprocessing_plot_csm(str(fdr_dir), output_csms_original, "original", "mokapot")
-
-            rescore_original_step.mark_done()
-        if not config._run_original and not rescore_prosit_step.is_done():
-            re.rescore_with_mokapot(input_file=fdr_dir / "rescore.tab", output_folder=fdr_dir, xl=xl)
-            if xl:
-                output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "mokapot")
-                output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
-                xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "mokapot")
-            rescore_prosit_step.mark_done()
+    runs = []
+    if not rescore_original_step.is_done():
+        runs.append(lambda threads: _percolator_run(fdr_dir, config, "original", threads, rescore_original_step, xl))
+    if not config._run_original and not rescore_prosit_step.is_done():
+        runs.append(lambda threads: _percolator_run(fdr_dir, config, "rescore", threads, rescore_prosit_step, xl))
+    if len(runs) == 2 and config.num_threads >= 2 and not xl:
+        # original and rescore are independent: run them at the same time, sharing numThreads (not for
+        # crosslinks, whose csm plots are not thread safe)
+        threads = [config.num_threads // 2, config.num_threads - config.num_threads // 2]
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            for future in [executor.submit(run, n) for run, n in zip(runs, threads, strict=True)]:
+                future.result()
     else:
-        raise ValueError(
-            'f{config.fdr_estimation_method} is not a valid rescoring tool, use either "percolator" or "mokapot"'
-        )
+        for run in runs:
+            run(config.num_threads)
 
 
 def xl_fdr(df: pd.DataFrame, score: str) -> pd.DataFrame:
@@ -938,16 +914,13 @@ def xl_between_or_self(df: pd.DataFrame, score: str) -> pd.DataFrame:
     return df_csms
 
 
-def xl_preprocessing_plot_csm(
-    features_dir: str, df: pd.DataFrame, original_or_rescore: str, percolator_or_mokapot: str
-):
+def xl_preprocessing_plot_csm(features_dir: str, df: pd.DataFrame, original_or_rescore: str):
     """
      Helper function to convert psm to csm level for plotting.
 
     :param features_dir: the features directory
     :param df: DataFrame containing the data
     :param original_or_rescore: rescoring by search engine features or intensity-based features
-    :param percolator_or_mokapot: percolator or mkkapot used for rescoring
     """
     columns_to_keep = [
         "PSMId_a",
@@ -980,29 +953,16 @@ def xl_preprocessing_plot_csm(
     df_target = df[df["label"]]
     df_decoy = df[~df["label"]]
 
-    if original_or_rescore == "original":
-        if percolator_or_mokapot == "percolator":
-            df_target.to_csv(features_dir + "/original.percolator.csms.txt", sep="\t", index=False)
-            df_decoy.to_csv(features_dir + "/original.percolator.decoy.csms.txt", sep="\t", index=False)
-        else:
-            df_target.to_csv(features_dir + "/original.mokapot.csms.txt", sep="\t", index=False)
-            df_decoy.to_csv(features_dir + "/original.mokapot.decoy.csms.txt", sep="\t", index=False)
-    else:
-        if percolator_or_mokapot == "percolator":
-            df_target.to_csv(features_dir + "/rescore.percolator.csms.txt", sep="\t", index=False)
-            df_decoy.to_csv(features_dir + "/rescore.percolator.decoy.csms.txt", sep="\t", index=False)
-        else:
-            df_target.to_csv(features_dir + "/rescore.mokapot.csms.txt", sep="\t", index=False)
-            df_decoy.to_csv(features_dir + "/rescore.mokapot.decoy.csms.txt", sep="\t", index=False)
+    df_target.to_csv(f"{features_dir}/{original_or_rescore}.percolator.csms.txt", sep="\t", index=False)
+    df_decoy.to_csv(f"{features_dir}/{original_or_rescore}.percolator.decoy.csms.txt", sep="\t", index=False)
 
 
-def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mokapot: str):
+def xl_psm_to_csm(features_dir: str, original_or_rescore: str):
     """
      Helper function to convert psm to csm level for ploting.
 
     :param features_dir: the features directory
     :param original_or_rescore: rescoring by search engine features or intesity-based features
-    :param percolator_or_mokapot: percolator or mkkapot used for rescoring
     :return: DataFrame in csm level
     """
 
@@ -1017,25 +977,9 @@ def xl_psm_to_csm(features_dir: str, original_or_rescore: str, percolator_or_mok
     def min_score(row):
         return min(row["score_a"], row["score_b"])
 
-    if original_or_rescore == "original":
-        if percolator_or_mokapot == "percolator":
-            decoy_psms = pd.read_csv(features_dir + "/original.percolator.decoy.psms.txt", delimiter="\t")
-            target_psms = pd.read_csv(features_dir + "/original.percolator.psms.txt", delimiter="\t")
-            psm_id = "PSMId"
-        else:
-            decoy_psms = pd.read_csv(features_dir + "/original.mokapot.decoy.psms.txt", delimiter="\t")
-            target_psms = pd.read_csv(features_dir + "/original.mokapot.psms.txt", delimiter="\t")
-            psm_id = "SpecId"
-
-    else:
-        if percolator_or_mokapot == "percolator":
-            decoy_psms = pd.read_csv(features_dir + "/rescore.percolator.decoy.psms.txt", delimiter="\t")
-            target_psms = pd.read_csv(features_dir + "/rescore.percolator.psms.txt", delimiter="\t")
-            psm_id = "PSMId"
-        else:
-            decoy_psms = pd.read_csv(features_dir + "/rescore.mokapot.decoy.psms.txt", delimiter="\t")
-            target_psms = pd.read_csv(features_dir + "/rescore.mokapot.psms.txt", delimiter="\t")
-            psm_id = "SpecId"
+    decoy_psms = pd.read_csv(f"{features_dir}/{original_or_rescore}.percolator.decoy.psms.txt", delimiter="\t")
+    target_psms = pd.read_csv(f"{features_dir}/{original_or_rescore}.percolator.psms.txt", delimiter="\t")
+    psm_id = "PSMId"
 
     new_columns = [
         "raw_file",
@@ -1510,11 +1454,7 @@ def run_rescoring(config_path: Union[str, Path, Config]):
             if not config.ptm_localization and not config._run_original:
                 pl.plot_all(fdr_dir, config)
                 mod_fdr_dir = fdr_dir / "mod_fdr"
-                if (
-                    config.ptm_fdr_control
-                    and config.fdr_estimation_method == "percolator"
-                    and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file()
-                ):
+                if config.ptm_fdr_control and (mod_fdr_dir / "rescore.percolator.psms.txt").is_file():
                     pl.plot_all(mod_fdr_dir, config)
         logger.info("Finished rescoring.")
 
@@ -1535,9 +1475,6 @@ def run_generate_training_data(config_path: Union[str, Path, Config]):
         config.read(config_path)
     config.check()
 
-    if config.fdr_estimation_method != "percolator":
-        raise ValueError("GenerateTrainingData requires fdr_estimation_method to be 'percolator'.")
-
     try:
         config._run_original = True
         run_rescoring(config)
@@ -1554,9 +1491,6 @@ def _export_training_data_parquets(config: Config, fdr_threshold: float = 0.01):
     :param config: Parsed Oktoberfest configuration
     :param fdr_threshold: Strict q-value threshold used for the filtered output
     """
-    if config.fdr_estimation_method != "percolator":
-        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
-
     data_dir = config.output / "data"
     fdr_dir = config.output / "results" / "percolator"
     original_psms_path = fdr_dir / "original.percolator.psms.txt"
@@ -1728,7 +1662,6 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
     """Generate spectral library from experimental data.
 
     :param config_path: Path to the configuration file.
-    :raises ValueError: If the FDR estimation method is not Percolator.
     :raises FileNotFoundError: If the annotated spectra HDF5 for a file is missing.
     """
     if isinstance(config_path, Config):
@@ -1737,9 +1670,6 @@ def generate_spectral_lib_fdr_control(config_path: Union[str, Path, Config]):
         config = Config()
         config.read(config_path)
     config.check()
-
-    if config.fdr_estimation_method != "percolator":
-        raise ValueError("GenerateTrainingData parquet export only supports Percolator output.")
 
     data_dir = config.output / "data"
     fdr_dir = config.output / "results" / "percolator"

@@ -1,7 +1,7 @@
 Features for target / decoy separation
 ======================================
 
-Oktoberfest creates tab files for target / decoy separation and fdr estimation using Percolator and mokapot. This provides an overview of the features that are used for rescoring with and without peptide property prediction.
+Oktoberfest creates tab files for target / decoy separation and fdr estimation using Percolator. This provides an overview of the features that are used for rescoring with and without peptide property prediction.
 
 
 Always present
