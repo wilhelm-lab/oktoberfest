@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from math import ceil
-from multiprocessing import Manager, Process, pool
+from multiprocessing.pool import AsyncResult
 from pathlib import Path
 from typing import Optional, Union
 
@@ -27,7 +27,7 @@ from oktoberfest import preprocessing as pp
 from oktoberfest import rescore as re
 
 from .data.spectra import Spectra
-from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator
+from .utils import Config, JobPool, ProcessStep, apply_quant, group_iterator, init_worker, log_files, mp_context
 from .utils.config import ADJACENT_DECOY_RESIDUES
 
 logger = logging.getLogger(__name__)
@@ -549,7 +549,7 @@ def _update(pbar: tqdm, postfix_values: dict[str, int]):
         pbar.refresh()
 
 
-def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: list[pool.AsyncResult]):
+def _check_write_failed_batch_file(failed_batch_file: Path, n_failed: int, results: list[AsyncResult]):
     if n_failed > 0:
         failed_batches = []
         for i, result in enumerate(results):
@@ -598,7 +598,8 @@ def generate_spectral_lib(config_path: Union[str, Path, Config]):
 
         worker_count = max(1, min(config.num_threads, n_batches))
 
-        with Manager() as manager:
+        context = mp_context()
+        with context.Manager() as manager:
             # setup
             shared_queue = manager.Queue(maxsize=worker_count)
             prediction_progress = manager.Value("i", 0)
@@ -609,9 +610,9 @@ def generate_spectral_lib(config_path: Union[str, Path, Config]):
             lock_failure = manager.Lock()
 
             # Create a pool for producer processes
-            predictor_pool = pool.Pool(worker_count)
+            predictor_pool = context.Pool(worker_count, initializer=init_worker, initargs=("default", log_files()))
 
-            consumer_process = Process(
+            consumer_process = context.Process(
                 target=speclib.async_write,
                 args=(shared_queue, writing_progress, config.custom_to_unimod()),
             )

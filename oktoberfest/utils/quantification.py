@@ -14,6 +14,7 @@ from picked_group_fdr.pipeline import pipeline
 from pyteomics import mass, mzml
 
 from . import Config
+from .multiprocessing_pool import mp_context
 
 logger = logging.getLogger(__name__)
 
@@ -378,7 +379,7 @@ def ppm_tolerance(ids: pd.DataFrame, spectra_dir: Path, threads: int = 1) -> dic
     sample = ids.sample(n=min(AUTO_PPM_SAMPLE, len(ids)), random_state=42)
     groups = list(sample.groupby("File Name"))
     paths = [spectra_dir / f"{raw_file}.mzML" for raw_file, _ in groups]
-    with ProcessPoolExecutor(max_workers=max(1, min(threads, len(groups)))) as executor:
+    with ProcessPoolExecutor(max_workers=max(1, min(threads, len(groups))), mp_context=mp_context()) as executor:
         errors = [
             e for file_errors in executor.map(ms1_mass_errors, paths, [g for _, g in groups]) for e in file_errors
         ]
