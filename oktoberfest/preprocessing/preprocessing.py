@@ -66,6 +66,8 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     if "PROTEINS" not in library_df.columns:
         library_df["PROTEINS"] = "unknown"
     var_df = Spectra._gen_vars_df()
+    # AnnData needs a string index (it would convert it and warn)
+    library_df.index = library_df.index.astype(str)
     spec = Spectra(obs=library_df, var=var_df)
 
     spec.var_names = var_df.index
@@ -412,7 +414,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    library = filter_peptides_for_model(library, model)
+    library = Spectra(filter_peptides_for_model(library, model).copy())
     library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
@@ -1079,7 +1081,9 @@ def annotate_spectral_library(
         phospho_loss_residues=phospho_loss_residues,
         plain_loss_residues=plain_loss_residues,
     )
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    obs = psms.drop(columns=["INTENSITIES", "MZ"])
+    obs.index = obs.index.astype(str)
+    aspec = Spectra(obs=obs, var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
         np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
