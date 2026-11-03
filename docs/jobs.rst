@@ -20,7 +20,13 @@ The command for executing a job within python:
 .. code-block:: python
 
    from oktoberfest.runner import run_job
-   run_job("<path/to/config.json>")
+
+   if __name__ == "__main__":
+       run_job("<path/to/config.json>")
+
+Oktoberfest starts its worker processes with the forkserver method (spawn on Windows), so a python script that
+starts a job needs the ``if __name__ == "__main__":`` guard: every worker imports the script, and without the guard it
+would start the job again and fail. Jupyter notebooks and the command line need no guard.
 
 If you instead want to run oktoberfest using the docker image, run:
 
