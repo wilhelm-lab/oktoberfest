@@ -208,3 +208,29 @@ class TestProcessing(unittest.TestCase):
             df["modified_sequence"].tolist(),
             ["[]-PEPTIDE-[UNIMOD:2]", "[UNIMOD:1]-PEPTIDE-[UNIMOD:2]"],
         )
+
+    def test_add_intensities_with_arrow_backed_var_names(self):
+        """Test that add_intensities works when var_names is backed by ArrowStringArray (pandas 3 default)."""
+        var_df = Spectra._gen_vars_df()
+        obs = pd.DataFrame(
+            {
+                "RAW_FILE": ["file_a"],
+                "SCAN_NUMBER": [1],
+                "MODIFIED_SEQUENCE": ["PEPTIDEK"],
+                "PRECURSOR_CHARGE": [2],
+                "COLLISION_ENERGY": [30.0],
+                "FRAGMENTATION": ["HCD"],
+            }
+        )
+        spectra = Spectra(obs=obs, var=var_df)
+        # Force Arrow-backed string index to simulate pandas 3 default behavior
+        arrow_index = pd.Index(pd.array(var_df.index.tolist(), dtype="string[pyarrow]"))
+        spectra.var_names = arrow_index
+
+        intensities = np.ones((1, len(var_df)))
+        annotation = np.array(arrow_index)[None, ...]
+        # Verify the annotation array has the correct shape and the mapping works
+        self.assertEqual(annotation.shape, (1, len(var_df)))
+        # add_intensities must not raise IndexError with Arrow-backed var_names
+        spectra.add_intensities(intensities, annotation, FragmentType.RAW)
+        self.assertIn("raw_int", spectra.layers)

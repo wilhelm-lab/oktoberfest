@@ -1086,7 +1086,7 @@ def annotate_spectral_library(
     aspec = Spectra(obs=obs, var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
+        np.stack(df_annotated_spectra["INTENSITIES"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
