@@ -19,6 +19,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# features taken from the search engine output (score, delta score, and MSFragger's matched ions, precursor mass error,
+# next score and e-value)
+SEARCH_ENGINE_FEATURES = (
+    "andromeda",
+    "andromeda_delta_score",
+    "annotated_ions",
+    "delta_mass_ppm",
+    "next_score",
+    "log10_evalue",
+)
+
+
 def generate_features(
     library: Spectra,
     search_type: str,
@@ -33,6 +45,8 @@ def generate_features(
     task: str = "default",
     featured_ions: Optional[list] = None,
     subtract_peaks: bool = False,
+    search_engine_features: bool = True,
+    subtract_order: str = "spectral_angle",
 ):
     """
     Generate features to be used for percolator target decoy separation.
@@ -54,6 +68,10 @@ def generate_features(
     :param featured_ions: The ion series to use for calculating percolator features
     :param subtract_peaks: whether to remove the peaks of better candidates of the same spectrum before the rescore
         features are calculated (see subtract_shared_peaks; not for crosslinks)
+    :param search_engine_features: whether the rescore features include the search engine scores
+        (SEARCH_ENGINE_FEATURES); the original features always do
+    :param subtract_order: how the candidates of a spectrum are picked for subtract_peaks, "spectral_angle" or
+        "exclusive_spectral_angle" (see subtract_shared_peaks)
 
     :Example:
 
@@ -105,7 +123,7 @@ def generate_features(
         raw = library.get_matrix(FragmentType.RAW)
         mz = library.get_matrix(FragmentType.MZ)
         if subtract_peaks:
-            raw, mz, meta = subtract_shared_peaks(meta, raw, mz, pred)
+            raw, mz, meta = subtract_shared_peaks(meta, raw, mz, pred, order=subtract_order)
     else:
         pred = None
         raw = None
@@ -129,6 +147,10 @@ def generate_features(
     )
 
     perc_features.calc()
+    if search_type == "rescore" and not search_engine_features:
+        perc_features.metrics_val = perc_features.metrics_val.drop(
+            columns=[column for column in SEARCH_ENGINE_FEATURES if column in perc_features.metrics_val]
+        )
     # missing feature values are 0 for percolator (filled here, so that merge_input only concatenates);
     # only columns with missing values are touched (categoricals become plain columns, as if read from the tab file)
     features = perc_features.metrics_val
