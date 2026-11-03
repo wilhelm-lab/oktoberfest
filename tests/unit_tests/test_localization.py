@@ -227,3 +227,55 @@ class TestAmbiguityCheck(unittest.TestCase):
         )
         for column in ("localization_flr", "localization_flr_decoy"):
             np.testing.assert_array_equal(off[column].to_numpy(), on[column].to_numpy())
+
+
+def _fake_percolator(input_file, output_folder, **kwargs):
+    """Write the percolator PSM outputs of rescore.tab without running percolator (targets score 1, decoys -1)."""
+    rescore = pd.read_csv(input_file, sep="\t")
+    for name, label in (("rescore.percolator.psms.txt", 1), ("rescore.percolator.decoy.psms.txt", -1)):
+        psms = rescore[rescore["Label"] == label]
+        pd.DataFrame({"PSMId": psms["SpecId"], "score": float(label), "peptide": psms["Peptide"]}).to_csv(
+            Path(output_folder) / name, sep="\t", index=False
+        )
+
+
+class TestLocalizeCitrullination(unittest.TestCase):
+    """Test the citrullination workflow of localize_ptms (percolator is replaced by _fake_percolator)."""
+
+    def test_citrullination(self):
+        """Test only spectra with a citrullinated candidate are rescored and the _mod features are removed."""
+        import tempfile
+        from unittest import mock
+
+        from oktoberfest.rescore import localize_ptms
+
+        rescore = pd.DataFrame(
+            {
+                "SpecId": ["f1-1-PEPR[UNIMOD:7]K-2", "f1-1-PEPRK-2", "f1-2-LESLIEK-2", "f1-3-DEC[UNIMOD:7]OY-2"],
+                "Label": [1, 1, 1, -1],
+                "ScanNr": [1, 1, 2, 3],
+                "filename": ["f1"] * 4,
+                "Peptide": ["PEPR[UNIMOD:7]K", "PEPRK", "LESLIEK", "DEC[UNIMOD:7]OY"],
+                "spectral_angle": [0.9, 0.8, 0.7, 0.2],
+                "spectral_angle_mod": [0.5, 0.4, 0.3, 0.1],
+                "Proteins": ["P1", "P1", "P2", "rev_P3"],
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            fdr_dir = Path(tmp_dir)
+            rescore.to_csv(fdr_dir / "rescore.tab", sep="\t", index=False)
+            with mock.patch("oktoberfest.rescore.localization.rescore_with_percolator", side_effect=_fake_percolator):
+                localize_ptms(fdr_dir, {7: ["R"]})
+
+            # all candidates of spectra with a citrullinated candidate (scan 2 has none)
+            filtered = pd.read_csv(fdr_dir / "rescore.tab", sep="\t")
+            self.assertListEqual(filtered["ScanNr"].tolist(), [1, 1, 3])
+            self.assertNotIn("id", filtered.columns)
+            # the citrullinated PSMs only, without the _mod features
+            localized = pd.read_csv(fdr_dir / "localize_mod" / "rescore.tab", sep="\t")
+            self.assertListEqual(localized["SpecId"].tolist(), ["f1-1-PEPR[UNIMOD:7]K-2", "f1-3-DEC[UNIMOD:7]OY-2"])
+            self.assertListEqual(
+                list(localized.columns),
+                ["SpecId", "Label", "ScanNr", "filename", "Peptide", "spectral_angle", "Proteins"],
+            )
+            self.assertTrue((fdr_dir / "localize_mod" / "rescore.percolator.psms.txt").exists())
