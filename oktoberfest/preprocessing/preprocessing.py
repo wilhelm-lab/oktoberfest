@@ -1119,10 +1119,10 @@ def annotate_spectral_library_xl(
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(cms2=cms2))
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES_A"]), aspec.var_names.values[None, ...], FragmentType.RAW_A
+        np.stack(df_annotated_spectra["INTENSITIES_A"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW_A
     )
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES_B"]), aspec.var_names.values[None, ...], FragmentType.RAW_B
+        np.stack(df_annotated_spectra["INTENSITIES_B"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW_B
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ_A"]), FragmentType.MZ_A)
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ_B"]), FragmentType.MZ_B)
