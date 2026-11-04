@@ -45,7 +45,7 @@ jobs:
         outputs:
             changed: ${{ steps.compare.outputs.changed }}
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   fetch-depth: 2
 
@@ -85,9 +85,9 @@ jobs:
         timeout-minutes: 360
 
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
-            - uses: actions/setup-python@v6
+            - uses: actions/setup-python@v7
               with:
                   python-version: ${{ matrix.python-version }}
                   cache: pip
@@ -96,7 +96,7 @@ jobs:
               run: pip install poetry
 
             - name: Cache Poetry virtualenv
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: ~/.cache/pypoetry/virtualenvs
                   # Separate cache key from the unit-test jobs so that adding
@@ -107,7 +107,7 @@ jobs:
             # inputs of the rescoring use case tests (mzML + MSFragger results from figshare, a few GB);
             # the key changes when the figshare URLs in the test module change
             - name: Cache rescoring use case inputs
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               with:
                   path: tests/data/*/inputs
                   key: usecase-inputs-${{ hashFiles('tests/integration_tests/test_rescoring_usecases.py') }}
@@ -120,7 +120,7 @@ jobs:
                   sudo apt-get install -y /tmp/$DEB
 
             # MS1 quantification test (test_rescoring_quantification): FlashLFQ runs on .NET 8
-            - uses: actions/setup-dotnet@v4
+            - uses: actions/setup-dotnet@v6
               with:
                   dotnet-version: "8.0.x"
 
