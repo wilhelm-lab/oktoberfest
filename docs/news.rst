@@ -4,7 +4,7 @@ News
 .. role:: date
     :class: date
 
-Oktoberfest supports DIA data and local DLOmix models :date:`2026-10-12`
+Oktoberfest supports DIA data and local DLOmix models :date:`2026-11-04`
 ------------------------------------------------------------------------
 
 | Oktoberfest 1.0.0 is published, adding support for data-independent acquisition (DIA). Set ``acquisitionMethod`` to ``"DIA"`` in the `configuration <config.html>`_ to calibrate the collision energy per precursor charge.
@@ -12,7 +12,7 @@ Oktoberfest supports DIA data and local DLOmix models :date:`2026-10-12`
 | Fragment intensities can now be predicted locally with a trained `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ model instead of Koina. Install the optional extra with ``pip install "oktoberfest[dlomix]"`` and see the DLOmix integration tutorial in the `tutorials folder on GitHub <https://github.com/wilhelm-lab/oktoberfest/tree/development/tutorials>`_.
 | The new ``GenerateTrainingData`` job exports annotated spectra from your own search results as training data for DLOmix, which can be used to fine-tune any Prosit intensity model on your data (see `Training Data Generation <jobs.html#training-data>`_).
 | Oktoberfest now comes with a `web UI <webui.html>`_ that can be run locally via Docker to submit and monitor jobs without writing config files.
-| **Breaking changes:** Oktoberfest now requires spectrum_fundamentals >=1.0.0. The ``ExpMass`` column of the percolator / mokapot input is now the experimental precursor m/z (see `SVM features <svm_features.html>`_). The collision energy calibration results (``<spectra_file>_ce.txt``, now stored as JSON) and plots moved to ``results/ce_calibration/`` (see `outputs <outputs.html>`_).
+| **Breaking changes:** Oktoberfest now requires python >=3.11 (support for python 3.10 was dropped), spectrum_fundamentals >=1.1.0 and spectrum_io >=1.0.1. The ``ExpMass`` column of the percolator input is now the experimental precursor m/z (see `SVM features <svm_features.html>`_). The collision energy calibration results (``<spectra_file>_ce.txt``, now stored as JSON) and plots moved to ``results/ce_calibration/`` (see `outputs <outputs.html>`_).
 | **mokapot support removed:** mokapot is unmaintained since 2023 and no longer runs with numpy 2 and pandas 3, so Oktoberfest now always uses Percolator for target / decoy separation and FDR estimation. Configs with ``"fdr_estimation_method": "mokapot"`` are rejected; use ``"fdr_estimation_method": "percolator"`` (the default) instead.
 
 Oktoberfest supports rescoring XL-MS datasets :date:`2025-06-14`
