@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 # not P, D, E, K, R, H, C and M, which change the fragmentation or are frequently modified
 ADJACENT_DECOY_RESIDUES = ["A", "G", "L", "V", "I", "F", "N", "Q", "W"]
 
-# decoy residues used to estimate the false localization rate if ptmLocalizationOptions.decoy_residues is not given
-DEFAULT_DECOY_RESIDUES = ["A", "G", "L", "V"]
-
 # options of ptmLocalizationOptions (first value is the default)
 LOCALIZATION_PROBABILITIES = ["pep", "score"]
 DECOY_WEIGHTINGS = ["count", "distance"]
@@ -26,6 +23,9 @@ FLR_ESTIMATORS = ["hybrid", "decoy"]
 QUANT_PRECURSOR_METHODS = ["search_engine", "flashlfq"]
 QUANT_PROTEIN_METHODS = ["directlfq", "none"]
 QUANT_NORMALIZATIONS = ["stable_drift", "drift", "mode", "median", "none"]
+
+# orders in which the candidates of a chimeric spectrum are picked (chimericPeakOrder, first value is the default)
+CHIMERIC_PEAK_ORDERS = ["spectral_angle", "exclusive_spectral_angle"]
 
 # DLOmix pipelines keyed by resolved model path. Module-level (not on Config) so a parent-loaded
 # pipeline is inherited by fork workers via copy-on-write, while Config stays picklable.
@@ -207,22 +207,65 @@ class Config:
 
     @property
     def search_results(self) -> Path:
-        """Get path to the search results file from the config file."""
-        search_results_path = self.inputs.get("search_results")
-        if search_results_path is not None:
-            # check if search_results_path is absolute and if not, append with the directory
-            # of the config file to resolve paths relative to the config location. This is
-            # required to make sure it always works no matter from which working directory
-            # oktoberfest is executed in case a relative path is provided, which would
-            # otherwise be relative to the working directory.
-            return self.base_path / search_results_path
-        else:
-            raise ValueError("No path to a msms.txt specified in config file.")
+        """Get path to the search results file from the config file (the first one if several are given)."""
+        return self.search_inputs[0][0]
 
     @property
     def search_results_type(self) -> str:
-        """Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file."""
-        return self.inputs.get("search_results_type", "maxquant").lower()
+        """
+        Get search type (Maxquant, Msfragger, Mascot or Internal) from the config file.
+
+        Several search engines are joined with "+" (e.g. "msfragger+sage").
+        """
+        search_results_type = self.inputs.get("search_results_type", "maxquant")
+        types = search_results_type if isinstance(search_results_type, list) else [search_results_type]
+        return "+".join(search_type.lower() for search_type in types)
+
+    @property
+    def search_inputs(self) -> list[tuple[Path, str]]:
+        """
+        Get the search results and their search engine types from the config file.
+
+        search_results and search_results_type are either single values or lists of the same length (one entry per
+        search engine, merged into one set of candidate PSMs, see preprocessing.merge_search_results).
+        """
+        search_results_path = self.inputs.get("search_results")
+        if search_results_path is None:
+            raise ValueError("No path to a msms.txt specified in config file.")
+        search_results_type = self.inputs.get("search_results_type", "maxquant")
+        paths = search_results_path if isinstance(search_results_path, list) else [search_results_path]
+        types = search_results_type if isinstance(search_results_type, list) else [search_results_type]
+        if len(paths) != len(types):
+            raise ValueError(
+                f"search_results ({len(paths)} entries) and search_results_type ({len(types)} entries) must have the "
+                "same number of entries."
+            )
+        # check if search_results_path is absolute and if not, append with the directory
+        # of the config file to resolve paths relative to the config location. This is
+        # required to make sure it always works no matter from which working directory
+        # oktoberfest is executed in case a relative path is provided, which would
+        # otherwise be relative to the working directory.
+        return [(self.base_path / path, search_type.lower()) for path, search_type in zip(paths, types, strict=True)]
+
+    @property
+    def reuse_libraries(self) -> list[Path]:
+        """
+        Get the output folders of previous runs whose annotation and predictions are reused (reuseLibraries).
+
+        Previous runs on the same spectra files with the same annotation settings and models, e.g. one rescoring run per
+        search engine before rescoring their merged search results. Default is none.
+        """
+        return [self.base_path / Path(path) for path in self.data.get("reuseLibraries", [])]
+
+    @property
+    def search_engine_features(self) -> bool:
+        """
+        Get flag whether the search engine scores are used as rescore features (searchEngineFeatures).
+
+        If False, the rescore features are the peptide property prediction features only (the original features, i.e.
+        the search engine baseline, are unchanged). Default is True.
+        """
+        return self.data.get("searchEngineFeatures", True)
 
     @property
     def custom_modifications(self) -> dict[str, dict[str, list[Union[int, float, str]]]]:
@@ -429,6 +472,10 @@ class Config:
         """Get the results/ce_calibration folder of a previous run to reuse its calibrated CE per spectra file."""
         ce_calibration_dir = self.ce_alignment_options.get("ce_calibration_dir")
         if ce_calibration_dir is None:
+            # reused libraries: the calibration of the first previous run, whose predictions are then all reused
+            reuse_libraries = self.data.get("reuseLibraries", [])
+            if reuse_libraries:
+                return self.base_path / Path(reuse_libraries[0]) / "results" / "ce_calibration"
             return None
         return self.base_path / Path(ce_calibration_dir)
 
@@ -603,6 +650,17 @@ class Config:
         return self.data.get("chimericPeakSubtraction", False)
 
     @property
+    def chimeric_peak_order(self) -> str:
+        """
+        Get the order in which the candidates of a chimeric spectrum are picked for chimericPeakSubtraction.
+
+        "spectral_angle": best spectral angle on the peaks the candidates picked before left, recomputed after every
+        pick. "exclusive_spectral_angle": best spectral angle on the ions whose observed peak no other candidate of the
+        spectrum matched (fixed order). Only used with chimericPeakSubtraction. Default is "spectral_angle".
+        """
+        return self.data.get("chimericPeakOrder", "spectral_angle")
+
+    @property
     def perform_rescoring(self) -> bool:
         """
         Get flag whether to run rescoring (percolator), plotting and quantification. Default is True.
@@ -720,27 +778,21 @@ class Config:
 
         Localizations of the PTMs on these residues, which cannot carry the PTMs (e.g. A for phosphorylation), are
         scored as additional (passive) candidates. Spectra in which a decoy candidate would win are used to estimate
-        the FLR. The residues are given in order of priority: every peptide uses the first one it contains. Default:
-        DEFAULT_DECOY_RESIDUES (A, G, L, V) without the residues the localized PTMs can be located on; an empty list
-        disables the decoys. Empty if ptm_localization is disabled.
+        the FLR. The residues are given in order of priority: every peptide uses the first one it contains. Decoys are
+        only used if ptmLocalizationOptions.decoy_residues is given (default: no decoys, the PTMs are localized without
+        estimating the FLR). Empty if ptm_localization is disabled.
         """
-        if not self.ptm_localization:
-            return []
         residues = self.ptm_decoy_priority_residues
-        if self.ptm_decoy_selection == "adjacent":
+        if residues and self.ptm_decoy_selection == "adjacent":
             residues += [aa for aa in ADJACENT_DECOY_RESIDUES if aa not in residues]
         return residues
 
     @property
     def ptm_decoy_priority_residues(self) -> list[str]:
-        """Get the decoy residues of ptmLocalizationOptions.decoy_residues (or the defaults), in order of priority."""
+        """Get the decoy residues of ptmLocalizationOptions.decoy_residues in order of priority, empty if not given."""
         if not self.ptm_localization:
             return []
-        residues = self.ptm_localization_options.get("decoy_residues")
-        if residues is None:
-            sites = {aa for site_list in self.ptm_sites.values() for aa in site_list}
-            return [aa for aa in DEFAULT_DECOY_RESIDUES if aa not in sites]
-        return list(residues)
+        return list(self.ptm_localization_options.get("decoy_residues") or [])
 
     @property
     def ptm_localization_probability(self) -> str:
@@ -947,6 +999,8 @@ class Config:
         self._check_percolator_subset()
         self._check_chimeric_peak_subtraction()
         self._check_mass_tolerance()
+        self._check_search_inputs()
+        self._check_reuse_libraries()
 
     def _check_mass_tolerance(self):
         """Check that massTolerance is a positive number or "auto" (only for ppm and linear peptides)."""
@@ -960,12 +1014,60 @@ class Config:
                                         or tolerance <= 0):  # fmt: skip
             raise ValueError(f'massTolerance must be a positive number or "auto", got {tolerance!r}.')
 
+    def _check_search_inputs(self):
+        """Check searchEngineFeatures and that several search engines are only combined where supported."""
+        # the raw config value: the property is typed bool (typeguard would reject other values before this check)
+        search_engine_features = self.data.get("searchEngineFeatures", True)
+        if not isinstance(search_engine_features, bool):
+            raise ValueError(f"searchEngineFeatures must be true or false, got {search_engine_features!r}.")
+        if "search_results" not in self.inputs:  # e.g. spectral library generation
+            return
+        search_types = [search_type for _, search_type in self.search_inputs]
+        if len(search_types) == 1:
+            return
+        unsupported = sorted({"xisearch", "scout", "custom_input"} & set(search_types))
+        if unsupported:
+            raise ValueError(
+                f"Search results of {', '.join(unsupported)} cannot be combined with other search engines."
+            )
+        if self.quantification:
+            raise ValueError("Quantification is not supported for combined search results of several search engines.")
+        if self.spectra_type in ["d", "hdf"]:
+            raise ValueError("Combined search results of several search engines are not supported for timsTOF data.")
+        if search_engine_features:
+            logger.warning(
+                "Combining several search engines with searchEngineFeatures: the search engine scores of the "
+                "engines are on different scales; consider searchEngineFeatures false."
+            )
+
+    def _check_reuse_libraries(self):
+        """Check reuseLibraries is a list of previous run folders, for DDA rescoring of non-crosslinked peptides."""
+        reuse_libraries = self.data.get("reuseLibraries", [])
+        if not isinstance(reuse_libraries, list) or not all(isinstance(path, str) for path in reuse_libraries):
+            raise ValueError(
+                f"reuseLibraries must be a list of output folders of previous runs, got {reuse_libraries!r}."
+            )
+        if not reuse_libraries:
+            return
+        if self.acquisition_method.lower() == "dia" or "xl" in self.models.get("intensity", "").lower():
+            raise ValueError("reuseLibraries is only supported for DDA spectra of non-crosslinked peptides.")
+        if self.ptm_localization:
+            raise ValueError("reuseLibraries is not supported with ptm_localization.")
+        for path in self.reuse_libraries:
+            if not (path / "data").is_dir():
+                raise ValueError(f"reuseLibraries: {path} is not the output folder of a previous run (no data folder).")
+
     def _check_chimeric_peak_subtraction(self):
-        """Check that chimericPeakSubtraction is a boolean."""
-        # read the raw value: the typed property must not be called with invalid values (typeguard)
+        """Check that chimericPeakSubtraction is a boolean and chimericPeakOrder a known order."""
+        # read the raw values: the typed properties must not be called with invalid values (typeguard)
         value = self.data.get("chimericPeakSubtraction", False)
         if not isinstance(value, bool):
             raise ValueError(f"chimericPeakSubtraction must be true or false, got {value!r}.")
+        order = self.data.get("chimericPeakOrder", "spectral_angle")
+        if order not in CHIMERIC_PEAK_ORDERS:
+            raise ValueError(f"chimericPeakOrder must be one of {', '.join(CHIMERIC_PEAK_ORDERS)}, got {order!r}.")
+        if "chimericPeakOrder" in self.data and not value:
+            logger.warning("chimericPeakOrder is only used with chimericPeakSubtraction, which is not enabled.")
 
     def _check_fdr_estimation_method(self):
         """Check that percolator is used for FDR estimation (mokapot support was removed)."""
@@ -1022,6 +1124,11 @@ class Config:
     def _check_ptm_decoys(self, ptm_sites: dict[int, list[str]], valid_residues: set[str]):
         """Check the decoy residues and the options of the false localization rate estimation."""
         decoys = self.ptm_decoy_residues
+        if not decoys and self.ptm_decoy_selection == "adjacent":
+            logger.warning(
+                'ptmLocalizationOptions.decoy_selection "adjacent" is ignored: no decoy_residues are given, so the PTMs '
+                "are localized without decoys."
+            )
         invalid_decoys = [r for r in decoys if r not in valid_residues]
         if invalid_decoys:
             raise ValueError(f"Invalid decoy residues {invalid_decoys} in ptmLocalizationOptions.")

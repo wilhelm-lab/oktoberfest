@@ -9,6 +9,7 @@ from oktoberfest.utils import Config
 
 def _config(**data) -> Config:
     config = Config()
+    config.base_path = Path()
     config.data.update(data)
     return config
 
@@ -387,17 +388,27 @@ class TestPTMLocalization(unittest.TestCase):
                     _config(ptm_localization=True, ptmLocalizationOptions=options)._check_ptm_localization()
 
     def test_ptm_decoy4_defaults(self):
-        """Test the decoy4 defaults: A/G/L/V decoys (without PTM sites), PEP probabilities, count weights, one group."""
+        """Test the defaults: no decoys unless decoy_residues are given, PEP probabilities, count weights, one group."""
         config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"21": ["S", "T", "Y"]}})
-        self.assertEqual(config.ptm_decoy_residues, ["A", "G", "L", "V"])
+        self.assertEqual(config.ptm_decoy_residues, [])
+        self.assertEqual(config.ptm_permutation_sites, {21: ["S", "T", "Y"]})
         self.assertEqual(config.ptm_localization_probability, "pep")
         self.assertEqual(config.ptm_decoy_weighting, "count")
         self.assertEqual(config.ptm_flr_groups, "none")
         self.assertEqual(config.ptm_flr_estimator, "hybrid")
         config._check_ptm_localization()
-        # residues the PTM can be located on are no decoys
-        config = _config(ptm_localization=True, ptmLocalizationOptions={"ptms": {"1": ["A", "K"]}})
-        self.assertEqual(config.ptm_decoy_residues, ["G", "L", "V"])
+        # no decoys for citrullination either, also with decoy_selection "adjacent"
+        options = {"ptms": {"7": ["N", "Q", "R"]}, "decoy_selection": "adjacent"}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_residues, [])
+        self.assertEqual(config.ptm_permutation_sites, {7: ["N", "Q", "R"]})
+        with self.assertLogs("oktoberfest.utils.config", level="WARNING"):
+            config._check_ptm_localization()
+        # decoys only on the residues given, in their order of priority
+        options = {"ptms": {"7": ["N", "Q", "R"]}, "decoy_residues": ["G", "A"]}
+        config = _config(ptm_localization=True, ptmLocalizationOptions=options)
+        self.assertEqual(config.ptm_decoy_residues, ["G", "A"])
+        self.assertEqual(config.ptm_permutation_sites, {7: ["N", "Q", "R", "G", "A"]})
         # an empty list disables the decoys
         options = {"ptms": {"21": ["S", "T", "Y"]}, "decoy_residues": []}
         self.assertEqual(_config(ptm_localization=True, ptmLocalizationOptions=options).ptm_decoy_residues, [])
@@ -532,6 +543,25 @@ class TestChimericPeakSubtraction(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "chimericPeakSubtraction"):
                     _config(chimericPeakSubtraction=value)._check_chimeric_peak_subtraction()
 
+    def test_order(self):
+        """Test the candidate order defaults to the spectral angle, known orders are accepted and others rejected."""
+        self.assertEqual(_config().chimeric_peak_order, "spectral_angle")
+        for value in ["spectral_angle", "exclusive_spectral_angle"]:
+            with self.subTest(value=value):
+                config = _config(chimericPeakSubtraction=True, chimericPeakOrder=value)
+                self.assertEqual(config.chimeric_peak_order, value)
+                config._check_chimeric_peak_subtraction()
+        for value in ["score", "", None, 1]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "chimericPeakOrder"):
+                    _config(chimericPeakSubtraction=True, chimericPeakOrder=value)._check_chimeric_peak_subtraction()
+
+    def test_order_without_subtraction(self):
+        """Test an order without chimericPeakSubtraction only warns."""
+        with self.assertLogs("oktoberfest.utils.config", level="WARNING") as logs:
+            _config(chimericPeakOrder="exclusive_spectral_angle")._check_chimeric_peak_subtraction()
+        self.assertIn("chimericPeakOrder", logs.output[0])
+
 
 class TestLibraryInputType(unittest.TestCase):
     """Test the library input type is taken from the config or inferred from the library input."""
@@ -570,3 +600,57 @@ class TestLibraryInputType(unittest.TestCase):
         """Test an unknown library input asks for the library input type."""
         with self.assertRaisesRegex(ValueError, "library_input_type"):
             self._type("peptides.tsv", "sequence\tcharge\nPEPTIDEK\t2\n")
+
+
+class TestSearchInputs(unittest.TestCase):
+    """Test search results of one or several search engines and the searchEngineFeatures flag."""
+
+    def test_single_engine(self):
+        """Test a single search result keeps its path and type."""
+        config = _config(inputs={"search_results": "/data/msms.txt", "search_results_type": "Maxquant"})
+        self.assertEqual(config.search_inputs, [(Path("/data/msms.txt"), "maxquant")])
+        self.assertEqual(config.search_results, Path("/data/msms.txt"))
+        self.assertEqual(config.search_results_type, "maxquant")
+        self.assertTrue(config.search_engine_features)
+        config._check_search_inputs()
+
+    def test_several_engines(self):
+        """Test lists of search results and types give one input per engine."""
+        config = _config(
+            inputs={
+                "search_results": ["/data/fragger", "/data/results.sage.tsv"],
+                "search_results_type": ["MSFragger", "Sage"],
+            },
+            searchEngineFeatures=False,
+        )
+        self.assertEqual(
+            config.search_inputs, [(Path("/data/fragger"), "msfragger"), (Path("/data/results.sage.tsv"), "sage")]
+        )
+        self.assertEqual(config.search_results_type, "msfragger+sage")
+        self.assertFalse(config.search_engine_features)
+        config._check_search_inputs()
+
+    def test_mismatched_lists(self):
+        """Test the number of search results and types must agree."""
+        config = _config(inputs={"search_results": ["/a", "/b"], "search_results_type": "Sage"})
+        with self.assertRaisesRegex(ValueError, "same number of entries"):
+            _ = config.search_inputs
+
+    def test_unsupported_combinations(self):
+        """Test crosslink engines, quantification and timsTOF data are rejected for several engines."""
+        inputs = {"search_results": ["/a", "/b"], "search_results_type": ["Xisearch", "Sage"]}
+        with self.assertRaisesRegex(ValueError, "xisearch cannot be combined"):
+            _config(inputs=inputs)._check_search_inputs()
+        inputs = {"search_results": ["/a", "/b"], "search_results_type": ["MSFragger", "Sage"]}
+        with self.assertRaisesRegex(ValueError, "Quantification"):
+            _config(inputs=inputs, quantification=True)._check_search_inputs()
+        with self.assertRaisesRegex(ValueError, "timsTOF"):
+            _config(inputs={**inputs, "spectra_type": "d"})._check_search_inputs()
+
+    def test_search_engine_features_flag(self):
+        """Test searchEngineFeatures must be a boolean."""
+        inputs = {"search_results": "/data/msms.txt"}
+        for value in [0, "false", None]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "searchEngineFeatures"):
+                    _config(inputs=inputs, searchEngineFeatures=value)._check_search_inputs()
