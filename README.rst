@@ -18,7 +18,7 @@ Oktoberfest: Rescoring, Collision Energy Calibration and Spectral Library Genera
 .. |CI| image:: https://github.com/wilhelm-lab/oktoberfest/workflows/CI/badge.svg
    :target: https://github.com/wilhelm-lab/oktoberfest/actions?workflow=CI
    :alt: CI Status
-.. |Codecov| image:: https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/main/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/wilhelm-lab/oktoberfest/branch/development/graph/badge.svg
    :target: https://codecov.io/gh/wilhelm-lab/oktoberfest
    :alt: Codecov
 .. |pre-commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
