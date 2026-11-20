@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
+import numpy as np
 import pandas as pd
 from koinapy.grpc import Koina as _KoinaGRPC
 
 from ..data.spectra import Spectra
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 alternative_column_map = {
@@ -41,6 +38,19 @@ alternative_column_map_xl_switched = {
         if key not in ["peptide_sequences_1", "peptide_sequences_2"]
     },
 }
+
+
+def _unique_inputs(data: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Find the distinct rows of the model inputs.
+
+    :param data: model inputs, arrays with one row per PSM
+    :return: index of the first occurrence of every distinct row, and the distinct row of every PSM
+    """
+    inputs = pd.DataFrame({key: np.asarray(value).reshape(len(value), -1)[:, 0] for key, value in data.items()})
+    inverse = inputs.groupby(list(inputs.columns), sort=False, dropna=False).ngroup().to_numpy()
+    _, first = np.unique(inverse, return_index=True)
+    return first, inverse
 
 
 class Koina(_KoinaGRPC):
@@ -82,7 +92,13 @@ class Koina(_KoinaGRPC):
                 input_field: data[[alternative_column_map[input_field]]].to_numpy()
                 for input_field in self.model_inputs.keys()
             }
-        return super().predict(inputs=data, **kwargs)
+        # predict every distinct input once (PSMs of the same peptide, charge, CE, ... share their prediction)
+        first, inverse = _unique_inputs(data)
+        if len(first) == len(inverse):
+            return super().predict(inputs=data, **kwargs)
+        logger.info(f"Predicting {len(first)} distinct inputs for {len(inverse)} PSMs")
+        predictions = super().predict(inputs={key: value[first] for key, value in data.items()}, **kwargs)
+        return {key: value[inverse] for key, value in predictions.items()}
 
     def predict_xl(
         self, data: dict[str, np.ndarray] | pd.DataFrame | Spectra, **kwargs

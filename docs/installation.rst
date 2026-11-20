@@ -44,12 +44,12 @@ This is a step-by-step guide for the manual installation of all mandatory and op
 Install Python
 ~~~~~~~~~~~~~~
 
-Oktoberfest requires python >=3.9 and <=3.11. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
+Oktoberfest requires python >=3.11 and is tested on python 3.11 to 3.13. Python 3.14 support is experimental: some dependencies do not allow it yet, so ``pip install`` fails there for now. Best practice is to use a clean conda environment (`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
 Follow the installation guide for your operating system, then create a new environment using
 
 .. code-block:: bash
 
-   conda create -y -n oktoberfest python==3.10
+   conda create -y -n oktoberfest python==3.11
 
 
 Optional dependencies
@@ -68,6 +68,8 @@ There are multiple optional dependencies depending on job types. Detailed notes 
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
     | :ref:`Rescoring`                                                 | Percolator          |                                                         |
     +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
+    | Peptide property prediction with a local DLOmix model            | DLOmix, TensorFlow  | not required when predicting via Koina (the default)    |
+    +------------------------------------------------------------------+---------------------+---------------------------------------------------------+
 
 **ThermoRawFileParser**
 `ThermoRawFileParser v1.4.3 <https://github.com/compomics/ThermoRawFileParser/releases/tag/v1.4.3>`_:
@@ -85,8 +87,17 @@ For MacOS, follow the instructions provided by `Mono <https://www.mono-project.c
 
 **Percolator**
 `Percolator v3.06.1 <https://github.com/percolator/percolator/releases/tag/rel-3-06-01>`_:
-This is the tool Mokapot is based on. As it has more options and is generally more stable wrt. to FDR cutoffs and deduplication, it is recommended to use this tool instead of Mokapot.
+Oktoberfest uses Percolator for target / decoy separation and FDR estimation.
 Installable packages are provided for Linux/MacOS/Windows.
+
+**DLOmix**
+By default, peptide property prediction is performed remotely via `Koina <https://koina.wilhelmlab.org>`_, which requires no extra dependencies.
+If you instead want to run a locally trained model (configured via the ``dlomix_intensity`` model, see :doc:`config`), install the ``dlomix`` optional extra, which pulls in `DLOmix <https://github.com/wilhelm-lab/dlomix>`_ and TensorFlow.
+Install it with:
+
+.. code-block:: bash
+
+   pip install "oktoberfest[dlomix]"
 
 Installing Oktoberfest
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -97,6 +108,12 @@ Oktoberfest is listed on the Python Package Index (PyPI) and can be installed wi
 
    conda activate oktoberfest
    pip install oktoberfest jupyterlab
+
+To also enable local DLOmix predictions, install the optional extra instead (see `DLOmix`_ above):
+
+.. code-block:: bash
+
+   pip install "oktoberfest[dlomix]" jupyterlab
 
 
 Installing xiFDR

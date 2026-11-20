@@ -72,13 +72,18 @@ class TestConfig(unittest.TestCase):
     def test_num_threads_defaults_to_one(self):
         """Test that num_threads defaults to one when unset."""
         conf = Config()
-        conf.data = {}
+        self.assertEqual(conf.num_threads, 1)
+
+    def test_num_threads_defaults_to_one_if_dlomix_model_is_configured(self):
+        """Test that num_threads defaults to one when a DLOmix model is configured."""
+        conf = Config()
+        conf.data["models"] = {"dlomix_intensity": "some_path"}
         self.assertEqual(conf.num_threads, 1)
 
     def test_num_threads_uses_config_key(self):
         """Test that num_threads uses the numThreads config key."""
         conf = Config()
-        conf.data = {"numThreads": 4}
+        conf.data["numThreads"] = 4
         self.assertEqual(conf.num_threads, 4)
 
 

@@ -17,29 +17,46 @@ from oktoberfest.data.spectra import Spectra
 from oktoberfest.utils import Config
 
 # Set the default fontsize and linewidth
-plt.rcParams.update({"font.size": 14, "axes.linewidth": 1.5, "xtick.major.width": 1.5, "ytick.major.width": 1.5})
+plt.rcParams.update(
+    {
+        "font.size": 14,
+        "axes.linewidth": 1.5,
+        "xtick.major.width": 1.5,
+        "ytick.major.width": 1.5,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "font.family": "sans-serif",
+    }
+)
+
+
+# columns of rescore.tab used by plot_all
+RESCORE_TAB_PLOT_COLUMNS = {
+    "SpecId",
+    "spectral_angle",
+    "RT",
+    "iRT",
+    "pred_RT",
+    "ScanNr",
+    "filename",
+    "abs_rt_diff",
+    "collision_energy_aligned",
+}
+# PSMs per raw file shown in the RT alignment plot
+MAX_RT_PLOT_POINTS = 50000
 
 
 def _check_columns(df: pd.DataFrame):
     """
-    Check columns to make plotting work for mokapot.
+    Check the percolator output columns needed for plotting.
 
     :param df: a pandas dataframe to check columns for
-    :raises AssertionError: if expected columns do not correspond to either mokapot or percolator output
+    :raises AssertionError: if expected columns of the percolator output are missing
 
-    :return: Tuple of column identifiers: (score, q-value, Proteins, SpecId)
+    :return: Tuple of column identifiers: (score, q-value, peptide, PSMId)
     """
-    mokapot_mapping = {
-        "mokapot score": "score",
-        "mokapot q-value": "q-value",
-        "Peptide": "peptide",
-        "SpecId": "PSMId",
-    }
-    if set(mokapot_mapping.keys()).issubset(df.columns):
-        column_names = list(mokapot_mapping.keys())
-    elif set(mokapot_mapping.values()).issubset(df.columns):
-        column_names = list(mokapot_mapping.values())
-    else:
+    column_names = ["score", "q-value", "peptide", "PSMId"]
+    if not set(column_names).issubset(df.columns):
         raise AssertionError("Missing columns in one of the input files. Please check.")
 
     return column_names
@@ -49,8 +66,8 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
     """
     Generate histogram of the score distribution for targets and decoys.
 
-    :param target: mokapot / percolator target output
-    :param decoy: mokapot / percolator decoy output
+    :param target: percolator target output
+    :param decoy: percolator decoy output
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -74,7 +91,7 @@ def plot_score_distribution(target: pd.DataFrame, decoy: pd.DataFrame, level: st
         >>> pl.plot_score_distribution(target=target_df,
         >>>                             decoy=decoy_df,
         >>>                             level="psm",
-        >>>                             filename="./tests/doctests/output/score_distribution_plot.svg")
+        >>>                             filename="./tests/doctests/output/score_distribution_plot.pdf")
     """
     score_col, _, _, _ = _check_columns(target)
 
@@ -100,10 +117,10 @@ def joint_plot(
     """
     Generate joint plot to compare rescoring with and without peptide property predictions.
 
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
-    :param prosit_decoy: mokapot / percolator decoy output for rescoring with peptide property prediction
-    :param andromeda_target: mokapot / percolator target output for rescoring without peptide property prediction
-    :param andromeda_decoy: mokapot / percolator decoy output for rescoring without peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
+    :param prosit_decoy: percolator decoy output for rescoring with peptide property prediction
+    :param andromeda_target: percolator target output for rescoring without peptide property prediction
+    :param andromeda_decoy: percolator decoy output for rescoring without peptide property prediction
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -139,7 +156,7 @@ def joint_plot(
         >>>                 andromeda_target=andromeda_target_df,
         >>>                 andromeda_decoy=andromeda_decoy_df,
         >>>                 level="psm",
-        >>>                 filename="./tests/doctests/output/joint_plot.svg")
+        >>>                 filename="./tests/doctests/output/joint_plot.pdf")
     """
     score_col, _, peptide_col, psm_col = _check_columns(prosit_target)
     if level.lower() == "peptide":
@@ -168,7 +185,7 @@ def joint_plot(
     df_decoys["color"] = "#FE7312"
 
     df_all = pd.concat([df_targets, df_decoys], axis=0)
-    df_all.dropna(inplace=True)
+    df_all = df_all.dropna()
     jplot = sns.jointplot(
         data=df_all,
         x="and_score",
@@ -192,12 +209,18 @@ def joint_plot(
     plt.close()
 
 
-def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, level: str, filename: Union[str, Path]):
+def plot_gain_loss(
+    prosit_target: pd.DataFrame,
+    andromeda_target: pd.DataFrame,
+    level: str,
+    filename: Union[str, Path],
+    fdr_cutoff: float = 0.01,
+):
     """
     Generate venn barplots to show lost, common and shared targets below 1% FDR attributed to peptide property predictions.
 
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
-    :param andromeda_target: mokapot / percolator target output for rescoring without peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
+    :param andromeda_target: percolator target output for rescoring without peptide property prediction
     :param level: The level on which to produce the comparison. Can be either "peptide" or "psm"
     :param filename: the path to the location used for storing the plot
 
@@ -222,7 +245,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
         >>> pl.plot_gain_loss(prosit_target=prosit_df,
         >>>                     andromeda_target=andromeda_df,
         >>>                     level="psm",
-        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.svg")
+        >>>                     filename="./tests/doctests/output/gain_loss_psm_plot.pdf")
     """
     _, qval_col, peptide_col, psm_col = _check_columns(prosit_target)
 
@@ -233,8 +256,8 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     else:
         raise ValueError(f"level can only be peptide or psm. Given: {level}")
 
-    andromeda_target = andromeda_target[andromeda_target[qval_col] < 0.01]
-    prosit_target = prosit_target[prosit_target[qval_col] < 0.01]
+    andromeda_target = andromeda_target[andromeda_target[qval_col] < fdr_cutoff]
+    prosit_target = prosit_target[prosit_target[qval_col] < fdr_cutoff]
     merged_df = prosit_target.merge(andromeda_target, how="inner", on=join_col)
 
     shared = len(merged_df.index)
@@ -283,7 +306,7 @@ def plot_gain_loss(prosit_target: pd.DataFrame, andromeda_target: pd.DataFrame, 
     ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
     # grid
-    ax.set_ylabel(f"number of target {level.lower()}s below 1% FDR")
+    ax.set_ylabel(f"number of target {level.lower()}s below " + str(fdr_cutoff * 100) + "% FDR")
     ax.set_axisbelow(True)
     ax.yaxis.grid(color="black")
     ax.tick_params(axis="y", which="major")
@@ -312,7 +335,7 @@ def plot_mean_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> import pandas as pd
         >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
         >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
-        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.svg")
+        >>> pl.plot_mean_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/mean_sa_ce_plot.pdf")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
     sns.scatterplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax)
@@ -337,14 +360,15 @@ def plot_violin_sa_ce(sa_ce_df: pd.DataFrame, filename: Union[str, Path]):
         >>> import pandas as pd
         >>> # Required columns: SPECTRA_ANGLE and COLLISION_ENERGY
         >>> sa_ce_df = pd.DataFrame({"SPECTRAL_ANGLE": [0.7,0.5,0.3,0.8], "COLLISION_ENERGY": [34,31,34,31]})
-        >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.svg")
+        >>> pl.plot_violin_sa_ce(sa_ce_df=sa_ce_df, filename="./tests/doctests/output/violin_sa_ce_plot.pdf")
     """
     fig, ax = plt.subplots(figsize=(8, 8))
-    sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", ax=ax, color="#1f77b4")
-    ax.axvline(
-        x=sa_ce_df["COLLISION_ENERGY"][sa_ce_df["SPECTRAL_ANGLE"].idxmax()] - sa_ce_df["COLLISION_ENERGY"].min(),
-        color="red",
-    )
+    # the picked CE has the highest mean spectral angle (as in the CE calibration); the violins are categorical, so the
+    # line goes at the position of that CE among the plotted CEs, not at its distance from the lowest CE
+    mean_sa = sa_ce_df.groupby("COLLISION_ENERGY")["SPECTRAL_ANGLE"].mean()
+    order = list(mean_sa.index)
+    sns.violinplot(data=sa_ce_df, x="COLLISION_ENERGY", y="SPECTRAL_ANGLE", order=order, ax=ax, color="#1f77b4")
+    ax.axvline(x=order.index(mean_sa.idxmax()), color="red")
     plt.xticks(rotation=90)
     plt.grid()
     plt.savefig(filename, dpi=300)
@@ -357,8 +381,8 @@ def plot_pred_rt_vs_irt(
     """
     Generate scatterplot to compare predicted indexed retention time against (aligned) experimentally observed retention time.
 
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param prosit_target: mokapot / percolator target output for rescoring with peptide property prediction
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param prosit_target: percolator target output for rescoring with peptide property prediction
     :param outpath: the path to the location used for storing the plot without the filename
     :param suffix: the suffix of the filename, which will be prepended by the rawfile name
 
@@ -393,6 +417,9 @@ def plot_pred_rt_vs_irt(
     for rawfile in targets["rawfile"].unique():
         fig, ax = plt.subplots(figsize=(8, 8))
         data = targets[targets["rawfile"] == rawfile]
+        # the density estimate is quadratic in the number of points: plot a random subset of large files
+        if len(data) > MAX_RT_PLOT_POINTS:
+            data = data.sample(MAX_RT_PLOT_POINTS, random_state=42)
 
         if (data["predicted iRT"] == data["experimental RT"]).all():
             # this can now happen if we skip the iRT prediction as we then use a perfect prediction as replacement
@@ -417,9 +444,9 @@ def plot_pred_rt_vs_irt(
 def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy_df: pd.DataFrame, filename: Path):
     """Generate spectral angle distribution for targets and decoys.
 
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
-    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param target_df: percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: percolator decoy output for rescoring with peptide property prediction on the psm level
     :param filename: the path to the location used for storing the plot
 
     :Example:
@@ -445,7 +472,7 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
         >>> pl.plot_sa_distribution(prosit_df=prosit_df,
         >>>                         target_df=target_df,
         >>>                         decoy_df=decoy_df,
-        >>>                         filename="./tests/doctests/output/sa_distribution_plot.svg")
+        >>>                         filename="./tests/doctests/output/sa_distribution_plot.pdf")
     """
     _, _, _, psm_col = _check_columns(target_df)
     target = prosit_df.merge(target_df, how="inner", left_on="SpecId", right_on=psm_col)
@@ -459,6 +486,24 @@ def plot_sa_distribution(prosit_df: pd.DataFrame, target_df: pd.DataFrame, decoy
     plt.legend(loc="upper right")
     plt.savefig(filename, dpi=300)
     plt.close()
+
+
+def _find_mzml(config: Config, raw_file: str) -> Union[Path, None]:
+    """
+    Find the mzML file of a raw file for mirror plots.
+
+    Raw files are converted to <output>/spectra; mzML inputs are read from the spectra input (a folder or one file).
+
+    :param config: the configuration object
+    :param raw_file: raw file name without extension
+    :return: path to the mzML file, None if it is not found
+    """
+    candidates = [config.output / "spectra" / f"{raw_file}.mzML"]
+    if config.spectra.is_dir():
+        candidates += [config.spectra / f"{raw_file}{suffix}" for suffix in (".mzML", ".mzml")]
+    elif config.spectra.stem == raw_file:
+        candidates.append(config.spectra)
+    return next((path for path in candidates if path.is_file()), None)
 
 
 def plot_mirror_spectrum(
@@ -480,17 +525,16 @@ def plot_mirror_spectrum(
     :param raw_file: The name of the raw file being processed
     :param scan_number: The scan number of the spectrum to be plotted
     :param config: the configuration object
-    :param prosit_df: mokapot / percolator input tab for rescoring with peptide property prediction
-    :param target_df: mokapot / percolator target output for rescoring with peptide property prediction on the psm level
-    :param decoy_df: mokapot / percolator decoy output for rescoring with peptide property prediction on the psm level
+    :param prosit_df: percolator input tab for rescoring with peptide property prediction
+    :param target_df: percolator target output for rescoring with peptide property prediction on the psm level
+    :param decoy_df: percolator decoy output for rescoring with peptide property prediction on the psm level
     :param pdf: PDF file object for saving mirror plots
     """
     score_col, _, _, spec_col = _check_columns(target_df)
     target_df["target"] = True
     decoy_df["target"] = False
     concat_target_decoy = pd.concat([target_df, decoy_df])
-    if spec_col == "PSMId":
-        concat_target_decoy["ScanNr"] = concat_target_decoy["PSMId"].str.split("-").str[1].astype(int)
+    concat_target_decoy["ScanNr"] = concat_target_decoy[spec_col].str.split("-").str[1].astype(int)
     filtered_obs = spec_pred.obs[spec_pred.obs["SCAN_NUMBER"] == scan_number]
     if filtered_obs.empty:
         print(f"Warning: Scan number {scan_number} for {raw_file} not found in the prediction file.")
@@ -519,6 +563,9 @@ def plot_mirror_spectrum(
     ][score_col].iloc[0]
     fragment_tol_mass = config.mass_tolerance
     fragment_tol_mode = config.unit_mass_tolerance
+    if fragment_tol_mass == "auto":
+        # the tolerance is set per spectra file; the plot uses the widest one on the uncalibrated spectrum
+        fragment_tol_mass, fragment_tol_mode = 20.0, "ppm"
 
     # Get experimental spectrum
     mz_exp = np.array(mzml[mzml["SCAN_NUMBER"] == scan_number]["MZ"].iloc[0])
@@ -573,15 +620,21 @@ def plot_mirror_spectrum(
     pdf.savefig(fig)
 
 
-def plot_all(data_dir: Path, config: Config):
+def plot_all(data_dir: Path, config: Config, fdr_cutoff: float = 0.01):
     """
     Generate all plots after a rescoring run.
 
-    :param data_dir: the directory containing all inputs / outputs from either percolator or mokapot
+    :param data_dir: the directory containing all inputs / outputs from percolator
     :param config: the configuration object
+    :param fdr_cutoff: the FDR cutoff used for the gain / loss plots
     """
-    fdr_method = data_dir.stem
-    prosit_df = pd.read_csv(data_dir / "rescore.tab", delimiter="\t")
+    fdr_dir = data_dir.parent if data_dir.stem == "mod_fdr" else data_dir
+    fdr_method = fdr_dir.name
+
+    # only the columns used by the plots (the full table holds all features of all PSMs)
+    prosit_df = pd.read_csv(
+        data_dir / "rescore.tab", delimiter="\t", usecols=lambda col: col in RESCORE_TAB_PLOT_COLUMNS
+    )
     prosit_pep_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.peptides.txt", delimiter="\t")
     prosit_pep_decoy = pd.read_csv(data_dir / f"rescore.{fdr_method}.decoy.peptides.txt", delimiter="\t")
     prosit_psms_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.psms.txt", delimiter="\t")
@@ -596,31 +649,31 @@ def plot_all(data_dir: Path, config: Config):
         prosit_pep_target,
         prosit_pep_decoy,
         "peptide",
-        data_dir / "rescore_target_vs_decoys_peptide_bins.svg",
+        data_dir / "rescore_target_vs_decoys_peptide_bins.pdf",
     )
     plot_score_distribution(
         prosit_psms_target,
         prosit_psms_decoy,
         "psm",
-        data_dir / "rescore_target_vs_decoys_psm_bins.svg",
+        data_dir / "rescore_target_vs_decoys_psm_bins.pdf",
     )
     plot_score_distribution(
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        data_dir / "original_target_vs_decoys_peptide_bins.svg",
+        data_dir / "original_target_vs_decoys_peptide_bins.pdf",
     )
     plot_score_distribution(
         andromeda_psms_target,
         andromeda_psms_decoy,
         "psm",
-        data_dir / "original_target_vs_decoys_psm_bins.svg",
+        data_dir / "original_target_vs_decoys_psm_bins.pdf",
     )
     plot_sa_distribution(
         prosit_df,
         prosit_psms_target,
         prosit_psms_decoy,
-        data_dir / "target_vs_decoys_sa_distribution.svg",
+        data_dir / "target_vs_decoys_sa_distribution.pdf",
     )
     joint_plot(
         prosit_pep_target,
@@ -628,7 +681,7 @@ def plot_all(data_dir: Path, config: Config):
         andromeda_pep_target,
         andromeda_pep_decoy,
         "peptide",
-        data_dir / "rescore_original_joint_plot_peptide.svg",
+        data_dir / "rescore_original_joint_plot_peptide.pdf",
     )
     joint_plot(
         prosit_psms_target,
@@ -636,28 +689,40 @@ def plot_all(data_dir: Path, config: Config):
         andromeda_psms_target,
         andromeda_psms_decoy,
         "psm",
-        data_dir / "rescore_original_joint_plot_psm.svg",
+        data_dir / "rescore_original_joint_plot_psm.pdf",
     )
 
-    plot_gain_loss(prosit_pep_target, andromeda_pep_target, "peptide", data_dir / "peptide_1%_FDR.svg")
-    plot_gain_loss(prosit_psms_target, andromeda_psms_target, "psm", data_dir / "psm_1%_FDR.svg")
+    plot_gain_loss(
+        prosit_pep_target,
+        andromeda_pep_target,
+        "peptide",
+        data_dir / ("peptide_" + str(fdr_cutoff * 100) + "%_FDR.pdf"),
+        fdr_cutoff=fdr_cutoff,
+    )
+    plot_gain_loss(
+        prosit_psms_target,
+        andromeda_psms_target,
+        "psm",
+        data_dir / ("psm_" + str(fdr_cutoff * 100) + "%_FDR.pdf"),
+        fdr_cutoff=fdr_cutoff,
+    )
 
-    plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.svg")
+    if {"RT", "iRT", "pred_RT"}.issubset(prosit_df.columns):
+        plot_pred_rt_vs_irt(prosit_df, prosit_psms_target, data_dir, "irt_vs_pred_rt.pdf")
 
-    base_mzml_path = os.path.abspath(os.path.join(data_dir, "../../spectra"))
-    base_hdf5_path = os.path.abspath(os.path.join(data_dir, "../../data"))
+    base_hdf5_path = os.path.abspath(os.path.join(fdr_dir, "../../data"))
     mirror_plots_dict = config.mirror_plots
-
-    fdr_method = data_dir.stem
-
-    prosit_psms_target = pd.read_csv(data_dir / f"rescore.{fdr_method}.psms.txt", delimiter="\t")
-    prosit_psms_decoy = pd.read_csv(data_dir / f"rescore.{fdr_method}.decoy.psms.txt", delimiter="\t")
+    if not mirror_plots_dict:
+        return
 
     pdf_path = data_dir / "mirror_plots.pdf"
 
     with PdfPages(pdf_path) as pdf:
         for raw_file, scan_numbers in mirror_plots_dict.items():
-            mzml_path = os.path.join(base_mzml_path, f"{raw_file}.mzML")
+            mzml_path = _find_mzml(config, raw_file)
+            if mzml_path is None:
+                print(f"Warning: No mzML file found for {raw_file}, skipping its mirror plots.")
+                continue
             hdf5_path = os.path.join(base_hdf5_path, f"{raw_file}.mzml.pred.hdf5")
 
             mzml = ThermoRaw.read_mzml(source=mzml_path)

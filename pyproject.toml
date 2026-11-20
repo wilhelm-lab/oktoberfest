@@ -1,29 +1,35 @@
 [project]
 name = "oktoberfest"
-version = "0.11.1"
+version = "1.0.0"
 description = "Public repo oktoberfest"
 authors = [{name = "Wilhelmlab at Technical University of Munich"}]
 license = "MIT"
 readme = "README.rst"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11"
 dependencies = [
     "rich>=15.0.0",
     "PyYAML>=5.4.1",
-    "anndata>=0.10.5post1",
+    # anndata <0.12.7 does not declare pandas<3 but cannot write pandas 3 strings to hdf5
+    "anndata>=0.12.7",
     "array-api-compat==1.12.0",
     "matplotlib>=3.6.3",
-    "mokapot>=0.9.1",
     "numpy>=1.26.4",
     "seaborn>=0.12.2",
-    "spectrum-io>=0.8.0",
+    # >=1.0.1 converts categorical sequences before replacing mods in Spectronaut and DLib libraries
+    "spectrum-io>=1.0.1",
+    # >=1.0.0 computes the ExpMass percolator feature (no longer added by oktoberfest)
+    "spectrum-fundamentals>=1.1.0",
     "picked_group_fdr>=0.9.0",
-    "koinapy>=0.0.10",
+    "koinapy>=0.0.11",
     "spectrum-utils>=0.4.2",
+    # pyopenms 3.6 ships its own Arrow; loading it next to pyarrow breaks DataFrame.to_parquet
+    # (ArrowKeyError: scheme 'file' already registered)
+    "pyopenms<3.6",
 ]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [project.urls]
@@ -40,10 +46,28 @@ docs = [
     "Pygments>=2.20.0",
 ]
 
+# dlomix[tf] extra installs tensorflow alongside dlomix
+# oktoberfest integration relies on dlomix models trained with keras/tensorflow
+dlomix = [
+    "dlomix[tf]>=0.3.1",
+    # dlomix's tensorflow range also admits versions without python 3.13 wheels
+    "tensorflow>=2.20,<2.22; python_version >= '3.13'",
+]
+
+# directLFQ protein intensities for MS1 quantification (quantificationOptions.protein "directlfq")
+quant = [
+    "directlfq>=0.3.3"
+]
+
 [project.scripts]
 oktoberfest = "oktoberfest.__main__:main"
 
 [tool.poetry]
+
+# Locking range only (not published): picked_group_fdr and triqler cap python at <3.14.
+# Users are bound by the open-ended requires-python above.
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0"
@@ -59,6 +83,9 @@ types-attrs = ">=19.1.0"
 Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 openpyxl = ">=3.0.10"
+# imported by anndata.tests.helpers from anndata 0.13 on (python >=3.12)
+dask = {version = ">=2024.5.1", python = ">=3.12"}
+fast-array-utils = {version = ">=1.0", python = ">=3.12"}
 
 
 
@@ -66,7 +93,7 @@ openpyxl = ">=3.0.10"
 testpaths = ["tests/unit_tests"] # run only unit tests by default
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]

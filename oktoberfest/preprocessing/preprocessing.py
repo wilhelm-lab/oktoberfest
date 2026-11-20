@@ -7,20 +7,35 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
 import spectrum_fundamentals.constants as c
 from anndata import AnnData
 from spectrum_fundamentals.annotation.annotation import annotate_spectra
-from spectrum_fundamentals.fragments import compute_peptide_mass, retrieve_ion_types
+from spectrum_fundamentals.fragments import compute_peptide_mass, fragment_arrays, retrieve_ion_types
 from spectrum_fundamentals.mod_string import internal_without_mods, maxquant_to_internal
 from spectrum_io.d import convert_d_hdf, read_and_aggregate_timstof
 from spectrum_io.file import csv
 from spectrum_io.raw import ThermoRaw
-from spectrum_io.search_result import Mascot, MaxQuant, MSAmanda, MSFragger, OpenMS, Sage, Scout, Xisearch
+from spectrum_io.search_result import (
+    Mascot,
+    MaxQuant,
+    MSAmanda,
+    MSFragger,
+    OpenMS,
+    Sage,
+    Scout,
+    Xisearch,
+)
 from spectrum_io.spectral_library.digest import get_peptide_to_protein_map
 
 from ..data.spectra import FragmentType, Spectra
 
 logger = logging.getLogger(__name__)
+
+# massTolerance "auto": percentile of the file's absolute fragment mass errors (after removing the offset) used as tolerance
+AUTO_MASS_TOLERANCE_PERCENTILE = 90
+# massTolerance "auto": widest fragment mass error (ppm) considered
+AUTO_MASS_TOLERANCE_MAX = 20.0
 
 
 def gen_lib(input_file: Union[str, Path]) -> Spectra:
@@ -51,6 +66,8 @@ def gen_lib(input_file: Union[str, Path]) -> Spectra:
     if "PROTEINS" not in library_df.columns:
         library_df["PROTEINS"] = "unknown"
     var_df = Spectra._gen_vars_df()
+    # AnnData needs a string index (it would convert it and warn)
+    library_df.index = library_df.index.astype(str)
     spec = Spectra(obs=library_df, var=var_df)
 
     spec.var_names = var_df.index
@@ -248,7 +265,7 @@ def filter_peptides_for_model(peptides: Union[pd.DataFrame, AnnData], model: str
         return filter_xl_peptides(peptides, **filter_kwargs)
     if "prosit" in model.lower():
         filter_kwargs = {
-            "min_length": 7,
+            "min_length": 6,
             "max_length": 30,
             "max_charge": 6,
         }
@@ -397,7 +414,7 @@ def process_and_filter_spectra_data(library: Spectra, model: str, tmt_label: Opt
     library.obs["PEPTIDE_LENGTH"] = library.obs["SEQUENCE"].apply(lambda x: len(x))
 
     # filter
-    library = filter_peptides_for_model(library, model)
+    library = Spectra(filter_peptides_for_model(library, model).copy())
     library.obs["MASS"] = library.obs["MODIFIED_SEQUENCE"].apply(lambda x: compute_peptide_mass(x))
 
     return library
@@ -438,8 +455,10 @@ def convert_search(
     tmt_label: str = "",
     custom_mods: Optional[dict[str, int]] = None,
     output_file: Optional[Union[str, Path]] = None,
-    ptm_unimod_id: Optional[int] = 0,
+    ptm_unimod_id: Optional[Union[int, dict[int, list[str]]]] = 0,
     ptm_sites: Optional[list] = None,
+    ptm_model: Optional[bool] = False,
+    num_threads: int = 1,
 ) -> pd.DataFrame:
     r"""
     Convert search results to Oktoberfest format.
@@ -451,15 +470,19 @@ def convert_search(
 
     :param input_path: Path to the directory or file containing the search results.
     :param search_engine: The search engine used to produce the search results,
-        currently supported are "Maxquant", "Mascot" and "MSFragger"
+        currently supported are "Maxquant", "Mascot" and "MSFragger". Use "custom_input" if the search results are
+        already in the internal Oktoberfest format, in which case they are only loaded (no conversion is performed).
     :param tmt_label: Optional tmt-label to consider when processing peptides. If given, the corresponding
         fixed modification for the N-terminus and lysin will be added
     :param custom_mods: Optional dictionary parameter given when input_file is not in internal Oktoberfest format with
         static and variable mods as keys. The values are the integer values of the respective unimod identifier
     :param output_file: Optional path to the location where the converted search results should be written to.
         If this is omitted, the results are not stored.
-    :param ptm_unimod_id: unimod id used for site localization
-    :param ptm_sites: possible sites that the ptm can exist on
+    :param ptm_unimod_id: unimod id used for site localization, or a mapping of unimod id to possible residues to
+        localize several PTMs. 0 or an empty mapping disables the generation of site permutations.
+    :param ptm_sites: possible sites that the ptm can exist on, if a single unimod id is given
+    :param ptm_model: whether a PTM-aware intensity model is used
+    :param num_threads: number of processes for reading several result files (e.g. one pepXML per raw file)
     :raises ValueError: if an unsupported search engine was given
     :return: A dataframe containing the converted results.
 
@@ -533,6 +556,9 @@ def convert_search(
         >>> print(converted_results)
     """
     search_engine = search_engine.lower()
+    if search_engine == "custom_input":
+        return load_search(input_path)
+
     search_result: Any
     xl = False
     if search_engine == "maxquant":
@@ -556,14 +582,61 @@ def convert_search(
     else:
         raise ValueError(f"Unknown search engine provided: {search_engine}")
 
-    return search_result(input_path).generate_internal(
+    return search_result(input_path, num_threads=num_threads).generate_internal(
         tmt_label=tmt_label,
         out_path=output_file,
         custom_mods=custom_mods,
         ptm_unimod_id=ptm_unimod_id,
         ptm_sites=ptm_sites,
         xl=xl,
+        ptm_model=ptm_model,
     )
+
+
+SEARCH_RESULT_KEY = ["RAW_FILE", "SCAN_NUMBER", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]
+
+
+def merge_search_results(
+    search_results: list[pd.DataFrame],
+    search_engines: list[str],
+    engines_file: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
+    """
+    Merge the converted search results of several search engines into one set of candidate PSMs.
+
+    The candidates of all engines are rescored together, so every spectrum keeps the candidates of every engine.
+    A candidate (raw file, scan number, modified sequence, precursor charge) found by several engines is kept once,
+    with the values of the first engine in the list. Only the columns all engines provide are kept (engine specific
+    columns, e.g. MSFragger's matched ions or e-value, would be missing for the candidates of the other engines).
+
+    :param search_results: converted search results (internal format) of every search engine
+    :param search_engines: name of the search engine of every search result, in the same order
+    :param engines_file: optional path of a csv file with the search engines that found every candidate
+        (candidate columns and one boolean column per engine); not used as rescoring input
+    :raises ValueError: if the number of search results and search engines differ
+    :return: the merged search results
+    """
+    if len(search_results) != len(search_engines):
+        raise ValueError("Every search result needs its search engine.")
+    columns = [column for column in search_results[0].columns if all(column in df for df in search_results[1:])]
+    frames = []
+    for df in search_results:
+        df = df[columns].copy()
+        df["RAW_FILE"] = df["RAW_FILE"].astype(str)
+        frames.append(df.drop_duplicates(SEARCH_RESULT_KEY))
+    merged = pd.concat(frames, ignore_index=True).drop_duplicates(SEARCH_RESULT_KEY).reset_index(drop=True)
+    candidates = pd.MultiIndex.from_frame(merged[SEARCH_RESULT_KEY])
+    found = merged[SEARCH_RESULT_KEY].copy()
+    for engine, df in zip(search_engines, frames, strict=True):
+        found[engine] = candidates.isin(pd.MultiIndex.from_frame(df[SEARCH_RESULT_KEY]))
+        logger.info(f"{engine}: {len(df)} candidate PSMs")
+    logger.info(
+        f"Merged {len(merged)} candidate PSMs of {', '.join(search_engines)} ({int(found[search_engines].all(axis=1).sum())} "
+        "found by all engines)"
+    )
+    if engines_file is not None:
+        found.to_csv(engines_file, index=False)
+    return merged
 
 
 def convert_timstof_metadata(
@@ -774,7 +847,7 @@ def split_search(
 
     filenames_found = []
     for filename in filenames:
-        output_file = (output_dir / filename).with_suffix(".rescore")
+        output_file = output_dir / f"{filename}.rescore"
         logger.info(f"Creating split search results file {output_file}")
         try:
             grouped_search_results.get_group(filename).to_csv(output_file)
@@ -840,7 +913,7 @@ def split_timstof_metadata(
 
     filenames_found = []
     for filename in filenames:
-        output_file = (output_dir / filename).with_suffix(".timsmeta")
+        output_file = output_dir / f"{filename}.timsmeta"
         logger.info(f"Creating split timstof metadata file {output_file}")
         try:
             grouped_timstof_metadata.get_group(filename).to_csv(output_file)
@@ -899,8 +972,82 @@ def merge_spectra_and_peptides(spectra: pd.DataFrame, search: pd.DataFrame) -> p
         >>> print(psms)
     """
     logger.info("Merging rawfile and search result")
+    # raw files named by numbers only (e.g. 1.raw, PXD000138) are read as int from the search results: then use the
+    # file names as str on both sides
+    if not (is_string_dtype(search["RAW_FILE"]) and is_string_dtype(spectra["RAW_FILE"])):
+        search = search.assign(RAW_FILE=search["RAW_FILE"].astype(str))
+        spectra = spectra.assign(RAW_FILE=spectra["RAW_FILE"].astype(str))
     psms = search.merge(spectra, on=["RAW_FILE", "SCAN_NUMBER"])
     return psms
+
+
+def calibrate_fragment_masses(
+    psms: pd.DataFrame,
+    featured_ions: list[str],
+    custom_mods: Optional[dict[str, float]] = None,
+    max_ppm: float = AUTO_MASS_TOLERANCE_MAX,
+    n_psms: int = 5000,
+) -> tuple[pd.DataFrame, Optional[float]]:
+    """
+    Calibrate the fragment m/z of a spectra file and get its fragment mass tolerance from the data.
+
+    For up to n_psms random target PSMs, every theoretical fragment ion (without neutral losses) is matched to its
+    closest peak within max_ppm. The median of these mass errors is the systematic offset, which is removed from the
+    m/z of all peaks. The tolerance is the AUTO_MASS_TOLERANCE_PERCENTILE percentile of the absolute errors around the
+    offset, at most max_ppm. Most matched peaks are true fragments, so random matches hardly move the median.
+    Spectra from an ion trap (ITMS) are left unchanged and get no tolerance, so that the default (0.35 Da) is used.
+
+    :param psms: PSMs merged with their spectra (MZ in ascending order)
+    :param featured_ions: ion types to be annotated
+    :param custom_mods: mapping of custom UNIMOD string identifiers ('[UNIMOD:xyz]') to their mass
+    :param max_ppm: widest mass error considered and largest tolerance
+    :param n_psms: number of target PSMs used to measure the mass errors
+    :return: the PSMs with calibrated MZ and the fragment mass tolerance in ppm (None for ion trap spectra)
+    """
+    if (psms["MASS_ANALYZER"] == "ITMS").any():
+        logger.warning("Ion trap spectra found, using the default fragment mass tolerance instead of auto.")
+        return psms, None
+    targets = np.flatnonzero(~psms["REVERSE"].astype(bool).to_numpy())
+    sample = np.random.default_rng(42).choice(targets, min(n_psms, len(targets)), replace=False)
+    errors = [
+        _fragment_mass_errors(np.asarray(mz), sequence, charge, featured_ions, custom_mods, max_ppm)
+        for mz, sequence, charge in psms.iloc[sample][["MZ", "MODIFIED_SEQUENCE", "PRECURSOR_CHARGE"]].itertuples(
+            index=False
+        )
+    ]
+    errors = np.concatenate(errors) if errors else np.array([])
+    if len(errors) == 0:
+        logger.warning(f"No fragment ions found within {max_ppm} ppm, using {max_ppm} ppm without calibration.")
+        return psms, max_ppm
+    offset = float(np.median(errors))
+    tolerance = min(max_ppm, float(np.percentile(np.abs(errors - offset), AUTO_MASS_TOLERANCE_PERCENTILE)))
+    logger.info(
+        f"Fragment mass offset {offset:+.2f} ppm, tolerance +-{tolerance:.2f} ppm "
+        f"({len(errors)} fragment ions of {len(sample)} target PSMs)"
+    )
+    psms = psms.copy()
+    psms["MZ"] = [np.asarray(mz) * (1 - offset * 1e-6) for mz in psms["MZ"]]
+    return psms, tolerance
+
+
+def _fragment_mass_errors(
+    mz: np.ndarray,
+    sequence: str,
+    charge: int,
+    featured_ions: list[str],
+    custom_mods: Optional[dict[str, float]],
+    max_ppm: float,
+) -> np.ndarray:
+    """Get the mass error (ppm) of the closest peak to every fragment ion of a PSM, for those within max_ppm."""
+    if len(mz) == 0:
+        return np.array([])
+    fragments = fragment_arrays(sequence, "FTMS", int(charge), featured_ions=featured_ions, custom_mods=custom_mods)[0]
+    theoretical = fragments["mass"][~fragments["neutral_loss"]]
+    right = np.clip(np.searchsorted(mz, theoretical), 0, len(mz) - 1)
+    left = np.clip(right - 1, 0, len(mz) - 1)
+    closest = np.where(np.abs(mz[right] - theoretical) < np.abs(mz[left] - theoretical), mz[right], mz[left])
+    ppm = (closest - theoretical) / theoretical * 1e6
+    return ppm[np.abs(ppm) <= max_ppm]
 
 
 def annotate_spectral_library(
@@ -913,6 +1060,8 @@ def annotate_spectral_library(
     annotate_neutral_loss: Optional[bool] = False,
     multifrag: Optional[bool] = False,
     featured_ions: Optional[list[str]] = None,
+    phospho_loss_residues: str = "ST",
+    plain_loss_residues: Optional[str] = None,
 ) -> Spectra:
     """
     Annotate all specified ion peaks of given PSMs (Default b and y ions).
@@ -932,6 +1081,9 @@ def annotate_spectral_library(
     :param multifrag: flag to indicate whether to annotate multifrag peaks or not
     :param featured_ions: list of ions to be annotated
     :param p_window: window size for precursor peak removal
+    :param phospho_loss_residues: phosphorylated residues annotated with the neutral loss of phosphoric acid
+    :param plain_loss_residues: if given, the neutral losses are also counted with these residues (e.g. "ST" if
+        phospho_loss_residues contains decoy residues), stored as ANNOTATED_NL_COUNT_PLAIN and EXPECTED_NL_COUNT_PLAIN
 
     :return: Spectra object containing the annotated featured sion peaks including metadata
 
@@ -972,16 +1124,24 @@ def annotate_spectral_library(
         custom_mods=custom_mods,
         annotate_neutral_loss=annotate_neutral_loss,
         featured_ions=featured_ions,
+        phospho_loss_residues=phospho_loss_residues,
+        plain_loss_residues=plain_loss_residues,
     )
-    aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=var_df)
+    obs = psms.drop(columns=["INTENSITIES", "MZ"])
+    obs.index = obs.index.astype(str)
+    aspec = Spectra(obs=obs, var=var_df)
     aspec.uns["ion_types"] = ion_types
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES"]), aspec.var_names.values[None, ...], FragmentType.RAW
+        np.stack(df_annotated_spectra["INTENSITIES"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ"]), FragmentType.MZ)
     aspec.add_column(df_annotated_spectra["CALCULATED_MASS"].values, "CALCULATED_MASS")
     aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT"].values, "EXPECTED_NL_COUNT")
     aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT"].values, "ANNOTATED_NL_COUNT")
+    if plain_loss_residues is not None:
+        aspec.add_column(df_annotated_spectra["EXPECTED_NL_COUNT_PLAIN"].values, "EXPECTED_NL_COUNT_PLAIN")
+        aspec.add_column(df_annotated_spectra["ANNOTATED_NL_COUNT_PLAIN"].values, "ANNOTATED_NL_COUNT_PLAIN")
+    aspec.add_column(df_annotated_spectra["MOST_INTESE_PEAK"].values, "MOST_INTESE_PEAK")
     aspec.strings_to_categoricals()
 
     logger.info("Finished annotating.")
@@ -1009,10 +1169,10 @@ def annotate_spectral_library_xl(
     df_annotated_spectra = annotate_spectra(psms, mass_tol, unit_mass_tol)
     aspec = Spectra(obs=psms.drop(columns=["INTENSITIES", "MZ"]), var=Spectra._gen_vars_df(cms2=cms2))
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES_A"]), aspec.var_names.values[None, ...], FragmentType.RAW_A
+        np.stack(df_annotated_spectra["INTENSITIES_A"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW_A
     )
     aspec.add_intensities(
-        np.stack(df_annotated_spectra["INTENSITIES_B"]), aspec.var_names.values[None, ...], FragmentType.RAW_B
+        np.stack(df_annotated_spectra["INTENSITIES_B"]), np.array(aspec.var_names)[None, ...], FragmentType.RAW_B
     )
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ_A"]), FragmentType.MZ_A)
     aspec.add_mzs(np.stack(df_annotated_spectra["MZ_B"]), FragmentType.MZ_B)
@@ -1113,7 +1273,10 @@ def load_spectra(
 
 
 def convert_raw_to_mzml(
-    raw_file: Union[str, Path], output_file: Union[str, Path], thermo_exe: Optional[Union[str, Path]] = None
+    raw_file: Union[str, Path],
+    output_file: Union[str, Path],
+    thermo_exe: Optional[Union[str, Path]] = None,
+    ms_level: Union[int, list[int]] = 2,
 ):
     """
     Convert raw to mzML format.
@@ -1126,6 +1289,7 @@ def convert_raw_to_mzml(
     :param thermo_exe: Path to the executable of ThermoRawFileParser, default depends on the OS:
         for Windows, it is "ThermoRawFileParser.exe", while for Linux and MacOS, it is
         "/opt/compomics/ThermoRawFileParser.exe".
+    :param ms_level: MS level(s) to keep, e.g. [1, 2] to keep the MS1 scans for MS1 quantification; default is 2
     """
     if thermo_exe is None:
         if "linux" in platform or platform == "darwin":
@@ -1134,7 +1298,7 @@ def convert_raw_to_mzml(
             thermo_exe = "ThermoRawFileParser.exe"
 
     raw = ThermoRaw()
-    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe)
+    raw.convert_raw_mzml(input_path=raw_file, output_path=output_file, thermo_exe=thermo_exe, ms_level=ms_level)
 
 
 def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
@@ -1149,3 +1313,56 @@ def convert_d_to_hdf(d_dir: Union[str, Path], output_file: Union[str, Path]):
     d_dir = Path(d_dir)
     output_file = Path(output_file)
     convert_d_hdf(input_path=d_dir, output_path=output_file)
+
+
+def _format_modified_sequence_for_parquet(modified_sequence: str) -> str:
+    """Convert modified sequences to explicit N/C-terminal marker format."""
+    sequence = str(modified_sequence)
+    if sequence.startswith("_") and sequence.endswith("_"):
+        sequence = sequence[1:-1]
+
+    if not re.match(r"^(\[\]|(\[UNIMOD:\d+\]))-", sequence):
+        sequence = f"[]-{sequence}"
+
+    if not re.search(r"-(\[\]|(\[UNIMOD:\d+\]))$", sequence):
+        sequence = f"{sequence}-[]"
+
+    return sequence
+
+
+def convert_anndata_to_parquet(hdf5_path: Union[str, Path], output_file: Union[str, Path]):
+    """Convert AnnData from hdf5 to parquet required for DLOmix."""
+    library = Spectra.from_hdf5(hdf5_path)
+    df = pd.DataFrame()
+
+    optional_columns = {
+        "raw_file": lambda: library.obs["RAW_FILE"].astype(str),
+        "scan_number": lambda: library.obs["SCAN_NUMBER"].astype("int64"),
+        "method_nbr": lambda: library.obs["FRAGMENTATION"].map(c.FRAGMENTATION_ENCODING).astype("int64"),
+        "precursor_charge_onehot": lambda: list(
+            np.eye(c.NUM_CHARGES_ONEHOT, dtype=int)[library.obs["PRECURSOR_CHARGE"].to_numpy() - 1]
+        ),
+        "collision_energy_aligned_normed": lambda: library.obs["COLLISION_ENERGY"].astype("float64") / 100.0,
+    }
+
+    for column_name, column_factory in optional_columns.items():
+        try:
+            df[column_name] = column_factory()
+        except (KeyError, ValueError, IndexError):
+            logger.warning(f"Optional column {column_name!r} could not be derived, excluded from output")
+
+    intensities = library.to_df(layer=library._resolve_layer_name(FragmentType.RAW))
+    intensities[intensities == 0] = -1
+    intensities[intensities == c.EPSILON] = 0
+    df["intensities_raw"] = list(intensities.to_numpy())
+
+    mz_layer = library._resolve_layer_name(FragmentType.MZ)
+    if mz_layer in library.layers:
+        df["mz_raw"] = list(library.to_df(layer=mz_layer).to_numpy())
+
+    if "FRAGMENTATION" in library.obs:
+        df["package"] = library.obs["FRAGMENTATION"].astype(str)
+
+    df["modified_sequence"] = library.obs["MODIFIED_SEQUENCE"].map(_format_modified_sequence_for_parquet).values
+
+    df.to_parquet(output_file, index=False)

@@ -93,13 +93,13 @@ class TestRunner(unittest.TestCase):
         shutil.copy(inputs_dir / "original.percolator.psms.txt", fdr_dir / "original.percolator.psms.txt")
         shutil.copy(inputs_dir / "original.percolator.decoy.psms.txt", fdr_dir / "original.percolator.decoy.psms.txt")
 
-        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
+        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
-        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore")
 
-        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
+        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original")
         output_csms_original = xl_between_or_self(output_csms_original, score="score")
-        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original", "percolator")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original")
 
         # generating xifdr input file
 
@@ -223,13 +223,13 @@ class TestRunner(unittest.TestCase):
         shutil.copy(inputs_dir / "original.percolator.psms.txt", fdr_dir / "original.percolator.psms.txt")
         shutil.copy(inputs_dir / "original.percolator.decoy.psms.txt", fdr_dir / "original.percolator.decoy.psms.txt")
 
-        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore", "percolator")
+        output_csms_rescore = xl_psm_to_csm(str(fdr_dir), "rescore")
         output_csms_rescore = xl_between_or_self(output_csms_rescore, score="score")
-        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore", "percolator")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "rescore")
 
-        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original", "percolator")
+        output_csms_original = xl_psm_to_csm(str(fdr_dir), "original")
         output_csms_original = xl_between_or_self(output_csms_original, score="score")
-        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original", "percolator")
+        xl_preprocessing_plot_csm(str(fdr_dir), output_csms_rescore, "original")
 
         # generating xifdr input file
 

@@ -6,12 +6,14 @@ repos:
             entry: ruff check
             language: system
             types: [python]
+            exclude: ^webui/backend/
             require_serial: true
           - id: ruff-format
             name: ruff format
             entry: ruff format
             language: system
             types: [python]
+            exclude: ^webui/backend/
             require_serial: true
           - id: check-added-large-files
             name: Check for added large files
@@ -44,3 +46,4 @@ repos:
       rev: v2.5.1
       hooks:
           - id: prettier
+            exclude: \.(vue|ts)$

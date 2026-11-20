@@ -13,7 +13,7 @@
         "irt": ""
     },
     "prediction_server": "koina.wilhelmlab.org:443",
-    "numThreads": 1,
+    "numThreads": 4,
     "fdr_estimation_method": "percolator",
     "allFeatures": true,
     "regressionMethod": "spline",
